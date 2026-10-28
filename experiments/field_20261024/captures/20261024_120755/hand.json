@@ -1,0 +1,62 @@
+{
+ "tiles": [
+  {
+   "tile": "4m",
+   "conf": 0.99
+  },
+  {
+   "tile": "0m",
+   "conf": 0.99
+  },
+  {
+   "tile": "7m",
+   "conf": 0.99
+  },
+  {
+   "tile": "8m",
+   "conf": 0.99
+  },
+  {
+   "tile": "9m",
+   "conf": 0.99
+  },
+  {
+   "tile": "1s",
+   "conf": 0.99
+  },
+  {
+   "tile": "2s",
+   "conf": 0.99
+  },
+  {
+   "tile": "3s",
+   "conf": 0.99
+  },
+  {
+   "tile": "4p",
+   "conf": 0.99
+  },
+  {
+   "tile": "4p",
+   "conf": 0.99
+  },
+  {
+   "tile": "5z",
+   "conf": 0.99
+  },
+  {
+   "tile": "5z",
+   "conf": 0.99
+  },
+  {
+   "tile": "5z",
+   "conf": 0.99
+  }
+ ],
+ "count": 13,
+ "melds": [],
+ "win_tile": null,
+ "notes": "",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 4139
+}

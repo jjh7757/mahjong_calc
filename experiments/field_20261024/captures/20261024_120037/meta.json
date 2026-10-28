@@ -1,0 +1,65 @@
+{
+ "time": "2026-10-24T12:00:52.100409",
+ "capture_long_side_px": 4080,
+ "setup": {
+  "source": "remote",
+  "remote_url": "http://192.168.0.64:8765",
+  "zoom": 1.0,
+  "height_cm": 60
+ },
+ "game": {
+  "round": "동2국",
+  "names": [
+   "플레이어 1",
+   "플레이어 2",
+   "플레이어 3",
+   "플레이어 4"
+  ],
+  "bottom_seat": 0,
+  "dealer": 1,
+  "honba": 0,
+  "riichi_seats": []
+ },
+ "winner_side": "right",
+ "timings_ms": {
+  "shrink": 475,
+  "locate": 5606,
+  "pick": 2059,
+  "crop": 450,
+  "read": 5572
+ },
+ "warnings": [],
+ "error": null,
+ "merge": {
+  "winner": 1,
+  "is_tsumo": true,
+  "loser": null,
+  "closed": [
+   "4m",
+   "0m",
+   "7m",
+   "8m",
+   "9m",
+   "1s",
+   "2s",
+   "3s",
+   "4p",
+   "4p",
+   "5z",
+   "5z",
+   "5z"
+  ],
+  "win_tile": "5z",
+  "melds": [],
+  "red_count": 1,
+  "hand_valid": false,
+  "uncertain": [],
+  "flags": [
+   "tileCountMismatch: 손패가 14장이어야 하는데 13장 읽혔습니다"
+  ],
+  "riichi": false,
+  "riichi_seats_photo": [],
+  "dora_indicators": [],
+  "ura_indicators": []
+ }
+}

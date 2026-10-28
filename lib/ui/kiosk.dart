@@ -1,0 +1,76 @@
+import 'package:flutter/material.dart';
+
+/// 키오스크(갤럭시탭 가로 고정) 화면 공용 값.
+///
+/// 폭이 넓은 가로 화면이면 키오스크 배치를 쓴다. 대국 중에는 테이블 화면(거치 촬영)이 첫 화면이고,
+/// 점수 계산은 따로 열었다가 "대국에 반영" 하면 테이블 화면으로 돌아온다(작혼의 대국 → 결산 → 대국 흐름).
+bool isKioskSize(Size s) => s.width >= 1000 && s.width > s.height;
+
+bool isKioskLayout(BuildContext context) => isKioskSize(MediaQuery.sizeOf(context));
+
+/// 대국 중인데 로비(홈)를 보고 있으면 그 대국의 id. 테이블 화면의 "홈" 이 넣고, 로비의 "대국 이어 하기" 가 비운다.
+/// 새 대국은 id 가 달라서 시작하면 바로 테이블 화면이 된다.
+final kioskLobbyFor = ValueNotifier<String?>(null);
+
+const kioskBg = Color(0xFF1C1916);
+const kioskSurface = Color(0xFF2A2521);
+const kioskGold = Color(0xFFE2C178);
+const kioskGoldDeep = Color(0xFFB8913E);
+const kioskRed = Color(0xFFC62828);
+const kioskFelt = Color(0xFF1F4D3A);
+const kioskPanel = Color(0xFFF7F4EE);
+
+/// 키오스크에서는 시트·대화상자·보조 화면을 어두운 테마 + 글자 1.25배로 키운다. 폰이면 그대로.
+Widget kioskWrap(BuildContext context, Widget child, {double scale = 1.25}) {
+  if (!isKioskLayout(context)) return child;
+  final mq = MediaQuery.of(context);
+  return Theme(
+    data: kioskDarkTheme(),
+    child: MediaQuery(data: mq.copyWith(textScaler: TextScaler.linear(scale)), child: child),
+  );
+}
+
+/// 폰이면 바텀시트, 키오스크면 가운데 큰 패널(어두운 테마). 안의 위젯은 같다.
+Future<T?> showAdaptiveSheet<T>(BuildContext context, {required WidgetBuilder builder, double kioskMaxWidth = 760}) {
+  if (!isKioskLayout(context)) {
+    return showModalBottomSheet<T>(context: context, isScrollControlled: true, builder: builder);
+  }
+  return showDialog<T>(
+    context: context,
+    builder: (ctx) => kioskWrap(
+      ctx,
+      Dialog(
+        backgroundColor: kioskSurface,
+        insetPadding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: kioskMaxWidth, maxHeight: MediaQuery.sizeOf(ctx).height - 48),
+          child: Builder(builder: builder),
+        ),
+      ),
+    ),
+  );
+}
+
+/// 키오스크에서 폰용 세로 화면(설정 폼·정산·지난 대국)을 가운데 [maxWidth] 로 모아 보여 준다.
+Widget kioskPage(BuildContext context, Widget body, {double maxWidth = 820}) {
+  if (!isKioskLayout(context)) return body;
+  return Center(child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: body));
+}
+
+/// 키오스크 어두운 테마(금색 강조).
+ThemeData kioskDarkTheme() {
+  final base = ThemeData(
+    colorScheme: ColorScheme.fromSeed(seedColor: kioskGold, brightness: Brightness.dark)
+        .copyWith(primary: kioskGold, onPrimary: const Color(0xFF2A1F08), surface: kioskSurface),
+    scaffoldBackgroundColor: kioskBg,
+    useMaterial3: true,
+  );
+  return base.copyWith(
+    appBarTheme: const AppBarTheme(
+      backgroundColor: kioskBg,
+      foregroundColor: Colors.white,
+      centerTitle: true,
+      titleTextStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white, letterSpacing: 1),
+    ),
+  );
+}

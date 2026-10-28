@@ -1,0 +1,42 @@
+original k26 left   face_up True (정답 True) O 8.63s
+original k16 bottom face_up True (정답 True) O 8.89s
+original k12 bottom face_up True (정답 True) O 9.34s
+blue     k25 right  face_up True (정답 True) O 9.5s
+original k28 right  face_up True (정답 True) O 9.83s
+blue     k28 right  face_up True (정답 True) O 10.0s
+original k15 left   face_up True (정답 True) O 10.69s
+blue     k15 left   face_up True (정답 True) O 5.18s
+green    k25 right  face_up True (정답 True) O 4.16s
+green    k28 right  face_up True (정답 True) O 4.46s
+blue     k16 bottom face_up True (정답 True) O 5.33s
+blue     k12 bottom face_up True (정답 True) O 5.57s
+green    k15 left   face_up True (정답 True) O 5.19s
+yellow   k25 right  face_up True (정답 True) O 3.95s
+green    k26 left   face_up True (정답 True) O 4.97s
+green    k16 bottom face_up True (정답 True) O 4.98s
+green    k12 bottom face_up True (정답 True) O 6.47s
+yellow   k28 right  face_up True (정답 True) O 5.91s
+original k25 right  face_up True (정답 True) O 22.15s
+yellow   k26 left   face_up True (정답 True) O 5.14s
+yellow   k15 left   face_up True (정답 True) O 8.26s
+blue     k26 left   face_up True (정답 True) O 15.67s
+orange   k28 right  face_up True (정답 True) O 3.67s
+yellow   k12 bottom face_up True (정답 True) O 5.91s
+yellow   k16 bottom face_up True (정답 True) O 5.4s
+orange   k25 right  face_up True (정답 True) O 5.79s
+orange   k12 bottom face_up True (정답 True) O 4.18s
+orange   k26 left   face_up True (정답 True) O 5.15s
+black    k25 right  face_up True (정답 True) O 5.59s
+black    k28 right  face_up True (정답 True) O 5.4s
+black    k15 left   face_up True (정답 True) O 5.7s
+orange   k16 bottom face_up True (정답 True) O 6.16s
+black    k26 left   face_up True (정답 True) O 5.92s
+black    k16 bottom face_up True (정답 True) O 3.85s
+orange   k15 left   face_up True (정답 True) O 11.16s
+black    k12 bottom face_up True (정답 True) O 39.64s
+== original 전체 6/6  화료자 앞면 맞음 6/6  다른 자리 뒷면 맞음 0/0  오류 0  화료자 손패 정답 6/6
+== blue     전체 6/6  화료자 앞면 맞음 6/6  다른 자리 뒷면 맞음 0/0  오류 0  화료자 손패 정답 6/6
+== green    전체 6/6  화료자 앞면 맞음 6/6  다른 자리 뒷면 맞음 0/0  오류 0  화료자 손패 정답 6/6
+== yellow   전체 6/6  화료자 앞면 맞음 6/6  다른 자리 뒷면 맞음 0/0  오류 0  화료자 손패 정답 6/6
+== orange   전체 6/6  화료자 앞면 맞음 6/6  다른 자리 뒷면 맞음 0/0  오류 0  화료자 손패 정답 6/6
+== black    전체 6/6  화료자 앞면 맞음 6/6  다른 자리 뒷면 맞음 0/0  오류 0  화료자 손패 정답 5/6

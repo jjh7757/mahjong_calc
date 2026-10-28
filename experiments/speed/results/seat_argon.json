@@ -1,0 +1,272 @@
+[
+ {
+  "scene": "A",
+  "photo": "k20_1",
+  "s": 0.54,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "A",
+  "photo": "k24_1",
+  "s": 0.52,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "B",
+  "photo": "k25_1",
+  "s": 0.43,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "B",
+  "photo": "k28_1",
+  "s": 0.32,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "C",
+  "photo": "k15_1",
+  "s": 0.48,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "C",
+  "photo": "k26_1",
+  "s": 0.76,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "D",
+  "photo": "k12_1",
+  "s": 0.37,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "D",
+  "photo": "k16_1",
+  "s": 0.42,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "E",
+  "photo": "k00_1",
+  "s": 0.99,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "E",
+  "photo": "k04_1",
+  "s": 0.67,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "A",
+  "photo": "k20_1",
+  "s": 0.32,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "A",
+  "photo": "k24_1",
+  "s": 0.35,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "B",
+  "photo": "k25_1",
+  "s": 0.36,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "B",
+  "photo": "k28_1",
+  "s": 0.36,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "C",
+  "photo": "k15_1",
+  "s": 0.61,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "C",
+  "photo": "k26_1",
+  "s": 0.34,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "D",
+  "photo": "k12_1",
+  "s": 0.33,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "D",
+  "photo": "k16_1",
+  "s": 0.69,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "E",
+  "photo": "k00_1",
+  "s": 0.34,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "E",
+  "photo": "k04_1",
+  "s": 0.35,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "A",
+  "photo": "k20_1",
+  "s": 0.54,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "A",
+  "photo": "k24_1",
+  "s": 0.36,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "B",
+  "photo": "k25_1",
+  "s": 0.9,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "B",
+  "photo": "k28_1",
+  "s": 0.36,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "C",
+  "photo": "k15_1",
+  "s": 0.44,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "C",
+  "photo": "k26_1",
+  "s": 0.73,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "D",
+  "photo": "k12_1",
+  "s": 0.75,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "D",
+  "photo": "k16_1",
+  "s": 0.34,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "E",
+  "photo": "k00_1",
+  "s": 0.94,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ },
+ {
+  "scene": "E",
+  "photo": "k04_1",
+  "s": 0.36,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status': 'PERMISSION_DENIED'}}"
+ }
+]

@@ -1,0 +1,89 @@
+{
+ "dora_indicators": [
+  {
+   "tile": "5s",
+   "conf": 0.95
+  }
+ ],
+ "ura_dora_indicators": [
+  {
+   "tile": "9s",
+   "conf": 0.95
+  }
+ ],
+ "riichi": {
+  "bottom": false,
+  "right": true,
+  "top": false,
+  "left": false
+ },
+ "riichi_conf": {
+  "bottom": 0.95,
+  "right": 0.99,
+  "top": 0.95,
+  "left": 0.95
+ },
+ "last_discards": {
+  "bottom": "2z",
+  "right": "4s",
+  "top": "3m",
+  "left": "2m"
+ },
+ "last_discards_conf": {
+  "bottom": 0.95,
+  "right": 0.95,
+  "top": 0.95,
+  "left": 0.95
+ },
+ "rivers": {
+  "bottom": [
+   "2z",
+   "1z",
+   "6s",
+   "6s",
+   "8p",
+   "4z",
+   "1p",
+   "2p",
+   "2z"
+  ],
+  "right": [
+   "5p",
+   "8p",
+   "9p",
+   "4s",
+   "9p",
+   "1z",
+   "6s",
+   "4s"
+  ],
+  "top": [
+   "1s",
+   "6s",
+   "8m",
+   "4z",
+   "3z",
+   "4z",
+   "3m",
+   "1m",
+   "3m"
+  ],
+  "left": [
+   "1z",
+   "1m",
+   "9m",
+   "4z",
+   "1p",
+   "1p",
+   "8p",
+   "2m"
+  ]
+ },
+ "notes": "우측 플레이어의 리치봉(파란색)이 홈에 올려져 있어 riichi: true 판정됨.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 6487,
+ "usage": {
+  "input_tokens": 2073,
+  "output_tokens": 587
+ }
+}

@@ -1,0 +1,103 @@
+{
+ "hands": [
+  {
+   "side": "bottom",
+   "box": [
+    725,
+    178,
+    930,
+    458
+   ],
+   "face_up": false,
+   "conf": 0.98
+  },
+  {
+   "side": "right",
+   "box": [
+    389,
+    725,
+    781,
+    846
+   ],
+   "face_up": false,
+   "conf": 0.97
+  },
+  {
+   "side": "top",
+   "box": [
+    73,
+    461,
+    156,
+    642
+   ],
+   "face_up": true,
+   "conf": 0.96
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    483,
+    351,
+    588,
+    501
+   ],
+   "conf": 0.98
+  },
+  {
+   "side": "right",
+   "box": [
+    384,
+    501,
+    569,
+    580
+   ],
+   "conf": 0.98
+  },
+  {
+   "side": "top",
+   "box": [
+    292,
+    442,
+    383,
+    577
+   ],
+   "conf": 0.98
+  },
+  {
+   "side": "left",
+   "box": [
+    342,
+    339,
+    509,
+    426
+   ],
+   "conf": 0.98
+  }
+ ],
+ "dead_wall": {
+  "box": [
+   90,
+   392,
+   137,
+   436
+  ],
+  "conf": 0.92
+ },
+ "center": {
+  "box": [
+   90,
+   337,
+   592,
+   583
+  ]
+ },
+ "notes": "왼쪽 자리는 손패가 없는 상태이거나 정리된 상태임. 윗쪽 자리는 패가 넘어져 공개(face_up=true)되어 있음. 11시 방향 산 끝에 도라 표시패(dead_wall)가 노출되어 있음.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 6127,
+ "usage": {
+  "input_tokens": 1521,
+  "output_tokens": 533
+ }
+}

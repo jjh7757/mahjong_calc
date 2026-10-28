@@ -1,0 +1,62 @@
+haselab    hand/kokushi.jpg       맞음 14/14 (적5 무시 14) 예측 17장       1.31초 | 1m 9m 1p 9p 1s 0m 9s 1z 4m 4m 2z 3z 4z 5z 6z 7z 7z 
+haselab    hand/chuuren.jpg       맞음 13/13 (적5 무시 13) 예측 13장 정답  0.74초 | 1m 1m 1m 2m 3m 4m 5m 6m 7m 8m 9m 9m 9m 
+haselab    hand/hand_bottom2.jpg  맞음  2/13 (적5 무시  2) 예측  2장       0.12초 | 7m 3m 
+haselab    seat/A/k20             맞음  1/14 (적5 무시  1) 예측  1장       0.10초 | 8s 
+haselab    seat/A/k24             맞음  0/14 (적5 무시  0) 예측  0장       0.07초 |  
+haselab    seat/B/k25             맞음  3/13 (적5 무시  3) 예측  3장       0.20초 | 1m 9s 9s 
+haselab    seat/B/k28             맞음  0/13 (적5 무시  0) 예측  2장       0.18초 | 5z 5z 
+haselab    seat/C/k15             맞음  1/13 (적5 무시  1) 예측  4장       0.43초 | 5z 5m 6s 5z 
+haselab    seat/C/k26             맞음  3/13 (적5 무시  3) 예측  8장       0.39초 | 5z 4m 7m 2z 5z 5z 5z 5z 
+haselab    seat/D/k12             맞음  7/13 (적5 무시  7) 예측  7장       0.26초 | 3m 4m 0m 6m 7m 8m 9m 
+haselab    seat/D/k16             맞음 11/13 (적5 무시 11) 예측 16장       0.53초 | 5z 5z 1m 2m 3m 4m 0m 6m 7m 8m 9m 2z 5z 7m 5z 5z 
+haselab    seat/E/k00             맞음  2/13 (적5 무시  2) 예측  6장       0.35초 | 5z 7m 9m 5z 5z 5z 
+haselab    seat/E/k04             맞음  2/13 (적5 무시  2) 예측  8장       0.33초 | 5z 7m 8s 5z 5z 5z 5z 5z 
+haselab    table/A/k20            맞음 12/14 (적5 무시 12) 예측 12장       0.52초 | 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s 4s 4s meld_0:0.66 self_hand:0.52
+haselab    table/A/k24            맞음 12/14 (적5 무시 12) 예측 16장       0.71초 | 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s 7m 1z 4s 5z 4s 5z self_hand:0.84 meld_0:0.48 meld_0:0.35
+haselab    table/B/k25            맞음 13/13 (적5 무시 13) 예측 19장       0.71초 | 7z 7z 1m 1m 1m 1m 1m 9s 9s 9s 9s 9s 9p 9p 9p 6z 6z 5z 6z self_hand:0.91 meld_0:0.85
+haselab    table/B/k28            맞음 11/13 (적5 무시 11) 예측 13장       0.55초 | 7z 1m 1m 1m 1m 9s 9s 9s 9s 9p 9p 9p 6z self_hand:0.92 meld_0:0.32
+haselab    table/C/k15            맞음  8/13 (적5 무시  8) 예측 11장       0.48초 | 1z 1m 2m 3m 4m 5m 6m 8m 5z 5z 5z self_hand:0.97
+haselab    table/C/k26            맞음  9/13 (적5 무시  9) 예측  9장       0.40초 | 1z 1z 1m 2m 3m 4m 5m 6m 7m self_hand:0.96
+haselab    table/D/k12            맞음 12/13 (적5 무시 12) 예측 17장       0.74초 | 1m 2m 3m 4m 0m 6m 7m 8m 9m 2z 4p 4p 7m 6m 7m 5z 5z meld_0:0.89 meld_0:0.59 self_hand:0.50
+haselab    table/D/k16            맞음 13/13 (적5 무시 13) 예측 19장       0.75초 | 1m 2m 3m 4m 0m 6m 7m 8m 8m 9m 2z 4p 4p 7m 7m 6m 7m 1m 5z meld_0:0.87 meld_0:0.61 self_hand:0.28
+haselab    table/E/k00            맞음 13/13 (적5 무시 13) 예측 16장       0.65초 | 1z 1z 1z 7m 8m 9m 1s 2s 3s 7s 8s 7z 7z 4p 4p 7m self_hand:0.96 meld_0:0.71
+haselab    table/E/k04            맞음 13/13 (적5 무시 13) 예측 18장       0.67초 | 1z 1z 1z 7m 8m 9m 1s 2s 3s 7s 7s 8s 7z 7z 5z 4p 4p 7m self_hand:0.95 meld_0:0.72
+Loading C:\Users\jjh7757\dev\_downloads\nikmomo\mahjong-yolos-best.onnx for ONNX Runtime inference...
+Using ONNX Runtime 1.29.0 with CPUExecutionProvider
+nikmomo-s  hand/kokushi.jpg       맞음 14/14 (적5 무시 14) 예측 21장       0.37초 | 1m 9m 1p 9p 2p 6p 1s 2s 9s 6s 1z 1m 2z 6s 3z 2p 4z 5z 6z 7z 7z 
+nikmomo-s  hand/chuuren.jpg       맞음 12/13 (적5 무시 12) 예측 13장       0.29초 | 1m 1m 1m 2m 3m 4m 5m 6m 9m 8m 9m 9m 9m 
+nikmomo-s  hand/hand_bottom2.jpg  맞음  8/13 (적5 무시  9) 예측 13장       0.25초 | 2s 3s 4s 7s 5s 9s 4p 0s 9m 7m 0p 4m 2m 
+nikmomo-s  seat/A/k20             맞음 11/14 (적5 무시 11) 예측 12장       0.18초 | 3p 3p 5p 5p 4m 3m 6m 6s 7s 8s 4s 4s 
+nikmomo-s  seat/A/k24             맞음 10/14 (적5 무시 10) 예측 12장       0.22초 | 3p 3p 5p 5p 4m 3m 2m 6s 7s 8s 4s 4s 
+nikmomo-s  seat/B/k25             맞음 12/13 (적5 무시 12) 예측 13장       0.23초 | 7z 1m 1m 1m 9s 9s 9p 9p 9p 9p 6z 6z 6z 
+nikmomo-s  seat/B/k28             맞음 13/13 (적5 무시 13) 예측 13장 정답  0.20초 | 7z 1m 1m 1m 9s 9s 9s 9p 9p 9p 6z 6z 6z 
+nikmomo-s  seat/C/k15             맞음 12/13 (적5 무시 12) 예측 15장       0.19초 | 1z 1z 1z 1m 2m 3m 4m 5m 3m 9m 8m 9m 2z 7m 6s 
+nikmomo-s  seat/C/k26             맞음 12/13 (적5 무시 12) 예측 20장       0.25초 | 1z 4z 1z 1z 1m 2m 3m 2m 3m 4m 5m 2m 7m 8m 8m 9m 6z 2z 7m 6s 
+nikmomo-s  seat/D/k12             맞음 11/13 (적5 무시 11) 예측 12장       0.24초 | 1m 2m 3m 4m 0p 6m 7m 8m 9m 2z 6m 7m 
+nikmomo-s  seat/D/k16             맞음 12/13 (적5 무시 12) 예측 13장       0.29초 | 1m 2m 3m 4m 0p 6m 7m 8m 9m 2z 6m 7m 8m 
+nikmomo-s  seat/E/k00             맞음 13/13 (적5 무시 13) 예측 17장       0.20초 | 1z 1z 1z 1z 8m 9m 1s 2s 3s 7s 8s 7z 7z 2p 2p 2p 7m 
+nikmomo-s  seat/E/k04             맞음 12/13 (적5 무시 12) 예측 18장       0.24초 | 1z 1z 1z 9m 8m 9m 7p 2s 3s 7s 8s 7z 7z 2p 2p 2p 4p 7m 
+Loading C:\Users\jjh7757\dev\_downloads\nikmomo\mahjong-yolom-best.onnx for ONNX Runtime inference...
+Using ONNX Runtime 1.29.0 with CPUExecutionProvider
+nikmomo-m  hand/kokushi.jpg       맞음 14/14 (적5 무시 14) 예측 20장       0.32초 | 1m 9m 1p 9p 2p 6p 1s 2s 9s 9s 1z 2z 6s 3z 2p 4z 5z 6z 7z 7z 
+nikmomo-m  hand/chuuren.jpg       맞음 13/13 (적5 무시 13) 예측 13장 정답  0.29초 | 1m 1m 1m 2m 3m 4m 5m 6m 7m 8m 9m 9m 9m 
+nikmomo-m  hand/hand_bottom2.jpg  맞음 10/13 (적5 무시 10) 예측 13장       0.35초 | 2s 3s 4s 7s 5s 9s 4p 5p 9m 7m 0p 4m 3m 
+nikmomo-m  seat/A/k20             맞음 11/14 (적5 무시 11) 예측 12장       0.27초 | 3p 3p 5p 5p 4m 6m 9m 6s 7s 8s 4s 4s 
+nikmomo-m  seat/A/k24             맞음  9/14 (적5 무시  9) 예측 12장       0.25초 | 3p 3p 5p 5p 4m 4m 3m 6s 7s 7s 4s 4s 
+nikmomo-m  seat/B/k25             맞음 12/13 (적5 무시 12) 예측 12장       0.23초 | 7z 1m 1m 1m 9s 9s 9s 9p 9p 9p 6z 6z 
+nikmomo-m  seat/B/k28             맞음  9/13 (적5 무시  9) 예측  9장       0.27초 | 1m 1m 1m 9s 9s 9s 9p 9p 9p 
+nikmomo-m  seat/C/k15             맞음 10/13 (적5 무시 10) 예측 12장       0.21초 | 1z 1z 1z 1m 3m 3m 4m 6m 8m 9m 2z 6s 
+nikmomo-m  seat/C/k26             맞음 11/13 (적5 무시 11) 예측 12장       0.26초 | 1z 1z 1z 1m 2m 3m 4m 4m 6m 8m 9m 2z 
+nikmomo-m  seat/D/k12             맞음 12/13 (적5 무시 12) 예측 13장       0.40초 | 1m 2m 3m 4m 0p 6m 7m 8m 9m 2z 6m 7m 8m 
+nikmomo-m  seat/D/k16             맞음 12/13 (적5 무시 12) 예측 13장       0.24초 | 1m 2m 3m 4m 0p 6m 7m 8m 9m 2z 6m 7m 8m 
+nikmomo-m  seat/E/k00             맞음 11/13 (적5 무시 11) 예측 13장       0.26초 | 1z 1z 1z 8m 9m 1s 2s 3s 7s 7z 0m 4p 7m 
+nikmomo-m  seat/E/k04             맞음 13/13 (적5 무시 13) 예측 15장       0.27초 | 1z 1z 1z 8m 9m 1s 2s 3s 7s 8s 7z 7z 4p 4p 7m 
+
+요약
+  haselab    hand  패 29/40 (72%)  틀리거나 남는 패 3/32  적5 무시 29/40  손패 전체 정답 1/3  중앙 0.74초
+  haselab    seat  패 30/132 (23%)  틀리거나 남는 패 25/55  적5 무시 30/132  손패 전체 정답 0/10  중앙 0.33초
+  haselab    table 패 116/132 (88%)  틀리거나 남는 패 34/150  적5 무시 116/132  손패 전체 정답 0/10  중앙 0.67초
+  nikmomo-s  hand  패 34/40 (85%)  틀리거나 남는 패 13/47  적5 무시 35/40  손패 전체 정답 0/3  중앙 0.29초
+  nikmomo-s  seat  패 118/132 (89%)  틀리거나 남는 패 27/145  적5 무시 118/132  손패 전체 정답 1/10  중앙 0.23초
+  nikmomo-m  hand  패 37/40 (92%)  틀리거나 남는 패 9/46  적5 무시 37/40  손패 전체 정답 1/3  중앙 0.32초
+  nikmomo-m  seat  패 110/132 (83%)  틀리거나 남는 패 13/123  적5 무시 110/132  손패 전체 정답 0/10  중앙 0.26초

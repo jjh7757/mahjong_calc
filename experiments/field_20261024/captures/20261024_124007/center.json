@@ -1,0 +1,89 @@
+{
+ "dora_indicators": [
+  {
+   "tile": "9s",
+   "conf": 0.95
+  }
+ ],
+ "ura_dora_indicators": [
+  {
+   "tile": "5s",
+   "conf": 0.9
+  }
+ ],
+ "riichi": {
+  "bottom": false,
+  "right": true,
+  "top": false,
+  "left": true
+ },
+ "riichi_conf": {
+  "bottom": 0.95,
+  "right": 0.99,
+  "top": 0.95,
+  "left": 0.99
+ },
+ "last_discards": {
+  "bottom": "2s",
+  "right": "8s",
+  "top": "3m",
+  "left": "2m"
+ },
+ "last_discards_conf": {
+  "bottom": 0.95,
+  "right": 0.95,
+  "top": 0.95,
+  "left": 0.95
+ },
+ "rivers": {
+  "bottom": [
+   "2z",
+   "1z",
+   "2s",
+   "6s",
+   "9p",
+   "4z",
+   "1p",
+   "2p",
+   "2z"
+  ],
+  "right": [
+   "1p",
+   "5p",
+   "9p",
+   "6s",
+   "7p",
+   "1z",
+   "8s",
+   "2s"
+  ],
+  "top": [
+   "4s",
+   "6s",
+   "1s",
+   "4z",
+   "3m",
+   "1m",
+   "3m"
+  ],
+  "left": [
+   "1z",
+   "1m",
+   "6z",
+   "9m",
+   "1p",
+   "4z",
+   "2s",
+   "1p",
+   "8p",
+   "2m"
+  ]
+ },
+ "notes": "Right side has placed a riichi stick in the tray; Left side has a rotated tile (2s) indicating riichi. Top-left shows 2 dora indicators (both 8s).",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 6223,
+ "usage": {
+  "input_tokens": 2047,
+  "output_tokens": 709
+ }
+}

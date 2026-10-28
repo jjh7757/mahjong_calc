@@ -1,0 +1,227 @@
+// 기기(에뮬레이터·폰) 위에서 거치 화면의 판독 흐름을 그대로 돌려 단계별 시간을 잰다.
+// 사진 줄이기·앞면 판정·자르기는 앱처럼 isolate(compute)에서, 서버 호출(/v2/*)은 실제로, 병합·점수는 기기에서.
+// 사진은 PC 에서 HTTP 로 받는다(측정 전에 받아 두므로 시간에 들어가지 않는다).
+//
+// PC: python -m http.server 8040 --bind 127.0.0.1 -d experiments/field_20261024/kakao_photos
+//     (인식 서버는 127.0.0.1:8030)
+// flutter drive --profile -d emulator-5554 --driver=test_driver/integration_test.dart \
+//   --target=integration_test/read_grid_timing_test.dart \
+//   --dart-define=PHOTO_URL=http://10.0.2.2:8040 --dart-define=RECOGNIZER_URL=http://10.0.2.2:8030 [--dart-define=REPEAT=2]
+// 결과는 TIMING {...} 줄(JSON)로 찍힌다. 대국 정보·격자는 read_grid_test.dart 와 같다.
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart' show compute;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:integration_test/integration_test.dart';
+import 'package:mahjong_calc/engine/calculator.dart' as engine;
+import 'package:mahjong_calc/game/game.dart';
+import 'package:mahjong_calc/services/capture_log.dart';
+import 'package:mahjong_calc/services/recognizer_client.dart';
+import 'package:mahjong_calc/table/auto_record.dart';
+import 'package:mahjong_calc/table/cropper.dart';
+import 'package:mahjong_calc/table/fixed_layout.dart';
+import 'package:mahjong_calc/table/grid_zones.dart';
+import 'package:mahjong_calc/table/merge.dart';
+import 'package:mahjong_calc/table/seat_map.dart';
+import 'package:mahjong_calc/table/shot_image.dart';
+import 'package:mahjong_calc/table/rectify.dart';
+import 'package:mahjong_calc/table/table_reader.dart';
+import 'package:image/image.dart' as img;
+
+const _photoUrl = String.fromEnvironment('PHOTO_URL', defaultValue: 'http://10.0.2.2:8040');
+const _repeat = int.fromEnvironment('REPEAT', defaultValue: 2);
+
+// 운영 서버는 분당 요청 제한이 있어 장면 사이에 쉰다(쉬는 시간은 재는 시간에 안 들어간다).
+const _sleepS = int.fromEnvironment('SLEEP_S', defaultValue: 0);
+
+// 화료패가 사진에 있는 장면 B·C·D(A·E 는 평가에서 뺀다). 격자는 5구역 측정과 같다.
+const _bcd = {
+  'B': (['k25', 'k28'], {'x1': 272, 'x2': 735, 'y1': 137, 'y2': 727}),
+  'C': (['k15', 'k26'], {'x1': 320, 'x2': 760, 'y1': 142, 'y2': 717}),
+  'D': (['k12', 'k16'], {'x1': 280, 'x2': 745, 'y1': 173, 'y2': 713}),
+};
+
+// SET=field: [참고·평가 밖] 10/24 매장 카메라 헤드 사진(captures/20261024_<시각>/original.jpg, PHOTO_URL 은 captures 폴더).
+// 화료가 사진에 다 있는 장면만. 정답은 NOTES "촬영별".
+// 13:18(131823)은 폰 EXIF 회전값이 바뀐 사진이라 뺌(앱은 헤드 사진 EXIF 를 무시하지만 여기선 원본 그대로 디코딩).
+// 격자: 기본값(GridZones.initial = 손으로 찍은 갤러리 사진 D 에 그은 선)은 삼각대 사진(탁자가 약 25° 기움)에 안 맞아
+// 화료자 손패가 가운데 칸에 들어갔다(첫 실행 손패 0/15). 앱에서 카메라를 놓고 격자를 한 번 맞추듯 삼각대 위치별로 맞춤
+// (`FIELD_GRID=initial` 이면 기본값으로).
+const _initialGrid = {'x1': 280, 'x2': 745, 'y1': 173, 'y2': 713};
+const _useInitial = String.fromEnvironment('FIELD_GRID') == 'initial';
+const _gridA = _useInitial ? _initialGrid : {'x1': 300, 'x2': 690, 'y1': 150, 'y2': 830}; // 12:29~13:51
+const _gridA2 = _useInitial ? _initialGrid : {'x1': 300, 'x2': 720, 'y1': 150, 'y2': 830}; // 12:40(조금 움직임)
+const _gridB1 = _useInitial ? _initialGrid : {'x1': 315, 'x2': 760, 'y1': 200, 'y2': 740}; // 13:59~14:09
+const _gridB2 = _useInitial ? _initialGrid : {'x1': 355, 'x2': 760, 'y1': 200, 'y2': 740}; // 14:34
+// FIELD_GRIDS="사진=x1,x2,y1,y2;…" 면 사진마다 그 격자(YOLO 자동 격자 비교용, experiments/yolo/auto_grid.py --set field).
+const _fieldGrids = String.fromEnvironment('FIELD_GRIDS');
+Map<String, int>? _gridOverride(String photo) {
+  for (final e in _fieldGrids.split(';')) {
+    final [p, v] = e.split('=').length == 2 ? e.split('=') : ['', ''];
+    if (p != photo) continue;
+    final n = [for (final x in v.split(',')) int.parse(x)];
+    return {'x1': n[0], 'x2': n[1], 'y1': n[2], 'y2': n[3]};
+  }
+  return null;
+}
+
+const _field = {
+  'F1229': (['122922'], _gridA),
+  'F1240': (['124007'], _gridA2),
+  'F대삼원': (['125053', '130533', '131210', '132647', '133011', '133620', '134323', '135148'], _gridA),
+  'F1400': (['135912', '140302', '140750', '140918'], _gridB1),
+  'F1434': (['143443'], _gridB2),
+};
+// 매장 장면의 대국 상황(촬영 기록 meta.json): 친 자리·본장.
+const _fieldGame = {'F1229': (1, 0), 'F1240': (1, 1), 'F대삼원': (2, 0), 'F1400': (2, 0), 'F1434': (2, 0)};
+
+// SET=bcdtilt: 개발용 합성 기울기(experiments/rectify/make_tilted.py, kakao_photos/tilted/<사진>_<a|b|c>.jpg).
+const _bcdTilt = {
+  'B': (['tilted/k25_a', 'tilted/k25_b', 'tilted/k25_c', 'tilted/k28_a', 'tilted/k28_b', 'tilted/k28_c'], _initialGrid),
+  'C': (['tilted/k15_a', 'tilted/k15_b', 'tilted/k15_c', 'tilted/k26_a', 'tilted/k26_b', 'tilted/k26_c'], _initialGrid),
+  'D': (['tilted/k12_a', 'tilted/k12_b', 'tilted/k12_c', 'tilted/k16_a', 'tilted/k16_b', 'tilted/k16_c'], _initialGrid),
+};
+
+const _set = String.fromEnvironment('SET', defaultValue: 'bcd');
+const _scenes = _set == 'field' ? _field : (_set == 'bcdtilt' ? _bcdTilt : _bcd);
+String _photoPath(String p) => _set == 'field' ? '20261024_$p/original.jpg' : '$p.jpg';
+
+// DUMP_DIR: 판독에 보낸 화료자 자리 크롭(seat.jpg)·리치봉 크롭(sticks.jpg)을 <DUMP_DIR>/<사진>/ 에 저장(추가 판독 실험용).
+const _dumpDir = String.fromEnvironment('DUMP_DIR');
+
+// RECTIFY=true: 펠트 네 모서리로 사진을 펴고(lib/table/rectify.dart) 표준 격자로 읽는다. 펠트를 못 찾으면 원래 격자.
+const _rectifyOn = bool.fromEnvironment('RECTIFY');
+
+/// 펴기(isolate): 원본 → (편 JPEG, 모서리) 또는 펠트를 못 찾으면 (null, null).
+(Uint8List?, Map<String, Object>?) _rectifyJob(Uint8List original) {
+  final im = img.decodeJpg(original)!;
+  final q = findFeltQuad(img.copyResize(im, width: 1000));
+  if (q == null) return (null, null);
+  return (img.encodeJpg(rectify(im, q, size: 3200), quality: 92), q.toJson());
+}
+
+// ONE_DECODE=false 면 예전처럼 축소본·크롭을 각각 compute 로(원본 두 번 디코딩) — 같은 시간대에 나란히 비교용(2026-10-26).
+const _oneDecode = bool.fromEnvironment('ONE_DECODE', defaultValue: true);
+
+// 거치 화면(mount_screen.dart)과 같은 isolate 이미지 처리.
+const _isolateOps = ImageOps(
+  shrink: _shrink,
+  cropMany: _crop,
+  analyze: _analyze,
+  analyzeGrid: _analyzeGrid,
+  openShot: _openShot,
+);
+Future<Uint8List> _shrink(Uint8List o) => compute(shrinkForLocate, o);
+Future<List<Uint8List>> _crop(Uint8List o, List<CropSpec> s) => compute(cropMany, (o, s));
+Future<ShotImage> _openShot(Uint8List o) async => _oneDecode ? await IsolateShotImage.open(o) : _TwoDecodeShot(o);
+
+/// 예전 방식: 부를 때마다 compute 로 원본을 새로 디코딩.
+class _TwoDecodeShot implements ShotImage {
+  final Uint8List original;
+  _TwoDecodeShot(this.original);
+  @override
+  Future<Uint8List> shrink() => _shrink(original);
+  @override
+  Future<List<Uint8List>> crop(List<CropSpec> specs) => _crop(original, specs);
+  @override
+  Future<void> close() async {}
+}
+Future<ShotAnalysis> _analyze(Uint8List small, FixedTable f) => compute(analyzeShot, (small, f));
+Future<ShotAnalysis> _analyzeGrid(Uint8List small, GridZones g) => compute(analyzeGridShot, (small, g));
+
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  for (final MapEntry(key: scene, value: (photos, gridJ)) in _scenes.entries) {
+    final sceneGrid = GridZones.fromJson(gridJ)!;
+    for (final photo in photos) {
+      final override = _gridOverride(photo);
+      final grid = override == null ? sceneGrid : GridZones.fromJson(override)!;
+      // FIELD_GRIDS 를 줬는데 그 사진 격자가 없으면(자동 격자 실패) 재지 않는다.
+      final skip = _fieldGrids.isNotEmpty && override == null;
+      for (var run = 1; run <= _repeat; run++) {
+        testWidgets(skip: skip, '$scene $photo #$run', (tester) async {
+          await tester.runAsync(() async {
+            if (_sleepS > 0) await Future<void>.delayed(const Duration(seconds: _sleepS));
+            final bytes = (await http.get(Uri.parse('$_photoUrl/${_photoPath(photo)}'))).bodyBytes;
+            final client = RecognizerClient();
+            final trace = TableReadTrace();
+            final (dealer, honba) = _fieldGame[scene] ?? (0, 0);
+            final game = Game(
+              id: 'photo',
+              startedAt: DateTime(2026, 10, 24),
+              settings: const GameSettings(),
+              names: const ['플레이어 1', '플레이어 2', '플레이어 3', '플레이어 4'],
+              dealer: dealer,
+              roundNumber: dealer + 1,
+              honba: honba,
+            );
+            final out = <String, Object?>{'scene': scene, 'photo': photo, 'run': run, 'bytes': bytes.length};
+            final sw = Stopwatch()..start();
+            try {
+              var shot = bytes;
+              var useGrid = grid;
+              if (_rectifyOn) {
+                final (rect, quad) = await compute(_rectifyJob, bytes);
+                out['rectify_ms'] = sw.elapsedMilliseconds;
+                out['quad'] = quad;
+                if (rect != null) {
+                  shot = rect;
+                  useGrid = standardGrid;
+                }
+              }
+              final reading = await TableReader(client, ops: _isolateOps).readGrid(shot, useGrid, trace: trace);
+              if (_dumpDir.isNotEmpty) {
+                final d = Directory('$_dumpDir/${photo.replaceAll('/', '_')}')..createSync(recursive: true);
+                if (trace.handCrop case final c?) File('${d.path}/seat.jpg').writeAsBytesSync(c);
+                if (trace.centerCrop case final c?) File('${d.path}/sticks.jpg').writeAsBytesSync(c);
+              }
+              final t0 = sw.elapsedMilliseconds;
+              final merge = mergeReading(
+                hand: reading.hand!,
+                center: reading.center,
+                winnerSide: reading.winnerSide!,
+                game: game,
+                seats: SeatMap(game.settings.bottomSeat),
+              );
+              final score = merge.hand == null ? null : engine.calculate(merge.hand!, merge.situation);
+              out['merge_score_ms'] = sw.elapsedMilliseconds - t0;
+              out['winner'] = reading.winnerSide!.name;
+              out['points'] = score == null ? null : RegExp(r' (\d{3,6}) \[').firstMatch('$score')?.group(1);
+              out['flags'] = [for (final f in merge.flags) f.issue.name];
+              out['warnings'] = reading.warnings;
+              out['merge'] = CaptureLog.mergeJson(merge);
+              // 확신도 분포를 보려고 판독 원본도(손패 패별 conf, 리치봉 자리별 conf, 도라 표시패 conf).
+              out['hand_read'] = reading.hand?.toJson();
+              out['center_read'] = reading.center?.toJson();
+              // 거치 화면과 같은 자동 반영 조건(null 이면 자동 반영).
+              out['auto_block'] = autoRecordBlocker(
+                warnings: reading.warnings,
+                issues: [for (final f in merge.flags) f.issue],
+                otherWinners: reading.others.length,
+                isTsumo: merge.isTsumo,
+                loser: merge.loser,
+                resultValid: score?.isValid ?? false,
+                paoBase: score != null && score.isValid ? engine.paoBasePoints(score) : 0,
+                gameOver: false,
+                doraIndicators: merge.situation.doraIndicators.length,
+                riichi: merge.situation.riichi,
+              );
+            } catch (e) {
+              out['error'] = '$e';
+            } finally {
+              client.close();
+            }
+            out['total_ms'] = sw.elapsedMilliseconds;
+            out['stages_ms'] = trace.timingsMs;
+            // ignore: avoid_print
+            print('TIMING ${jsonEncode(out)}');
+          });
+        }, timeout: const Timeout(Duration(minutes: 3)));
+      }
+    }
+  }
+}

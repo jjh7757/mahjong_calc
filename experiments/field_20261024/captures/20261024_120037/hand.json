@@ -1,0 +1,61 @@
+{
+ "tiles": [
+  {
+   "tile": "4m",
+   "conf": 0.99
+  },
+  {
+   "tile": "0m",
+   "conf": 0.99
+  },
+  {
+   "tile": "7m",
+   "conf": 0.99
+  },
+  {
+   "tile": "8m",
+   "conf": 0.99
+  },
+  {
+   "tile": "9m",
+   "conf": 0.99
+  },
+  {
+   "tile": "1s",
+   "conf": 0.99
+  },
+  {
+   "tile": "2s",
+   "conf": 0.99
+  },
+  {
+   "tile": "3s",
+   "conf": 0.99
+  },
+  {
+   "tile": "4p",
+   "conf": 0.99
+  },
+  {
+   "tile": "4p",
+   "conf": 0.99
+  },
+  {
+   "tile": "5z",
+   "conf": 0.98
+  },
+  {
+   "tile": "5z",
+   "conf": 0.98
+  }
+ ],
+ "count": 12,
+ "melds": [],
+ "win_tile": {
+  "tile": "5z",
+  "conf": 0.98
+ },
+ "notes": "5m은 전체가 붉은 색인 적도라(0m)이며, 맨 오른쪽 백(5z) 1장은 화료패로 약간 떨어져 있음.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 4189
+}

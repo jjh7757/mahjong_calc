@@ -1,0 +1,49 @@
+B k25_1 틀 [whole] 0.37s
+B k28_1 틀 [whole] 0.34s
+C k15_1 틀 [s] 0.39s
+C k26_1 틀 [s] 0.36s
+D k12_1 틀 [s] 0.35s
+D k16_1 틀 [s] 0.33s
+Direct use of automatic function calling (AFC) in Models.generate_content is not recommended. Instead, we recommend to use AFC in Chat.send_message. Similarly, direct use of AFC in Models.generate_content_stream is not recommended. Instead, we recommend to use AFC in Chat.send_message_stream.
+D k12_1 #0   9.1s think 0  OK
+C k26_1 #0  10.1s think 0  OK
+C k15_1 #0  12.3s think 0  OK
+C k15_1 #1   4.5s think 0  OK
+C k26_1 #1   6.0s think 0  OK
+D k16_1 #0  11.2s think 624  OK
+D k12_1 #1   9.1s think 0  OK
+C k15_1 #2   5.3s think 0  OK
+D k16_1 #1   8.9s think 446  OK
+D k12_1 #2   6.6s think 0  OK
+D k16_1 #2  10.0s think 0  OK
+C k15_1 #3   5.3s think 0  OK
+C k26_1 #2  14.4s think 0  OK
+C k26_1 #3   6.6s think 0  OK
+D k12_1 #3   6.4s think 0  OK
+D k16_1 #3   6.3s think 0  OK
+C k15_1 #4   4.3s think 0  OK
+D k12_1 #4   5.8s think 0  OK
+C k26_1 #4   7.7s think 0  OK
+C k15_1 #5   5.0s think 0  OK
+D k16_1 #4   9.2s think 400  OK
+C k26_1 #5   6.1s think 0  OK
+D k12_1 #5   5.7s think 0  OK
+C k15_1 #6   5.5s think 0  OK
+D k16_1 #5   6.2s think 0  OK
+C k26_1 #6   6.1s think 0  OK
+D k12_1 #6   6.3s think 0  OK
+D k16_1 #6   7.3s think 0  OK
+C k15_1 #7   4.8s think 0  OK
+C k26_1 #7   6.7s think 0  OK
+D k12_1 #7   6.3s think 0  OK
+C k15_1 #8   4.5s think 0  OK
+D k16_1 #7   9.6s think 538  OK
+C k26_1 #8   9.9s think 0  OK
+D k16_1 #8   6.7s think 0  OK
+D k12_1 #8   7.5s think 0  OK
+C k15_1 #9   4.7s think 0  OK
+D k12_1 #9   6.1s think 0  OK
+C k26_1 #9   6.5s think 0  OK
+D k16_1 #9   6.5s think 0  OK
+mos_pieces 정답 40/40  {'C': '20/20', 'D': '20/20'}  시간 중앙 6.4s 최대 14.4s  입력 17856 출력 293 생각 50
+  시간 중앙 6.4 / p90 10.1 / 최대 14.4초  생각한 호출 4/40  생각 최대 624

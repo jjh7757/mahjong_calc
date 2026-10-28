@@ -1,0 +1,103 @@
+{
+ "hands": [
+  {
+   "side": "bottom",
+   "box": [
+    725,
+    175,
+    928,
+    456
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    386,
+    722,
+    781,
+    848
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    69,
+    462,
+    169,
+    699
+   ],
+   "face_up": true,
+   "conf": 0.98
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    483,
+    351,
+    588,
+    501
+   ],
+   "conf": 0.98
+  },
+  {
+   "side": "right",
+   "box": [
+    384,
+    502,
+    570,
+    581
+   ],
+   "conf": 0.98
+  },
+  {
+   "side": "top",
+   "box": [
+    292,
+    444,
+    381,
+    576
+   ],
+   "conf": 0.98
+  },
+  {
+   "side": "left",
+   "box": [
+    342,
+    339,
+    513,
+    426
+   ],
+   "conf": 0.98
+  }
+ ],
+ "dead_wall": {
+  "box": [
+   90,
+   392,
+   137,
+   436
+  ],
+  "conf": 0.9
+ },
+ "center": {
+  "box": [
+   88,
+   336,
+   595,
+   583
+  ]
+ },
+ "notes": "top 플레이어의 손패는 앞면으로 오픈되어 있음. dead_wall(도라 표시패 추정)이 top 좌측 앞에 놓여 있음.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 6079,
+ "usage": {
+  "input_tokens": 1521,
+  "output_tokens": 508
+ }
+}

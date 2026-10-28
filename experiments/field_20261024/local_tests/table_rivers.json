@@ -1,0 +1,88 @@
+# wall 46.5s
+{
+ "dora_indicators": [
+  {
+   "tile": "2s",
+   "conf": 0.95
+  }
+ ],
+ "ura_dora_indicators": [
+  {
+   "tile": "8s",
+   "conf": 0.95
+  }
+ ],
+ "riichi": {
+  "bottom": false,
+  "right": false,
+  "top": false,
+  "left": false
+ },
+ "riichi_conf": {
+  "bottom": 0.95,
+  "right": 0.95,
+  "top": 0.95,
+  "left": 0.95
+ },
+ "last_discards": {
+  "bottom": "2z",
+  "right": "6s",
+  "top": "3m",
+  "left": "2m"
+ },
+ "last_discards_conf": {
+  "bottom": 0.95,
+  "right": 0.9,
+  "top": 0.95,
+  "left": 0.95
+ },
+ "rivers": {
+  "bottom": [
+   "2z",
+   "1z",
+   "3s",
+   "3s",
+   "8p",
+   "4z",
+   "1p",
+   "2p",
+   "2z"
+  ],
+  "right": [
+   "1z",
+   "6p",
+   "6s",
+   "6p",
+   "4p",
+   "3p",
+   "2s",
+   "6s"
+  ],
+  "top": [
+   "1m",
+   "3m",
+   "4z",
+   "9m",
+   "8s",
+   "1s",
+   "4z",
+   "3z",
+   "3m"
+  ],
+  "left": [
+   "1z",
+   "1m",
+   "9m",
+   "4z",
+   "1p",
+   "8p",
+   "6z",
+   "1p",
+   "1p",
+   "2m"
+  ]
+ },
+ "notes": "우측 상단 왕패에 도라 표시패(2s)와 아랫단의 뒷도라 표시패(8s)가 모두 공개되어 있습니다.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 46314
+}

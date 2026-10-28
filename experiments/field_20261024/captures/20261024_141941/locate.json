@@ -1,0 +1,115 @@
+{
+ "hands": [
+  {
+   "side": "bottom",
+   "box": [
+    747,
+    104,
+    998,
+    405
+   ],
+   "face_up": false,
+   "conf": 0.98
+  },
+  {
+   "side": "right",
+   "box": [
+    471,
+    700,
+    863,
+    834
+   ],
+   "face_up": false,
+   "conf": 0.97
+  },
+  {
+   "side": "left",
+   "box": [
+    234,
+    149,
+    449,
+    290
+   ],
+   "face_up": true,
+   "conf": 0.96
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    507,
+    321,
+    621,
+    477
+   ],
+   "conf": 0.96
+  },
+  {
+   "side": "right",
+   "box": [
+    429,
+    475,
+    618,
+    567
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    334,
+    432,
+    429,
+    566
+   ],
+   "conf": 0.96
+  },
+  {
+   "side": "left",
+   "box": [
+    359,
+    310,
+    532,
+    407
+   ],
+   "conf": 0.96
+  }
+ ],
+ "melds": [
+  {
+   "side": "left",
+   "box": [
+    36,
+    317,
+    79,
+    380
+   ],
+   "conf": 0.91
+  }
+ ],
+ "dead_wall": {
+  "box": [
+   546,
+   148,
+   617,
+   205
+  ],
+  "conf": 0.92
+ },
+ "center": {
+  "box": [
+   332,
+   146,
+   625,
+   570
+  ]
+ },
+ "notes": "top 플레이어의 손패는 보이지 않음. left 플레이어의 울기가 모서리 상단에 놓여 있음.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 15949,
+ "usage": {
+  "input_tokens": 1638,
+  "output_tokens": 1803
+ }
+}

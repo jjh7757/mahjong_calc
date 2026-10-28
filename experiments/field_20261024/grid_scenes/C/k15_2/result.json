@@ -1,0 +1,171 @@
+{
+ "photo": "C:/Users/jjh7757/AppData/Local/Temp/claude/C--Users-jjh7757-dev-mahjong-calc/65eec9af-1e78-468b-a970-549fa299af1e/scratchpad/kakao/k15.jpg",
+ "grid": {
+  "x1": 320,
+  "x2": 760,
+  "y1": 142,
+  "y2": 717,
+  "panel": [
+   307,
+   465,
+   473,
+   610
+  ]
+ },
+ "face_up_candidates": [
+  "bottom",
+  "right",
+  "top",
+  "left"
+ ],
+ "winner_side": "bottom",
+ "warnings": [],
+ "merge": {
+  "winner": 0,
+  "is_tsumo": false,
+  "loser": null,
+  "closed": [],
+  "win_tile": null,
+  "melds": [],
+  "red_count": 0,
+  "hand_valid": false,
+  "uncertain": [],
+  "flags": [
+   "tileCountMismatch: 손패가 14장이어야 하는데 0장 읽혔습니다"
+  ],
+  "riichi": false,
+  "riichi_seats_photo": [
+   3
+  ],
+  "dora_indicators": [],
+  "ura_indicators": []
+ },
+ "flags": [
+  "손패가 14장이어야 하는데 0장 읽혔습니다"
+ ],
+ "total_ms": 11386,
+ "timings_ms": {
+  "shrink": 303,
+  "analyze": 26,
+  "pick": 0,
+  "crop": 492,
+  "read": 10562
+ },
+ "analysis": {
+  "felt_iou": 1.0,
+  "moved": false,
+  "face_up": [],
+  "dora_box": null,
+  "hand_colors": {
+   "bottom": {
+    "back": 0.023,
+    "white": 0.266
+   },
+   "right": {
+    "back": 0.016,
+    "white": 0.181
+   },
+   "top": {
+    "back": 0.055,
+    "white": 0.142
+   },
+   "left": {
+    "back": 0.038,
+    "white": 0.197
+   }
+  }
+ },
+ "observation": {
+  "players": {
+   "bottom": {
+    "hand": {
+     "face_up": true,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": null,
+    "riichi_stick": false
+   },
+   "right": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "6p",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": false
+   },
+   "top": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "3z",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": false
+   },
+   "left": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "7z",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": true
+   }
+  },
+  "dora_indicators": [],
+  "usage": {
+   "corner_bottom": {
+    "input_tokens": 1509,
+    "output_tokens": 12
+   },
+   "last_right": {
+    "input_tokens": 1544,
+    "output_tokens": 34
+   },
+   "last_top": {
+    "input_tokens": 1532,
+    "output_tokens": 50
+   },
+   "last_left": {
+    "input_tokens": 1547,
+    "output_tokens": 50
+   },
+   "sticks": {
+    "input_tokens": 1430,
+    "output_tokens": 358
+   },
+   "hand_bottom": {
+    "input_tokens": 1535,
+    "output_tokens": 628
+   },
+   "dora": {
+    "input_tokens": 1478,
+    "output_tokens": 573
+   }
+  }
+ }
+}

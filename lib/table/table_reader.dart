@@ -1,0 +1,683 @@
+/// 거치 촬영 한 장을 끝까지 읽는다: locate → 화료자 자리 결정 → 구역 크롭 → 손패·중앙 병렬 호출.
+/// 순수 Dart. 무거운 이미지 처리는 [ImageOps] 로 바꿔 끼워 isolate 에서 돌릴 수 있다.
+library;
+
+import 'dart:typed_data';
+
+import '../services/recognizer_client.dart';
+import 'cropper.dart' as cropper;
+import 'cropper.dart' show CropSpec;
+import 'fixed_layout.dart';
+import 'grid_zones.dart';
+import 'observation.dart';
+import 'shot_image.dart';
+import 'table_layout.dart';
+import 'table_reading.dart';
+
+typedef ShrinkFn = Future<Uint8List> Function(Uint8List original);
+typedef CropManyFn = Future<List<Uint8List>> Function(Uint8List original, List<CropSpec> specs);
+typedef AnalyzeFn = Future<ShotAnalysis> Function(Uint8List small, FixedTable fixed);
+typedef AnalyzeGridFn = Future<ShotAnalysis> Function(Uint8List small, GridZones grid);
+typedef OpenShotFn = Future<ShotImage> Function(Uint8List original);
+
+/// 이미지 처리 함수 묶음. 기본값은 같은 isolate 에서 바로 돌린다.
+/// [openShot] 은 격자 판독([TableReader.readGrid])이 원본을 한 번만 디코딩해 축소본·크롭을 만들 때 쓴다.
+class ImageOps {
+  final ShrinkFn shrink;
+  final CropManyFn cropMany;
+  final AnalyzeFn analyze;
+  final AnalyzeGridFn analyzeGrid;
+  final OpenShotFn openShot;
+  const ImageOps({
+    required this.shrink,
+    required this.cropMany,
+    this.analyze = _analyzeSync,
+    this.analyzeGrid = _analyzeGridSync,
+    this.openShot = _openDirect,
+  });
+
+  static Future<Uint8List> _shrinkSync(Uint8List o) async => cropper.shrinkForLocate(o);
+  static Future<List<Uint8List>> _cropSync(Uint8List o, List<CropSpec> s) async => cropper.cropMany((o, s));
+  static Future<ShotAnalysis> _analyzeSync(Uint8List small, FixedTable f) async => analyzeShot((small, f));
+  static Future<ShotAnalysis> _analyzeGridSync(Uint8List small, GridZones g) async => analyzeGridShot((small, g));
+  static Future<ShotImage> _openDirect(Uint8List o) async => DirectShotImage(o);
+  static const ImageOps direct = ImageOps(shrink: _shrinkSync, cropMany: _cropSync);
+}
+
+/// 읽기 단계. 진행 표시용.
+enum ReadStage { decoding, locating, cropping, reading }
+
+extension ReadStageX on ReadStage {
+  String get label => const ['사진 준비 중', '테이블 구역 찾는 중', '구역 자르는 중', '손패·중앙 읽는 중'][index];
+}
+
+/// 읽는 동안 생긴 중간 산출물. 촬영 기록 저장(데이터셋)과 디버깅용. 넘기면 채워진다.
+class TableReadTrace {
+  Uint8List? small;
+  Uint8List? handCrop;
+  Uint8List? centerCrop;
+
+  /// 왕패(도라 표시패) 구역만 잘라 낸 것. locate 가 dead_wall 을 찾았을 때만.
+  Uint8List? wallCrop;
+  TableLayout? layout;
+  Side? winnerSide;
+  HandReading? hand;
+  CenterReading? center;
+
+  /// [wallCrop] 을 따로 읽은 결과(도라·뒷도라만 쓴다).
+  CenterReading? wall;
+
+  /// 화료자 울기 묶음 크롭(locate 의 melds 상자).
+  List<Uint8List> meldCrops = const [];
+
+  /// 자리별 강 크롭(그 자리 사람 방향으로 세운 것).
+  Map<Side, Uint8List> riverCrops = const {};
+
+  /// 모델이 본 것을 모은 관찰 JSON. 판단 전 원본.
+  TableObservation? observation;
+
+  /// 단계별 걸린 시간(ms): shrink, analyze(고정 구역), locate, pick, crop, read.
+  final Map<String, int> timingsMs = {};
+
+  /// 구역을 어디서 얻었나: locate · fixed(고정 구역, locate 생략) · fixed→locate(고정 구역으로 읽었는데 장수가 안 맞아 다시)
+  /// · grid(미리 그은 격자, [TableReader.readGrid]).
+  String layoutMode = 'locate';
+
+  /// 고정 구역 픽셀 판정 결과.
+  ShotAnalysis? analysis;
+
+  /// 서버 호출별 걸린 시간(ms). 이름은 보낸 파일 이름(seat_bottom, handonly_bottom, last3 …).
+  final Map<String, int> callMs = {};
+
+  /// 그림자 모드로 두 방식을 같이 읽은 자리의 두 답(기록용).
+  final Map<Side, ShadowRead> shadow = {};
+
+  /// 추적 자리를 어떻게 읽었나: handonly(손패 칸만) · fallback_seat(장수가 안 맞아 자리 전체를 다시 읽음).
+  final Map<Side, String> trackedMode = {};
+}
+
+/// 그림자 모드: 같은 사진의 한 자리를 손패 전용(/v2/handonly)과 자리 전체(/v2/seat)로 동시에 읽은 두 답. 기록용(설계 7절).
+class ShadowRead {
+  final Map<String, dynamic> handonly;
+  final Map<String, dynamic> seat;
+  final int? handonlyMs;
+  final int? seatMs;
+  const ShadowRead({required this.handonly, required this.seat, this.handonlyMs, this.seatMs});
+
+  Map<String, dynamic> toJson() => {'handonly': handonly, 'seat': seat, 'handonly_ms': handonlyMs, 'seat_ms': seatMs};
+}
+
+/// 손패를 읽을 자리를 못 정했을 때. [layout] 은 그래도 돌려준다(화면에 상자를 그리기 위해).
+class TableReadException implements Exception {
+  final String message;
+  final TableLayout? layout;
+  const TableReadException(this.message, {this.layout});
+  @override
+  String toString() => message;
+}
+
+class TableReader {
+  final RecognizerClient client;
+  final ImageOps ops;
+  const TableReader(this.client, {this.ops = ImageOps.direct});
+
+  /// [winnerSide] 를 주면 그 자리를 읽고, 없으면 눕힌 자리가 하나일 때 자동, 둘 이상이면 [pickWinner] 로 묻는다.
+  /// 중앙 읽기가 실패해도 손패만으로 계속하고 [TableReading.warnings] 에 남긴다.
+  ///
+  /// [fixed] 를 주면 locate 대신 그 구역을 쓴다([FixedTable]). 카메라가 움직였거나 앞면 손패를 못 찾았으면 locate 하고,
+  /// 고정 구역으로 읽은 손패 장수가 안 맞으면 locate 로 한 번 더 읽는다.
+  Future<TableReading> read(
+    Uint8List original, {
+    Side? winnerSide,
+    Future<Side?> Function(List<Side> candidates)? pickWinner,
+    void Function(ReadStage stage)? onStage,
+    TableReadTrace? trace,
+    FixedTable? fixed,
+  }) async {
+    if (fixed != null) {
+      final r = await _read(original, winnerSide, pickWinner, onStage, trace, fixed);
+      if (r != null) return r;
+      trace?.layoutMode = 'fixed→locate';
+    }
+    return (await _read(original, winnerSide, pickWinner, onStage, trace, null))!;
+  }
+
+  /// 미리 그은 격자([GridZones]) 5구역으로 읽는다. locate 없이 구역마다 잘라 동시에 부른다.
+  /// - 화료자 자리(손패 + 오른쪽 모서리) → /v2/seat: 앞면 여부, 손패, 떨어진 한 장, 울기 전부, 따로 놓인 앞면 패.
+  ///   화료자는 자리 구역 픽셀(뒷면 연보라가 없는 자리)로 정하고, 못 정하면 네 자리를 모두 읽어 모델의 앞면 답으로 정한다.
+  ///   그래도 하나가 아니면 [pickWinners] 로 묻는다. 여럿을 고르면(동시 론) 첫 자리가 대표, 나머지는 [TableReading.others].
+  /// - 가운데: 다른 자리 쪽을 각각 그 사람 방향으로 세워 강의 **마지막 패 한 장만**, 여러 자리를 한 번에 /v2/last3(누가 쏘였나).
+  /// - 리치: 가운데 기기 둘레의 **리치봉만** /v2/sticks. 강의 가로 패는 보지 않는다.
+  /// - 도라: 가운데 칸 전체를 /v2/dora 로 읽은 것과 화료자 자리의 따로 놓인 앞면 패(없으면 울기 모양이 아닌 묶음)를
+  ///   둘 다 넘긴다. 리치 화료면 손패 옆, 아니면 가운데를 먼저 쓴다(merge, 매장 관행).
+  ///
+  /// [splitSeat] 이면 자리 구역을 손패 칸([GridZones.handCell], /v2/seat)과 오른쪽 모서리 칸([GridZones.cornerCell],
+  /// /v2/corner)으로 나눠 따로 보낸다(실험: 크롭이 작아 패가 크게 들어가는 대신 경계에 걸친 패를 놓칠 수 있다).
+  ///
+  /// [tracked] 는 판 상태 추적이 게임 중에 확정한 자리별 울기. 그 자리는 손패 칸만 /v2/handonly 로 읽고 울기를 채운다.
+  /// 손패 장수가 울기와 맞지 않으면 자리 전체를 /v2/seat 로 다시 읽는다(지금 방식으로 복귀). [shadow] 면 처음부터
+  /// 둘 다 보내 두 답을 [TableReadTrace.shadow] 에 남긴다(결과는 손패 전용 쪽, 실험용 — 설계 docs/state_tracking_design.md 7절).
+  Future<TableReading> readGrid(
+    Uint8List original,
+    GridZones grid, {
+    bool splitSeat = false,
+    Map<Side, List<ObservedMeld>> tracked = const {},
+    bool shadow = false,
+    Side? winnerSide,
+    Future<List<Side>?> Function(List<Side> candidates)? pickWinners,
+    void Function(ReadStage stage)? onStage,
+    TableReadTrace? trace,
+  }) async {
+    final sw = Stopwatch()..start();
+    void lap(String name) {
+      trace?.timingsMs[name] = sw.elapsedMilliseconds;
+      sw.reset();
+    }
+
+    trace?.layoutMode = 'grid';
+    onStage?.call(ReadStage.decoding);
+    // 원본은 한 번만 디코딩한다(축소본·크롭을 같은 이미지에서). 다 자르면 바로 놓는다.
+    final shot = await ops.openShot(original);
+    final Uint8List small;
+    final ShotAnalysis a;
+    final Map<Side, Uint8List> seatCrops, cornerCrops, lastCrops;
+    final Uint8List sticksCrop, doraCrop;
+    final warnings = <String>[];
+    final usage = <String, Map<String, int>>{};
+    Future<Map<String, dynamic>?> call(String kind, Uint8List? bytes, String name, {bool required = false}) {
+      if (bytes == null) return Future.value(null);
+      final t = Stopwatch()..start();
+      final f = client.observe(kind, bytes, filename: '$name.jpg').then<Map<String, dynamic>?>((j) {
+        trace?.callMs[name] = t.elapsedMilliseconds;
+        usage[name] = parseUsage(j['usage']);
+        return j;
+      });
+      return required
+          ? f
+          : f.catchError((Object e) {
+              warnings.add('$name 을(를) 읽지 못했습니다: $e');
+              return null;
+            });
+    }
+
+    final Side? known;
+    final List<Side> seatSides, lastSides, cornerSides, trackedSides;
+    final Map<Side, Uint8List> handCrops;
+    var layout = grid.toLayout(faceUp: const []);
+    final Map<Side, Future<Map<String, dynamic>?>> seatF, cornerF, shadowF;
+    final trackedMode = <Side, String>{};
+    final started = <Future<Object?>>[];
+    try {
+      small = await shot.shrink();
+      trace?.small = small;
+      lap('shrink');
+      a = await ops.analyzeGrid(small, grid);
+      trace?.analysis = a;
+      layout = grid.toLayout(faceUp: a.faceUp);
+      trace?.layout = layout;
+      lap('analyze');
+
+      known = winnerSide ?? (a.faceUp.length == 1 ? a.faceUp.first : null);
+      seatSides = known == null ? Side.values : [known];
+      lastSides = [
+        for (final s in Side.values)
+          if (s != known) s,
+      ];
+
+      onStage?.call(ReadStage.cropping);
+      cornerSides = splitSeat ? seatSides : const <Side>[];
+      // 추적으로 울기를 이미 아는 자리는 손패 칸만 읽는다(/v2/handonly). 자리 전체 크롭도 잘라 둔다 —
+      // 장수가 안 맞으면 그걸로 /v2/seat 를 다시 부르고, 그림자 모드면 처음부터 둘 다 보낸다.
+      trackedSides = [
+        for (final s in seatSides)
+          if (!splitSeat && tracked.containsKey(s)) s,
+      ];
+      // 장면 시간은 자리 판독(3번 동시, 가장 느림)이 정하므로 자리 크롭을 먼저 잘라 먼저 보낸다.
+      final seatList = await shot.crop([
+        for (final s in seatSides) CropSpec(splitSeat ? grid.handCell(s) : grid.seat(s), side: s),
+        for (final s in cornerSides) CropSpec(grid.cornerCell(s), side: s),
+        for (final s in trackedSides) CropSpec(grid.handCell(s), side: s),
+      ]);
+      seatCrops = {for (final (i, s) in seatSides.indexed) s: seatList[i]};
+      cornerCrops = {for (final (i, s) in cornerSides.indexed) s: seatList[seatSides.length + i]};
+      handCrops = {
+        for (final (i, s) in trackedSides.indexed) s: seatList[seatSides.length + cornerSides.length + i],
+      };
+      trace?.meldCrops = [...cornerCrops.values];
+      onStage?.call(ReadStage.reading);
+      seatF = {
+        for (final s in seatSides)
+          s: trackedSides.contains(s)
+              ? call('handonly', handCrops[s], 'handonly_${s.name}', required: known != null)
+              : call('seat', seatCrops[s], 'seat_${s.name}', required: known != null),
+      };
+      shadowF = {
+        for (final s in trackedSides)
+          if (shadow) s: call('seat', seatCrops[s], 'seat_${s.name}'),
+      };
+      cornerF = {for (final s in cornerSides) s: call('corner', cornerCrops[s], 'corner_${s.name}')};
+      started.addAll([...seatF.values, ...shadowF.values, ...cornerF.values]);
+
+      final rest = await shot.crop([
+        for (final s in lastSides) CropSpec(grid.lastZone(s), side: s),
+        CropSpec(grid.sticksZone),
+        CropSpec(grid.center),
+      ]);
+      lastCrops = {for (final (i, s) in lastSides.indexed) s: rest[i]};
+      trace?.riverCrops = lastCrops;
+      sticksCrop = rest[rest.length - 2];
+      trace?.centerCrop = sticksCrop;
+      doraCrop = rest.last;
+      trace?.wallCrop = doraCrop;
+      lap('crop');
+    } catch (_) {
+      // 자리 판독을 보낸 뒤 나머지를 자르다 실패하면, 보낸 요청의 오류가 처리되지 않은 채 남지 않게 한다.
+      for (final f in started) {
+        f.ignore();
+      }
+      rethrow;
+    } finally {
+      await shot.close();
+    }
+
+    // 강 끝은 자리마다 따로 부르지 않고 한 호출로 읽는다(/v2/last3). 따로 부르면 셋 중 하나가 생각을 길게 해 장면이 30초대로
+    // 늘었고, 한 호출에선 모델이 생각을 건너뛰어 빠르다(B·C·D 60장면: 론 패 54 → 60/60, 중앙 8.5 → 5.9초, p90 32.7 → 14.4초).
+    final lastSent = [
+      for (final s in lastSides)
+        if (lastCrops[s] != null) s,
+    ];
+    final lastsF = lastSent.isEmpty
+        ? Future<Map<String, dynamic>?>.value(null)
+        : client
+              .observeLasts([for (final s in lastSent) (lastCrops[s]!, 'last_${s.name}.jpg')])
+              .then<Map<String, dynamic>?>((j) {
+                usage['last3'] = parseUsage(j['usage']);
+                return j;
+              })
+              .catchError((Object e) {
+                warnings.add('강 끝을 읽지 못했습니다: $e');
+                return null;
+              });
+    final sticksF = call('sticks', sticksCrop, 'sticks');
+    final doraF = call('dora', doraCrop, 'dora');
+
+    final seats = <Side, SeatV2>{
+      for (final e in seatF.entries)
+        if (await e.value case final j?) e.key: parseSeatV2(j),
+    };
+    // 추적 자리: 손패 전용 판독에 미리 읽은 울기를 채우고 장수(14 − 3 × 울기)를 검사한다. 안 맞으면 자리 전체를 다시 읽는다.
+    for (final s in trackedSides) {
+      final h = seats[s];
+      final melds = tracked[s]!;
+      final shadowJ = shadow ? await shadowF[s] : null;
+      final handonlyJ = await seatF[s];
+      if (trace != null && handonlyJ != null && shadowJ != null) {
+        trace.shadow[s] = ShadowRead(
+          handonly: handonlyJ,
+          seat: shadowJ,
+          handonlyMs: trace.callMs['handonly_${s.name}'],
+          seatMs: trace.callMs['seat_${s.name}'],
+        );
+      }
+      if (h == null) continue;
+      final count = h.tiles.length + (h.separate == null ? 0 : 1);
+      // 쯔모·화료패를 손패 옆에 둔 론이면 14 − 3×울기, 론 패가 아직 방총자 강에 있으면 13 − 3×울기(merge 가 강 끝에서 더한다).
+      final need = 13 - 3 * melds.length;
+      if (h.faceUp && (count == need || count == need + 1)) {
+        seats[s] = (faceUp: true, tiles: h.tiles, separate: h.separate, melds: melds, loose: h.loose, agreement: h.agreement);
+        trackedMode[s] = 'handonly';
+        continue;
+      }
+      final full = shadowJ ?? await call('seat', seatCrops[s], 'seat_${s.name}');
+      trackedMode[s] = 'fallback_seat';
+      warnings.add('${s.label} 자리: 미리 읽은 울기 ${melds.length}묶음과 손패 $count장이 맞지 않아 자리 전체를 다시 읽었습니다');
+      seats[s] = full != null
+          ? parseSeatV2(full)
+          : (faceUp: h.faceUp, tiles: h.tiles, separate: h.separate, melds: melds, loose: h.loose, agreement: h.agreement);
+    }
+    trace?.trackedMode.addAll(trackedMode);
+    // 나눠 읽었으면 모서리 칸의 울기·따로 놓인 패를 그 자리에 합친다. 손패 칸에서도 같은 묶음을 읽었으면 한 번만 센다.
+    for (final e in cornerF.entries) {
+      final c = await e.value;
+      final h = seats[e.key];
+      if (c == null || h == null) continue;
+      final corner = parseCornerV2(c);
+      String key(ObservedMeld m) => ([for (final t in m.tiles) t.tile]..sort()).join(',');
+      final keys = {for (final m in corner.melds) key(m)};
+      seats[e.key] = (
+        faceUp: h.faceUp,
+        tiles: h.tiles,
+        separate: h.separate,
+        melds: [
+          ...corner.melds,
+          for (final m in h.melds)
+            if (!keys.contains(key(m))) m,
+        ],
+        loose: [...h.loose, ...corner.loose],
+        agreement: h.agreement,
+      );
+    }
+    final rivers = ((await lastsF)?['rivers'] as List<dynamic>?) ?? const [];
+    final lastJ = <Side, Map<String, dynamic>?>{
+      for (final s in lastSides)
+        s: switch (lastSent.indexOf(s)) {
+          final i when i >= 0 && i < rivers.length => rivers[i] as Map<String, dynamic>?,
+          _ => null,
+        },
+    };
+    final sticksJ = await sticksF;
+    final doraJ = await doraF;
+    lap('read');
+
+    var sides = [?known];
+    if (sides.isEmpty) {
+      // 손패 4장 이상을 앞면으로 읽은 자리. 패산 더미 때문에 픽셀로 못 정한 자리(장면 C·E 왼쪽)가 여기서 정해진다.
+      final cands = [
+        for (final s in Side.values)
+          if (seats[s] case final v? when v.faceUp && v.tiles.length >= 4) s,
+      ];
+      layout = grid.toLayout(faceUp: cands);
+      trace?.layout = layout;
+      // 둘 이상이면 동시 론일 수 있어 여럿을 고를 수 있게 묻는다(첫 자리가 대표 화료자).
+      sides = cands.length == 1 ? cands : (await pickWinners?.call(cands.isEmpty ? Side.values : cands)) ?? const [];
+      if (sides.isEmpty) {
+        throw TableReadException(
+          cands.isEmpty ? '앞면으로 눕힌 손패를 못 찾았습니다. 누가 났는지 골라 주세요' : '눕힌 손패가 ${cands.length}자리입니다. 누가 났는지 골라 주세요',
+          layout: layout,
+        );
+      }
+    }
+    lap('pick');
+    final side = sides.first;
+    trace?.winnerSide = side;
+    trace?.handCrop = seatCrops[side];
+    for (final s in sides) {
+      if (seats[s] == null) {
+        throw TableReadException('${s.label} 자리를 읽지 못했습니다. 다시 찍어 주세요', layout: layout);
+      }
+    }
+    final sticks = sticksJ == null ? const <Side, bool>{} : parseCenterV2(sticksJ).sticks;
+    final dora = doraJ == null ? const <ReadTile>[] : parseCenterV2(doraJ).indicators;
+
+    /// 화료자 [side] 하나의 판독. 강 끝·리치봉·도라는 같은 사진 것을 나눠 쓴다.
+    TableReading build(Side side) {
+      final h = seats[side]!;
+      final ws = [...warnings];
+      final who = sides.length > 1 ? '${side.label}: ' : '';
+      final melds = [
+        for (final m in h.melds)
+          if (m.consistent) m,
+      ];
+      final stray = [
+        for (final m in h.melds)
+          if (!m.consistent) ...m.tiles,
+      ];
+      if (stray.isNotEmpty) {
+        ws.add('$who퐁·치·깡 모양이 아닌 묶음(${stray.map((t) => t.code).join(' ')})을 울기에서 뺐습니다');
+      }
+      // 서버가 여러 번 읽은 답이 모두 같지 않으면 자동으로 믿지 않는다. 엇갈린 패는 서버가 확신도 0 으로 보내 노란 테두리가 된다.
+      if (h.agreement case (unanimous: false, :final reads, :final agree, :final alternatives)) {
+        ws.add(
+          '$who손패를 $reads번 읽어 $agree번만 같았습니다. 노란 패를 확인하세요'
+          '${alternatives.isEmpty ? '' : ' (다른 답: ${alternatives.join(' / ')})'}',
+        );
+      }
+      final lastTiles = <Side, ReadTile?>{
+        for (final e in lastJ.entries)
+          if (e.key != side) e.key: e.value == null ? null : parseLastV2(e.value!),
+      };
+      final observation = TableObservation(
+        players: {
+          for (final s in Side.values)
+            s: SeatObservation(
+              faceUp: s == side || a.faceUp.contains(s) || (seats[s]?.faceUp ?? false),
+              handTiles: s == side ? h.tiles : const [],
+              separateTile: s == side ? h.separate : null,
+              melds: s == side ? melds : const [],
+              // 강은 마지막 패 한 장만 읽는다. 가로 여부는 리치 판단에 쓰지 않는다.
+              river: lastTiles.containsKey(s) ? [if (lastTiles[s] case final t?) RiverTile(t)] : null,
+              riichiStick: sticks[s] ?? false,
+            ),
+        },
+        // 가운데(왕패)와 화료자 손패 옆을 따로 넘기고, 어느 쪽을 쓸지는 merge 가 리치 여부로 정한다.
+        doraIndicators: dora,
+        handSideIndicators: h.loose.isNotEmpty ? h.loose : stray,
+        usage: usage,
+      );
+      if (side == sides.first) trace?.observation = observation;
+      return TableReading(
+        layout: layout,
+        winnerSide: side,
+        hand: observation.toHandReading(side),
+        center: observation.toCenterReading(),
+        warnings: ws,
+        meldsTracked: trackedMode[side] == 'handonly',
+      );
+    }
+
+    final first = build(side);
+    trace?.hand = first.hand;
+    trace?.center = first.center;
+    return TableReading(
+      layout: layout,
+      winnerSide: side,
+      hand: first.hand,
+      center: first.center,
+      warnings: first.warnings,
+      others: [for (final s in sides.skip(1)) build(s)],
+      meldsTracked: first.meldsTracked,
+    );
+  }
+
+  /// [fixed] 로 읽다가 장수가 안 맞으면 null(그때 locate 로 다시 읽는다).
+  Future<TableReading?> _read(
+    Uint8List original,
+    Side? winnerSide,
+    Future<Side?> Function(List<Side> candidates)? pickWinner,
+    void Function(ReadStage stage)? onStage,
+    TableReadTrace? trace,
+    FixedTable? fixed,
+  ) async {
+    final sw = Stopwatch()..start();
+    void lap(String name) {
+      trace?.timingsMs[name] = sw.elapsedMilliseconds;
+      sw.reset();
+    }
+
+    onStage?.call(ReadStage.decoding);
+    final small = await ops.shrink(original);
+    trace?.small = small;
+    lap('shrink');
+
+    TableLayout? fixedLayout;
+    if (fixed != null) {
+      final a = await ops.analyze(small, fixed);
+      trace?.analysis = a;
+      lap('analyze');
+      if (!a.moved && a.faceUp.isNotEmpty) fixedLayout = fixed.layoutFor(a);
+    }
+    if (fixed != null && fixedLayout == null) return null;
+    final usingFixed = fixedLayout != null;
+    if (usingFixed) trace?.layoutMode = 'fixed';
+
+    final TableLayout layout;
+    if (fixedLayout != null) {
+      layout = fixedLayout;
+    } else {
+      onStage?.call(ReadStage.locating);
+      layout = await client.locate(small);
+      lap('locate');
+    }
+    trace?.layout = layout;
+
+    var side = winnerSide;
+    if (side == null) {
+      final candidates = layout.faceUpSides;
+      if (candidates.isEmpty) {
+        throw TableReadException(
+          layout.hands.isEmpty ? '손패 구역을 찾지 못했습니다. 테이블 전체가 보이게 찍었는지 확인하세요' : '앞면으로 눕힌 손패가 없습니다. 화료한 손패를 눕혀 주세요',
+          layout: layout,
+        );
+      } else if (candidates.length == 1) {
+        side = candidates.first;
+      } else {
+        side = await pickWinner?.call(candidates);
+        if (side == null) {
+          throw TableReadException('눕힌 손패가 ${candidates.length}자리입니다. 누가 났는지 골라 주세요', layout: layout);
+        }
+      }
+    }
+    lap('pick');
+    trace?.winnerSide = side;
+    final handZone = layout.hand(side);
+    if (handZone == null) {
+      throw TableReadException('${side.label} 자리의 손패 구역을 찾지 못했습니다', layout: layout);
+    }
+
+    onStage?.call(ReadStage.cropping);
+    // 모델은 보이는 것만 적고(서버 /v2), 판단은 [TableObservation] 이 코드로 한다.
+    // 크롭: 화료자 손패 · 자리별 강(그 사람 방향으로 세움) · 가운데 · 왕패.
+    final specs = <CropSpec>[CropSpec.hand(handZone.box, side)];
+    // 화료자의 울기: 손패 끝에서 그 사람 오른쪽 모서리까지([meldCorner])를 늘 따로 잘라 읽는다(묶음 하나까지).
+    // locate 의 울기 상자는 호출마다 있다 없다 해서(갤러리 사진 A 안깡 2/2 → 0/2) 그것만 믿지 않는다.
+    // locate 가 그 모서리 안에서 묶음을 둘 이상 찾았으면 모서리 대신 그 상자들을 하나씩 읽고, 모서리 밖의 오른쪽
+    // 상자는 더해 읽는다. 손패가 이미지 끝에 붙어 모서리가 없으면 locate 상자만.
+    final corner = meldCorner(handZone.box, side);
+    final located = usingFixed ? const <SidedZone>[] : layout.meldsRightOf(side);
+    final inCorner = [
+      for (final m in located)
+        if (corner.containsCenterOf(m.box)) m,
+    ];
+    final readCorner = inCorner.length < 2 && corner.width > 5 && corner.height > 5;
+    final meldZones = [
+      if (readCorner) SidedZone(side, corner) else ...inCorner,
+      for (final m in located)
+        if (!corner.containsCenterOf(m.box)) m,
+    ];
+    for (final (i, m) in meldZones.indexed) {
+      specs.add(readCorner && i == 0 ? CropSpec(m.box, side: side, pad: 0.03) : CropSpec.meld(m.box, side));
+    }
+    final riverSides = [for (final r in layout.rivers) r.side];
+    for (final r in layout.rivers) {
+      specs.add(CropSpec.river(r.box, r.side));
+    }
+    final center = layout.center;
+    if (center != null) specs.add(CropSpec.center(center));
+    // 자동탁의 왕패는 보통 한 자리 앞 패산 끝에 있어 가운데 크롭에서 작게 잡히거나 빠진다. 따로 크게 잘라 읽는다.
+    final wall = layout.deadWall?.box;
+    if (wall != null) specs.add(CropSpec.wall(wall));
+    final crops = await ops.cropMany(original, specs);
+    trace?.handCrop = crops[0];
+    final meldCrops = crops.sublist(1, 1 + meldZones.length);
+    trace?.meldCrops = meldCrops;
+    final r0 = 1 + meldZones.length;
+    final riverCrops = {for (var i = 0; i < riverSides.length; i++) riverSides[i]: crops[r0 + i]};
+    trace?.riverCrops = riverCrops;
+    final centerCrop = center == null ? null : crops[r0 + riverSides.length];
+    trace?.centerCrop = centerCrop;
+    final wallCrop = wall == null ? null : crops.last;
+    trace?.wallCrop = wallCrop;
+    lap('crop');
+
+    onStage?.call(ReadStage.reading);
+    final warnings = <String>[];
+    final usage = <String, Map<String, int>>{};
+    Future<Map<String, dynamic>?> call(
+      String kind,
+      Uint8List? bytes,
+      String name, {
+      bool required = false,
+      String? filename,
+    }) {
+      if (bytes == null) return Future.value(null);
+      final f = client.observe(kind, bytes, filename: filename ?? '$name.jpg').then<Map<String, dynamic>?>((j) {
+        usage[name] = parseUsage(j['usage']);
+        return j;
+      });
+      return required
+          ? f
+          : f.catchError((Object e) {
+              warnings.add('$name 을(를) 읽지 못했습니다: $e');
+              return null;
+            });
+    }
+
+    final handF = call('hand', crops[0], 'hand', required: true, filename: 'hand_${side.name}.jpg');
+    final meldF = [for (var i = 0; i < meldCrops.length; i++) call('meld', meldCrops[i], 'meld_$i')];
+    final riverF = [for (final s in riverSides) call('river', riverCrops[s], 'river_${s.name}')];
+    final centerF = call('center', centerCrop, 'center');
+    final wallF = call('center', wallCrop, 'wall');
+    if (center == null) warnings.add('중앙 구역을 찾지 못해 리치봉·도라는 강·왕패에서만 봅니다');
+
+    final handJ = (await handF)!;
+    final meldJ = await Future.wait(meldF);
+    final riverJ = await Future.wait(riverF);
+    final centerJ = await centerF;
+    final wallJ = await wallF;
+
+    final h = parseHandV2(handJ);
+    final boxedMelds = [
+      for (final j in meldJ)
+        if (j != null) ?parseMeldV2(j),
+    ];
+    // 손패 크롭에서 읽은 울기(손패 옆에 붙여 둔 것)도 더하되, 모서리·울기 상자에서 같은 묶음을 읽었으면 한 번만 센다.
+    String key(ObservedMeld m) => ([for (final t in m.tiles) t.tile]..sort()).join(',');
+    final boxedKeys = {for (final m in boxedMelds) key(m)};
+    final readMelds = [
+      ...boxedMelds,
+      for (final m in h.melds)
+        if (!boxedKeys.contains(key(m))) m,
+    ];
+    // 퐁·치·깡 모양이 아닌 묶음(갤러리 사진의 4통4통7만 = 모서리에 둔 도라 표시패)은 울기로 쓰지 않고
+    // 다른 데서 도라 표시패를 못 읽었을 때 그 후보로 쓴다.
+    final melds = [
+      for (final m in readMelds)
+        if (m.consistent) m,
+    ];
+    final stray = [
+      for (final m in readMelds)
+        if (!m.consistent) ...m.tiles,
+    ];
+    if (stray.isNotEmpty) {
+      warnings.add('퐁·치·깡 모양이 아닌 묶음(${stray.map((t) => t.code).join(' ')})을 울기에서 뺐습니다');
+    }
+    // 고정 구역으로 읽은 장수가 안 맞으면(울기를 놓쳤거나 옆 패가 섞임) locate 로 다시.
+    final count = h.tiles.length + (h.separate == null ? 0 : 1) + 3 * melds.length;
+    if (usingFixed && count != 13 && count != 14) return null;
+    final rivers = {
+      for (var i = 0; i < riverSides.length; i++)
+        if (riverJ[i] != null) riverSides[i]: parseRiverV2(riverJ[i]!),
+    };
+    final c = centerJ == null ? null : parseCenterV2(centerJ);
+    final w = wallJ == null ? null : parseCenterV2(wallJ);
+    final faceUp = layout.faceUpSides.toSet();
+    final observation = TableObservation(
+      players: {
+        for (final s in Side.values)
+          s: SeatObservation(
+            faceUp: faceUp.contains(s),
+            handTiles: s == side ? h.tiles : const [],
+            separateTile: s == side ? h.separate : null,
+            melds: s == side ? melds : const [],
+            river: rivers[s]?.tiles,
+            riichiStick: (rivers[s]?.riichiStick ?? false) || (c?.sticks[s] ?? false) || (w?.sticks[s] ?? false),
+          ),
+      },
+      // 왕패를 따로 읽었으면 그쪽(크게 잘라 정확), 아니면 가운데.
+      doraIndicators: (w != null && w.indicators.isNotEmpty)
+          ? w.indicators
+          : (c != null && c.indicators.isNotEmpty)
+          ? c.indicators
+          : stray,
+      usage: usage,
+    );
+    final hand = observation.toHandReading(side);
+    final centerReading = observation.toCenterReading();
+    trace?.observation = observation;
+    trace?.hand = hand;
+    trace?.center = centerReading;
+    lap('read');
+
+    return TableReading(layout: layout, winnerSide: side, hand: hand, center: centerReading, warnings: warnings);
+  }
+}

@@ -1,0 +1,115 @@
+{
+ "hands": [
+  {
+   "side": "bottom",
+   "box": [
+    746,
+    107,
+    1000,
+    405
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    470,
+    701,
+    867,
+    834
+   ],
+   "face_up": false,
+   "conf": 0.92
+  },
+  {
+   "side": "top",
+   "box": [
+    105,
+    464,
+    212,
+    642
+   ],
+   "face_up": true,
+   "conf": 0.95
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    506,
+    317,
+    622,
+    477
+   ],
+   "conf": 0.93
+  },
+  {
+   "side": "right",
+   "box": [
+    427,
+    476,
+    617,
+    567
+   ],
+   "conf": 0.93
+  },
+  {
+   "side": "top",
+   "box": [
+    333,
+    430,
+    428,
+    568
+   ],
+   "conf": 0.93
+  },
+  {
+   "side": "left",
+   "box": [
+    360,
+    311,
+    532,
+    408
+   ],
+   "conf": 0.93
+  }
+ ],
+ "melds": [
+  {
+   "side": "top",
+   "box": [
+    37,
+    318,
+    83,
+    380
+   ],
+   "conf": 0.88
+  }
+ ],
+ "dead_wall": {
+  "box": [
+   112,
+   389,
+   161,
+   437
+  ],
+  "conf": 0.87
+ },
+ "center": {
+  "box": [
+   112,
+   310,
+   624,
+   570
+  ]
+ },
+ "notes": "",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 23245,
+ "usage": {
+  "input_tokens": 1638,
+  "output_tokens": 2969
+ }
+}

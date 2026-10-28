@@ -1,0 +1,104 @@
+{
+ "hands": [
+  {
+   "side": "bottom",
+   "box": [
+    744,
+    104,
+    1000,
+    404
+   ],
+   "face_up": false,
+   "conf": 0.9
+  },
+  {
+   "side": "right",
+   "box": [
+    468,
+    699,
+    867,
+    834
+   ],
+   "face_up": false,
+   "conf": 0.9
+  },
+  {
+   "side": "top",
+   "box": [
+    103,
+    461,
+    212,
+    642
+   ],
+   "face_up": true,
+   "conf": 0.95
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    511,
+    317,
+    623,
+    475
+   ],
+   "conf": 0.93
+  },
+  {
+   "side": "right",
+   "box": [
+    427,
+    480,
+    620,
+    567
+   ],
+   "conf": 0.93
+  },
+  {
+   "side": "top",
+   "box": [
+    333,
+    433,
+    430,
+    568
+   ],
+   "conf": 0.93
+  },
+  {
+   "side": "left",
+   "box": [
+    360,
+    312,
+    533,
+    408
+   ],
+   "conf": 0.93
+  }
+ ],
+ "melds": [],
+ "dead_wall": {
+  "box": [
+   112,
+   389,
+   161,
+   436
+  ],
+  "conf": 0.88
+ },
+ "center": {
+  "box": [
+   110,
+   305,
+   630,
+   575
+  ]
+ },
+ "notes": "left 플레이어의 손패는 보이지 않으며, top 플레이어의 손패만 앞면으로 공개되어 있습니다.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 26568,
+ "usage": {
+  "input_tokens": 1638,
+  "output_tokens": 3276
+ }
+}

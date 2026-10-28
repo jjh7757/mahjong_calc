@@ -1,0 +1,460 @@
+{
+ "image": "C:\\Users\\jjh7757\\dev\\mahjong_calc\\experiments\\field_20261024\\captures\\20261024_115559\\original.jpg",
+ "locate": {
+  "hands": [
+   {
+    "side": "bottom",
+    "box": [
+     611,
+     142,
+     917,
+     404
+    ],
+    "conf": 0.98,
+    "face_up": true
+   },
+   {
+    "side": "right",
+    "box": [
+     468,
+     608,
+     825,
+     788
+    ],
+    "conf": 0.98,
+    "face_up": true
+   },
+   {
+    "side": "top",
+    "box": [
+     17,
+     366,
+     230,
+     742
+    ],
+    "conf": 0.95,
+    "face_up": true
+   },
+   {
+    "side": "left",
+    "box": [
+     168,
+     184,
+     469,
+     368
+    ],
+    "conf": 0.98,
+    "face_up": true
+   }
+  ],
+  "rivers": [
+   {
+    "side": "bottom",
+    "box": [
+     447,
+     334,
+     552,
+     471
+    ],
+    "conf": 0.95
+   },
+   {
+    "side": "right",
+    "box": [
+     384,
+     477,
+     557,
+     564
+    ],
+    "conf": 0.95
+   },
+   {
+    "side": "top",
+    "box": [
+     296,
+     447,
+     385,
+     571
+    ],
+    "conf": 0.95
+   },
+   {
+    "side": "left",
+    "box": [
+     316,
+     332,
+     467,
+     424
+    ],
+    "conf": 0.95
+   }
+  ],
+  "dead_wall": null,
+  "center": {
+   "box": [
+    294,
+    332,
+    557,
+    571
+   ]
+  },
+  "face_up_sides": [
+   "bottom",
+   "right",
+   "top",
+   "left"
+  ],
+  "notes": "벽패(패산) 일부가 남아 있으며 도라 표시패는 명확히 노출되어 있지 않거나 벽패 내부에 있음.",
+  "model": "gemini-3.8-flash",
+  "latency_ms": 6785,
+  "usage": {
+   "input_tokens": 1632,
+   "output_tokens": 527
+  }
+ },
+ "results": {
+  "hand_bottom": {
+   "tiles": [
+    {
+     "tile": "1s",
+     "conf": 0.99
+    },
+    {
+     "tile": "2s",
+     "conf": 0.99
+    },
+    {
+     "tile": "3p",
+     "conf": 0.99
+    },
+    {
+     "tile": "8p",
+     "conf": 0.99
+    },
+    {
+     "tile": "9p",
+     "conf": 0.99
+    },
+    {
+     "tile": "1m",
+     "conf": 0.99
+    },
+    {
+     "tile": "2m",
+     "conf": 0.99
+    },
+    {
+     "tile": "3m",
+     "conf": 0.99
+    },
+    {
+     "tile": "4m",
+     "conf": 0.99
+    },
+    {
+     "tile": "5m",
+     "conf": 0.99
+    },
+    {
+     "tile": "6m",
+     "conf": 0.99
+    },
+    {
+     "tile": "7m",
+     "conf": 0.99
+    }
+   ],
+   "count": 12,
+   "melds": [],
+   "win_tile": {
+    "tile": "6s",
+    "conf": 0.98
+   },
+   "notes": "왼쪽 끝에 6s(화료패)가 약간 떨어져 놓여 있음. 오른쪽 보라색 뒷면 패 2개는 손패가 아님.",
+   "model": "gemini-3.8-flash",
+   "latency_ms": 4980,
+   "usage": {
+    "input_tokens": 1680,
+    "output_tokens": 308
+   }
+  },
+  "hand_right": {
+   "tiles": [
+    {
+     "tile": "0m",
+     "conf": 0.99
+    },
+    {
+     "tile": "7m",
+     "conf": 0.99
+    },
+    {
+     "tile": "8m",
+     "conf": 0.99
+    },
+    {
+     "tile": "9m",
+     "conf": 0.99
+    },
+    {
+     "tile": "1s",
+     "conf": 0.99
+    },
+    {
+     "tile": "2s",
+     "conf": 0.99
+    },
+    {
+     "tile": "3s",
+     "conf": 0.99
+    },
+    {
+     "tile": "4p",
+     "conf": 0.99
+    },
+    {
+     "tile": "4p",
+     "conf": 0.99
+    },
+    {
+     "tile": "5z",
+     "conf": 0.99
+    },
+    {
+     "tile": "5z",
+     "conf": 0.99
+    },
+    {
+     "tile": "5z",
+     "conf": 0.98
+    }
+   ],
+   "count": 12,
+   "melds": [],
+   "win_tile": {
+    "tile": "4m",
+    "conf": 0.99
+   },
+   "notes": "4m이 손패 왼쪽에 따로 분리되어 놓여 있음 (화료패)",
+   "model": "gemini-3.8-flash",
+   "latency_ms": 4330,
+   "usage": {
+    "input_tokens": 1675,
+    "output_tokens": 290
+   }
+  },
+  "hand_top": {
+   "tiles": [
+    {
+     "tile": "1s",
+     "conf": 0.99
+    },
+    {
+     "tile": "2s",
+     "conf": 0.99
+    },
+    {
+     "tile": "3s",
+     "conf": 0.99
+    },
+    {
+     "tile": "4s",
+     "conf": 0.99
+    },
+    {
+     "tile": "5p",
+     "conf": 0.98
+    },
+    {
+     "tile": "5p",
+     "conf": 0.98
+    },
+    {
+     "tile": "7z",
+     "conf": 0.99
+    },
+    {
+     "tile": "7z",
+     "conf": 0.99
+    },
+    {
+     "tile": "7z",
+     "conf": 0.99
+    },
+    {
+     "tile": "5z",
+     "conf": 0.95
+    }
+   ],
+   "count": 10,
+   "melds": [
+    {
+     "type": "pon",
+     "tiles": [
+      "6z",
+      "6z",
+      "6z"
+     ],
+     "conf": 0.95
+    }
+   ],
+   "win_tile": null,
+   "notes": "화료패는 멘젠 패에 포함되어 구분되지 않거나 백(5z)일 수 있으나 명확한 분리가 없어 tiles에 포함함. 우측 하단에 발(6z) 울기가 있음.",
+   "model": "gemini-3.8-flash",
+   "latency_ms": 4718,
+   "usage": {
+    "input_tokens": 1666,
+    "output_tokens": 307
+   }
+  },
+  "hand_left": {
+   "tiles": [
+    {
+     "tile": "2p",
+     "conf": 0.99
+    },
+    {
+     "tile": "2p",
+     "conf": 0.99
+    },
+    {
+     "tile": "4m",
+     "conf": 0.99
+    },
+    {
+     "tile": "5m",
+     "conf": 0.99
+    },
+    {
+     "tile": "6m",
+     "conf": 0.99
+    },
+    {
+     "tile": "1s",
+     "conf": 0.98
+    },
+    {
+     "tile": "2s",
+     "conf": 0.99
+    },
+    {
+     "tile": "4s",
+     "conf": 0.99
+    },
+    {
+     "tile": "4s",
+     "conf": 0.99
+    },
+    {
+     "tile": "7s",
+     "conf": 0.99
+    },
+    {
+     "tile": "7s",
+     "conf": 0.99
+    },
+    {
+     "tile": "7s",
+     "conf": 0.99
+    },
+    {
+     "tile": "4z",
+     "conf": 0.96
+    }
+   ],
+   "count": 13,
+   "melds": [],
+   "win_tile": null,
+   "notes": "화료패(14번째 패) 없이 13장만 놓여 있는 손패입니다.",
+   "model": "gemini-3.8-flash",
+   "latency_ms": 31321,
+   "usage": {
+    "input_tokens": 1705,
+    "output_tokens": 3719
+   }
+  },
+  "center": {
+   "dora_indicators": [],
+   "ura_dora_indicators": [],
+   "riichi": {
+    "bottom": false,
+    "right": false,
+    "top": false,
+    "left": false
+   },
+   "riichi_conf": {
+    "bottom": 0.99,
+    "right": 0.99,
+    "top": 0.99,
+    "left": 0.99
+   },
+   "last_discards": {
+    "bottom": "2z",
+    "right": "4s",
+    "top": "1m",
+    "left": "2m"
+   },
+   "last_discards_conf": {
+    "bottom": 0.95,
+    "right": 0.95,
+    "top": 0.95,
+    "left": 0.95
+   },
+   "rivers": {
+    "bottom": [
+     "2z",
+     "1z",
+     "4s",
+     "6s",
+     "8p",
+     "4z",
+     "1p",
+     "2p",
+     "2z"
+    ],
+    "right": [
+     "2p",
+     "4p",
+     "7p",
+     "6s",
+     "5p",
+     "6s",
+     "1z",
+     "4s"
+    ],
+    "top": [
+     "1s",
+     "6s",
+     "1m",
+     "4z",
+     "3m",
+     "3z",
+     "1m"
+    ],
+    "left": [
+     "1z",
+     "1m",
+     "3z",
+     "9m",
+     "1p",
+     "4z",
+     "1p",
+     "8p",
+     "2m"
+    ]
+   },
+   "notes": "패산이나 왕패가 보이지 않아 도라 표시패는 식별되지 않습니다.",
+   "model": "gemini-3.8-flash",
+   "latency_ms": 6150,
+   "usage": {
+    "input_tokens": 2061,
+    "output_tokens": 547
+   }
+  }
+ },
+ "timing_s": {
+  "locate": 7.1,
+  "stage2_parallel": 45.4,
+  "total": 52.5
+ }
+}

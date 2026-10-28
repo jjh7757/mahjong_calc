@@ -1,0 +1,166 @@
+python-dotenv could not parse statement starting at line 21
+python-dotenv could not parse statement starting at line 25
+python-dotenv could not parse statement starting at line 27
+Direct use of automatic function calling (AFC) in Models.generate_content is not recommended. Instead, we recommend to use AFC in Chat.send_message. Similarly, direct use of AFC in Models.generate_content_stream is not recommended. Instead, we recommend to use AFC in Chat.send_message_stream.
+scale0.7  B k28_1 6.65s think 0 OK
+scale1    B k25_1 7.52s think 0 OK
+scale0.35 B k28_1 7.74s think 0 OK
+scale0.5  B k25_1 8.17s think 0 OK
+scale0.5  B k28_1 8.67s think 0 OK
+scale1    B k28_1 9.49s think 0 OK
+scale1    C k15_1 5.62s think 0 OK
+scale0.35 C k15_1 5.56s think 0 OK
+scale1    C k26_1 5.36s think 0 OK
+scale0.7  C k15_1 11.57s think 835 OK
+scale0.5  C k15_1 12.9s think 827 OK
+scale0.7  B k25_1 22.58s think 1771 OK
+scale0.7  C k26_1 13.93s think 985 OK
+scale0.7  D k12_1 5.71s think 0 OK
+scale0.5  D k12_1 6.01s think 0 OK
+scale0.35 B k25_1 26.9s think 2356 OK
+scale0.35 C k26_1 13.53s think 886 OK
+scale0.35 D k12_1 5.69s think 0 OK
+scale0.5  C k26_1 16.29s think 1452 OK
+scale0.7  D k16_1 5.31s think 0 OK
+scale0.35 D k16_1 4.78s think 0 OK
+scale1    B k25_1 4.74s think 0 OK
+scale0.5  B k25_1 5.16s think 0 OK
+scale1    D k16_1 10.82s think 0 OK
+scale1    D k12_1 21.68s think 829 OK
+scale0.7  B k28_1 4.08s think 0 OK
+scale1    B k28_1 5.49s think 0 OK
+scale0.5  B k28_1 5.34s think 0 OK
+scale0.35 B k25_1 10.0s think 679 X 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p ['6z 6z 6z']
+scale0.35 B k28_1 8.17s think 432 OK
+scale1    C k15_1 7.24s think 295 OK
+scale0.35 C k15_1 4.49s think 0 OK
+scale0.5  C k15_1 6.81s think 0 OK
+scale0.7  B k25_1 16.36s think 1294 OK
+scale0.5  D k16_1 19.13s think 1618 OK
+scale0.7  C k15_1 10.17s think 797 OK
+scale0.7  C k26_1 5.66s think 0 OK
+scale0.35 C k26_1 5.5s think 0 OK
+scale1    D k12_1 5.26s think 0 OK
+scale0.7  D k12_1 5.29s think 0 OK
+scale0.35 D k12_1 4.4s think 0 OK
+scale0.5  D k12_1 5.53s think 0 OK
+scale0.7  D k16_1 3.99s think 0 OK
+scale1    C k26_1 12.97s think 0 OK
+scale0.35 D k16_1 4.11s think 0 OK
+scale0.5  D k16_1 5.21s think 0 OK
+scale1    B k25_1 4.88s think 0 OK
+scale0.5  C k26_1 12.87s think 683 OK
+scale0.7  B k25_1 5.12s think 0 OK
+scale0.35 B k25_1 5.61s think 0 OK
+scale0.7  B k28_1 4.38s think 0 OK
+scale1    B k28_1 5.13s think 0 OK
+scale0.35 B k28_1 4.99s think 0 OK
+scale1    C k15_1 5.38s think 0 OK
+scale1    D k16_1 14.99s think 0 OK
+scale0.35 C k15_1 4.22s think 0 OK
+scale0.7  C k15_1 5.21s think 0 OK
+scale0.5  C k15_1 5.53s think 0 OK
+scale1    C k26_1 5.32s think 0 OK
+scale0.35 C k26_1 5.38s think 0 OK
+scale1    D k12_1 5.26s think 0 OK
+scale0.7  D k12_1 5.16s think 0 OK
+scale0.5  B k25_1 17.11s think 0 OK
+scale0.5  B k28_1 14.87s think 1187 OK
+scale0.5  C k26_1 8.24s think 516 OK
+scale0.5  D k12_1 7.38s think 0 OK
+scale0.7  D k16_1 4.06s think 0 OK
+scale0.35 D k16_1 4.11s think 0 OK
+scale0.5  D k16_1 4.99s think 0 OK
+scale1    D k16_1 6.0s think 0 OK
+scale1    B k25_1 4.71s think 0 OK
+scale0.7  C k26_1 14.53s think 915 OK
+scale0.35 D k12_1 9.1s think 0 OK
+scale0.5  B k25_1 5.17s think 0 OK
+scale0.7  B k28_1 3.67s think 0 OK
+scale0.35 B k25_1 5.74s think 0 OK
+scale1    B k28_1 6.07s think 0 OK
+scale0.35 B k28_1 5.25s think 0 OK
+scale0.5  B k28_1 5.9s think 0 OK
+scale1    C k15_1 5.02s think 0 OK
+scale0.7  B k25_1 9.47s think 446 OK
+scale0.7  C k15_1 4.96s think 0 OK
+scale0.35 C k15_1 4.47s think 0 OK
+scale0.5  C k15_1 5.79s think 0 OK
+scale1    C k26_1 5.46s think 0 OK
+scale0.5  C k26_1 4.81s think 0 OK
+scale1    D k12_1 5.62s think 0 OK
+scale0.7  D k12_1 5.65s think 0 OK
+scale0.35 D k12_1 4.66s think 0 OK
+scale0.7  C k26_1 7.84s think 0 OK
+scale0.5  D k12_1 5.71s think 0 OK
+scale0.7  D k16_1 4.07s think 0 OK
+scale0.35 C k26_1 9.9s think 606 OK
+scale0.5  D k16_1 4.77s think 0 OK
+scale0.35 D k16_1 4.27s think 0 OK
+scale1    B k25_1 4.34s think 0 OK
+scale0.5  B k25_1 4.98s think 0 OK
+scale0.35 B k25_1 5.62s think 0 X 7z 1m 1m 1m 9s 9s 9s 9p 9p 9p ['6z 6z 6z 6z']
+scale1    B k28_1 5.71s think 0 OK
+scale0.7  B k25_1 9.73s think 533 OK
+scale0.7  B k28_1 6.36s think 0 OK
+scale1    C k15_1 5.5s think 0 OK
+scale0.35 B k28_1 9.32s think 0 OK
+scale0.35 C k15_1 5.07s think 0 OK
+scale1    C k26_1 5.65s think 0 OK
+scale1    D k16_1 18.99s think 0 OK
+scale0.5  B k28_1 16.12s think 1400 OK
+scale1    D k12_1 5.25s think 0 OK
+scale0.7  C k15_1 15.77s think 1492 OK
+scale0.5  C k15_1 14.11s think 1308 OK
+scale0.35 C k26_1 9.17s think 505 OK
+scale0.5  C k26_1 10.43s think 824 OK
+scale0.5  D k12_1 5.0s think 0 OK
+scale0.35 D k12_1 5.33s think 0 OK
+scale0.7  D k16_1 4.02s think 0 OK
+scale0.7  D k12_1 11.39s think 0 OK
+scale0.35 D k16_1 3.81s think 0 OK
+scale0.5  D k16_1 5.03s think 0 OK
+scale1    B k25_1 4.21s think 0 OK
+scale0.35 B k25_1 5.07s think 0 X 7z 1m 1m 1m 9s 9s 9s 9p 9p 9p ['6z 6z 6z 6z']
+scale0.7  B k28_1 4.37s think 0 OK
+scale1    B k28_1 5.69s think 0 OK
+scale0.7  C k26_1 23.35s think 1876 OK
+scale0.5  B k28_1 5.37s think 0 OK
+scale1    D k16_1 14.97s think 0 OK
+scale0.7  C k15_1 5.02s think 0 OK
+scale1    C k15_1 5.56s think 0 OK
+scale0.35 C k15_1 4.12s think 0 OK
+scale0.35 B k28_1 6.81s think 0 OK
+scale0.5  C k15_1 5.93s think 0 OK
+scale1    C k26_1 5.39s think 0 OK
+scale0.7  C k26_1 5.42s think 0 OK
+scale0.35 C k26_1 5.43s think 0 OK
+scale1    D k12_1 5.3s think 0 OK
+scale0.5  B k25_1 19.18s think 0 OK
+scale0.7  D k12_1 6.49s think 0 OK
+scale0.5  C k26_1 8.44s think 471 OK
+scale0.35 D k12_1 4.78s think 0 OK
+scale0.7  D k16_1 3.99s think 0 OK
+scale1    D k16_1 5.58s think 0 OK
+scale0.5  D k12_1 7.09s think 0 OK
+scale0.5  D k16_1 5.06s think 0 OK
+scale0.35 D k16_1 6.2s think 0 OK
+scale0.7  B k25_1 68.9s think 7044 OK
+scale1     정답 36/36 (B 12/12 C 12/12 D 12/12)  시간 중앙 5.5 p90 15.0 최대 21.7s  생각한 호출 2/36 생각 평균 31 최대 829  입력 10663  패 높이 [142, 147, 159, 160, 176, 177]
+    B: 정답 12/12 중앙 5.3 p90 7.5s 생각 0/12
+    C: 정답 12/12 중앙 5.5 p90 7.2s 생각 1/12
+    D: 정답 12/12 중앙 5.8 p90 19.0s 생각 1/12
+scale0.7   정답 36/36 (B 12/12 C 12/12 D 12/12)  시간 중앙 5.7 p90 16.4 최대 68.9s  생각한 호출 11/36 생각 평균 500 최대 7044  입력 10663  패 높이 [99, 103, 111, 112, 123, 124]
+    B: 정답 12/12 중앙 6.5 p90 22.6s 생각 5/12
+    C: 정답 12/12 중앙 9.0 p90 15.8s 생각 6/12
+    D: 정답 12/12 중앙 5.2 p90 6.5s 생각 0/12
+scale0.5   정답 36/36 (B 12/12 C 12/12 D 12/12)  시간 중앙 6.0 p90 16.3 최대 19.2s  생각한 호출 10/36 생각 평균 286 최대 1618  입력 10686  패 높이 [71, 74, 80, 88]
+    B: 정답 12/12 중앙 7.0 p90 17.1s 생각 2/12
+    C: 정답 12/12 중앙 8.3 p90 14.1s 생각 7/12
+    D: 정답 12/12 중앙 5.4 p90 7.4s 생각 1/12
+scale0.35  정답 33/36 (B 9/12 C 12/12 D 12/12)  시간 중앙 5.4 p90 9.9 최대 26.9s  생각한 호출 6/36 생각 평균 152 최대 2356  입력 10686  패 높이 [50, 51, 56, 62]
+    B: 정답 9/12 중앙 6.3 p90 10.0s 생각 3/12
+    C: 정답 12/12 중앙 5.4 p90 9.9s 생각 3/12
+    D: 정답 12/12 중앙 4.7 p90 6.2s 생각 0/12
+    틀림 ×1 B k25_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+    틀림 ×2 B k25_1: 7z 1m 1m 1m 9s 9s 9s 9p 9p 9p | ['6z 6z 6z 6z']

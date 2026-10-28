@@ -1,0 +1,266 @@
+{
+ "rivers": {
+  "bottom": [
+   "1p",
+   "1p",
+   "4z",
+   "9s",
+   "2z",
+   "2s",
+   "7z",
+   "2m",
+   "3s",
+   "7z",
+   "1s"
+  ],
+  "right": [
+   "2z",
+   "1s",
+   "4z",
+   "1p",
+   "5z",
+   "7z",
+   "1z",
+   "1s",
+   "2p",
+   "4s"
+  ],
+  "top": [
+   "2z",
+   "3z",
+   "9s",
+   "3p",
+   "7m",
+   "2p",
+   "8m",
+   "1z",
+   "2s",
+   "2m"
+  ],
+  "left": [
+   "6s",
+   "9m",
+   "2p",
+   "9p",
+   "2s",
+   "1z",
+   "3z",
+   "2s",
+   "4s",
+   "7p",
+   "4p"
+  ]
+ },
+ "raw": {
+  "bottom": {
+   "dora_indicators": [],
+   "ura_dora_indicators": [],
+   "riichi": {
+    "bottom": false,
+    "right": false,
+    "top": false,
+    "left": false
+   },
+   "riichi_conf": {
+    "bottom": 0.95,
+    "right": 0.8,
+    "top": 0.8,
+    "left": 0.8
+   },
+   "last_discards": {
+    "bottom": "1s",
+    "right": null,
+    "top": null,
+    "left": null
+   },
+   "last_discards_conf": {
+    "bottom": 0.98,
+    "right": 0.0,
+    "top": 0.0,
+    "left": 0.0
+   },
+   "rivers": {
+    "bottom": [
+     "1p",
+     "1p",
+     "4z",
+     "9s",
+     "2z",
+     "2s",
+     "7z",
+     "2m",
+     "3s",
+     "7z",
+     "1s"
+    ],
+    "right": [],
+    "top": [],
+    "left": []
+   },
+   "notes": "Bottom river shows 11 discarded tiles. Other players' rivers, dora indicators, and wall tiles are not visible in the cropped image.",
+   "model": "gemini-3.8-flash",
+   "latency_ms": 4206,
+   "usage": {
+    "input_tokens": 2081,
+    "output_tokens": 309
+   }
+  },
+  "right": {
+   "dora_indicators": [],
+   "ura_dora_indicators": [],
+   "riichi": {
+    "bottom": false,
+    "right": false,
+    "top": false,
+    "left": false
+   },
+   "riichi_conf": {
+    "bottom": 0.9,
+    "right": 0.5,
+    "top": 0.5,
+    "left": 0.5
+   },
+   "last_discards": {
+    "bottom": "4s",
+    "right": null,
+    "top": null,
+    "left": null
+   },
+   "last_discards_conf": {
+    "bottom": 0.99,
+    "right": 0.0,
+    "top": 0.0,
+    "left": 0.0
+   },
+   "rivers": {
+    "bottom": [
+     "2z",
+     "1s",
+     "4z",
+     "1p",
+     "5z",
+     "7z",
+     "1z",
+     "1s",
+     "2p",
+     "4s"
+    ],
+    "right": [],
+    "top": [],
+    "left": []
+   },
+   "notes": "하단 플레이어의 버림패(강) 두 줄만 부분적으로 확대되어 보이는 이미지입니다. 첫 줄 6장(2z, 1s, 4z, 1p, 5z, 7z), 둘째 줄 4장(1z, 1s, 2p, 4s)이 보입니다.",
+   "model": "gemini-3.8-flash",
+   "latency_ms": 4489,
+   "usage": {
+    "input_tokens": 2073,
+    "output_tokens": 353
+   }
+  },
+  "top": {
+   "dora_indicators": [],
+   "ura_dora_indicators": [],
+   "riichi": {
+    "bottom": false,
+    "right": false,
+    "top": false,
+    "left": false
+   },
+   "riichi_conf": {
+    "bottom": 0.9,
+    "right": 0.5,
+    "top": 0.5,
+    "left": 0.5
+   },
+   "last_discards": {
+    "bottom": "2m",
+    "right": null,
+    "top": null,
+    "left": null
+   },
+   "last_discards_conf": {
+    "bottom": 0.95,
+    "right": 0.0,
+    "top": 0.0,
+    "left": 0.0
+   },
+   "rivers": {
+    "bottom": [
+     "2z",
+     "3z",
+     "9s",
+     "3p",
+     "7m",
+     "2p",
+     "8m",
+     "1z",
+     "2s",
+     "2m"
+    ],
+    "right": [],
+    "top": [],
+    "left": []
+   },
+   "notes": "Bottom player's discard river is visible (first row 6 tiles: 2z, 3z, 9s, 3p, 7m, 2p; second row 4 tiles: 8m, 1z, 2s, 2m). Other areas/walls are cropped out.",
+   "model": "gemini-3.8-flash",
+   "latency_ms": 4850,
+   "usage": {
+    "input_tokens": 2045,
+    "output_tokens": 300
+   }
+  },
+  "left": {
+   "dora_indicators": [],
+   "ura_dora_indicators": [],
+   "riichi": {
+    "bottom": false,
+    "right": false,
+    "top": false,
+    "left": false
+   },
+   "riichi_conf": {
+    "bottom": 0.95,
+    "right": 0.7,
+    "top": 0.7,
+    "left": 0.7
+   },
+   "last_discards": {
+    "bottom": "4p",
+    "right": null,
+    "top": null,
+    "left": null
+   },
+   "last_discards_conf": {
+    "bottom": 0.98,
+    "right": 0.0,
+    "top": 0.0,
+    "left": 0.0
+   },
+   "rivers": {
+    "bottom": [
+     "6s",
+     "9m",
+     "2p",
+     "9p",
+     "2s",
+     "1z",
+     "3z",
+     "2s",
+     "4s",
+     "7p",
+     "4p"
+    ],
+    "right": [],
+    "top": [],
+    "left": []
+   },
+   "notes": "이미지는 온라인/디지털 마작 화면의 한 플레이어 강(버림패 줄) 부분 확대이며, 도라 표시패 및 타 플레이어의 전체 강은 보이지 않음.",
+   "model": "gemini-3.8-flash",
+   "latency_ms": 4329,
+   "usage": {
+    "input_tokens": 2073,
+    "output_tokens": 348
+   }
+  }
+ }
+}

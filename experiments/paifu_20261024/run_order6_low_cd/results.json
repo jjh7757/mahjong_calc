@@ -1,0 +1,4087 @@
+[
+ {
+  "variant": "C",
+  "shot": "20261024_115559",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "2s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "7p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "7z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 8,
+    "pos": 8
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 8284,
+  "out_tok": 1405,
+  "ms": 5098,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.5
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.5
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.5
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "2z",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "2z",
+       "1z",
+       "2s",
+       "6s",
+       "8p",
+       "4z",
+       "1p",
+       "2p",
+       "2z"
+      ]
+     }
+    ],
+    "notes": "Bottom 자리의 버림패 첫 줄 6장(2z, 1z, 2s, 6s, 8p, 4z), 둘째 줄 3장(1p, 2p, 2z) 보임. 왼쪽에 2m, 8p 일부가 다른 방향(left 자리)으로 보이나 완전히 잘림."
+   },
+   "right": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.9
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "7s",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "1z",
+       "9p",
+       "7s",
+       "9p",
+       "7p",
+       "3p",
+       "8s",
+       "7s"
+      ]
+     }
+    ],
+    "notes": "이미지가 기울어져 잘려 있으며 bottom 플레이어의 버림패만 보입니다. 도라 표시패는 보이지 않습니다."
+   },
+   "top": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.9
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "top",
+      "code": "3m",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "top",
+      "codes": [
+       "1m",
+       "3m",
+       "4z",
+       "8m",
+       "6s",
+       "3z",
+       "4z",
+       "3z",
+       "3m"
+      ]
+     }
+    ],
+    "notes": "이미지는 회전되어 있으며 top 플레이어의 강만 명확히 보입니다. 1행 6장: 1m, 3m, 4z(북), 8m, 6s, 3z(서). 2행 3장: 4z(북), 3z(서), 3m. 도라 표시패와 다른 자리는 보이지 않습니다."
+   },
+   "left": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.7
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.5
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.5
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "1p",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "1m",
+       "9m",
+       "4z",
+       "1p",
+       "8p",
+       "2m",
+       "1z",
+       "7z",
+       "1p"
+      ]
+     },
+     {
+      "side": "right",
+      "codes": [
+       "2s",
+       "1z",
+       "2z"
+      ]
+     }
+    ],
+    "notes": "이미지가 기울어져 잘려 있어 왕패와 도라 표시패 영역이 보이지 않음. bottom 자리의 강과 right 자리의 일부 버림패만 식별 가능함."
+   }
+  }
+ },
+ {
+  "variant": "D6",
+  "shot": "20261024_115559",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "7p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "6z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 8,
+    "pos": 8
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 6340,
+  "out_tok": 3501,
+  "ms": 13618,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "2p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "The tile on the far left (2m) belongs to the adjacent player's discard river/wall and is excluded."
+   },
+   "right": {
+    "tile_count": 8,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "7p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "첫째 줄 6장, 둘째 줄 2장으로 총 8장의 버림패가 확인됩니다."
+   },
+   "top": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.95
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "8m",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.98
+     }
+    ],
+    "notes": "총 9장의 버림패가 확인됩니다."
+   },
+   "left": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "2m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "6z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "9 tiles in total: row 1 has 6 tiles (1m, 9m, 4z, 1p, 8p, 2m), row 2 has 3 tiles (1z, 6z, 1p). The tiles on the right edge belong to another player's river/wall."
+   }
+  }
+ },
+ {
+  "variant": "C",
+  "shot": "20261024_115801",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2m",
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "6p",
+    "3p",
+    "2s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "3z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 10,
+    "tiles": 9,
+    "pos": 0
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 6,
+    "pos": 6
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 8296,
+  "out_tok": 1368,
+  "ms": 4969,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.9
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "2z",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "2m",
+       "2z",
+       "1z",
+       "8s",
+       "6s",
+       "8p",
+       "4z",
+       "1p",
+       "2p",
+       "2z"
+      ]
+     }
+    ],
+    "notes": "이미지가 기울어져 잘려 있어 bottom 자리의 강과 중앙 콘솔 일부만 명확히 보입니다. 첫 줄 2m부터 시작하여 7장이 놓인 뒤 둘째 줄에 1p, 2p, 2z가 놓여 있습니다."
+   },
+   "right": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.7
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.7
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.7
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "7s",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "1z",
+       "9p",
+       "7s",
+       "9p",
+       "6p",
+       "3p",
+       "2s",
+       "7s"
+      ]
+     }
+    ],
+    "notes": "Bottom river shows 8 tiles: first row 1z, 9p, 7s, 9p, 6p, 3p; second row 2s, 7s. Other players' rivers and wall/dora indicators are not clearly visible or present in this cropped view."
+   },
+   "top": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.8
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "top",
+      "code": "3m",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "top",
+      "codes": [
+       "1m",
+       "3m",
+       "4z",
+       "8m",
+       "6s",
+       "3z",
+       "4z",
+       "3z",
+       "3m"
+      ]
+     }
+    ],
+    "notes": "이미지는 뒤집혀/기울어져 있으며 상단(top) 플레이어의 버림패(강)만 촬영되어 있습니다. 패 방향이 거꾸로 되어 있어 top 자리의 버림패로 식별됩니다."
+   },
+   "left": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.5
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.5
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "1p",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "1m",
+       "9m",
+       "4z",
+       "1p",
+       "8p",
+       "2m",
+       "1z",
+       "3z",
+       "1p"
+      ]
+     }
+    ],
+    "notes": "이미지가 회전 및 잘려 있어 bottom의 버림패(강)와 AMOS 중앙 주사위부 및 right 일부 버림패만 보임. 도라 표시패는 보이지 않음."
+   }
+  }
+ },
+ {
+  "variant": "D6",
+  "shot": "20261024_115801",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "8m",
+    "2z",
+    "1z",
+    "2s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "7p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "6z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 7,
+    "pos": 0
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 8,
+    "pos": 8
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 6316,
+  "out_tok": 4574,
+  "ms": 18285,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "8m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "2s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "2p",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "Wait, let me re-check row and col orientation. Look at row 1: 8m, 2z, 1z, 2s, 6s, 8p, 4z (that's 7 tiles?). Ah, wait! The tiles on the top row: 8m, 2z, 1z, 2s, 6s, 8p, 4z is 7 tiles? No, 8m is col 1? Wait, to the right of 8p is 4z. Wait, let's count top row: left to right: 8m (1), 南 2z (2), 東 1z (3), 2s (4), 6s (5), 8p (6), 北 4z (7?). Wait, 4z is row 1 col 7? No! 8m is shifted left, or is 4z row 1 col 6? Let's re-examine: 8m, 南, 東, 2s, 6s, 8p, 北. That is 7 tiles in one row! Wait, no: the second row has 1p, 2p, 南(2z). Why are there 7 tiles in the top row? Wait, look at 8m: behind 8m is another tile? No, 8m is next to another tile on the left? No, let's look at the gap between 2z and 1p: 1p is right below 南(2z). 2p is right below 東(1z). 南 is right below 2s. So row 2 starts under 南(2z). That means 南(2z) is col 2, or col 1? Wait! To the left of 南(row 1), there is 8m. To the left of 8m, there is a corner of a tile? Wait, 8m is upside down? 8m has '八萬' written, but wait, look at 八萬: it's 八 on top, 萬 below. But wait, is that a discard from the left player, or is 8m tile 1? Wait! Look at 8m: 八 is on the right, 萬 is on the left? It's rotated 90 degrees! Ah! 8m is lying horizontally (sideways) or it belongs to the left river? No, look at the orientation: the green table has the auto-table center at the top. The top row has: a tile edge on the far left, then 8m (sideways?), 南, 東, 2s, 6s, 8p, 北. Wait, why would there be 7 tiles? A row in riichi mahjong is 6 tiles! Ah, 北 is row 1 col 6? Let's count: 南(1), 東(2), 2s(3), 6s(4), 8p(5), 北(6). What is the 8m to the left of 南? 8m is sideways, but wait, it's pushed against 南? No, 8m has purple back, edge on the left... wait, look at the dice box / center console! The center console extends to the left. But wait, could 8m be tile 1 that was riichi? If 8m is riichi sideways, why are 南, 東, etc. after it? In Riichi mahjong, discards go left to right. If 南 is col 1, what is 8m? Wait, look at 8m: 八萬 is written sideways (rotated 90 degrees counter-clockwise or clockwise). Wait, the left player's river! In a 4-player game, the left player discards towards the center. The left player's discard row would be perpendicular! But here 8m is oriented horizontally, facing... wait, 八 is on the right, 萬 is on the left, so its top is pointing right (towards 南). That means it was discarded by the player sitting on the left! Wait, let's look at the center tray: the center tray has a dice button on the top right, and the LED display in the middle. The player's river is in front of the display. Usually, row 1 has 6 tiles. If 南, 東, 2s, 6s, 8p, 北 are 6 tiles, they perfectly align with the LED display! And below them, row 2 has: 1p (col 1), 2p (col 2), 南 (col 3). Notice how 1p is aligned with 南 (col 1 of row 1)! 2p is aligned with 東 (col 2 of row 1)! 南 is aligned with 2s (col 3 of row 1)! Wow, 1p is EXACTLY directly under 南! 2p is EXACTLY directly under 東! 南 is EXACTLY directly under 2s! That means 南 is col 1 of row 1! So row 1 consists of: 南 (col 1), 東 (col 2), 2s (col 3), 6s (col 4), 8p (col 5), 北 (col 6). Exactly 6 tiles! And what is 8m? 8m is the river of the player to the left! Notice 8m is perpendicular to this player's tiles, and to the left of 8m there is another tile of that player's river! Yes! The prompt explicitly says: '주의: 이 플레이어의 강만 읽습니다. 사진 가장자리에 걸친 다른 자리의 강·손패·벽패는 읽지 않습니다.' That's a crucial hint!"
+   },
+   "right": {
+    "tile_count": 8,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "7p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "총 8장의 버림패(1번째 줄 6장, 2번째 줄 2장)"
+   },
+   "top": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "8m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "1st row: 1m, 3m, 4z (North), 8m, 6s, 3z (West). 2nd row: 4z (North), 3z (West), 3m."
+   },
+   "left": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "2m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "6z",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": ""
+   }
+  }
+ },
+ {
+  "variant": "C",
+  "shot": "20261024_115929",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2m",
+    "2z",
+    "1z",
+    "4s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "7p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "6z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 10,
+    "tiles": 8,
+    "pos": 0
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 8,
+    "pos": 8
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 8265,
+  "out_tok": 3866,
+  "ms": 30049,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.7
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.7
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "2z",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "2m",
+       "2z",
+       "1z",
+       "4s",
+       "6s",
+       "8p",
+       "4z",
+       "1p",
+       "2p",
+       "2z"
+      ]
+     }
+    ],
+    "notes": "이미지가 기울어져 잘려 있어 다른 자리의 버림패나 왕패(도라 표시패)는 보이지 않습니다."
+   },
+   "right": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.7
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.7
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.7
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "7s",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "1z",
+       "9p",
+       "7s",
+       "9p",
+       "7p",
+       "3p",
+       "8s",
+       "7s"
+      ]
+     }
+    ],
+    "notes": "Bottom river consists of 6 tiles on the first row (1z, 9p, 7s, 9p, 7p, 3p) and 2 tiles on the second row (8s, 7s). No visible dora indicators."
+   },
+   "top": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.5
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.5
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.5
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "3m",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "1m",
+       "3m",
+       "4z",
+       "8m",
+       "6s",
+       "3z",
+       "4z",
+       "3z",
+       "3m"
+      ]
+     }
+    ],
+    "notes": "왼쪽에 다른 자리 버림패로 추정되는 패(2p)의 일부가 보이나 가려짐이 심해 bottom 자리 강만 판독함."
+   },
+   "left": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.9
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "1p",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "1m",
+       "9m",
+       "4z",
+       "1p",
+       "8p",
+       "2m",
+       "1z",
+       "6z",
+       "1p"
+      ]
+     }
+    ],
+    "notes": "Bottom 자리의 버림패(강) 9장만 온전히 식별 가능하며, 오른쪽 자리는 일부만 잘려 보입니다. 도라 표시패는 보이지 않습니다."
+   }
+  }
+ },
+ {
+  "variant": "D6",
+  "shot": "20261024_115929",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "8m",
+    "2z",
+    "1z",
+    "4s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "7p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "6z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 10,
+    "tiles": 8,
+    "pos": 0
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 8,
+    "pos": 8
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 6321,
+  "out_tok": 2654,
+  "ms": 8722,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "tile_count": 10,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "8m",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "4s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "2p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 10,
+      "row": 2,
+      "col": 4,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "1번 줄 6장(8m은 8자만 일부 보임이 아니라 八萬이 거꾸로 놓여 있거나 8m으로 보임), 그러나 자세히 보면 첫 줄 6장은: 맨 왼쪽 8m(八萬이 상하반전됨), 南(2z), 東(1z), 4s, 6s, 8p... 잠깐, 北(4z)는 어디 줄인가? 배열을 다시 보자. 윗줄에 패 7개가 일렬로 있지 않고, 맨 왼쪽 8m(1개), 그 옆 南, 東, 4s, 6s, 8p, 北(6개). 총 7개가 한 줄에 보이지만, 강은 6개씩 끊김. 자세히 보면 맨 오른쪽 北(4z)까지 윗줄 7개? 아니면 맨 왼쪽 패는 다른 사람의 패인가? 위치를 보면 南, 東, 4s, 6s, 8p, 北 6개가 정갈하게 붙어 있고, 맨 왼쪽 패(八萬)는 약간 떨어져 있거나 윗줄 col 1? 아니, 맨 왼쪽 패 위쪽에 다른 패(흰 테두리)가 보임. 하지만 이 플레이어의 강 첫 줄은 보통 6장이다. 첫 줄: 南, 東, 4s, 6s, 8p, 北(6장)? 그렇다면 맨 왼쪽 8m은? 8m 뒤에 다른 타일이 보임. 이는 왼쪽 플레이어의 강 마지막 패일 수 있다. 하지만 위치를 보면 점수봉 표시창/주사위 박스 아래에 南, 東, 4s, 6s, 8p, 北가 정렬되어 있고, 그 아래 줄에 1p, 2p, 2z가 南 아래부터 놓여 있다! 즉, 강 1줄은 南(col 1)부터 北(col 6)까지 6장이고, 2줄은 1p(col 1), 2p(col 2), 2z(col 3)이다. 맨 왼쪽의 패는 왼쪽 플레이어의 강 끝패이다."
+   },
+   "right": {
+    "tile_count": 8,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "7p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": ""
+   },
+   "top": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "8m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "9 tiles in total: 6 in the first row, 3 in the second row."
+   },
+   "left": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "2m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "6z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": ""
+   }
+  }
+ },
+ {
+  "variant": "C",
+  "shot": "20261024_120037",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "2s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "6p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "7z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 7,
+    "pos": 7
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 8228,
+  "out_tok": 1264,
+  "ms": 4441,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.8
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "2z",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "2z",
+       "1z",
+       "2s",
+       "6s",
+       "8p",
+       "4z",
+       "1p",
+       "2p",
+       "2z"
+      ]
+     }
+    ],
+    "notes": "이미지가 기울어져 잘려 있으며 bottom 플레이어의 버림패(강) 일부와 주변 패만 명확히 보임. 도라 표시패는 보이지 않음."
+   },
+   "right": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.9
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "7s",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "1z",
+       "9p",
+       "7s",
+       "9p",
+       "6p",
+       "3p",
+       "8s",
+       "7s"
+      ]
+     }
+    ],
+    "notes": "이미지가 기울어져 잘려 있어 bottom 자리의 강 일부와 right 자리 패산/강 일부만 보임. 도라 표시패는 보이지 않음."
+   },
+   "top": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.8
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "top",
+      "code": "3m",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "top",
+      "codes": [
+       "1m",
+       "3m",
+       "4z",
+       "8m",
+       "6s",
+       "3z",
+       "4z",
+       "3z",
+       "3m"
+      ]
+     }
+    ],
+    "notes": "이미지는 뒤집힌 상태(top 플레이어 기준)로 강이 보이며, 1줄째 1m, 3m, 4z(북), 8m, 6s, 3z(서), 2줄째 4z(북), 3z(서), 3m이 버려져 있습니다."
+   },
+   "left": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.7
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.7
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "1p",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "1m",
+       "9m",
+       "4z",
+       "1p",
+       "8p",
+       "2m",
+       "1z",
+       "7z",
+       "1p"
+      ]
+     }
+    ],
+    "notes": "이미지가 기울어져 있고 크롭되어 bottom의 강과 right의 일부 패만 보임. 도라 표시패는 보이지 않음."
+   }
+  }
+ },
+ {
+  "variant": "D6",
+  "shot": "20261024_120037",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "4s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "7p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "6z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 8,
+    "pos": 8
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 6284,
+  "out_tok": 7157,
+  "ms": 27562,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "2p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "왼쪽에 걸쳐 보이는 2m 등은 상가(왼쪽 플레이어)의 버림패이므로 제외하고 해당 플레이어의 9개 버림패만 인식했습니다."
+   },
+   "right": {
+    "tile_count": 8,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "7p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "First row contains 6 tiles: 1z, 9p, 7s, 9p, 7p, 3p. Second row contains 2 tiles: 8s, 7s."
+   },
+   "top": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "8m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "총 9장의 버림패가 확인되며 리치 선언패(가로패)는 없습니다."
+   },
+   "left": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "2m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "6z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "9 discarded tiles total across 2 rows; none rotated sideways."
+   }
+  }
+ },
+ {
+  "variant": "C",
+  "shot": "20261024_120755",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2m",
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "6p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "6z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 10,
+    "tiles": 9,
+    "pos": 0
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 7,
+    "pos": 7
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 8296,
+  "out_tok": 1498,
+  "ms": 5092,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.8
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "2z",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "2m",
+       "2z",
+       "1z",
+       "8s",
+       "6s",
+       "8p",
+       "4z",
+       "1p",
+       "2p",
+       "2z"
+      ]
+     }
+    ],
+    "notes": "이미지가 기울어져 있고 잘려 있으며, 하가(bottom)의 버림패(강)만 선명하게 보입니다. 첫째 줄은 2m, 2z, 1z, 8s, 6s, 8p로 추정되며 4z는 첫째 줄 끝에 붙어 있거나 둘째 줄 시작부로 보입니다(순서: 2m, 2z, 1z, 8s, 6s, 8p, 4z 혹은 2m부터 시작하여 둘째 줄 1p, 2p, 2z). 도라 표시패는 보이지 않습니다."
+   },
+   "right": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.7
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.7
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "7s",
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "code": "9m",
+      "confidence": 0.9
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "1z",
+       "9p",
+       "7s",
+       "9p",
+       "6p",
+       "3p",
+       "8s",
+       "7s"
+      ]
+     },
+     {
+      "side": "right",
+      "codes": [
+       "9m",
+       "9m"
+      ]
+     }
+    ],
+    "notes": "도라 표시패가 위치한 왕패 영역이 화면에 보이지 않음."
+   },
+   "top": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.8
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "top",
+      "code": "3m",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "top",
+      "codes": [
+       "1m",
+       "3m",
+       "4z",
+       "8m",
+       "6s",
+       "3z",
+       "4z",
+       "3z",
+       "3m"
+      ]
+     }
+    ],
+    "notes": "이미지는 회전되어 있고, top 자리의 버림패(강)만 확인됩니다 (거꾸로 놓여 있음: 1줄 1m, 3m, 4z, 8m, 6s, 3z / 2줄 4z, 3z, 3m). 도라 표시패는 보이지 않습니다."
+   },
+   "left": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.8
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.5
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.5
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "1p",
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "code": "1p",
+      "confidence": 0.7
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "1m",
+       "9m",
+       "4z",
+       "1p",
+       "8p",
+       "2m",
+       "1z",
+       "6z",
+       "1p"
+      ]
+     },
+     {
+      "side": "right",
+      "codes": [
+       "8s",
+       "1z",
+       "2z",
+       "1p"
+      ]
+     }
+    ],
+    "notes": "이미지가 부분적으로 크롭되어 있어 bottom과 right 버림패 일부만 보이며, 왕패 및 도라 표시패는 보이지 않습니다."
+   }
+  }
+ },
+ {
+  "variant": "D6",
+  "shot": "20261024_120755",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "7p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "2z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 8,
+    "pos": 8
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   }
+  },
+  "calls": 4,
+  "in_tok": 6381,
+  "out_tok": 5091,
+  "ms": 22217,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "2p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "Row 1 contains 6 tiles: 2z, 1z, 8s, 6s, 8p, 4z. Row 2 contains 3 tiles: 1p, 2p, 2z. A 2m tile on the left is from an adjacent player's discard river."
+   },
+   "right": {
+    "tile_count": 8,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "7p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "8 tiles in total across 2 rows (6 in row 1, 2 in row 2)."
+   },
+   "top": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.95
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.96
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "8m",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.98
+     }
+    ],
+    "notes": "첫째 줄 1~2번째 패(1m, 3m)는 상하가 뒤집혀 버려진 형태입니다."
+   },
+   "left": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "2m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "총 9장의 버림패가 확인되며, 우측에 부분적으로 보이는 다른 플레이어의 강 패는 제외했습니다."
+   }
+  }
+ },
+ {
+  "variant": "C",
+  "shot": "20261024_122922",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2m",
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "6p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "4z",
+    "6s",
+    "8m",
+    "4z",
+    "3m",
+    "1m",
+    "3m",
+    "3z",
+    "4z"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "3s",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 10,
+    "tiles": 9,
+    "pos": 0
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 7,
+    "pos": 7
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 1
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 8296,
+  "out_tok": 1435,
+  "ms": 5635,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.7
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.7
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.7
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "2z",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "2m",
+       "2z",
+       "1z",
+       "8s",
+       "6s",
+       "8p",
+       "4z",
+       "1p",
+       "2p",
+       "2z"
+      ]
+     }
+    ],
+    "notes": "이미지가 기울어져 있고 잘려 있으며, bottom 플레이어의 버림패(강)만 확인 가능함. 첫째 줄은 2m(일부 잘림), 2z, 1z, 8s, 6s, 8p, 둘째 줄은 4z(첫째줄 끝에 이음), 1p, 2p, 2z 형태로 놓여 있음."
+   },
+   "right": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.9
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "7s",
+      "confidence": 0.98
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "1z",
+       "9p",
+       "7s",
+       "9p",
+       "6p",
+       "3p",
+       "8s",
+       "7s"
+      ]
+     }
+    ],
+    "notes": "이미지 각도가 기울어져 있으며 bottom 플레이어의 버림패(강)만 주로 보입니다. 우측 상단에 상대방의 버림패 일부(만수패)가 보이나 전체 확인은 불가합니다."
+   },
+   "top": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.5
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.5
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "top",
+      "code": "3m",
+      "confidence": 0.95
+     }
+    ],
+    "rivers": [
+     {
+      "side": "top",
+      "codes": [
+       "4z",
+       "6s",
+       "8m",
+       "4z",
+       "3m",
+       "1m",
+       "3m",
+       "3z",
+       "4z"
+      ]
+     }
+    ],
+    "notes": "이미지가 회전 및 크롭되어 top 플레이어의 버림패(강)만 보입니다. 패가 거꾸로 놓여 있어 top 자리 기준 1줄: 4z, 6s, 8m, 4z, 3m, 1m (우측에서 좌측으로 읽었을 때 거꾸로 서있는 패 기준), 2줄: 3m, 3z, 4z."
+   },
+   "left": {
+    "dora_indicators": [],
+    "ura_dora_indicators": [],
+    "riichi": [
+     {
+      "side": "bottom",
+      "riichi": false,
+      "confidence": 0.95
+     },
+     {
+      "side": "right",
+      "riichi": false,
+      "confidence": 0.9
+     },
+     {
+      "side": "top",
+      "riichi": false,
+      "confidence": 0.7
+     },
+     {
+      "side": "left",
+      "riichi": false,
+      "confidence": 0.7
+     }
+    ],
+    "last_discards": [
+     {
+      "side": "bottom",
+      "code": "1p",
+      "confidence": 0.98
+     }
+    ],
+    "rivers": [
+     {
+      "side": "bottom",
+      "codes": [
+       "1m",
+       "9m",
+       "4z",
+       "1p",
+       "8p",
+       "2m",
+       "1z",
+       "3s",
+       "1p"
+      ]
+     },
+     {
+      "side": "right",
+      "codes": [
+       "8s",
+       "1z",
+       "2z"
+      ]
+     }
+    ],
+    "notes": "이미지가 기울어져 잘려 있어 bottom 자리의 강과 right 자리의 강 일부만 보이며, 도라 표시패(패산)는 보이지 않습니다."
+   }
+  }
+ },
+ {
+  "variant": "D6",
+  "shot": "20261024_122922",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2m",
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "7p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "2s",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 3
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 8,
+    "pos": 8
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 6352,
+  "out_tok": 3147,
+  "ms": 14128,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "2m",
+      "sideways": false,
+      "confidence": 0.95
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "2p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "Row 1 contains 6 tiles (2m, 2z, 1z, 8s, 6s, 8p). Note that the tile next to 8p is 4z (North), which appears to be col 7 or col 6 depending on whether 2m is col 1. Looking closely: 2m is col 1 (partially visible upside down / tilted), col 2 is 2z, col 3 is 1z, col 4 is 8s, col 5 is 6s, col 6 is 8p, and 4z is col 7? Wait, let's recount row 1: left edge has 2m, then 2z, 1z, 8s, 6s, 8p, 4z - that's 7 tiles in row 1? Wait, 2m is cut off on left. If 2m is col 1, then there are 7 tiles in row 1: 2m, 南, 東, 8s, 6s, 8p, 北. Ah, look at row 2: it starts under 南? No, 1p is under 南, 2p is under 東, 南 is under 8s. Wait, where is col 1 of row 2? Under 2m? No, under 2m there is nothing. Actually, is 2m in row 1? 2m is upside down? No, 2m is 二萬, with 二 at bottom and 萬 at top (upside down). Wait, look at 2m, it's 2m facing the other player? No, 2m is oriented upside down (萬 is on the left/top). Wait, look at the corner: 2m is on the left. But wait, why are there 7 tiles in row 1? Wait, 4z (北) is to the right of 8p. Is 4z a discard or something else? No, 4z is a standard discard. Wait, if row 1 has 6 tiles, could 2m belong to the left player's river? The left player's river would be perpendicular! Here 2m is aligned horizontally with 南, 東, etc., but slightly offset, or is 2m actually col 1? Wait, no, look at 2m, it is oriented 180 degrees from the rest! Look at 萬 - the radical is upside down! Wait, no, 二 is at the left, 萬 is at the right? No, 2m is sideways/upside down? Actually, 2m is an opponent's discard or wall tile? Wait, look at the seam: next to 2m there is a white tile edge. No, in Chinese/Japanese automatic tables, sometimes tiles are 6 per row. Why are there 7 tiles: [2m?], 南, 東, 8s, 6s, 8p, 北? That's 7 tiles! Wait, in 7-tile river or did someone discard 7? No, in Japanese mahjong it's 6 tiles per row. Wait, is 2m part of the left player's river? The left player's river would run vertically, and their tiles would face their side (rotated 90 degrees). But this tile has 萬 and 二 facing towards the camera or left? The 萬 is clearly visible, characters oriented towards the left (rotated 90 degrees counter-clockwise relative to the camera, or facing left player). Yes! It's rotated 90 degrees compared to 南 and 東! And look at the tile behind it (to the left), there's another tile edge. That is indeed the left player's discard river! The current player's row 1 consists of: 南 (1z? no, 2z), 東 (1z), 8s, 6s, 8p, 北 (4z) - exactly 6 tiles! Row 2 has 3 tiles: 1p, 2p, 南 (2z). Total count = 6 + 3 = 9 tiles."
+   },
+   "right": {
+    "tile_count": 8,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "7p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "8 tiles discarded in total: Row 1 has 6 tiles (1z, 9p, 7s, 9p, 7p, 3p), Row 2 has 2 tiles (8s, 7s)."
+   },
+   "top": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "8m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "9 tiles in total: 6 tiles in row 1 and 3 tiles in row 2."
+   },
+   "left": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "2m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "2s",
+      "sideways": false,
+      "confidence": 0.95
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "Row 1 contains 6 tiles (1m, 9m, 4z, 1p, 8p, 2m). Row 2 contains 3 tiles (1z, 2s, 1p). Surrounding tiles from other players are ignored."
+   }
+  }
+ }
+]

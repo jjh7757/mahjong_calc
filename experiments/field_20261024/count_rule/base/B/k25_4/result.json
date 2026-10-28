@@ -1,0 +1,201 @@
+{
+ "photo": "C:/Users/jjh7757/AppData/Local/Temp/claude/C--Users-jjh7757-dev-mahjong-calc/65eec9af-1e78-468b-a970-549fa299af1e/scratchpad/kakao/k25.jpg",
+ "grid": {
+  "x1": 272,
+  "x2": 735,
+  "y1": 137,
+  "y2": 727
+ },
+ "winner_side": "right",
+ "warnings": [],
+ "merge": {
+  "winner": 1,
+  "is_tsumo": false,
+  "loser": 2,
+  "closed": [
+   "7z",
+   "1m",
+   "1m",
+   "1m",
+   "9s",
+   "9s",
+   "9s",
+   "9p",
+   "9p",
+   "9p",
+   "7z"
+  ],
+  "win_tile": "7z",
+  "melds": [
+   "[6z 6z 6z]"
+  ],
+  "red_count": 0,
+  "hand_valid": true,
+  "uncertain": [],
+  "flags": [
+   "winFromDiscard: 손패가 10장이라 위(플레이어 3) 강 끝 중 로 론으로 봤습니다"
+  ],
+  "riichi": false,
+  "riichi_seats_photo": [
+   0,
+   3
+  ],
+  "dora_indicators": [
+   "1z",
+   "7m"
+  ],
+  "ura_indicators": []
+ },
+ "flags": [
+  "손패가 10장이라 위(플레이어 3) 강 끝 중 로 론으로 봤습니다"
+ ],
+ "score": "7판 60부 하네만 12000 [혼노두 2, 또이또이 2, 산안커 2, 발 1] HandShape.standard 7z7z 1m1m1m 9p9p9p 9s9s9s [6z6z6z] wait=WaitType.tanki@0",
+ "total_ms": 14561,
+ "timings_ms": {
+  "shrink": 768,
+  "analyze": 90,
+  "crop": 1486,
+  "read": 12213,
+  "pick": 0
+ },
+ "analysis": {
+  "felt_iou": 1.0,
+  "moved": false,
+  "face_up": [
+   "right"
+  ],
+  "dora_box": null,
+  "hand_colors": {
+   "bottom": {
+    "back": 0.015,
+    "white": 0.288
+   },
+   "right": {
+    "back": 0.0,
+    "white": 0.164
+   },
+   "top": {
+    "back": 0.033,
+    "white": 0.097
+   },
+   "left": {
+    "back": 0.043,
+    "white": 0.227
+   }
+  }
+ },
+ "observation": {
+  "players": {
+   "bottom": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "6s",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": true
+   },
+   "right": {
+    "hand": {
+     "face_up": true,
+     "tiles": [
+      "7z",
+      "1m",
+      "1m",
+      "1m",
+      "9s",
+      "9s",
+      "9s",
+      "9p",
+      "9p",
+      "9p"
+     ],
+     "separate_tile": null
+    },
+    "melds": [
+     {
+      "tiles": [
+       "6z",
+       "6z",
+       "6z"
+      ],
+      "sideways": [],
+      "face_down": [],
+      "conf": 0.95
+     }
+    ],
+    "river": null,
+    "riichi_stick": false
+   },
+   "top": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "7z",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": false
+   },
+   "left": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "3s",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": true
+   }
+  },
+  "dora_indicators": [
+   "1z",
+   "7m"
+  ],
+  "usage": {
+   "dora": {
+    "input_tokens": 1477,
+    "output_tokens": 93
+   },
+   "sticks": {
+    "input_tokens": 1438,
+    "output_tokens": 229
+   },
+   "last_top": {
+    "input_tokens": 1532,
+    "output_tokens": 302
+   },
+   "last_bottom": {
+    "input_tokens": 1532,
+    "output_tokens": 311
+   },
+   "last_left": {
+    "input_tokens": 1544,
+    "output_tokens": 452
+   },
+   "seat_right": {
+    "input_tokens": 2748,
+    "output_tokens": 842
+   }
+  }
+ }
+}

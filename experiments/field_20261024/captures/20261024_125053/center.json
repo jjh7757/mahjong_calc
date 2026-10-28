@@ -1,0 +1,90 @@
+{
+ "dora_indicators": [
+  {
+   "tile": "9s",
+   "conf": 0.99
+  },
+  {
+   "tile": "5s",
+   "conf": 0.99
+  }
+ ],
+ "ura_dora_indicators": [],
+ "riichi": {
+  "bottom": false,
+  "right": true,
+  "top": false,
+  "left": false
+ },
+ "riichi_conf": {
+  "bottom": 0.95,
+  "right": 0.99,
+  "top": 0.95,
+  "left": 0.95
+ },
+ "last_discards": {
+  "bottom": "2z",
+  "right": "8s",
+  "top": "3m",
+  "left": "2m"
+ },
+ "last_discards_conf": {
+  "bottom": 0.98,
+  "right": 0.98,
+  "top": 0.95,
+  "left": 0.98
+ },
+ "rivers": {
+  "bottom": [
+   "2z",
+   "1z",
+   "8s",
+   "6s",
+   "8p",
+   "4z",
+   "1p",
+   "2p",
+   "2z"
+  ],
+  "right": [
+   "1p",
+   "8p",
+   "8p",
+   "8s",
+   "5p",
+   "1z",
+   "8s",
+   "8s"
+  ],
+  "top": [
+   "5z",
+   "6s",
+   "8m",
+   "4z",
+   "1m",
+   "4z",
+   "3m",
+   "3z",
+   "3m"
+  ],
+  "left": [
+   "1z",
+   "1m",
+   "5z",
+   "9m",
+   "1p",
+   "4z",
+   "2s",
+   "1p",
+   "8p",
+   "2m"
+  ]
+ },
+ "notes": "Right 자리 슬롯에 파란색 리치봉이 꽂혀 있습니다. 상단 좌측 패산 위에 놓인 도라 표시패는 8s(그 옆은 3s)입니다.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 7115,
+ "usage": {
+  "input_tokens": 2047,
+  "output_tokens": 644
+ }
+}

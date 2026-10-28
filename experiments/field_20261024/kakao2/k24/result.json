@@ -1,0 +1,600 @@
+{
+ "photo": "C:\\Users\\jjh7757\\AppData\\Local\\Temp\\claude\\C--Users-jjh7757-dev-mahjong-calc\\65eec9af-1e78-468b-a970-549fa299af1e\\scratchpad\\kakao\\k24.jpg",
+ "winner_side": "top",
+ "warnings": [],
+ "merge": {
+  "winner": 2,
+  "is_tsumo": true,
+  "loser": null,
+  "closed": [
+   "3p",
+   "3p",
+   "5p",
+   "5p",
+   "4m",
+   "5m",
+   "6m",
+   "6s",
+   "7s",
+   "8s"
+  ],
+  "win_tile": "8s",
+  "melds": [],
+  "red_count": 0,
+  "hand_valid": false,
+  "uncertain": [],
+  "flags": [
+   "winTileAssumed: 화료패를 따로 찾지 못해 손패 마지막 장으로 봤습니다",
+   "tileCountMismatch: 손패가 14장이어야 하는데 10장 읽혔습니다"
+  ],
+  "riichi": false,
+  "riichi_seats_photo": [
+   0,
+   3
+  ],
+  "dora_indicators": [
+   "1z",
+   "7m"
+  ],
+  "ura_indicators": []
+ },
+ "flags": [
+  "화료패를 따로 찾지 못해 손패 마지막 장으로 봤습니다",
+  "손패가 14장이어야 하는데 10장 읽혔습니다"
+ ],
+ "timings_ms": {
+  "shrink": 302,
+  "locate": 37421,
+  "pick": 0,
+  "crop": 386,
+  "read": 20530
+ },
+ "layout": {
+  "hands": [
+   {
+    "side": "bottom",
+    "box": [
+     918,
+     296,
+     976,
+     680
+    ],
+    "face_up": false,
+    "conf": 0.98
+   },
+   {
+    "side": "right",
+    "box": [
+     238,
+     775,
+     545,
+     853
+    ],
+    "face_up": false,
+    "conf": 0.98
+   },
+   {
+    "side": "top",
+    "box": [
+     79,
+     399,
+     130,
+     606
+    ],
+    "face_up": true,
+    "conf": 0.98
+   },
+   {
+    "side": "left",
+    "box": [
+     214,
+     107,
+     613,
+     194
+    ],
+    "face_up": false,
+    "conf": 0.98
+   }
+  ],
+  "rivers": [
+   {
+    "side": "bottom",
+    "box": [
+     523,
+     413,
+     663,
+     574
+    ],
+    "conf": 0.98
+   },
+   {
+    "side": "right",
+    "box": [
+     352,
+     575,
+     532,
+     683
+    ],
+    "conf": 0.98
+   },
+   {
+    "side": "top",
+    "box": [
+     226,
+     401,
+     344,
+     544
+    ],
+    "conf": 0.98
+   },
+   {
+    "side": "left",
+    "box": [
+     333,
+     323,
+     524,
+     428
+    ],
+    "conf": 0.98
+   }
+  ],
+  "melds": [],
+  "dead_wall": {
+   "box": [
+    169,
+    287,
+    216,
+    336
+   ],
+   "conf": 0.95
+  },
+  "center": {
+   "box": [
+    165,
+    285,
+    665,
+    685
+   ]
+  },
+  "notes": "상가(top) 손패가 공개되어 있으며, 도라 표시패 2장이 상가 강 좌측에 따로 놓여 있음",
+  "model": "gemini-3.8-flash",
+  "latency_ms": 37341,
+  "usage": {
+   "input_tokens": 1638,
+   "output_tokens": 4562
+  }
+ },
+ "observation": {
+  "players": {
+   "bottom": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "1z",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "9p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "7s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "9p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "7p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "5s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "8s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "7s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "3p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "9p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "7p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "3s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "2m",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "8p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "6m",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "9m",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "6s",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": true
+   },
+   "right": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "1m",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "3m",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "4z",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "8m",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "1s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "3z",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "4z",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "3z",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "3m",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "5s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "2s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "8m",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "8s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "2p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "2s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "6p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "6p",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": false
+   },
+   "top": {
+    "hand": {
+     "face_up": true,
+     "tiles": [
+      "3p",
+      "3p",
+      "5p",
+      "5p",
+      "4m",
+      "5m",
+      "6m",
+      "6s",
+      "7s",
+      "8s"
+     ],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "1m",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "9m",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "4z",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "1p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "8p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "2m",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "1z",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "6z",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "1p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "2s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "1s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "0s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "8s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "4p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "7s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "5p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "3z",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": false
+   },
+   "left": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "2z",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "1z",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "2z",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "6s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "8p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "4z",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "1p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "2p",
+      "sideways": true,
+      "conf": 0.99
+     },
+     {
+      "tile": "2z",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "7z",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "6m",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "7p",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "7m",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "2s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "9s",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "1m",
+      "sideways": false,
+      "conf": 0.99
+     },
+     {
+      "tile": "9m",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": true
+   }
+  },
+  "dora_indicators": [
+   "1z",
+   "7m"
+  ],
+  "usage": {
+   "hand": {
+    "input_tokens": 1509,
+    "output_tokens": 284
+   },
+   "river_bottom": {
+    "input_tokens": 1519,
+    "output_tokens": 436
+   },
+   "river_top": {
+    "input_tokens": 1504,
+    "output_tokens": 436
+   },
+   "river_left": {
+    "input_tokens": 1504,
+    "output_tokens": 436
+   },
+   "center": {
+    "input_tokens": 1697,
+    "output_tokens": 222
+   },
+   "wall": {
+    "input_tokens": 1701,
+    "output_tokens": 902
+   },
+   "river_right": {
+    "input_tokens": 1485,
+    "output_tokens": 905
+   }
+  }
+ }
+}

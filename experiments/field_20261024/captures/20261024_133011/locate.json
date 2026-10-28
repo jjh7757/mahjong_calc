@@ -1,0 +1,115 @@
+{
+ "hands": [
+  {
+   "side": "bottom",
+   "box": [
+    732,
+    94,
+    941,
+    389
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    404,
+    655,
+    786,
+    775
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    66,
+    405,
+    161,
+    584
+   ],
+   "face_up": true,
+   "conf": 0.95
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    486,
+    285,
+    590,
+    439
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    389,
+    442,
+    574,
+    521
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    296,
+    386,
+    389,
+    517
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "left",
+   "box": [
+    337,
+    274,
+    510,
+    366
+   ],
+   "conf": 0.95
+  }
+ ],
+ "melds": [
+  {
+   "side": "top",
+   "box": [
+    7,
+    260,
+    48,
+    321
+   ],
+   "conf": 0.9
+  }
+ ],
+ "dead_wall": {
+  "box": [
+   81,
+   335,
+   130,
+   380
+  ],
+  "conf": 0.88
+ },
+ "center": {
+  "box": [
+   81,
+   274,
+   590,
+   521
+  ]
+ },
+ "notes": "3인 마작으로 추정되며, left 자리 손패는 없음. top 플레이어의 손패가 도라 표시패 옆에 공개되어 있음.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 24234,
+ "usage": {
+  "input_tokens": 1638,
+  "output_tokens": 2979
+ }
+}

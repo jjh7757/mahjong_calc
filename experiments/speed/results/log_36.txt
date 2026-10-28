@@ -1,0 +1,36 @@
+python-dotenv could not parse statement starting at line 21
+python-dotenv could not parse statement starting at line 25
+python-dotenv could not parse statement starting at line 27
+Direct use of automatic function calling (AFC) in Models.generate_content is not recommended. Instead, we recommend to use AFC in Chat.send_message. Similarly, direct use of AFC in Models.generate_content_stream is not recommended. Instead, we recommend to use AFC in Chat.send_message_stream.
+Direct use of automatic function calling (AFC) in Models.generate_content is not recommended. Instead, we recommend to use AFC in Chat.send_message. Similarly, direct use of AFC in Models.generate_content_stream is not recommended. Instead, we recommend to use AFC in Chat.send_message_stream.
+36_zr      정답 15/30  {'A': '0/6', 'B': '4/6', 'C': '5/6', 'D': '6/6', 'E': '0/6'}  시간 중앙 4.8s 최대 10.0s  입력 10654 출력 337 생각 0
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 C k15_1: 1z 1z 1z 1m 2m 3m 4m 0m 6m 7m 8m 9m 2z | []
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+36_zr_min  정답 16/30  {'A': '0/6', 'B': '3/6', 'C': '6/6', 'D': '6/6', 'E': '1/6'}  시간 중앙 4.6s 최대 8.4s  입력 10654 출력 337 생각 0
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 B k28_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 B k25_1: 7z 1m 1m 1m 9s 9s 9s 9p 9p 9p | []
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []

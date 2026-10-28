@@ -1,0 +1,104 @@
+{
+ "hands": [
+  {
+   "side": "bottom",
+   "box": [
+    747,
+    108,
+    998,
+    404
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    471,
+    702,
+    867,
+    831
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "left",
+   "box": [
+    233,
+    149,
+    451,
+    292
+   ],
+   "face_up": true,
+   "conf": 0.92
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    510,
+    321,
+    622,
+    477
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    430,
+    480,
+    620,
+    568
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    334,
+    431,
+    429,
+    568
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "left",
+   "box": [
+    365,
+    312,
+    532,
+    408
+   ],
+   "conf": 0.95
+  }
+ ],
+ "melds": [],
+ "dead_wall": {
+  "box": [
+   547,
+   148,
+   617,
+   206
+  ],
+  "conf": 0.85
+ },
+ "center": {
+  "box": [
+   330,
+   145,
+   625,
+   570
+  ]
+ },
+ "notes": "top 자리는 손패가 보이지 않으며, left 플레이어의 손패는 앞면으로 눕혀져 있습니다. 패산 벽패 일부가 테이블 위에 남아 있습니다.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 17068,
+ "usage": {
+  "input_tokens": 1638,
+  "output_tokens": 1899
+ }
+}

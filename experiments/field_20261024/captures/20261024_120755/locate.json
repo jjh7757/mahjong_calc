@@ -1,0 +1,102 @@
+{
+ "hands": [
+  {
+   "side": "bottom",
+   "box": [
+    731,
+    173,
+    932,
+    458
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    423,
+    692,
+    829,
+    809
+   ],
+   "face_up": true,
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    71,
+    484,
+    148,
+    670
+   ],
+   "face_up": false,
+   "conf": 0.92
+  },
+  {
+   "side": "left",
+   "box": [
+    216,
+    147,
+    517,
+    288
+   ],
+   "face_up": false,
+   "conf": 0.95
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    488,
+    349,
+    589,
+    499
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    381,
+    498,
+    565,
+    575
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    297,
+    438,
+    382,
+    569
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "left",
+   "box": [
+    346,
+    339,
+    516,
+    423
+   ],
+   "conf": 0.95
+  }
+ ],
+ "dead_wall": null,
+ "center": {
+  "box": [
+   294,
+   337,
+   591,
+   577
+  ]
+ },
+ "notes": "왕패 및 도라 표시패 미확인, right 손패의 멜드(울기) 포함",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 4801
+}

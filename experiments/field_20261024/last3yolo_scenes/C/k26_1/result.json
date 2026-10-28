@@ -1,0 +1,194 @@
+{
+ "photo": "experiments/field_20261024/kakao_photos/k26.jpg",
+ "grid": {
+  "x1": 320,
+  "x2": 760,
+  "y1": 142,
+  "y2": 717
+ },
+ "winner_side": "left",
+ "warnings": [],
+ "merge": {
+  "winner": 3,
+  "is_tsumo": false,
+  "loser": 0,
+  "closed": [
+   "1z",
+   "1z",
+   "1z",
+   "1m",
+   "2m",
+   "3m",
+   "4m",
+   "5m",
+   "6m",
+   "7m",
+   "8m",
+   "9m",
+   "2z",
+   "2z"
+  ],
+  "win_tile": "2z",
+  "melds": [],
+  "red_count": 0,
+  "hand_valid": true,
+  "uncertain": [],
+  "flags": [
+   "winFromDiscard: 손패가 13장이라 아래(플레이어 1) 강 끝 남 로 론으로 봤습니다",
+   "riichiMismatch: 사진에는 리치(횡치)가 보이는데 기록에는 없습니다. 반영할 때 리치봉을 자동으로 넣습니다"
+  ],
+  "riichi": true,
+  "riichi_seats_photo": [
+   3
+  ],
+  "dora_indicators": [
+   "7m",
+   "6s"
+  ],
+  "ura_indicators": []
+ },
+ "flags": [
+  "손패가 13장이라 아래(플레이어 1) 강 끝 남 로 론으로 봤습니다",
+  "사진에는 리치(횡치)가 보이는데 기록에는 없습니다. 반영할 때 리치봉을 자동으로 넣습니다"
+ ],
+ "score": "8판 40부 배만 16000 [리치 1, 혼일색 3, 일기통관 2, 장풍패 1, 도라 1] HandShape.standard 2z2z 1m2m3m 4m5m6m 7m8m9m 1z1z1z wait=WaitType.tanki@0",
+ "total_ms": 8839,
+ "timings_ms": {
+  "shrink": 344,
+  "analyze": 49,
+  "crop": 676,
+  "read": 7764,
+  "pick": 0
+ },
+ "analysis": {
+  "felt_iou": 1.0,
+  "moved": false,
+  "face_up": [
+   "left"
+  ],
+  "dora_box": null,
+  "hand_colors": {
+   "bottom": {
+    "back": 0.015,
+    "white": 0.228
+   },
+   "right": {
+    "back": 0.011,
+    "white": 0.172
+   },
+   "top": {
+    "back": 0.016,
+    "white": 0.12
+   },
+   "left": {
+    "back": 0.027,
+    "white": 0.233
+   }
+  },
+  "tile_patterns": {
+   "bottom": 65,
+   "right": 3,
+   "top": 0,
+   "left": 2870
+  }
+ },
+ "observation": {
+  "players": {
+   "bottom": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "2z",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": false
+   },
+   "right": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "6p",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": false
+   },
+   "top": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "3z",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": false
+   },
+   "left": {
+    "hand": {
+     "face_up": true,
+     "tiles": [
+      "1z",
+      "1z",
+      "1z",
+      "1m",
+      "2m",
+      "3m",
+      "4m",
+      "5m",
+      "6m",
+      "7m",
+      "8m",
+      "9m",
+      "2z"
+     ],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": null,
+    "riichi_stick": true
+   }
+  },
+  "dora_indicators": [],
+  "hand_side_indicators": [
+   "7m",
+   "6s"
+  ],
+  "usage": {
+   "sticks": {
+    "input_tokens": 1439,
+    "output_tokens": 145
+   },
+   "last3": {
+    "input_tokens": 4714,
+    "output_tokens": 156
+   },
+   "seat_left": {
+    "input_tokens": 32097,
+    "output_tokens": 736
+   },
+   "dora": {
+    "input_tokens": 1478,
+    "output_tokens": 472
+   }
+  }
+ }
+}

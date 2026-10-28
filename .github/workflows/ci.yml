@@ -1,0 +1,64 @@
+# 앱 CI: push·PR 마다 analyze + test. master push 엔 APK 도 빌드해 artifact 로 올린다.
+# APK 의 서버 키는 저장소 Secrets 의 RECOGNIZER_API_KEY (없으면 APK 단계는 건너뜀).
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: "3.47.7"   # 로컬과 같은 버전(.dart_tool/package_config.json)
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  apk:
+    needs: check
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 키 확인
+        id: key
+        env:
+          KEY: ${{ secrets.RECOGNIZER_API_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "RECOGNIZER_API_KEY secret 이 없어 APK 를 건너뜀 (gh secret set RECOGNIZER_API_KEY < .recognizer_key)"
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-java@v4
+        if: steps.key.outputs.present == 'true'
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        if: steps.key.outputs.present == 'true'
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: APK 빌드 (release, 운영 키)
+        if: steps.key.outputs.present == 'true'
+        run: flutter build apk --release --dart-define=RECOGNIZER_API_KEY=${{ secrets.RECOGNIZER_API_KEY }}
+      - uses: actions/upload-artifact@v4
+        if: steps.key.outputs.present == 'true'
+        with:
+          name: mahjong_calc-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30

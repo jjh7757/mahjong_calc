@@ -1,0 +1,30 @@
+403187831140.dkr.ecr.ap-northeast-2.amazonaws.com/yolo26-bench:arm64
+== grid
+INFO {"machine": "aarch64", "cpus": 2, "ort": "1.31.0", "threads": 0, "load_s": 0.13}
+RESULT {"run": 0, "scene": "B", "photo": "k25", "decode_s": 0.123, "grid_s": 5.066, "region_each_s": [1.059, 0.98, 1.028, 0.971, 1.022], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 736, "y1": 160, "x1": 306, "x2": 737}, "grid_matches_pc": false}
+RESULT {"run": 0, "scene": "B", "photo": "k28", "decode_s": 0.111, "grid_s": 5.29, "region_each_s": [1.129, 0.99, 1.165, 0.978, 1.023], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 737, "y1": 180, "x1": 315, "x2": 730}, "grid_matches_pc": true}
+RESULT {"run": 0, "scene": "C", "photo": "k15", "decode_s": 0.117, "grid_s": 5.068, "region_each_s": [1.072, 0.979, 1.013, 0.979, 1.018], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 725, "y1": 166, "x1": 318, "x2": 772}, "grid_matches_pc": false}
+RESULT {"run": 0, "scene": "C", "photo": "k26", "decode_s": 0.129, "grid_s": 5.225, "region_each_s": [1.222, 0.961, 1.011, 0.976, 1.05], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 727, "y1": 165, "x1": 311, "x2": 750}, "grid_matches_pc": false}
+RESULT {"run": 0, "scene": "D", "photo": "k12", "decode_s": 0.117, "grid_s": 5.057, "region_each_s": [1.007, 1.011, 1.016, 0.974, 1.043], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 741, "y1": 159, "x1": 243, "x2": 775}, "grid_matches_pc": true}
+RESULT {"run": 0, "scene": "D", "photo": "k16", "decode_s": 0.123, "grid_s": 5.301, "region_each_s": [0.976, 0.978, 1.199, 1.08, 1.063], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 620, "y1": 158, "x1": 244, "x2": 689}, "grid_matches_pc": false}
+RESULT {"run": 1, "scene": "B", "photo": "k25", "decode_s": 0.111, "grid_s": 5.279, "region_each_s": [1.255, 0.961, 1.009, 0.971, 1.078], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 736, "y1": 160, "x1": 306, "x2": 737}, "grid_matches_pc": false}
+RESULT {"run": 1, "scene": "B", "photo": "k28", "decode_s": 0.109, "grid_s": 4.953, "region_each_s": [0.977, 0.962, 1.01, 0.983, 1.016], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 737, "y1": 180, "x1": 315, "x2": 730}, "grid_matches_pc": true}
+RESULT {"run": 1, "scene": "C", "photo": "k15", "decode_s": 0.116, "grid_s": 5.161, "region_each_s": [0.965, 0.966, 1.01, 0.972, 1.243], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 725, "y1": 166, "x1": 318, "x2": 772}, "grid_matches_pc": false}
+RESULT {"run": 1, "scene": "C", "photo": "k26", "decode_s": 0.118, "grid_s": 4.983, "region_each_s": [0.962, 0.959, 1.006, 1.003, 1.049], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 727, "y1": 165, "x1": 311, "x2": 750}, "grid_matches_pc": false}
+RESULT {"run": 1, "scene": "D", "photo": "k12", "decode_s": 0.116, "grid_s": 4.979, "region_each_s": [0.968, 0.966, 1.025, 0.99, 1.026], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 741, "y1": 159, "x1": 243, "x2": 775}, "grid_matches_pc": true}
+RESULT {"run": 1, "scene": "D", "photo": "k16", "decode_s": 0.12, "grid_s": 4.933, "region_each_s": [0.966, 0.961, 1.007, 0.978, 1.017], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 620, "y1": 158, "x1": 244, "x2": 689}, "grid_matches_pc": false}
+RESULT {"run": 2, "scene": "B", "photo": "k25", "decode_s": 0.111, "grid_s": 5.034, "region_each_s": [0.985, 0.962, 1.014, 1.039, 1.029], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 736, "y1": 160, "x1": 306, "x2": 737}, "grid_matches_pc": false}
+RESULT {"run": 2, "scene": "B", "photo": "k28", "decode_s": 0.112, "grid_s": 5.199, "region_each_s": [1.181, 0.97, 1.032, 0.991, 1.019], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 737, "y1": 180, "x1": 315, "x2": 730}, "grid_matches_pc": true}
+RESULT {"run": 2, "scene": "C", "photo": "k15", "decode_s": 0.115, "grid_s": 5.211, "region_each_s": [0.969, 0.966, 1.015, 1.234, 1.023], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 725, "y1": 166, "x1": 318, "x2": 772}, "grid_matches_pc": false}
+RESULT {"run": 2, "scene": "C", "photo": "k26", "decode_s": 0.118, "grid_s": 5.019, "region_each_s": [0.968, 0.969, 1.048, 1.015, 1.015], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 727, "y1": 165, "x1": 311, "x2": 750}, "grid_matches_pc": false}
+RESULT {"run": 2, "scene": "D", "photo": "k12", "decode_s": 0.115, "grid_s": 5.421, "region_each_s": [0.964, 0.97, 1.223, 1.234, 1.025], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 741, "y1": 159, "x1": 243, "x2": 775}, "grid_matches_pc": true}
+RESULT {"run": 2, "scene": "D", "photo": "k16", "decode_s": 0.12, "grid_s": 4.966, "region_each_s": [0.973, 0.969, 1.021, 0.978, 1.02], "tile_s": 0, "n_tiles": 0, "classify_s": 0, "grid": {"y2": 620, "y1": 158, "x1": 244, "x2": 689}, "grid_matches_pc": false}
+SUMMARY {"machine": "aarch64", "cpus": 2, "ort": "1.31.0", "threads": 0, "load_s": 0.13, "n": 18, "decode_med": 0.117, "region_one_med": 1.01, "grid_med": 5.067, "grid_max": 5.421, "tile_med": 0.0, "classify_med": 0.0, "verify_med": 0.0, "grid_matches_pc": 6, "peak_mem_mb": 443}
+exit=0 oom=false
+== verify
+INFO {"machine": "aarch64", "cpus": 2, "ort": "1.31.0", "threads": 0, "load_s": 0.37}
+SUMMARY {"machine": "aarch64", "cpus": 2, "ort": "1.31.0", "threads": 0, "load_s": 0.37, "n": 18, "decode_med": 0.116, "region_one_med": 0, "grid_med": 0.0, "grid_max": 0.0, "tile_med": 0.62, "classify_med": 2.139, "verify_med": 2.771, "grid_matches_pc": null, "peak_mem_mb": 441}
+exit=0 oom=false
+               total        used        free      shared  buff/cache   available
+Mem:            1836         730         712          49         638        1105
+	

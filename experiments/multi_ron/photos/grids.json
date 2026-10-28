@@ -1,0 +1,30 @@
+{
+ "CD": {
+  "grid": {
+   "x1": 280,
+   "x2": 745,
+   "y1": 173,
+   "y2": 713
+  },
+  "winners": [
+   "bottom",
+   "left"
+  ],
+  "base": "D",
+  "donor": "C"
+ },
+ "DC": {
+  "grid": {
+   "x1": 320,
+   "x2": 760,
+   "y1": 142,
+   "y2": 717
+  },
+  "winners": [
+   "bottom",
+   "left"
+  ],
+  "base": "C",
+  "donor": "D"
+ }
+}

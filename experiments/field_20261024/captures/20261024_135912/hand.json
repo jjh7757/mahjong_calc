@@ -1,0 +1,63 @@
+{
+ "tiles": [
+  {
+   "tile": "3p",
+   "conf": 0.99
+  },
+  {
+   "tile": "3p",
+   "conf": 0.99
+  },
+  {
+   "tile": "4m",
+   "conf": 0.99
+  },
+  {
+   "tile": "5m",
+   "conf": 0.99
+  },
+  {
+   "tile": "6m",
+   "conf": 0.99
+  },
+  {
+   "tile": "4s",
+   "conf": 0.99
+  },
+  {
+   "tile": "4s",
+   "conf": 0.99
+  },
+  {
+   "tile": "4s",
+   "conf": 0.99
+  },
+  {
+   "tile": "6s",
+   "conf": 0.99
+  },
+  {
+   "tile": "7s",
+   "conf": 0.99
+  },
+  {
+   "tile": "8s",
+   "conf": 0.99
+  },
+  {
+   "tile": "9s",
+   "conf": 0.99
+  },
+  {
+   "tile": "9s",
+   "conf": 0.99
+  }
+ ],
+ "count": 13,
+ "melds": [],
+ "win_tile": null,
+ "notes": "",
+ "model": "observe",
+ "latency_ms": 0,
+ "usage": {}
+}

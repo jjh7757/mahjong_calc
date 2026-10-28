@@ -1,0 +1,104 @@
+{
+ "hands": [
+  {
+   "side": "bottom",
+   "box": [
+    722,
+    176,
+    929,
+    457
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    387,
+    723,
+    780,
+    845
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    70,
+    461,
+    154,
+    642
+   ],
+   "face_up": true,
+   "conf": 0.95
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    480,
+    351,
+    586,
+    502
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    384,
+    502,
+    569,
+    582
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    292,
+    442,
+    377,
+    578
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "left",
+   "box": [
+    338,
+    340,
+    508,
+    427
+   ],
+   "conf": 0.95
+  }
+ ],
+ "melds": [],
+ "dead_wall": {
+  "box": [
+   91,
+   392,
+   137,
+   438
+  ],
+  "conf": 0.85
+ },
+ "center": {
+  "box": [
+   90,
+   338,
+   587,
+   586
+  ]
+ },
+ "notes": "",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 5394,
+ "usage": {
+  "input_tokens": 1638,
+  "output_tokens": 283
+ }
+}

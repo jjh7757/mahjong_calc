@@ -1,0 +1,51 @@
+{
+ "dora_indicators": [
+  {
+   "tile": "5s",
+   "conf": 0.95
+  }
+ ],
+ "ura_dora_indicators": [
+  {
+   "tile": "9s",
+   "conf": 0.95
+  }
+ ],
+ "riichi": {
+  "bottom": false,
+  "right": false,
+  "top": false,
+  "left": false
+ },
+ "riichi_conf": {
+  "bottom": 0.8,
+  "right": 0.8,
+  "top": 0.8,
+  "left": 0.8
+ },
+ "last_discards": {
+  "bottom": null,
+  "right": null,
+  "top": null,
+  "left": null
+ },
+ "last_discards_conf": {
+  "bottom": 0.0,
+  "right": 0.0,
+  "top": 0.0,
+  "left": 0.0
+ },
+ "rivers": {
+  "bottom": [],
+  "right": [],
+  "top": [],
+  "left": []
+ },
+ "notes": "이미지에 도라 표시패(5s)와 바로 아래 공개된 뒷도라 표시패(9s)만 클로즈업되어 보임",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 4199,
+ "usage": {
+  "input_tokens": 2069,
+  "output_tokens": 267
+ }
+}

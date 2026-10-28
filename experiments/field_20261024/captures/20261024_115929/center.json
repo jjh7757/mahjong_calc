@@ -1,0 +1,31 @@
+{
+ "dora_indicators": [],
+ "ura_dora_indicators": [],
+ "riichi": {
+  "bottom": false,
+  "right": false,
+  "top": false,
+  "left": false
+ },
+ "riichi_conf": {
+  "bottom": 0.95,
+  "right": 0.95,
+  "top": 0.95,
+  "left": 0.95
+ },
+ "last_discards": {
+  "bottom": "2z",
+  "right": "8s",
+  "top": "3m",
+  "left": "2m"
+ },
+ "last_discards_conf": {
+  "bottom": 0.95,
+  "right": 0.95,
+  "top": 0.9,
+  "left": 0.95
+ },
+ "notes": "벽패(왕패)가 보이지 않아 도라 표시패는 식별되지 않음",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 5034
+}

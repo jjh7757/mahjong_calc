@@ -1,0 +1,915 @@
+[
+ {
+  "model": "haselab",
+  "item": "hand/kokushi.jpg",
+  "truth": 14,
+  "pred": 17,
+  "hit": 14,
+  "hit_loose": 14,
+  "exact": false,
+  "sec": 1.31,
+  "read": "1m 9m 1p 9p 1s 0m 9s 1z 4m 4m 2z 3z 4z 5z 6z 7z 7z",
+  "want": "1m 9m 1p 9p 1s 9s 1z 2z 3z 4z 5z 6z 7z 7z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "1s:0.49",
+   "4m:0.44"
+  ]
+ },
+ {
+  "model": "haselab",
+  "item": "hand/chuuren.jpg",
+  "truth": 13,
+  "pred": 13,
+  "hit": 13,
+  "hit_loose": 13,
+  "exact": true,
+  "sec": 0.74,
+  "read": "1m 1m 1m 2m 3m 4m 5m 6m 7m 8m 9m 9m 9m",
+  "want": "1m 1m 1m 2m 3m 4m 5m 6m 7m 8m 9m 9m 9m",
+  "backs": 7,
+  "regions": [],
+  "low": []
+ },
+ {
+  "model": "haselab",
+  "item": "hand/hand_bottom2.jpg",
+  "truth": 13,
+  "pred": 2,
+  "hit": 2,
+  "hit_loose": 2,
+  "exact": false,
+  "sec": 0.12,
+  "read": "7m 3m",
+  "want": "2s 3s 4s 7s 8s 9s 4p 5p 7m 7m 0m 4m 3m",
+  "backs": 0,
+  "regions": [],
+  "low": []
+ },
+ {
+  "model": "haselab",
+  "item": "seat/A/k20",
+  "truth": 14,
+  "pred": 1,
+  "hit": 1,
+  "hit_loose": 1,
+  "exact": false,
+  "sec": 0.1,
+  "read": "8s",
+  "want": "3p 3p 5p 5p 4m 5m 6m 6s 7s 8s 4s 4s 4s 4s",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "8s:0.36"
+  ]
+ },
+ {
+  "model": "haselab",
+  "item": "seat/A/k24",
+  "truth": 14,
+  "pred": 0,
+  "hit": 0,
+  "hit_loose": 0,
+  "exact": false,
+  "sec": 0.07,
+  "read": "",
+  "want": "3p 3p 5p 5p 4m 5m 6m 6s 7s 8s 4s 4s 4s 4s",
+  "backs": 0,
+  "regions": [],
+  "low": []
+ },
+ {
+  "model": "haselab",
+  "item": "seat/B/k25",
+  "truth": 13,
+  "pred": 3,
+  "hit": 3,
+  "hit_loose": 3,
+  "exact": false,
+  "sec": 0.2,
+  "read": "1m 9s 9s",
+  "want": "7z 1m 1m 1m 9s 9s 9s 9p 9p 9p 6z 6z 6z",
+  "backs": 0,
+  "regions": [],
+  "low": []
+ },
+ {
+  "model": "haselab",
+  "item": "seat/B/k28",
+  "truth": 13,
+  "pred": 2,
+  "hit": 0,
+  "hit_loose": 0,
+  "exact": false,
+  "sec": 0.18,
+  "read": "5z 5z",
+  "want": "7z 1m 1m 1m 9s 9s 9s 9p 9p 9p 6z 6z 6z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "5z:0.35"
+  ]
+ },
+ {
+  "model": "haselab",
+  "item": "seat/C/k15",
+  "truth": 13,
+  "pred": 4,
+  "hit": 1,
+  "hit_loose": 1,
+  "exact": false,
+  "sec": 0.43,
+  "read": "5z 5m 6s 5z",
+  "want": "1z 1z 1z 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "5z:0.46"
+  ]
+ },
+ {
+  "model": "haselab",
+  "item": "seat/C/k26",
+  "truth": 13,
+  "pred": 8,
+  "hit": 3,
+  "hit_loose": 3,
+  "exact": false,
+  "sec": 0.39,
+  "read": "5z 4m 7m 2z 5z 5z 5z 5z",
+  "want": "1z 1z 1z 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z",
+  "backs": 0,
+  "regions": [],
+  "low": []
+ },
+ {
+  "model": "haselab",
+  "item": "seat/D/k12",
+  "truth": 13,
+  "pred": 7,
+  "hit": 7,
+  "hit_loose": 7,
+  "exact": false,
+  "sec": 0.26,
+  "read": "3m 4m 0m 6m 7m 8m 9m",
+  "want": "1m 2m 3m 4m 0m 6m 7m 8m 9m 2z 6m 7m 8m",
+  "backs": 0,
+  "regions": [],
+  "low": []
+ },
+ {
+  "model": "haselab",
+  "item": "seat/D/k16",
+  "truth": 13,
+  "pred": 16,
+  "hit": 11,
+  "hit_loose": 11,
+  "exact": false,
+  "sec": 0.53,
+  "read": "5z 5z 1m 2m 3m 4m 0m 6m 7m 8m 9m 2z 5z 7m 5z 5z",
+  "want": "1m 2m 3m 4m 0m 6m 7m 8m 9m 2z 6m 7m 8m",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "5z:0.50",
+   "5z:0.60",
+   "5z:0.43"
+  ]
+ },
+ {
+  "model": "haselab",
+  "item": "seat/E/k00",
+  "truth": 13,
+  "pred": 6,
+  "hit": 2,
+  "hit_loose": 2,
+  "exact": false,
+  "sec": 0.35,
+  "read": "5z 7m 9m 5z 5z 5z",
+  "want": "1z 1z 1z 7m 8m 9m 1s 2s 3s 7s 8s 7z 7z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "5z:0.41",
+   "5z:0.58",
+   "5z:0.59"
+  ]
+ },
+ {
+  "model": "haselab",
+  "item": "seat/E/k04",
+  "truth": 13,
+  "pred": 8,
+  "hit": 2,
+  "hit_loose": 2,
+  "exact": false,
+  "sec": 0.33,
+  "read": "5z 7m 8s 5z 5z 5z 5z 5z",
+  "want": "1z 1z 1z 7m 8m 9m 1s 2s 3s 7s 8s 7z 7z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "5z:0.30",
+   "5z:0.44",
+   "5z:0.59"
+  ]
+ },
+ {
+  "model": "haselab",
+  "item": "table/A/k20",
+  "truth": 14,
+  "pred": 12,
+  "hit": 12,
+  "hit_loose": 12,
+  "exact": false,
+  "sec": 0.52,
+  "read": "3p 3p 5p 5p 4m 5m 6m 6s 7s 8s 4s 4s",
+  "want": "3p 3p 5p 5p 4m 5m 6m 6s 7s 8s 4s 4s 4s 4s",
+  "backs": 2,
+  "regions": [
+   "meld_0:0.66",
+   "self_hand:0.52"
+  ],
+  "low": []
+ },
+ {
+  "model": "haselab",
+  "item": "table/A/k24",
+  "truth": 14,
+  "pred": 16,
+  "hit": 12,
+  "hit_loose": 12,
+  "exact": false,
+  "sec": 0.71,
+  "read": "3p 3p 5p 5p 4m 5m 6m 6s 7s 8s 7m 1z 4s 5z 4s 5z",
+  "want": "3p 3p 5p 5p 4m 5m 6m 6s 7s 8s 4s 4s 4s 4s",
+  "backs": 3,
+  "regions": [
+   "self_hand:0.84",
+   "meld_0:0.48",
+   "meld_0:0.35"
+  ],
+  "low": [
+   "back:0.59",
+   "back:0.42"
+  ]
+ },
+ {
+  "model": "haselab",
+  "item": "table/B/k25",
+  "truth": 13,
+  "pred": 19,
+  "hit": 13,
+  "hit_loose": 13,
+  "exact": false,
+  "sec": 0.71,
+  "read": "7z 7z 1m 1m 1m 1m 1m 9s 9s 9s 9s 9s 9p 9p 9p 6z 6z 5z 6z",
+  "want": "7z 1m 1m 1m 9s 9s 9s 9p 9p 9p 6z 6z 6z",
+  "backs": 0,
+  "regions": [
+   "self_hand:0.91",
+   "meld_0:0.85"
+  ],
+  "low": [
+   "5z:0.58",
+   "6z:0.51"
+  ]
+ },
+ {
+  "model": "haselab",
+  "item": "table/B/k28",
+  "truth": 13,
+  "pred": 13,
+  "hit": 11,
+  "hit_loose": 11,
+  "exact": false,
+  "sec": 0.55,
+  "read": "7z 1m 1m 1m 1m 9s 9s 9s 9s 9p 9p 9p 6z",
+  "want": "7z 1m 1m 1m 9s 9s 9s 9p 9p 9p 6z 6z 6z",
+  "backs": 0,
+  "regions": [
+   "self_hand:0.92",
+   "meld_0:0.32"
+  ],
+  "low": []
+ },
+ {
+  "model": "haselab",
+  "item": "table/C/k15",
+  "truth": 13,
+  "pred": 11,
+  "hit": 8,
+  "hit_loose": 8,
+  "exact": false,
+  "sec": 0.48,
+  "read": "1z 1m 2m 3m 4m 5m 6m 8m 5z 5z 5z",
+  "want": "1z 1z 1z 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z",
+  "backs": 0,
+  "regions": [
+   "self_hand:0.97"
+  ],
+  "low": [
+   "5z:0.40",
+   "5z:0.31",
+   "5z:0.37"
+  ]
+ },
+ {
+  "model": "haselab",
+  "item": "table/C/k26",
+  "truth": 13,
+  "pred": 9,
+  "hit": 9,
+  "hit_loose": 9,
+  "exact": false,
+  "sec": 0.4,
+  "read": "1z 1z 1m 2m 3m 4m 5m 6m 7m",
+  "want": "1z 1z 1z 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z",
+  "backs": 0,
+  "regions": [
+   "self_hand:0.96"
+  ],
+  "low": []
+ },
+ {
+  "model": "haselab",
+  "item": "table/D/k12",
+  "truth": 13,
+  "pred": 17,
+  "hit": 12,
+  "hit_loose": 12,
+  "exact": false,
+  "sec": 0.74,
+  "read": "1m 2m 3m 4m 0m 6m 7m 8m 9m 2z 4p 4p 7m 6m 7m 5z 5z",
+  "want": "1m 2m 3m 4m 0m 6m 7m 8m 9m 2z 6m 7m 8m",
+  "backs": 0,
+  "regions": [
+   "meld_0:0.89",
+   "meld_0:0.59",
+   "self_hand:0.50"
+  ],
+  "low": []
+ },
+ {
+  "model": "haselab",
+  "item": "table/D/k16",
+  "truth": 13,
+  "pred": 19,
+  "hit": 13,
+  "hit_loose": 13,
+  "exact": false,
+  "sec": 0.75,
+  "read": "1m 2m 3m 4m 0m 6m 7m 8m 8m 9m 2z 4p 4p 7m 7m 6m 7m 1m 5z",
+  "want": "1m 2m 3m 4m 0m 6m 7m 8m 9m 2z 6m 7m 8m",
+  "backs": 1,
+  "regions": [
+   "meld_0:0.87",
+   "meld_0:0.61",
+   "self_hand:0.28"
+  ],
+  "low": [
+   "1m:0.38",
+   "back:0.31",
+   "5z:0.46"
+  ]
+ },
+ {
+  "model": "haselab",
+  "item": "table/E/k00",
+  "truth": 13,
+  "pred": 16,
+  "hit": 13,
+  "hit_loose": 13,
+  "exact": false,
+  "sec": 0.65,
+  "read": "1z 1z 1z 7m 8m 9m 1s 2s 3s 7s 8s 7z 7z 4p 4p 7m",
+  "want": "1z 1z 1z 7m 8m 9m 1s 2s 3s 7s 8s 7z 7z",
+  "backs": 0,
+  "regions": [
+   "self_hand:0.96",
+   "meld_0:0.71"
+  ],
+  "low": []
+ },
+ {
+  "model": "haselab",
+  "item": "table/E/k04",
+  "truth": 13,
+  "pred": 18,
+  "hit": 13,
+  "hit_loose": 13,
+  "exact": false,
+  "sec": 0.67,
+  "read": "1z 1z 1z 7m 8m 9m 1s 2s 3s 7s 7s 8s 7z 7z 5z 4p 4p 7m",
+  "want": "1z 1z 1z 7m 8m 9m 1s 2s 3s 7s 8s 7z 7z",
+  "backs": 0,
+  "regions": [
+   "self_hand:0.95",
+   "meld_0:0.72"
+  ],
+  "low": [
+   "5z:0.43"
+  ]
+ },
+ {
+  "model": "nikmomo-s",
+  "item": "hand/kokushi.jpg",
+  "truth": 14,
+  "pred": 21,
+  "hit": 14,
+  "hit_loose": 14,
+  "exact": false,
+  "sec": 0.37,
+  "read": "1m 9m 1p 9p 2p 6p 1s 2s 9s 6s 1z 1m 2z 6s 3z 2p 4z 5z 6z 7z 7z",
+  "want": "1m 9m 1p 9p 1s 9s 1z 2z 3z 4z 5z 6z 7z 7z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "2p:0.39",
+   "6p:0.58",
+   "1s:0.57",
+   "1m:0.39",
+   "6s:0.52"
+  ]
+ },
+ {
+  "model": "nikmomo-s",
+  "item": "hand/chuuren.jpg",
+  "truth": 13,
+  "pred": 13,
+  "hit": 12,
+  "hit_loose": 12,
+  "exact": false,
+  "sec": 0.29,
+  "read": "1m 1m 1m 2m 3m 4m 5m 6m 9m 8m 9m 9m 9m",
+  "want": "1m 1m 1m 2m 3m 4m 5m 6m 7m 8m 9m 9m 9m",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "1m:0.50",
+   "6m:0.28",
+   "9m:0.43"
+  ]
+ },
+ {
+  "model": "nikmomo-s",
+  "item": "hand/hand_bottom2.jpg",
+  "truth": 13,
+  "pred": 13,
+  "hit": 8,
+  "hit_loose": 9,
+  "exact": false,
+  "sec": 0.25,
+  "read": "2s 3s 4s 7s 5s 9s 4p 0s 9m 7m 0p 4m 2m",
+  "want": "2s 3s 4s 7s 8s 9s 4p 5p 7m 7m 0m 4m 3m",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "5s:0.33"
+  ]
+ },
+ {
+  "model": "nikmomo-s",
+  "item": "seat/A/k20",
+  "truth": 14,
+  "pred": 12,
+  "hit": 11,
+  "hit_loose": 11,
+  "exact": false,
+  "sec": 0.18,
+  "read": "3p 3p 5p 5p 4m 3m 6m 6s 7s 8s 4s 4s",
+  "want": "3p 3p 5p 5p 4m 5m 6m 6s 7s 8s 4s 4s 4s 4s",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "3m:0.44",
+   "6m:0.26"
+  ]
+ },
+ {
+  "model": "nikmomo-s",
+  "item": "seat/A/k24",
+  "truth": 14,
+  "pred": 12,
+  "hit": 10,
+  "hit_loose": 10,
+  "exact": false,
+  "sec": 0.22,
+  "read": "3p 3p 5p 5p 4m 3m 2m 6s 7s 8s 4s 4s",
+  "want": "3p 3p 5p 5p 4m 5m 6m 6s 7s 8s 4s 4s 4s 4s",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "3p:0.51",
+   "2m:0.50",
+   "4s:0.35"
+  ]
+ },
+ {
+  "model": "nikmomo-s",
+  "item": "seat/B/k25",
+  "truth": 13,
+  "pred": 13,
+  "hit": 12,
+  "hit_loose": 12,
+  "exact": false,
+  "sec": 0.23,
+  "read": "7z 1m 1m 1m 9s 9s 9p 9p 9p 9p 6z 6z 6z",
+  "want": "7z 1m 1m 1m 9s 9s 9s 9p 9p 9p 6z 6z 6z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "9s:0.36",
+   "9p:0.36",
+   "6z:0.54",
+   "6z:0.55"
+  ]
+ },
+ {
+  "model": "nikmomo-s",
+  "item": "seat/B/k28",
+  "truth": 13,
+  "pred": 13,
+  "hit": 13,
+  "hit_loose": 13,
+  "exact": true,
+  "sec": 0.2,
+  "read": "7z 1m 1m 1m 9s 9s 9s 9p 9p 9p 6z 6z 6z",
+  "want": "7z 1m 1m 1m 9s 9s 9s 9p 9p 9p 6z 6z 6z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "9s:0.47",
+   "9s:0.27",
+   "6z:0.60",
+   "6z:0.60",
+   "6z:0.42"
+  ]
+ },
+ {
+  "model": "nikmomo-s",
+  "item": "seat/C/k15",
+  "truth": 13,
+  "pred": 15,
+  "hit": 12,
+  "hit_loose": 12,
+  "exact": false,
+  "sec": 0.19,
+  "read": "1z 1z 1z 1m 2m 3m 4m 5m 3m 9m 8m 9m 2z 7m 6s",
+  "want": "1z 1z 1z 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "5m:0.33",
+   "3m:0.43",
+   "7m:0.48"
+  ]
+ },
+ {
+  "model": "nikmomo-s",
+  "item": "seat/C/k26",
+  "truth": 13,
+  "pred": 20,
+  "hit": 12,
+  "hit_loose": 12,
+  "exact": false,
+  "sec": 0.25,
+  "read": "1z 4z 1z 1z 1m 2m 3m 2m 3m 4m 5m 2m 7m 8m 8m 9m 6z 2z 7m 6s",
+  "want": "1z 1z 1z 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "4z:0.33",
+   "3m:0.45",
+   "3m:0.31",
+   "5m:0.27",
+   "8m:0.50",
+   "6z:0.51"
+  ]
+ },
+ {
+  "model": "nikmomo-s",
+  "item": "seat/D/k12",
+  "truth": 13,
+  "pred": 12,
+  "hit": 11,
+  "hit_loose": 11,
+  "exact": false,
+  "sec": 0.24,
+  "read": "1m 2m 3m 4m 0p 6m 7m 8m 9m 2z 6m 7m",
+  "want": "1m 2m 3m 4m 0m 6m 7m 8m 9m 2z 6m 7m 8m",
+  "backs": 0,
+  "regions": [],
+  "low": []
+ },
+ {
+  "model": "nikmomo-s",
+  "item": "seat/D/k16",
+  "truth": 13,
+  "pred": 13,
+  "hit": 12,
+  "hit_loose": 12,
+  "exact": false,
+  "sec": 0.29,
+  "read": "1m 2m 3m 4m 0p 6m 7m 8m 9m 2z 6m 7m 8m",
+  "want": "1m 2m 3m 4m 0m 6m 7m 8m 9m 2z 6m 7m 8m",
+  "backs": 0,
+  "regions": [],
+  "low": []
+ },
+ {
+  "model": "nikmomo-s",
+  "item": "seat/E/k00",
+  "truth": 13,
+  "pred": 17,
+  "hit": 13,
+  "hit_loose": 13,
+  "exact": false,
+  "sec": 0.2,
+  "read": "1z 1z 1z 1z 8m 9m 1s 2s 3s 7s 8s 7z 7z 2p 2p 2p 7m",
+  "want": "1z 1z 1z 7m 8m 9m 1s 2s 3s 7s 8s 7z 7z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "1z:0.34",
+   "2p:0.46",
+   "2p:0.53",
+   "2p:0.49"
+  ]
+ },
+ {
+  "model": "nikmomo-s",
+  "item": "seat/E/k04",
+  "truth": 13,
+  "pred": 18,
+  "hit": 12,
+  "hit_loose": 12,
+  "exact": false,
+  "sec": 0.24,
+  "read": "1z 1z 1z 9m 8m 9m 7p 2s 3s 7s 8s 7z 7z 2p 2p 2p 4p 7m",
+  "want": "1z 1z 1z 7m 8m 9m 1s 2s 3s 7s 8s 7z 7z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "9m:0.38",
+   "9m:0.46",
+   "7p:0.35",
+   "2p:0.53",
+   "4p:0.53"
+  ]
+ },
+ {
+  "model": "nikmomo-m",
+  "item": "hand/kokushi.jpg",
+  "truth": 14,
+  "pred": 20,
+  "hit": 14,
+  "hit_loose": 14,
+  "exact": false,
+  "sec": 0.32,
+  "read": "1m 9m 1p 9p 2p 6p 1s 2s 9s 9s 1z 2z 6s 3z 2p 4z 5z 6z 7z 7z",
+  "want": "1m 9m 1p 9p 1s 9s 1z 2z 3z 4z 5z 6z 7z 7z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "2p:0.39"
+  ]
+ },
+ {
+  "model": "nikmomo-m",
+  "item": "hand/chuuren.jpg",
+  "truth": 13,
+  "pred": 13,
+  "hit": 13,
+  "hit_loose": 13,
+  "exact": true,
+  "sec": 0.29,
+  "read": "1m 1m 1m 2m 3m 4m 5m 6m 7m 8m 9m 9m 9m",
+  "want": "1m 1m 1m 2m 3m 4m 5m 6m 7m 8m 9m 9m 9m",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "7m:0.49"
+  ]
+ },
+ {
+  "model": "nikmomo-m",
+  "item": "hand/hand_bottom2.jpg",
+  "truth": 13,
+  "pred": 13,
+  "hit": 10,
+  "hit_loose": 10,
+  "exact": false,
+  "sec": 0.35,
+  "read": "2s 3s 4s 7s 5s 9s 4p 5p 9m 7m 0p 4m 3m",
+  "want": "2s 3s 4s 7s 8s 9s 4p 5p 7m 7m 0m 4m 3m",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "5s:0.33",
+   "7m:0.47"
+  ]
+ },
+ {
+  "model": "nikmomo-m",
+  "item": "seat/A/k20",
+  "truth": 14,
+  "pred": 12,
+  "hit": 11,
+  "hit_loose": 11,
+  "exact": false,
+  "sec": 0.27,
+  "read": "3p 3p 5p 5p 4m 6m 9m 6s 7s 8s 4s 4s",
+  "want": "3p 3p 5p 5p 4m 5m 6m 6s 7s 8s 4s 4s 4s 4s",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "6m:0.59",
+   "4s:0.45"
+  ]
+ },
+ {
+  "model": "nikmomo-m",
+  "item": "seat/A/k24",
+  "truth": 14,
+  "pred": 12,
+  "hit": 9,
+  "hit_loose": 9,
+  "exact": false,
+  "sec": 0.25,
+  "read": "3p 3p 5p 5p 4m 4m 3m 6s 7s 7s 4s 4s",
+  "want": "3p 3p 5p 5p 4m 5m 6m 6s 7s 8s 4s 4s 4s 4s",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "5p:0.37",
+   "4m:0.42",
+   "4m:0.38"
+  ]
+ },
+ {
+  "model": "nikmomo-m",
+  "item": "seat/B/k25",
+  "truth": 13,
+  "pred": 12,
+  "hit": 12,
+  "hit_loose": 12,
+  "exact": false,
+  "sec": 0.23,
+  "read": "7z 1m 1m 1m 9s 9s 9s 9p 9p 9p 6z 6z",
+  "want": "7z 1m 1m 1m 9s 9s 9s 9p 9p 9p 6z 6z 6z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "1m:0.40",
+   "9s:0.45",
+   "9s:0.29",
+   "9p:0.58",
+   "9p:0.39",
+   "9p:0.53",
+   "6z:0.37",
+   "6z:0.38"
+  ]
+ },
+ {
+  "model": "nikmomo-m",
+  "item": "seat/B/k28",
+  "truth": 13,
+  "pred": 9,
+  "hit": 9,
+  "hit_loose": 9,
+  "exact": false,
+  "sec": 0.27,
+  "read": "1m 1m 1m 9s 9s 9s 9p 9p 9p",
+  "want": "7z 1m 1m 1m 9s 9s 9s 9p 9p 9p 6z 6z 6z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "1m:0.41",
+   "1m:0.53",
+   "9s:0.43",
+   "9s:0.30",
+   "9p:0.50",
+   "9p:0.40"
+  ]
+ },
+ {
+  "model": "nikmomo-m",
+  "item": "seat/C/k15",
+  "truth": 13,
+  "pred": 12,
+  "hit": 10,
+  "hit_loose": 10,
+  "exact": false,
+  "sec": 0.21,
+  "read": "1z 1z 1z 1m 3m 3m 4m 6m 8m 9m 2z 6s",
+  "want": "1z 1z 1z 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "1z:0.50",
+   "4m:0.59",
+   "9m:0.41",
+   "6s:0.48"
+  ]
+ },
+ {
+  "model": "nikmomo-m",
+  "item": "seat/C/k26",
+  "truth": 13,
+  "pred": 12,
+  "hit": 11,
+  "hit_loose": 11,
+  "exact": false,
+  "sec": 0.26,
+  "read": "1z 1z 1z 1m 2m 3m 4m 4m 6m 8m 9m 2z",
+  "want": "1z 1z 1z 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "1z:0.29",
+   "1z:0.57",
+   "1m:0.46",
+   "3m:0.52",
+   "4m:0.31"
+  ]
+ },
+ {
+  "model": "nikmomo-m",
+  "item": "seat/D/k12",
+  "truth": 13,
+  "pred": 13,
+  "hit": 12,
+  "hit_loose": 12,
+  "exact": false,
+  "sec": 0.4,
+  "read": "1m 2m 3m 4m 0p 6m 7m 8m 9m 2z 6m 7m 8m",
+  "want": "1m 2m 3m 4m 0m 6m 7m 8m 9m 2z 6m 7m 8m",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "7m:0.36",
+   "7m:0.48"
+  ]
+ },
+ {
+  "model": "nikmomo-m",
+  "item": "seat/D/k16",
+  "truth": 13,
+  "pred": 13,
+  "hit": 12,
+  "hit_loose": 12,
+  "exact": false,
+  "sec": 0.24,
+  "read": "1m 2m 3m 4m 0p 6m 7m 8m 9m 2z 6m 7m 8m",
+  "want": "1m 2m 3m 4m 0m 6m 7m 8m 9m 2z 6m 7m 8m",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "7m:0.36"
+  ]
+ },
+ {
+  "model": "nikmomo-m",
+  "item": "seat/E/k00",
+  "truth": 13,
+  "pred": 13,
+  "hit": 11,
+  "hit_loose": 11,
+  "exact": false,
+  "sec": 0.26,
+  "read": "1z 1z 1z 8m 9m 1s 2s 3s 7s 7z 0m 4p 7m",
+  "want": "1z 1z 1z 7m 8m 9m 1s 2s 3s 7s 8s 7z 7z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "1z:0.42",
+   "2s:0.48",
+   "7z:0.31",
+   "0m:0.28",
+   "4p:0.40",
+   "7m:0.60"
+  ]
+ },
+ {
+  "model": "nikmomo-m",
+  "item": "seat/E/k04",
+  "truth": 13,
+  "pred": 15,
+  "hit": 13,
+  "hit_loose": 13,
+  "exact": false,
+  "sec": 0.27,
+  "read": "1z 1z 1z 8m 9m 1s 2s 3s 7s 8s 7z 7z 4p 4p 7m",
+  "want": "1z 1z 1z 7m 8m 9m 1s 2s 3s 7s 8s 7z 7z",
+  "backs": 0,
+  "regions": [],
+  "low": [
+   "8s:0.57",
+   "7z:0.49",
+   "7z:0.33",
+   "4p:0.45"
+  ]
+ }
+]

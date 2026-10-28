@@ -1,0 +1,8 @@
+python-dotenv could not parse statement starting at line 21
+python-dotenv could not parse statement starting at line 25
+python-dotenv could not parse statement starting at line 27
+Direct use of automatic function calling (AFC) in Models.generate_content is not recommended. Instead, we recommend to use AFC in Chat.send_message. Similarly, direct use of AFC in Models.generate_content_stream is not recommended. Instead, we recommend to use AFC in Chat.send_message_stream.
+opt_guide  정답 57/60  {'B': '17/20', 'C': '20/20', 'D': '20/20'}  시간 중앙 7.3s 최대 262.3s  입력 10843 출력 300 생각 162
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']

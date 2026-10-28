@@ -1,0 +1,35 @@
+{
+ "time": "2026-10-24T14:19:59.956511",
+ "capture_long_side_px": 4080,
+ "setup": {
+  "source": "remote",
+  "remote_url": "http://192.168.0.64:8765",
+  "zoom": 1.0,
+  "height_cm": 60
+ },
+ "game": {
+  "round": "동3국",
+  "names": [
+   "플레이어 1",
+   "플레이어 2",
+   "플레이어 3",
+   "플레이어 4"
+  ],
+  "bottom_seat": 0,
+  "dealer": 2,
+  "honba": 0,
+  "riichi_seats": []
+ },
+ "winner_side": "left",
+ "timings_ms": {
+  "shrink": 535,
+  "locate": 16677,
+  "pick": 0,
+  "crop": 532
+ },
+ "layout_mode": "locate",
+ "fixed_analysis": null,
+ "warnings": [],
+ "error": "인식 모델 호출이 실패했습니다. 다시 시도하세요.",
+ "merge": null
+}

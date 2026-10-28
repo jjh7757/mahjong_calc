@@ -1,0 +1,12 @@
+
+[AE] 크롭×흔들기 68개 (장수가 13·14 라 맞힐 수 있는 것 68)
+   처음(장수 검사만)   correct   4  fallback  61  unsafe   3
+   조치 후         correct   4  fallback  64  unsafe   0
+   처음(장수 검사만) unsafe: [('A/k20_1', 'rot:6'), ('A/k24_1', 'rot:6'), ('E/k00_1', 'rot:-3')]
+   조치 후 unsafe: []
+
+[field] 크롭×흔들기 459개 (장수가 13·14 라 맞힐 수 있는 것 204)
+   처음(장수 검사만)   correct  63  fallback 394  unsafe   2
+   조치 후         correct   0  fallback 459  unsafe   0
+   처음(장수 검사만) unsafe: [('122922/hand_right', 'bright:1.3'), ('140750/hand_left', 'cut:210')]
+   조치 후 unsafe: []

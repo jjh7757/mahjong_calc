@@ -1,0 +1,61 @@
+{
+ "tiles": [
+  {
+   "tile": "1s",
+   "conf": 0.99
+  },
+  {
+   "tile": "2s",
+   "conf": 0.99
+  },
+  {
+   "tile": "3p",
+   "conf": 0.99
+  },
+  {
+   "tile": "8p",
+   "conf": 0.99
+  },
+  {
+   "tile": "9p",
+   "conf": 0.99
+  },
+  {
+   "tile": "1m",
+   "conf": 0.99
+  },
+  {
+   "tile": "2m",
+   "conf": 0.99
+  },
+  {
+   "tile": "3m",
+   "conf": 0.99
+  },
+  {
+   "tile": "4m",
+   "conf": 0.99
+  },
+  {
+   "tile": "5m",
+   "conf": 0.99
+  },
+  {
+   "tile": "6m",
+   "conf": 0.99
+  },
+  {
+   "tile": "7m",
+   "conf": 0.99
+  }
+ ],
+ "count": 12,
+ "melds": [],
+ "win_tile": {
+  "tile": "6s",
+  "conf": 0.99
+ },
+ "notes": "화료패(6s)가 손패 왼쪽으로 떨어져 놓여 있습니다.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 5117
+}

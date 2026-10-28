@@ -1,0 +1,29 @@
+== sift 원근 펴기  특징점 중앙 196개, 검출 4.9ms/장
+  loso(매장+집)     손패 39/78 (50%)  B 10/26 C 15/26 D 14/26  | 패 한 장 1937ms (기준 395장 비교)
+     자주 틀림: 1m→9m×4, 9p→6s×4, 6m→0m×4, 1m→8m×2, 9s→1m×2, 3m→9m×2, 5m→0m×2, 3m→0m×2
+  loso Q 제외      손패 39/78 (50%)  B 9/26 C 15/26 D 15/26  | 패 한 장 1586ms (기준 302장 비교)
+     자주 틀림: 1m→9m×4, 9p→8p×4, 9s→1m×3, 3m→9m×3, 1m→8m×2, 5m→0m×2, 0m→5m×2, 1m→6m×1
+  A·E·Q+집        손패 32/78 (41%)  B 9/26 C 13/26 D 10/26  | 패 한 장 1600ms (기준 311장 비교)
+     자주 틀림: 1m→9m×5, 9p→6s×4, 6m→0m×4, 4m→0m×3, 1m→7m×2, 1m→8m×2, 3m→9m×2, 5m→0m×2
+  집 패만           손패 21/78 (27%)  B 9/26 C 5/26 D 7/26  | 패 한 장 656ms (기준 140장 비교)
+     자주 틀림: 1m→2m×3, 9s→9m×3, 9p→7m×3, 2m→9m×3, 9s→8m×2, 9p→8p×2, 1z→9m×2, 1m→9m×2
+== orb 원근 펴기  특징점 중앙 300개, 검출 1.4ms/장
+  loso(매장+집)     손패 43/78 (55%)  B 9/26 C 20/26 D 14/26  | 패 한 장 3740ms (기준 395장 비교)
+     자주 틀림: 9s→9p×5, 1m→8m×4, 9p→5z×3, 8m→1m×3, 1m→7m×2, 2m→1m×2, 5m→0m×2, 6m→0m×2
+  loso Q 제외      손패 41/78 (53%)  B 8/26 C 20/26 D 13/26  | 패 한 장 2647ms (기준 302장 비교)
+     자주 틀림: 1m→8m×4, 9p→5z×4, 1m→7m×3, 9s→6p×3, 6m→7m×3, 8m→1m×3, 9s→5z×2, 2m→1m×2
+  A·E·Q+집        손패 40/78 (51%)  B 11/26 C 17/26 D 12/26  | 패 한 장 3029ms (기준 311장 비교)
+     자주 틀림: 1m→8m×5, 9s→9p×5, 9p→7s×4, 6m→0m×4, 2m→0m×3, 3m→0m×3, 5m→0m×2, 1m→0m×2
+  집 패만           손패 41/78 (53%)  B 11/26 C 15/26 D 15/26  | 패 한 장 1322ms (기준 140장 비교)
+     자주 틀림: 9p→2s×3, 1m→9m×2, 9s→5z×2, 9p→5z×2, 8m→5z×2, 2m→8m×2, 3m→8m×2, 0m→5m×2
+Traceback (most recent call last):
+  File "C:\Users\jjh7757\dev\mahjong_calc\experiments\template\feature.py", line 142, in <module>
+    per[t["group"]][1] += 1
+    
+  File "C:\Users\jjh7757\dev\mahjong_calc\experiments\template\feature.py", line 107, in main
+    "loso Q ����": lambda t: [r for r in rows if r["group"] not in (t["group"], "Q")],
+                ^^^^^^^^^^^^^^^
+  File "C:\Users\jjh7757\dev\mahjong_calc\experiments\template\feature.py", line 73, in <lambda>
+    "orb": lambda: (cv2.ORB_create(nfeatures=300, edgeThreshold=8, patchSize=15, fastThreshold=5), cv2.NORM_HAMMING),
+                      ^^^^^^^^^^^^^^^^
+AttributeError: module 'cv2' has no attribute 'AKAZE_create'

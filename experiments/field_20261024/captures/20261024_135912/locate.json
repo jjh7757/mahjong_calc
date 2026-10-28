@@ -1,0 +1,85 @@
+{
+ "hands": [
+  {
+   "side": "right",
+   "box": [
+    468,
+    700,
+    866,
+    835
+   ],
+   "face_up": false,
+   "conf": 0.92
+  },
+  {
+   "side": "left",
+   "box": [
+    228,
+    126,
+    513,
+    294
+   ],
+   "face_up": true,
+   "conf": 0.95
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    510,
+    324,
+    619,
+    477
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    429,
+    483,
+    620,
+    569
+   ],
+   "conf": 0.93
+  },
+  {
+   "side": "top",
+   "box": [
+    333,
+    433,
+    427,
+    568
+   ],
+   "conf": 0.94
+  },
+  {
+   "side": "left",
+   "box": [
+    359,
+    310,
+    532,
+    405
+   ],
+   "conf": 0.94
+  }
+ ],
+ "melds": [],
+ "dead_wall": null,
+ "center": {
+  "box": [
+   333,
+   310,
+   620,
+   569
+  ]
+ },
+ "notes": "bottom과 top 자리는 손패가 없거나 화면에 잡히지 않음. left 손패는 오픈되어 있음.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 25886,
+ "usage": {
+  "input_tokens": 1638,
+  "output_tokens": 3614
+ }
+}

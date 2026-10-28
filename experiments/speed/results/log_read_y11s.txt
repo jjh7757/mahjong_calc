@@ -1,0 +1,76 @@
+python-dotenv could not parse statement starting at line 21
+python-dotenv could not parse statement starting at line 25
+python-dotenv could not parse statement starting at line 27
+Direct use of automatic function calling (AFC) in Models.generate_content is not recommended. Instead, we recommend to use AFC in Chat.send_message. Similarly, direct use of AFC in Models.generate_content_stream is not recommended. Instead, we recommend to use AFC in Chat.send_message_stream.
+C k26_1 #0   6.5s 2/3 {'bottom': '2z', 'right': '6p', 'top': '7s'}
+D k12_1 #0   7.2s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+B k28_1 #0   7.2s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+B k25_1 #0   7.5s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+D k16_1 #0   7.7s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+C k15_1 #0   7.7s 3/3 {'bottom': '2z', 'right': '6p', 'top': '3z'}
+B k28_1 #1   3.4s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+C k15_1 #1   3.8s 3/3 {'bottom': '2z', 'right': '6p', 'top': '3z'}
+B k25_1 #1   4.6s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+C k26_1 #1   3.7s 2/3 {'bottom': '2z', 'right': '6p', 'top': '7s'}
+D k16_1 #1   3.8s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+D k12_1 #1   6.6s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+C k15_1 #2   3.9s 3/3 {'bottom': '2z', 'right': '6p', 'top': '3z'}
+B k25_1 #2   4.6s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+B k28_1 #2   4.5s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+D k16_1 #2   4.1s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+B k28_1 #3   3.4s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+D k12_1 #2   7.2s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+B k25_1 #3   3.8s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+C k15_1 #3   4.0s 3/3 {'bottom': '2z', 'right': '6p', 'top': '3z'}
+D k12_1 #3   3.7s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+D k16_1 #3   3.9s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+B k28_1 #4   3.2s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+C k15_1 #4   4.0s 3/3 {'bottom': '2z', 'right': '6p', 'top': '3z'}
+D k12_1 #4   3.8s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+C k26_1 #2  16.4s 2/3 {'bottom': '2z', 'right': '6p', 'top': '7s'}
+C k26_1 #3  10.1s 2/3 {'bottom': '2z', 'right': '6p', 'top': '7s'}
+B k25_1 #4  10.1s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+C k26_1 #4   7.4s 2/3 {'bottom': '2z', 'right': '6p', 'top': '7s'}
+D k16_1 #4   4.0s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+B k28_1 #5   3.3s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+B k25_1 #5   4.6s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+C k26_1 #5   3.4s 2/3 {'bottom': '2z', 'right': '6p', 'top': '7s'}
+C k15_1 #5   3.9s 3/3 {'bottom': '2z', 'right': '6p', 'top': '3z'}
+D k12_1 #5   3.6s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+B k28_1 #6   3.3s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+B k25_1 #6   3.8s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+D k16_1 #5   5.0s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+C k26_1 #6   3.8s 2/3 {'bottom': '2z', 'right': '6p', 'top': '7s'}
+C k15_1 #6   4.1s 3/3 {'bottom': '2z', 'right': '6p', 'top': '3z'}
+D k12_1 #6   3.5s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+B k25_1 #7   3.9s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+D k16_1 #6   4.5s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+B k28_1 #7   4.6s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+C k15_1 #7   4.2s 3/3 {'bottom': '2z', 'right': '6p', 'top': '3z'}
+C k26_1 #7   4.3s 2/3 {'bottom': '2z', 'right': '6p', 'top': '7s'}
+D k12_1 #7   3.7s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+B k25_1 #8   3.8s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+D k16_1 #7   4.2s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+B k28_1 #8   3.5s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+D k12_1 #8   3.5s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+C k26_1 #8   3.6s 2/3 {'bottom': '2z', 'right': '6p', 'top': '7s'}
+C k15_1 #8   4.0s 3/3 {'bottom': '2z', 'right': '6p', 'top': '3z'}
+B k25_1 #9   3.6s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+B k28_1 #9   3.4s 3/3 {'bottom': '6s', 'left': '3s', 'top': '7z'}
+D k16_1 #8   5.2s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+C k26_1 #9   3.5s 2/3 {'bottom': '2z', 'right': '6p', 'top': '7s'}
+C k15_1 #9   4.2s 3/3 {'bottom': '2z', 'right': '6p', 'top': '3z'}
+D k12_1 #9   4.2s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+D k16_1 #9   4.2s 3/3 {'right': '2z', 'top': '3z', 'left': '7z'}
+
+장면 60  세 자리 모두 50  론 패 60  자리별 170/180  시간 중앙 4.0 / p90 7.5 / 최대 16.4  입력 4691  생각>0 1
+  틀림 k26_1 top: 7s → 3z
+  틀림 k26_1 top: 7s → 3z
+  틀림 k26_1 top: 7s → 3z
+  틀림 k26_1 top: 7s → 3z
+  틀림 k26_1 top: 7s → 3z
+  틀림 k26_1 top: 7s → 3z
+  틀림 k26_1 top: 7s → 3z
+  틀림 k26_1 top: 7s → 3z
+  틀림 k26_1 top: 7s → 3z
+  틀림 k26_1 top: 7s → 3z

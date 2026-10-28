@@ -1,0 +1,19 @@
+403187831140.dkr.ecr.ap-northeast-2.amazonaws.com/yolo26-bench:arm64
+== fp32-grid
+SUMMARY {"machine": "aarch64", "cpus": 2, "ort": "1.31.0", "threads": 0, "load_s": 0.21, "rect": true, "models": {"region": "regions-yolo-26n-dyn.onnx", "tile": "tile-yolo-26n-dyn.onnx", "cls": "classifier-resnet50.onnx"}, "n": 18, "decode_med": 0.13, "region_one_med": 0.734, "grid_med": 3.694, "grid_max": 4.033, "tile_med": 0.0, "classify_med": 0.0, "verify_med": 0.0, "grid_matches_pc": null, "peak_mem_mb": 248}
+exit=0 oom=false
+== int8-grid
+SUMMARY {"machine": "aarch64", "cpus": 2, "ort": "1.31.0", "threads": 0, "load_s": 0.68, "rect": true, "models": {"region": "regions-yolo-26n-dyn.int8-minmax-cal8.onnx", "tile": "tile-yolo-26n-dyn.onnx", "cls": "classifier-resnet50.int8-minmax-cal8.onnx"}, "n": 18, "decode_med": 0.117, "region_one_med": 0.35, "grid_med": 1.754, "grid_max": 1.922, "tile_med": 0.0, "classify_med": 0.0, "verify_med": 0.0, "grid_matches_pc": null, "peak_mem_mb": 216}
+exit=0 oom=false
+== fp32-verify
+SUMMARY {"machine": "aarch64", "cpus": 2, "ort": "1.31.0", "threads": 0, "load_s": 0.31, "rect": true, "models": {"region": "regions-yolo-26n-dyn.onnx", "tile": "tile-yolo-26n-dyn.onnx", "cls": "classifier-resnet50.onnx"}, "n": 18, "decode_med": 0.112, "region_one_med": 0, "grid_med": 0.0, "grid_max": 0.0, "tile_med": 0.28, "classify_med": 2.117, "verify_med": 2.389, "grid_matches_pc": null, "peak_mem_mb": 347}
+exit=0 oom=false
+== int8-verify
+SUMMARY {"machine": "aarch64", "cpus": 2, "ort": "1.31.0", "threads": 0, "load_s": 0.34, "rect": true, "models": {"region": "regions-yolo-26n-dyn.int8-minmax-cal8.onnx", "tile": "tile-yolo-26n-dyn.onnx", "cls": "classifier-resnet50.int8-minmax-cal8.onnx"}, "n": 18, "decode_med": 0.113, "region_one_med": 0, "grid_med": 0.0, "grid_max": 0.0, "tile_med": 0.285, "classify_med": 0.595, "verify_med": 0.877, "grid_matches_pc": null, "peak_mem_mb": 272}
+exit=0 oom=false
+== int8-verify-b14
+SUMMARY {"machine": "aarch64", "cpus": 2, "ort": "1.31.0", "threads": 0, "load_s": 0.35, "rect": true, "models": {"region": "regions-yolo-26n-dyn.int8-minmax-cal8.onnx", "tile": "tile-yolo-26n-dyn.onnx", "cls": "classifier-resnet50.int8-minmax-cal8.onnx"}, "n": 18, "decode_med": 0.105, "region_one_med": 0, "grid_med": 0.0, "grid_max": 0.0, "tile_med": 0.28, "classify_med": 0.586, "verify_med": 0.857, "grid_matches_pc": null, "peak_mem_mb": 270}
+exit=0 oom=false
+               total        used        free      shared  buff/cache   available
+Mem:            1836         661         833          50         578        1175
+	

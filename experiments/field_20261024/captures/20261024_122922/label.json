@@ -1,0 +1,40 @@
+{
+ "time": "2026-10-24T12:33:12.166992",
+ "round": "동2국",
+ "honba": 0,
+ "winner": 1,
+ "is_tsumo": false,
+ "loser": 2,
+ "closed": [
+  "4m",
+  "0m",
+  "7m",
+  "8m",
+  "9m",
+  "1s",
+  "2s",
+  "3s",
+  "4p",
+  "4p",
+  "5z",
+  "5z",
+  "5z",
+  "3m"
+ ],
+ "win_tile": "3m",
+ "melds": [],
+ "red_count": 1,
+ "riichi": true,
+ "dora_indicators": [
+  "5s"
+ ],
+ "ura_indicators": [
+  "9s"
+ ],
+ "riichi_seats": [
+  1
+ ],
+ "auto_riichi_seats": [
+  1
+ ]
+}

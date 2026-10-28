@@ -1,0 +1,71 @@
+{
+ "time": "2026-10-24T14:08:30.637482",
+ "capture_long_side_px": 4080,
+ "setup": {
+  "source": "remote",
+  "remote_url": "http://192.168.0.64:8765",
+  "zoom": 1.0,
+  "height_cm": 60
+ },
+ "game": {
+  "round": "동3국",
+  "names": [
+   "플레이어 1",
+   "플레이어 2",
+   "플레이어 3",
+   "플레이어 4"
+  ],
+  "bottom_seat": 0,
+  "dealer": 2,
+  "honba": 0,
+  "riichi_seats": []
+ },
+ "winner_side": "left",
+ "timings_ms": {
+  "shrink": 493,
+  "locate": 30366,
+  "pick": 0,
+  "crop": 561,
+  "read": 8976
+ },
+ "layout_mode": "locate",
+ "fixed_analysis": null,
+ "warnings": [],
+ "error": null,
+ "merge": {
+  "winner": 3,
+  "is_tsumo": false,
+  "loser": 1,
+  "closed": [
+   "3p",
+   "3p",
+   "4m",
+   "5m",
+   "6m",
+   "4s",
+   "4s",
+   "4s",
+   "6s",
+   "7s",
+   "8s",
+   "0s",
+   "0s",
+   "3p"
+  ],
+  "win_tile": "3p",
+  "melds": [],
+  "red_count": 2,
+  "hand_valid": true,
+  "uncertain": [],
+  "flags": [
+   "winFromDiscard: 손패가 13장이라 오른쪽(플레이어 2) 강 끝 3통 로 론으로 봤습니다"
+  ],
+  "riichi": false,
+  "riichi_seats_photo": [],
+  "dora_indicators": [
+   "7m",
+   "6z"
+  ],
+  "ura_indicators": []
+ }
+}

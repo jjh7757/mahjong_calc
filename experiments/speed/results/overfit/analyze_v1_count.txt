@@ -1,0 +1,52 @@
+
+검사: count  설정 조합 405개 × 사진 6 × 흔들기 17
+
+1) 민감도 — 흔들지 않은 사진, 조합마다 6장 중 correct/unsafe
+   correct 4/6 unsafe 0: 조합 45개 (11%)
+   correct 4/6 unsafe 1: 조합 27개 (7%)
+   correct 4/6 unsafe 2: 조합 9개 (2%)
+   correct 3/6 unsafe 0: 조합 45개 (11%)
+   correct 3/6 unsafe 1: 조합 114개 (28%)
+   correct 3/6 unsafe 2: 조합 18개 (4%)
+   correct 2/6 unsafe 0: 조합 9개 (2%)
+   correct 2/6 unsafe 1: 조합 30개 (7%)
+   correct 2/6 unsafe 2: 조합 60개 (15%)
+   correct 2/6 unsafe 3: 조합 9개 (2%)
+   correct 1/6 unsafe 0: 조합 3개 (1%)
+   correct 1/6 unsafe 1: 조합 6개 (1%)
+   correct 1/6 unsafe 2: 조합 6개 (1%)
+   correct 1/6 unsafe 3: 조합 12개 (3%)
+   correct 0/6 unsafe 3: 조합 9개 (2%)
+   correct 0/6 unsafe 4: 조합 3개 (1%)
+   기본값 4|1.5|1.5|0.35|2.5: {'correct': 4, 'fallback': 2, 'unsafe': 0}
+   k    하나만 바꿈(correct/unsafe): 2→2/2  3→2/2  4→4/0  5→2/2  6→3/2
+   pad  하나만 바꿈(correct/unsafe): 1.0→3/1  1.5→4/0  2.0→4/0
+   half 하나만 바꿈(correct/unsafe): 1.0→3/1  1.5→4/0  2.0→3/1
+   gap  하나만 바꿈(correct/unsafe): 0.25→4/0  0.35→4/0  0.45→4/0
+   sep  하나만 바꿈(correct/unsafe): 2.0→4/0  2.5→4/0  3.0→4/0
+
+2) 장면 하나씩 빼기(고를 때 흔든 사진 포함, 점수 = correct − 5×unsafe)
+   B 뺌 → 고른 조합 3|1.0|1.0|0.25|2.0: B 에서 {'correct': 0, 'fallback': 34, 'unsafe': 0}   (기본값이면 {'correct': 4, 'fallback': 29, 'unsafe': 1})
+   C 뺌 → 고른 조합 3|1.0|1.0|0.25|2.0: C 에서 {'correct': 34, 'fallback': 0, 'unsafe': 0}   (기본값이면 {'correct': 30, 'fallback': 0, 'unsafe': 4})
+   D 뺌 → 고른 조합 2|2.0|2.0|0.25|2.0: D 에서 {'correct': 24, 'fallback': 3, 'unsafe': 7}   (기본값이면 {'correct': 21, 'fallback': 3, 'unsafe': 10})
+
+3) 흔든 사진 — 기본값 4|1.5|1.5|0.35|2.5
+   none         correct 4/6 fallback 2 unsafe 0 
+   scale:0.7    correct 3/6 fallback 2 unsafe 1 ['k16_1']
+   scale:1.3    correct 3/6 fallback 2 unsafe 1 ['k16_1']
+   rot:-6       correct 3/6 fallback 2 unsafe 1 ['k15_1']
+   rot:-3       correct 3/6 fallback 2 unsafe 1 ['k26_1']
+   rot:3        correct 5/6 fallback 1 unsafe 0 
+   rot:6        correct 4/6 fallback 1 unsafe 1 ['k25_1']
+   bright:0.7   correct 3/6 fallback 2 unsafe 1 ['k15_1']
+   bright:1.3   correct 2/6 fallback 2 unsafe 2 ['k12_1', 'k16_1']
+   contrast:0.7 correct 4/6 fallback 2 unsafe 0 
+   blur:2       correct 2/6 fallback 2 unsafe 2 ['k12_1', 'k16_1']
+   jpeg:40      correct 3/6 fallback 2 unsafe 1 ['k16_1']
+   cut:110      correct 4/6 fallback 1 unsafe 1 ['k16_1']
+   cut:210      correct 3/6 fallback 3 unsafe 0 
+   cut:310      correct 2/6 fallback 2 unsafe 2 ['k15_1', 'k16_1']
+   cut:410      correct 3/6 fallback 2 unsafe 1 ['k16_1']
+   pad:0.1      correct 4/6 fallback 2 unsafe 0 
+   합계: {'correct': 55, 'fallback': 32, 'unsafe': 15}
+   (모든 조합 × 모든 흔들기 합계: {'correct': 18237, 'fallback': 15585, 'unsafe': 7488})

@@ -1,0 +1,71 @@
+[
+  {
+    "image": "01.jpg",
+    "model": "gemini-pro-latest",
+    "tiles": [
+      "1m",
+      "2m",
+      "5m",
+      "7m",
+      "8m",
+      "5p",
+      "8p",
+      "8s",
+      "8s",
+      "1z",
+      "2z",
+      "4z",
+      "5z",
+      "5z"
+    ],
+    "confidence": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "notes": "",
+    "latency_s": 13.349575899977935,
+    "usage": {
+      "input_tokens": 1397,
+      "output_tokens": 1904,
+      "cost_usd": null
+    },
+    "served_by": "gemini-pro-latest",
+    "truth": [
+      "1m",
+      "2m",
+      "5m",
+      "7m",
+      "8m",
+      "5p",
+      "8p",
+      "7s",
+      "7s",
+      "1z",
+      "2z",
+      "4z",
+      "5z",
+      "5z"
+    ],
+    "score": {
+      "truth_count": 14,
+      "pred_count": 14,
+      "matched": 12,
+      "tile_accuracy": 0.8571428571428571,
+      "all_correct": false,
+      "order_exact": false,
+      "red_ok": true
+    }
+  }
+]

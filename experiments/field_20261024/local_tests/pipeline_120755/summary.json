@@ -1,0 +1,203 @@
+{
+ "image": "C:\\Users\\jjh7757\\AppData\\Local\\Temp\\claude\\C--Users-jjh7757-dev-mahjong-calc\\1981d77a-8e2f-4e66-b41f-508feaf7704b\\scratchpad\\cap6\\original.jpg",
+ "locate": {
+  "hands": [
+   {
+    "side": "bottom",
+    "box": [
+     732,
+     175,
+     930,
+     456
+    ],
+    "conf": 0.96,
+    "face_up": false
+   },
+   {
+    "side": "right",
+    "box": [
+     422,
+     693,
+     831,
+     808
+    ],
+    "conf": 0.98,
+    "face_up": true
+   }
+  ],
+  "rivers": [
+   {
+    "side": "bottom",
+    "box": [
+     486,
+     348,
+     591,
+     497
+    ],
+    "conf": 0.96
+   },
+   {
+    "side": "right",
+    "box": [
+     381,
+     498,
+     569,
+     574
+    ],
+    "conf": 0.96
+   },
+   {
+    "side": "top",
+    "box": [
+     295,
+     437,
+     384,
+     569
+    ],
+    "conf": 0.96
+   },
+   {
+    "side": "left",
+    "box": [
+     343,
+     337,
+     513,
+     420
+    ],
+    "conf": 0.96
+   }
+  ],
+  "dead_wall": {
+   "box": [
+    231,
+    739,
+    296,
+    783
+   ],
+   "conf": 0.93
+  },
+  "center": {
+   "box": [
+    231,
+    337,
+    592,
+    783
+   ]
+  },
+  "face_up_sides": [
+   "right"
+  ],
+  "notes": "",
+  "model": "gemini-3.8-flash",
+  "latency_ms": 20226
+ },
+ "results": {
+  "hand_right": {
+   "tiles": [
+    {
+     "tile": "4m",
+     "conf": 0.99
+    },
+    {
+     "tile": "0m",
+     "conf": 0.99
+    },
+    {
+     "tile": "7m",
+     "conf": 0.99
+    },
+    {
+     "tile": "8m",
+     "conf": 0.99
+    },
+    {
+     "tile": "9m",
+     "conf": 0.99
+    },
+    {
+     "tile": "1s",
+     "conf": 0.99
+    },
+    {
+     "tile": "2s",
+     "conf": 0.99
+    },
+    {
+     "tile": "3s",
+     "conf": 0.99
+    },
+    {
+     "tile": "4p",
+     "conf": 0.99
+    },
+    {
+     "tile": "4p",
+     "conf": 0.99
+    },
+    {
+     "tile": "5z",
+     "conf": 0.99
+    },
+    {
+     "tile": "5z",
+     "conf": 0.99
+    },
+    {
+     "tile": "5z",
+     "conf": 0.99
+    }
+   ],
+   "count": 13,
+   "melds": [],
+   "win_tile": null,
+   "notes": "",
+   "model": "gemini-3.8-flash",
+   "latency_ms": 14377
+  },
+  "center": {
+   "dora_indicators": [
+    {
+     "tile": "2s",
+     "conf": 0.95
+    },
+    {
+     "tile": "8s",
+     "conf": 0.95
+    }
+   ],
+   "ura_dora_indicators": [],
+   "riichi": {
+    "bottom": false,
+    "right": true,
+    "top": false,
+    "left": false
+   },
+   "riichi_conf": {
+    "bottom": 0.95,
+    "right": 0.95,
+    "top": 0.95,
+    "left": 0.95
+   },
+   "last_discards": {
+    "bottom": "2z",
+    "right": "4s",
+    "top": "3m",
+    "left": "2m"
+   },
+   "last_discards_conf": {
+    "bottom": 0.95,
+    "right": 0.8,
+    "top": 0.95,
+    "left": 0.95
+   },
+   "notes": "우측 상단 왕패에 도라 표시패 2장(2s, 8s)이 공개되어 있습니다. right 자리에 1,000점 리치봉이 놓여 있습니다.",
+   "model": "gemini-3.8-flash",
+   "latency_ms": 76134
+  }
+ },
+ "timing_s": {
+  "locate": 20.5,
+  "stage2_parallel": 76.2,
+  "total": 96.7
+ }
+}

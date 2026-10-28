@@ -1,0 +1,96 @@
+{
+ "hands": [
+  {
+   "side": "bottom",
+   "box": [
+    732,
+    94,
+    944,
+    387
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    403,
+    653,
+    791,
+    777
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    66,
+    405,
+    163,
+    585
+   ],
+   "face_up": true,
+   "conf": 0.92
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    483,
+    286,
+    590,
+    441
+   ],
+   "conf": 0.96
+  },
+  {
+   "side": "right",
+   "box": [
+    390,
+    440,
+    577,
+    522
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    296,
+    383,
+    390,
+    519
+   ],
+   "conf": 0.96
+  },
+  {
+   "side": "left",
+   "box": [
+    336,
+    274,
+    513,
+    365
+   ],
+   "conf": 0.96
+  }
+ ],
+ "melds": [],
+ "dead_wall": null,
+ "center": {
+  "box": [
+   296,
+   273,
+   593,
+   523
+  ]
+ },
+ "notes": "왼쪽 자리는 손패가 없으며, 위쪽 플레이어 손패는 앞면으로 노출되어 있습니다.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 14773,
+ "usage": {
+  "input_tokens": 1638,
+  "output_tokens": 1631
+ }
+}

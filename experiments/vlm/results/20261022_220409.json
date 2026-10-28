@@ -1,0 +1,34 @@
+[
+  {
+    "image": "hand_bottom.jpg",
+    "model": "gemini-pro-latest",
+    "tiles": [
+      "2m",
+      "2m",
+      "3m",
+      "3m",
+      "6p",
+      "9p",
+      "7z",
+      "8s"
+    ],
+    "confidence": [
+      0.9,
+      0.9,
+      0.7,
+      0.7,
+      0.9,
+      0.9,
+      0.95,
+      0.8
+    ],
+    "notes": "전체적으로 화질이 흐려 3번째와 4번째 만수패(3m으로 추정)의 판별이 다소 불확실하며, 우측 상단 끝에 위치한 삭수패(8s)는 화면에 일부만 잘려서 보입니다.",
+    "latency_s": 38.77901010000005,
+    "usage": {
+      "input_tokens": 1392,
+      "output_tokens": 4688,
+      "cost_usd": null
+    },
+    "served_by": "gemini-pro-latest"
+  }
+]

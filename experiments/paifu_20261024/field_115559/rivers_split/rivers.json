@@ -1,0 +1,257 @@
+{
+ "rivers": {
+  "bottom": [
+   "2z",
+   "1z",
+   "2s",
+   "6s",
+   "8p",
+   "4z",
+   "1p",
+   "2p",
+   "2z"
+  ],
+  "right": [
+   "1z",
+   "9p",
+   "7s",
+   "9p",
+   "7p",
+   "3p",
+   "8s",
+   "7s"
+  ],
+  "top": [
+   "1m",
+   "3m",
+   "4z",
+   "8m",
+   "6s",
+   "3z",
+   "4z",
+   "3z",
+   "3m"
+  ],
+  "left": [
+   "1m",
+   "9m",
+   "4z",
+   "1p",
+   "8p",
+   "2m",
+   "1z",
+   "8s",
+   "1p"
+  ]
+ },
+ "raw": {
+  "bottom": {
+   "dora_indicators": [],
+   "ura_dora_indicators": [],
+   "riichi": {
+    "bottom": false,
+    "right": false,
+    "top": false,
+    "left": false
+   },
+   "riichi_conf": {
+    "bottom": 0.95,
+    "right": 0.8,
+    "top": 0.8,
+    "left": 0.8
+   },
+   "last_discards": {
+    "bottom": "2z",
+    "right": null,
+    "top": null,
+    "left": null
+   },
+   "last_discards_conf": {
+    "bottom": 0.95,
+    "right": 0.0,
+    "top": 0.0,
+    "left": 0.0
+   },
+   "rivers": {
+    "bottom": [
+     "2z",
+     "1z",
+     "2s",
+     "6s",
+     "8p",
+     "4z",
+     "1p",
+     "2p",
+     "2z"
+    ],
+    "right": [],
+    "top": [],
+    "left": []
+   },
+   "notes": "이미지가 기울어져 잘려 있으며 bottom(하가)의 버림패(강)만 주로 보입니다. 좌측의 1p, 2m 및 우측의 4s 등은 다른 자리의 버림패 일부로 보이나 전체 식별은 불가능합니다.",
+   "model": "gemini-3.8-flash",
+   "latency_ms": 4696,
+   "usage": {
+    "input_tokens": 2061,
+    "output_tokens": 356
+   }
+  },
+  "right": {
+   "dora_indicators": [],
+   "ura_dora_indicators": [],
+   "riichi": {
+    "bottom": false,
+    "right": false,
+    "top": false,
+    "left": false
+   },
+   "riichi_conf": {
+    "bottom": 0.95,
+    "right": 0.8,
+    "top": 0.8,
+    "left": 0.8
+   },
+   "last_discards": {
+    "bottom": "7s",
+    "right": null,
+    "top": null,
+    "left": null
+   },
+   "last_discards_conf": {
+    "bottom": 0.95,
+    "right": 0.0,
+    "top": 0.0,
+    "left": 0.0
+   },
+   "rivers": {
+    "bottom": [
+     "1z",
+     "9p",
+     "7s",
+     "9p",
+     "7p",
+     "3p",
+     "8s",
+     "7s"
+    ],
+    "right": [],
+    "top": [],
+    "left": []
+   },
+   "notes": "이미지가 회전 및 크롭되어 bottom 플레이어의 버림패(강)만 주로 보입니다. 왕패 및 도라 표시패는 보이지 않습니다.",
+   "model": "gemini-3.8-flash",
+   "latency_ms": 4368,
+   "usage": {
+    "input_tokens": 2066,
+    "output_tokens": 324
+   }
+  },
+  "top": {
+   "dora_indicators": [
+    {
+     "tile": "8p",
+     "conf": 0.8
+    }
+   ],
+   "ura_dora_indicators": [],
+   "riichi": {
+    "bottom": false,
+    "right": false,
+    "top": false,
+    "left": false
+   },
+   "riichi_conf": {
+    "bottom": 0.95,
+    "right": 0.9,
+    "top": 0.9,
+    "left": 0.9
+   },
+   "last_discards": {
+    "bottom": "3m",
+    "right": null,
+    "top": null,
+    "left": null
+   },
+   "last_discards_conf": {
+    "bottom": 0.95,
+    "right": 0.0,
+    "top": 0.0,
+    "left": 0.0
+   },
+   "rivers": {
+    "bottom": [
+     "1m",
+     "3m",
+     "4z",
+     "8m",
+     "6s",
+     "3z",
+     "4z",
+     "3z",
+     "3m"
+    ],
+    "right": [],
+    "top": [],
+    "left": []
+   },
+   "notes": "이미지가 크게 기울어져 있으며, 하가/상가/대면의 강은 보이지 않고 한 쪽 강(1열: 1m, 3m, 4z, 8m, 6s, 3z / 2열: 4z, 3z, 3m)만 보입니다. 가운데 본체 옆에 일부 보이는 패는 도라 표시패로 추정됩니다.",
+   "model": "gemini-3.8-flash",
+   "latency_ms": 5001,
+   "usage": {
+    "input_tokens": 2091,
+    "output_tokens": 391
+   }
+  },
+  "left": {
+   "dora_indicators": [],
+   "ura_dora_indicators": [],
+   "riichi": {
+    "bottom": true,
+    "right": false,
+    "top": false,
+    "left": false
+   },
+   "riichi_conf": {
+    "bottom": 0.95,
+    "right": 0.9,
+    "top": 0.7,
+    "left": 0.7
+   },
+   "last_discards": {
+    "bottom": "1p",
+    "right": null,
+    "top": null,
+    "left": null
+   },
+   "last_discards_conf": {
+    "bottom": 0.95,
+    "right": 0.0,
+    "top": 0.0,
+    "left": 0.0
+   },
+   "rivers": {
+    "bottom": [
+     "1m",
+     "9m",
+     "4z",
+     "1p",
+     "8p",
+     "2m",
+     "1z",
+     "8s",
+     "1p"
+    ],
+    "right": [],
+    "top": [],
+    "left": []
+   },
+   "notes": "Bottom 자리의 리치 표시등(빨간색 LED)이 켜져 있습니다. 도라 표시패는 프레임 내에 보이지 않습니다.",
+   "model": "gemini-3.8-flash",
+   "latency_ms": 4491,
+   "usage": {
+    "input_tokens": 2069,
+    "output_tokens": 306
+   }
+  }
+ }
+}

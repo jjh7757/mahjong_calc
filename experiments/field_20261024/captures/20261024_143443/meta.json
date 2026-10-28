@@ -1,0 +1,101 @@
+{
+ "time": "2026-10-24T14:36:38.242640",
+ "capture_long_side_px": 4080,
+ "setup": {
+  "source": "remote",
+  "remote_url": "http://192.168.0.64:8765",
+  "zoom": 1.0,
+  "height_cm": 60
+ },
+ "game": {
+  "round": "동3국",
+  "names": [
+   "플레이어 1",
+   "플레이어 2",
+   "플레이어 3",
+   "플레이어 4"
+  ],
+  "bottom_seat": 0,
+  "dealer": 2,
+  "honba": 0,
+  "riichi_seats": []
+ },
+ "winner_side": "left",
+ "timings_ms": {
+  "shrink": 448,
+  "analyze": 197,
+  "pick": 0,
+  "crop": 550,
+  "locate": 16574,
+  "read": 81161
+ },
+ "layout_mode": "fixed→locate",
+ "fixed_analysis": {
+  "felt_iou": 0.999,
+  "moved": false,
+  "face_up": [
+   "bottom",
+   "left"
+  ],
+  "dora_box": [
+   504,
+   198,
+   568,
+   248
+  ],
+  "hand_colors": {
+   "bottom": {
+    "back": 0.03,
+    "white": 0.227
+   },
+   "right": {
+    "back": 0.103,
+    "white": 0.237
+   },
+   "left": {
+    "back": 0.0,
+    "white": 0.234
+   }
+  }
+ },
+ "warnings": [],
+ "error": null,
+ "merge": {
+  "winner": 3,
+  "is_tsumo": false,
+  "loser": 1,
+  "closed": [
+   "3p",
+   "3p",
+   "5p",
+   "5p",
+   "4m",
+   "5m",
+   "6m",
+   "6s",
+   "7s",
+   "8s",
+   "3p"
+  ],
+  "win_tile": "3p",
+  "melds": [
+   "(4s 4s 4s 4s)"
+  ],
+  "red_count": 0,
+  "hand_valid": true,
+  "uncertain": [],
+  "flags": [
+   "winFromDiscard: 손패가 10장이라 오른쪽(플레이어 2) 강 끝 3통 로 론으로 봤습니다"
+  ],
+  "riichi": false,
+  "riichi_seats_photo": [
+   0,
+   1
+  ],
+  "dora_indicators": [
+   "6z",
+   "7m"
+  ],
+  "ura_indicators": []
+ }
+}

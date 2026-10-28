@@ -1,0 +1,102 @@
+{
+ "time": "2026-10-24T14:26:17.349348",
+ "capture_long_side_px": 4080,
+ "setup": {
+  "source": "remote",
+  "remote_url": "http://192.168.0.64:8765",
+  "zoom": 1.0,
+  "height_cm": 60
+ },
+ "game": {
+  "round": "동3국",
+  "names": [
+   "플레이어 1",
+   "플레이어 2",
+   "플레이어 3",
+   "플레이어 4"
+  ],
+  "bottom_seat": 0,
+  "dealer": 2,
+  "honba": 0,
+  "riichi_seats": []
+ },
+ "winner_side": "left",
+ "timings_ms": {
+  "shrink": 470,
+  "analyze": 180,
+  "pick": 0,
+  "crop": 552,
+  "locate": 27704,
+  "read": 38517
+ },
+ "layout_mode": "fixed→locate",
+ "fixed_analysis": {
+  "felt_iou": 0.999,
+  "moved": false,
+  "face_up": [
+   "left"
+  ],
+  "dora_box": [
+   549,
+   150,
+   615,
+   203
+  ],
+  "hand_colors": {
+   "bottom": {
+    "back": 0.039,
+    "white": 0.223
+   },
+   "right": {
+    "back": 0.098,
+    "white": 0.266
+   },
+   "left": {
+    "back": 0.0,
+    "white": 0.22
+   }
+  }
+ },
+ "warnings": [
+  "river_top 을(를) 읽지 못했습니다: 인식 모델 호출이 실패했습니다. 다시 시도하세요."
+ ],
+ "error": null,
+ "merge": {
+  "winner": 3,
+  "is_tsumo": true,
+  "loser": null,
+  "closed": [
+   "3p",
+   "4p",
+   "5p",
+   "5p",
+   "4m",
+   "5m",
+   "6m",
+   "6s",
+   "7s",
+   "8s"
+  ],
+  "win_tile": "8s",
+  "melds": [
+   "[6z 6z 6z]"
+  ],
+  "red_count": 0,
+  "hand_valid": false,
+  "uncertain": [],
+  "flags": [
+   "winTileAssumed: 화료패를 따로 찾지 못해 손패 마지막 장으로 봤습니다",
+   "tileCountMismatch: 손패가 11장이어야 하는데 10장 읽혔습니다"
+  ],
+  "riichi": false,
+  "riichi_seats_photo": [
+   0,
+   1
+  ],
+  "dora_indicators": [
+   "1z",
+   "8m"
+  ],
+  "ura_indicators": []
+ }
+}

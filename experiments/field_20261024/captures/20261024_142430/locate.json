@@ -1,0 +1,126 @@
+{
+ "hands": [
+  {
+   "side": "bottom",
+   "box": [
+    746,
+    105,
+    995,
+    404
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    471,
+    700,
+    865,
+    836
+   ],
+   "face_up": false,
+   "conf": 0.96
+  },
+  {
+   "side": "top",
+   "box": [
+    128,
+    449,
+    230,
+    638
+   ],
+   "face_up": false,
+   "conf": 0.9
+  },
+  {
+   "side": "left",
+   "box": [
+    233,
+    148,
+    451,
+    292
+   ],
+   "face_up": true,
+   "conf": 0.98
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    506,
+    323,
+    622,
+    477
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    427,
+    477,
+    619,
+    566
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    333,
+    431,
+    429,
+    568
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "left",
+   "box": [
+    365,
+    311,
+    535,
+    406
+   ],
+   "conf": 0.95
+  }
+ ],
+ "melds": [
+  {
+   "side": "left",
+   "box": [
+    26,
+    318,
+    77,
+    380
+   ],
+   "conf": 0.92
+  }
+ ],
+ "dead_wall": {
+  "box": [
+   547,
+   148,
+   618,
+   205
+  ],
+  "conf": 0.88
+ },
+ "center": {
+  "box": [
+   320,
+   145,
+   630,
+   575
+  ]
+ },
+ "notes": "",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 27507,
+ "usage": {
+  "input_tokens": 1638,
+  "output_tokens": 3203
+ }
+}

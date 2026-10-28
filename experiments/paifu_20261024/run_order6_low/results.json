@@ -1,0 +1,8021 @@
+[
+ {
+  "variant": "A",
+  "shot": "20261024_115559",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "1p",
+    "8p",
+    "2z",
+    "1z",
+    "8s",
+    "8s",
+    "9p",
+    "4z"
+   ],
+   "right": [
+    "2p",
+    "7p",
+    "4p",
+    "7p",
+    "8s",
+    "8p",
+    "1z",
+    "8s"
+   ],
+   "top": [
+    "1s",
+    "6s",
+    "6m",
+    "4z",
+    "3m",
+    "3m",
+    "3z",
+    "1m",
+    "4z"
+   ],
+   "left": [
+    "1z",
+    "9m",
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "7p",
+    "5p",
+    "2m"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 8,
+    "tiles": 6,
+    "pos": 0
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 3,
+    "pos": 0
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 7,
+    "pos": 0
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 6,
+    "pos": 1
+   }
+  },
+  "calls": 1,
+  "in_tok": 2091,
+  "out_tok": 606,
+  "ms": 6918,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "dora_indicators": [
+    {
+     "code": "8s",
+     "confidence": 0.95
+    }
+   ],
+   "ura_dora_indicators": [],
+   "riichi": [
+    {
+     "side": "bottom",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "right",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "top",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "left",
+     "riichi": false,
+     "confidence": 0.95
+    }
+   ],
+   "last_discards": [
+    {
+     "side": "bottom",
+     "code": "4z",
+     "confidence": 0.95
+    },
+    {
+     "side": "right",
+     "code": "8s",
+     "confidence": 0.95
+    },
+    {
+     "side": "top",
+     "code": "1m",
+     "confidence": 0.95
+    },
+    {
+     "side": "left",
+     "code": "2m",
+     "confidence": 0.95
+    }
+   ],
+   "rivers": [
+    {
+     "side": "bottom",
+     "codes": [
+      "1p",
+      "8p",
+      "2z",
+      "1z",
+      "8s",
+      "8s",
+      "9p",
+      "4z"
+     ]
+    },
+    {
+     "side": "right",
+     "codes": [
+      "2p",
+      "7p",
+      "4p",
+      "7p",
+      "8s",
+      "8p",
+      "1z",
+      "8s"
+     ]
+    },
+    {
+     "side": "top",
+     "codes": [
+      "1s",
+      "6s",
+      "6m",
+      "4z",
+      "3m",
+      "3m",
+      "3z",
+      "1m",
+      "4z"
+     ]
+    },
+    {
+     "side": "left",
+     "codes": [
+      "1z",
+      "9m",
+      "1m",
+      "9m",
+      "4z",
+      "1p",
+      "7p",
+      "5p",
+      "2m"
+     ]
+    }
+   ],
+   "notes": "도라 표시패는 오른쪽 상단 벽패(왕패) 위에 뒤집혀 있는 8s 1장입니다. 오른쪽 플레이어의 손패/울기 일부가 우측 하단에 보입니다."
+  }
+ },
+ {
+  "variant": "B0",
+  "shot": "20261024_115559",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "6s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "2p",
+    "4p",
+    "8p",
+    "8s",
+    "4p",
+    "1z",
+    "1s",
+    "3s",
+    "6s",
+    "6s"
+   ],
+   "top": [
+    "4z",
+    "3z",
+    "1m",
+    "4z",
+    "6s",
+    "1s",
+    "1m",
+    "3m"
+   ],
+   "left": [
+    "1z",
+    "6z",
+    "1p",
+    "1p",
+    "8p",
+    "2m",
+    "1m",
+    "9m",
+    "4z",
+    "9m"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 10,
+    "tiles": 2,
+    "pos": 0
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 8,
+    "tiles": 6,
+    "pos": 1
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 10,
+    "tiles": 8,
+    "pos": 3
+   }
+  },
+  "calls": 1,
+  "in_tok": 1626,
+  "out_tok": 1699,
+  "ms": 10903,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "rivers": [
+    {
+     "side": "bottom",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "2p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "right",
+     "tile_count": 10,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "2p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "4p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "4p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1s",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "3s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 10,
+       "row": 2,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.98
+      }
+     ]
+    },
+    {
+     "side": "top",
+     "tile_count": 8,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "3z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "1s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "left",
+     "tile_count": 10,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "6z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "2m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "9m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 10,
+       "row": 2,
+       "col": 4,
+       "code": "9m",
+       "sideways": false,
+       "confidence": 0.95
+      }
+     ]
+    }
+   ],
+   "notes": "Bottom player has 9 discards, right has 10 discards, top has 8 discards, left has 10 discards."
+  }
+ },
+ {
+  "variant": "B",
+  "shot": "20261024_115559",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "8s",
+    "8s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "8p",
+    "8s",
+    "4p",
+    "4p",
+    "3p",
+    "2p",
+    "1z",
+    "8s",
+    "2s",
+    "8s"
+   ],
+   "top": [
+    "4z",
+    "3m",
+    "4z",
+    "1s",
+    "8s",
+    "1s",
+    "1m",
+    "3z",
+    "3m",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "7s",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 10,
+    "tiles": 3,
+    "pos": 0
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 10,
+    "tiles": 6,
+    "pos": 4
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 1,
+  "in_tok": 1794,
+  "out_tok": 1750,
+  "ms": 11846,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "rivers": [
+    {
+     "side": "bottom",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "2p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "right",
+     "tile_count": 10,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "4p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "2p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "2s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 10,
+       "row": 2,
+       "col": 4,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.95
+      }
+     ]
+    },
+    {
+     "side": "top",
+     "tile_count": 10,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1s",
+       "sideways": false,
+       "confidence": 0.95
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "1s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "3z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 10,
+       "row": 2,
+       "col": 4,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "left",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "9m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "2m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "7s",
+       "sideways": false,
+       "confidence": 0.95
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    }
+   ],
+   "notes": ""
+  }
+ },
+ {
+  "variant": "D",
+  "shot": "20261024_115559",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "7p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "6z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 8,
+    "pos": 8
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 6340,
+  "out_tok": 3188,
+  "ms": 9564,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "2p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "Row 1 contains 6 tiles (2z, 1z, 8s, 6s, 8p, 4z). Row 2 contains 3 tiles (1p, 2p, 2z). Tiles on the left edge (2m, 8p) and right edge belong to other players' rivers/walls."
+   },
+   "right": {
+    "tile_count": 8,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "7p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": ""
+   },
+   "top": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "8m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "1st row (top, closest to center): 1m, 3m, 4z(北), 8m(八萬), 6s, 3z(西). 2nd row (bottom, toward player): 4z(北), 3z(西), 3m. Total 9 tiles."
+   },
+   "left": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "2m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "6z",
+      "sideways": false,
+      "confidence": 0.98
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": ""
+   }
+  }
+ },
+ {
+  "variant": "A",
+  "shot": "20261024_115801",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1p",
+    "7p",
+    "3p",
+    "6s",
+    "7p",
+    "1z",
+    "8s",
+    "8s"
+   ],
+   "top": [
+    "4s",
+    "6s",
+    "1s",
+    "4z",
+    "1m",
+    "4z",
+    "3m"
+   ],
+   "left": [
+    "1z",
+    "1m",
+    "9m",
+    "9m",
+    "1p",
+    "4z",
+    "1p",
+    "8p",
+    "2m"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 4,
+    "pos": 2
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 7,
+    "tiles": 5,
+    "pos": 0
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 0
+   }
+  },
+  "calls": 1,
+  "in_tok": 2069,
+  "out_tok": 551,
+  "ms": 5865,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "dora_indicators": [],
+   "ura_dora_indicators": [],
+   "riichi": [
+    {
+     "side": "bottom",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "right",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "top",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "left",
+     "riichi": false,
+     "confidence": 0.95
+    }
+   ],
+   "last_discards": [
+    {
+     "side": "bottom",
+     "code": "2z",
+     "confidence": 0.95
+    },
+    {
+     "side": "right",
+     "code": "8s",
+     "confidence": 0.95
+    },
+    {
+     "side": "top",
+     "code": "3m",
+     "confidence": 0.95
+    },
+    {
+     "side": "left",
+     "code": "2m",
+     "confidence": 0.95
+    }
+   ],
+   "rivers": [
+    {
+     "side": "bottom",
+     "codes": [
+      "2z",
+      "1z",
+      "8s",
+      "6s",
+      "8p",
+      "4z",
+      "1p",
+      "2p",
+      "2z"
+     ]
+    },
+    {
+     "side": "right",
+     "codes": [
+      "1p",
+      "7p",
+      "3p",
+      "6s",
+      "7p",
+      "1z",
+      "8s",
+      "8s"
+     ]
+    },
+    {
+     "side": "top",
+     "codes": [
+      "4s",
+      "6s",
+      "1s",
+      "4z",
+      "1m",
+      "4z",
+      "3m"
+     ]
+    },
+    {
+     "side": "left",
+     "codes": [
+      "1z",
+      "1m",
+      "9m",
+      "9m",
+      "1p",
+      "4z",
+      "1p",
+      "8p",
+      "2m"
+     ]
+    }
+   ],
+   "notes": "패산(왕패)이 프레임에 보이지 않아 도라 표시패가 확인되지 않습니다."
+  }
+ },
+ {
+  "variant": "B0",
+  "shot": "20261024_115801",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "3p",
+    "7p",
+    "3p",
+    "3s",
+    "3p",
+    "1z",
+    "3s",
+    "8s",
+    "1z"
+   ],
+   "top": [
+    "1m",
+    "4z",
+    "8m",
+    "6s",
+    "1s",
+    "3m",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "6s",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 9,
+    "tiles": 4,
+    "pos": 0
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 4
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 1,
+  "in_tok": 1604,
+  "out_tok": 1686,
+  "ms": 11736,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "rivers": [
+    {
+     "side": "bottom",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "2p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "right",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "7p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "3s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "3s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.5
+      }
+     ]
+    },
+    {
+     "side": "top",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "8m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "1s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.95
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "3z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.95
+      }
+     ]
+    },
+    {
+     "side": "left",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "9m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "2m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.95
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    }
+   ],
+   "notes": "All sides have 9 discarded tiles arranged into a complete first row of 6 and a partial second row of 3."
+  }
+ },
+ {
+  "variant": "B",
+  "shot": "20261024_115801",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "3p",
+    "3s",
+    "3p",
+    "5p",
+    "3p",
+    "8s",
+    "3s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "4z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "7z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 3,
+    "pos": 3
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 1,
+  "in_tok": 1772,
+  "out_tok": 1628,
+  "ms": 11756,
+  "n_mismatch": 0,
+  "count_mismatch": 2,
+  "raw": {
+   "rivers": [
+    {
+     "side": "bottom",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "2p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "right",
+     "tile_count": 10,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "3s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "5p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "3s",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "top",
+     "tile_count": 8,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "8m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "3z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "left",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "9m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "2m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "7z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    }
+   ],
+   "notes": "All four discard rivers detected."
+  }
+ },
+ {
+  "variant": "D",
+  "shot": "20261024_115801",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2m",
+    "2z",
+    "1z",
+    "4s",
+    "6s",
+    "8p",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "7p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "6z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 7,
+    "pos": 3
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 8,
+    "pos": 8
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 6352,
+  "out_tok": 5108,
+  "ms": 28861,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "2m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "4s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "2p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "Row 1 has 6 tiles (2m, 2z, 1z, 4s, 6s, 8p - note: the 4z to the right seems to be the 7th tile or belongs to the next? Wait, let's recount row 1). Actually, in row 1: 2m, 2z, 1z, 4s, 6s, 8p, 4z - that's 7 tiles? Let's check alignment: 2m is col 1, 2z is col 2, 1z col 3, 4s col 4, 6s col 5, 8p col 6, 4z col 7? Or is 2m actually part of an earlier thing? No, looking closely at row 2, it starts below 2z: 1p is under 2z, 2p is under 1z, 2z is under 4s. That means row 1 has 7 tiles, or 2m is col 1, 2z col 2, 1z col 3, 4s col 4, 6s col 5, 8p col 6, 4z is sideways/next? Wait, 2m is displaced slightly or there's a tile behind it? There is a tile above 2m (looks like 8p or 5p partially visible, which is from another player/seat). Let's count row 1: [2m], [2z], [1z], [4s], [6s], 8p, 4z. That is 7 tiles in one line. Wait, 8p and 4z: 2m is col 1? Let's recount: 2m, 2z, 1z, 4s, 6s, 8p, 4z = 7 tiles? Wait, standard is 6 tiles per row. Why are there 7? Look at the leftmost tile above 2m: there is an 8p or 4p. That's another player's river. The 2m is slightly offset. But 2m, 2z, 1z, 4s, 6s, 8p, 4z: wait, 4z is on the far right. Could 2m be on the left? Yes, total 7 tiles in that row if 4z is included. Wait, 1p is under 2z! If row 2 starts under 2z, maybe 2m is tile 1, or 2m is pushed left? Let's treat row 1 as 6 tiles: 2m, 2z, 1z, 4s, 6s, 8p? But what is 4z? 4z is in row 1 col 7? Ah, in standard 6-tile rows, if someone plays 7, it's a misplacement, or row 1 is 2z..4z (6 tiles) and 2m is something else? Wait, 2m has Japanese 二萬. It's clearly a discard! Wait, 4z is 北. 2m, 南, 東, 4s, 6s, 8p, 北. That's 7 tiles! Total tiles shown = 7 + 3 = 10 tiles. Wait, let's count: 1: 2m, 2: 2z, 3: 1z, 4: 4s, 5: 6s, 6: 8p, 7: 4z (or 4z is col 6 and 2m is col 1? 7 tiles cannot fit in 6 columns unless non-standard). Wait, 6 tiles per row is standard, but players sometimes place 7 before starting row 2, or row 1 has 6 and 4z is row 1 col 6? No, counting: 1(2m), 2(2z), 3(1z), 4(4s), 5(6s), 6(8p), 7(4z). Exactly 7 tiles in that top line! And row 2 has: 1p, 2p, 2z (3 tiles). So total 10 tiles. Wait, let's re-verify n = (row-1)*6 + col. If row 1 has 6 tiles, why is there a 7th? Could 2m belong to the left player? No, orientation of 2m is the same (upright facing the viewer). But wait! Look at the tile above 2m: it's upside down / facing 90 degrees? The tile above 2m is horizontal! Wait, the tile above 2m is 8p/pinzu lying sideways? It's white face with dots, belonging to the left player's river! Left player discarded 2m? No, 2m faces bottom-up (viewer). Wait, look at the table rim: the blue plastic console is in front of the viewer? No, the blue console with 'amos' and dice box and LED is the CENTER / OPPONENT's side! Wait! The prompt says: '그 플레이어는 사진 아래쪽에 앉아 있고, 테이블 가운데는 사진 위쪽입니다. 패의 글자·무늬는 대체로 똑바로 보입니다.' The console with dice button and 'amos' is in the CENTER of the table! The river tiles are placed in front of the center console. The first row (closest to center) is indeed the row closest to the console! In row 1, there are: 2z(南), 1z(東), 4s, 6s, 8p, 4z(北). That's 6 tiles! Wait, what is 2m? 2m is to the left of 2z. Why is 2m there? Is 2m row 1 col 1? Then 2z is col 2, 1z col 3, 4s col 4, 6s col 5, 8p col 6, 4z col 7? That's 7 tiles. Wait, look at the alignment: 2m has a tile above it (5p or 8p), wait, 2m has the character 二萬, but wait, look at the edge: 2m's orientation is the SAME. Why are there 7? Let's check: could 4z be from the right player? The right player has 8p and something with green/black bamboo (1s or 8s?) pointing toward the right. So the right side has another player's river. But 4z is perfectly aligned with 8p, 6s, 4s, 1z, 2z! Wait, look at 2m: 2m is shifted down slightly compared to 2z, and there is a tile above it! But wait, is 2m a discard or is it 6 tiles: 2m, 2z, 1z, 4s, 6s, 8p? Then 4z is col 7? Wait, what if row 1 is: 2m(col 1), 2z(col 2), 1z(col 3), 4s(col 4), 6s(col 5), 8p(col 6), and 4z is row 1 col 7? But the schema requires: n = (row - 1) * 6 + col. If col can only be 1..6, then n must follow row/col! If there are 6 tiles per row, one row can only have 6 tiles. If row 1 has 6 tiles, could 2m be part of another player, or is 4z part of another player? Wait, look at the right: 4z is upright, same size and orientation as 8p. Look at 2m: 2m is also upright, same size and orientation as 2z. Wait! Let's count how many tiles across: 2m, 2z, 1z, 4s, 6s, 8p, 4z -> that IS 7 tiles. Why would a player have 7 tiles in the first row? Sometimes casual players don't break at 6, they put 6 or 7, or 2m is row 2 col 1? No, row 2 is 1p, 2p, 2z below 2z, 1z, 4s! Wait, look at the gap: 1p is right below 2z! Why didn't they put 1p below 2m? Because 2m might be... wait! Is 2m the first tile of row 2? No, 2m is next to 2z. But wait, why is there a tile ABOVE 2m? The tile above 2m is partially hidden under the mask, it has 4 or 8 dots (筒). It is flush with the top of 2z! Wait, the tile above 2m is flush with 2z, 1z, 4s... NO! The tile above 2m is at the same level as 2z? No, 2z, 1z, 4s, 6s, 8p, 4z are all in ONE horizontal straight line! Look at that line: 2z, 1z, 4s, 6s, 8p, 4z are in a perfectly straight row of SIX tiles! 2m is BELOW that row! Look at 2m: the top of 2m aligns with the bottom of the tile above it! 2m is shifted DOWN! In fact, 2m is in line with... wait, 2m is higher than 1p, but the tile ABOVE 2m is in line with 2z! Wait, what is the tile above 2m? It shows two circles (top half cut off, looks like 4p or 8p or 2p). But wait, look at the console: the console edge is dark blue. The tile above 2m is right against the dark blue console, JUST LIKE 2z, 1z, 4s, 6s, 8p, 4z! No, wait, look at the tile above 2m: its text/pattern is rotated 90 degrees or facing the left? No, it's 4p or 8p facing the viewer. But wait, why would there be a tile above 2m, and 2m below it? Ah! Could the river be 6 columns: Column 1: tile above 2m? No, that tile is mostly cropped/hidden. Wait, is that a hand or another player's river? Look at the bottom edge: there's green felt. The mask cut off the rest. But wait, what if the river is: Row 1: 2z, 1z, 4s, 6s, 8p, 4z (6 tiles!) Row 2: 1p, 2p, 2z (3 tiles)? Then what is 2m? 2m is to the left of 2z. Wait, could 2m and the tile above it belong to the LEFT player? In mahjong, the left player's river is to the left. The left player's river tiles are oriented perpendicular (turned 90 degrees) relative to this player, UNLESS the photo is cropped strangely. But 2m has 二萬 oriented vertically, facing the SAME direction as this player! Why would 2m face this player? Because this player discarded it! But wait, why is 2m placed there? Wait, look at 2m and the tile above it: the tile above 2m has circles. Is it rotated? No, the circles are aligned horizontally, but wait, look at the blue back of 2m and the tile above it: the right side of the tile above 2m has a blue back visible! That means it's facing... wait, Japanese tiles have blue backs! The right edge of 2m shows blue! Wait, no, the right edge of 2m is white, the left edge? No, the top edge of 2m shows white, the right edge shows a blue line (the back of the tile)! Wait, if the blue back is on the RIGHT side of the tile, then the tile is facing LEFT! No, the face is pointing up, but wait, why is there blue on the right edge of the tile above 2m? Look closely at the tile above 2m: on its right side, there is a blue stripe! That's the back of a tile lying on its side? No, Japanese tiles are two-tone: white front (about 2/3) and colored back (yellow or blue, about 1/3). When viewed from the side, you see white and blue. In 2z, the bottom edge is white, the top edge is facing the console. In the tile above 2m, the BLUE is on the right side! That means the tile's back is to the right, so it's standing on its side? No, it's oriented 90 degrees! It belongs to the LEFT player! Wait, does 2m have blue on the right side? Yes! Look at the right edge of 2m: between 2m and 2z, there is a distinct purple/blue stripe! That is the BACK of 2m! Wait, if the back is on the right, 2m is facing left? But "
+   },
+   "right": {
+    "tile_count": 8,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "7p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "1st row has 6 tiles (1z, 9p, 7s, 9p, 7p, 3p); 2nd row has 2 tiles (8s, 7s)."
+   },
+   "top": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "8m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "First row has 6 tiles (1m, 3m, 4z, 8m, 6s, 3z), second row has 3 tiles (4z, 3z, 3m). An edge of a neighboring tile is visible to the far left but not part of this discard pond."
+   },
+   "left": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "2m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "6z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": ""
+   }
+  }
+ },
+ {
+  "variant": "A",
+  "shot": "20261024_115929",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1p",
+    "7p",
+    "6p",
+    "6s",
+    "7p",
+    "1z",
+    "8s",
+    "8s"
+   ],
+   "top": [
+    "1s",
+    "6s",
+    "8m",
+    "4z",
+    "3m",
+    "1m",
+    "3m"
+   ],
+   "left": [
+    "1z",
+    "1m",
+    "9m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 3,
+    "pos": 2
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 7,
+    "tiles": 6,
+    "pos": 0
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 1
+   }
+  },
+  "calls": 1,
+  "in_tok": 2069,
+  "out_tok": 550,
+  "ms": 5299,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "dora_indicators": [],
+   "ura_dora_indicators": [],
+   "riichi": [
+    {
+     "side": "bottom",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "right",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "top",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "left",
+     "riichi": false,
+     "confidence": 0.95
+    }
+   ],
+   "last_discards": [
+    {
+     "side": "bottom",
+     "code": "2z",
+     "confidence": 0.95
+    },
+    {
+     "side": "right",
+     "code": "8s",
+     "confidence": 0.95
+    },
+    {
+     "side": "top",
+     "code": "3m",
+     "confidence": 0.9
+    },
+    {
+     "side": "left",
+     "code": "1p",
+     "confidence": 0.95
+    }
+   ],
+   "rivers": [
+    {
+     "side": "bottom",
+     "codes": [
+      "2z",
+      "1z",
+      "8s",
+      "6s",
+      "8p",
+      "4z",
+      "1p",
+      "2p",
+      "2z"
+     ]
+    },
+    {
+     "side": "right",
+     "codes": [
+      "1p",
+      "7p",
+      "6p",
+      "6s",
+      "7p",
+      "1z",
+      "8s",
+      "8s"
+     ]
+    },
+    {
+     "side": "top",
+     "codes": [
+      "1s",
+      "6s",
+      "8m",
+      "4z",
+      "3m",
+      "1m",
+      "3m"
+     ]
+    },
+    {
+     "side": "left",
+     "codes": [
+      "1z",
+      "1m",
+      "9m",
+      "9m",
+      "4z",
+      "1p",
+      "8p",
+      "2m",
+      "1p"
+     ]
+    }
+   ],
+   "notes": "벽패(왕패) 및 도라 표시패는 사진 프레임 밖에 있어 보이지 않음."
+  }
+ },
+ {
+  "variant": "B0",
+  "shot": "20261024_115929",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "2p",
+    "8p",
+    "9p",
+    "6s",
+    "7p",
+    "1z",
+    "6s",
+    "8s"
+   ],
+   "top": [
+    "1m",
+    "4z",
+    "8m",
+    "6s",
+    "1s",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 4,
+    "pos": 1
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 7,
+    "tiles": 6,
+    "pos": 2
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 7,
+    "tiles": 7,
+    "pos": 7
+   }
+  },
+  "calls": 1,
+  "in_tok": 1604,
+  "out_tok": 1479,
+  "ms": 10814,
+  "n_mismatch": 2,
+  "count_mismatch": 0,
+  "raw": {
+   "rivers": [
+    {
+     "side": "bottom",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "2p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "right",
+     "tile_count": 8,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "2p",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "9p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "7p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "top",
+     "tile_count": 7,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "8m",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "1s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 2,
+       "col": 1,
+       "code": "3z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 3,
+       "col": 1,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.95
+      }
+     ]
+    },
+    {
+     "side": "left",
+     "tile_count": 7,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "9m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "2m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    }
+   ],
+   "notes": "Top player river row arrangement appears irregular or shifted due to hand interactions/table space, but tiles were mapped according to visible discards."
+  }
+ },
+ {
+  "variant": "B",
+  "shot": "20261024_115929",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "4s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "0p",
+    "3s",
+    "3p",
+    "8p",
+    "3p",
+    "0s",
+    "1z",
+    "4s"
+   ],
+   "top": [
+    "1m",
+    "3z",
+    "4z",
+    "8m",
+    "6s",
+    "1s",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "1s"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 2,
+    "pos": 0
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 7,
+    "tiles": 6,
+    "pos": 4
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 8,
+    "tiles": 7,
+    "pos": 7
+   }
+  },
+  "calls": 1,
+  "in_tok": 1772,
+  "out_tok": 1507,
+  "ms": 11038,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "rivers": [
+    {
+     "side": "bottom",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "2p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "right",
+     "tile_count": 8,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "0p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "3s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "0s",
+       "sideways": false,
+       "confidence": 0.95
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "4s",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "top",
+     "tile_count": 7,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "3z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "8m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "1s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "left",
+     "tile_count": 8,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "9m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "2m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "1s",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    }
+   ],
+   "notes": "All discards parsed according to standard mahjong river layout rules."
+  }
+ },
+ {
+  "variant": "D",
+  "shot": "20261024_115929",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "4s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "7p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "3z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 8,
+    "pos": 8
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 6321,
+  "out_tok": 2276,
+  "ms": 5876,
+  "n_mismatch": 0,
+  "count_mismatch": 1,
+  "raw": {
+   "bottom": {
+    "tile_count": 8,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "2p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "There are 9 tiles visible in this player's river (row 1 has 6 tiles, row 2 has 3 tiles). Tiles on the left belong to the adjacent player's river."
+   },
+   "right": {
+    "tile_count": 8,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "7p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "Row 1 contains 6 tiles: 1z, 9p, 7s, 9p, 7p, 3p. Row 2 contains 2 tiles: 8s, 7s. None are sideways."
+   },
+   "top": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "8m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "Tiles to the left (e.g. 2p partially shown) belong to other regions or walls and are excluded."
+   },
+   "left": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "2m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "Row 1 contains 1m, 9m, 4z (North), 1p, 8p, 2m. Row 2 contains 1z (East), 3z (West), 1p."
+   }
+  }
+ },
+ {
+  "variant": "A",
+  "shot": "20261024_120037",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "4s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "3p",
+    "7p",
+    "3p",
+    "3s",
+    "3p",
+    "3s",
+    "1z",
+    "8s"
+   ],
+   "top": [
+    "1s",
+    "6s",
+    "8m",
+    "4z",
+    "3m",
+    "1m",
+    "3m"
+   ],
+   "left": [
+    "1z",
+    "1m",
+    "9s",
+    "9m",
+    "1p",
+    "4z",
+    "1p",
+    "8p",
+    "2m"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 4,
+    "pos": 0
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 7,
+    "tiles": 6,
+    "pos": 0
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 0
+   }
+  },
+  "calls": 1,
+  "in_tok": 2069,
+  "out_tok": 630,
+  "ms": 5818,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "dora_indicators": [],
+   "ura_dora_indicators": [],
+   "riichi": [
+    {
+     "side": "bottom",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "right",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "top",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "left",
+     "riichi": false,
+     "confidence": 0.95
+    }
+   ],
+   "last_discards": [
+    {
+     "side": "bottom",
+     "code": "2z",
+     "confidence": 0.95
+    },
+    {
+     "side": "right",
+     "code": "8s",
+     "confidence": 0.95
+    },
+    {
+     "side": "top",
+     "code": "3m",
+     "confidence": 0.95
+    },
+    {
+     "side": "left",
+     "code": "2m",
+     "confidence": 0.95
+    }
+   ],
+   "rivers": [
+    {
+     "side": "bottom",
+     "codes": [
+      "2z",
+      "1z",
+      "4s",
+      "6s",
+      "8p",
+      "4z",
+      "1p",
+      "2p",
+      "2z"
+     ]
+    },
+    {
+     "side": "right",
+     "codes": [
+      "3p",
+      "7p",
+      "3p",
+      "3s",
+      "3p",
+      "3s",
+      "1z",
+      "8s"
+     ]
+    },
+    {
+     "side": "top",
+     "codes": [
+      "1s",
+      "6s",
+      "8m",
+      "4z",
+      "3m",
+      "1m",
+      "3m"
+     ]
+    },
+    {
+     "side": "left",
+     "codes": [
+      "1z",
+      "1m",
+      "9s",
+      "9m",
+      "1p",
+      "4z",
+      "1p",
+      "8p",
+      "2m"
+     ]
+    }
+   ],
+   "notes": "도라 표시패가 위치하는 패산/왕패가 사진에 보이지 않음."
+  }
+ },
+ {
+  "variant": "B0",
+  "shot": "20261024_120037",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "3p",
+    "6s",
+    "3p",
+    "5p",
+    "3p",
+    "3p",
+    "6s",
+    "1z"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "1s",
+    "3z"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "6z"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 2,
+    "pos": 1
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 7,
+    "tiles": 6,
+    "pos": 5
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 8,
+    "tiles": 7,
+    "pos": 7
+   }
+  },
+  "calls": 1,
+  "in_tok": 1604,
+  "out_tok": 1543,
+  "ms": 10413,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "rivers": [
+    {
+     "side": "bottom",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "2p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "right",
+     "tile_count": 8,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "5p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.95
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "top",
+     "tile_count": 7,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "8m",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "1s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "3z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "left",
+     "tile_count": 8,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "9m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "2m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "6z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    }
+   ],
+   "notes": "Bottom: 9 tiles (6+3). Right: 8 tiles (6+2). Top: 7 tiles (6+1). Left: 8 tiles (6+2). All players' discarded tiles are clearly visible."
+  }
+ },
+ {
+  "variant": "B",
+  "shot": "20261024_120037",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "3p",
+    "3s",
+    "3p",
+    "8p",
+    "3p",
+    "8s",
+    "3s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "1m",
+    "6s",
+    "1s",
+    "4z"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "6z"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 3,
+    "pos": 3
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 7,
+    "tiles": 5,
+    "pos": 5
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 8,
+    "tiles": 7,
+    "pos": 7
+   }
+  },
+  "calls": 1,
+  "in_tok": 1772,
+  "out_tok": 1587,
+  "ms": 10909,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "rivers": [
+    {
+     "side": "bottom",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "2p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "right",
+     "tile_count": 8,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "3s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "3s",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "top",
+     "tile_count": 7,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "1s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.98
+      }
+     ]
+    },
+    {
+     "side": "left",
+     "tile_count": 8,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "9m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "2m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "6z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    }
+   ],
+   "notes": "Top's row 2 col 1 (above 1m/3m) shows 3m or 4z/other tile partially visible; top row 2 tile above 4z is a 3m/4z tile (identified as 4z with 3m next to it: wait, above 1m is 4z, above 3m is 3z, above 4z is 3m)."
+  }
+ },
+ {
+  "variant": "D",
+  "shot": "20261024_120037",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "2s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "7p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "6z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 8,
+    "pos": 8
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 6284,
+  "out_tok": 2258,
+  "ms": 5422,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "2s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "2p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "Row 1 contains 6 tiles (南, 東, 2s, 6s, 8p, 北). Row 2 contains 3 tiles (1p, 2p, 南). The tiles on the far left (2m, etc.) and upper right belong to other players' discards/walls."
+   },
+   "right": {
+    "tile_count": 8,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "7p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "Row 1 contains 6 tiles: 1z, 9p, 7s, 9p, 7p, 3p. Row 2 contains 2 tiles: 8s, 7s."
+   },
+   "top": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "8m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "9 tiles in total: 6 in the first row, 3 in the second row. An opponent tile (1p) is partially visible on the far left edge."
+   },
+   "left": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "2m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "6z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": ""
+   }
+  }
+ },
+ {
+  "variant": "A",
+  "shot": "20261024_120755",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "8s",
+    "8s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "3p",
+    "7p",
+    "3p",
+    "6s",
+    "6p",
+    "1z",
+    "3s",
+    "8s"
+   ],
+   "top": [
+    "6z",
+    "6s",
+    "8m",
+    "4z",
+    "3z",
+    "4z",
+    "1m",
+    "3m"
+   ],
+   "left": [
+    "1z",
+    "1m",
+    "9m",
+    "1p",
+    "4z",
+    "1p",
+    "8p",
+    "2m"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 4,
+    "pos": 0
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 8,
+    "tiles": 7,
+    "pos": 0
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 8,
+    "tiles": 8,
+    "pos": 1
+   }
+  },
+  "calls": 1,
+  "in_tok": 2069,
+  "out_tok": 653,
+  "ms": 6770,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "dora_indicators": [],
+   "ura_dora_indicators": [],
+   "riichi": [
+    {
+     "side": "bottom",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "right",
+     "riichi": true,
+     "confidence": 0.99
+    },
+    {
+     "side": "top",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "left",
+     "riichi": false,
+     "confidence": 0.95
+    }
+   ],
+   "last_discards": [
+    {
+     "side": "bottom",
+     "code": "2z",
+     "confidence": 0.98
+    },
+    {
+     "side": "right",
+     "code": "8s",
+     "confidence": 0.9
+    },
+    {
+     "side": "top",
+     "code": "3m",
+     "confidence": 0.95
+    },
+    {
+     "side": "left",
+     "code": "2m",
+     "confidence": 0.95
+    }
+   ],
+   "rivers": [
+    {
+     "side": "bottom",
+     "codes": [
+      "2z",
+      "1z",
+      "8s",
+      "8s",
+      "8p",
+      "4z",
+      "1p",
+      "2p",
+      "2z"
+     ]
+    },
+    {
+     "side": "right",
+     "codes": [
+      "3p",
+      "7p",
+      "3p",
+      "6s",
+      "6p",
+      "1z",
+      "3s",
+      "8s"
+     ]
+    },
+    {
+     "side": "top",
+     "codes": [
+      "6z",
+      "6s",
+      "8m",
+      "4z",
+      "3z",
+      "4z",
+      "1m",
+      "3m"
+     ]
+    },
+    {
+     "side": "left",
+     "codes": [
+      "1z",
+      "1m",
+      "9m",
+      "1p",
+      "4z",
+      "1p",
+      "8p",
+      "2m"
+     ]
+    }
+   ],
+   "notes": "도라 표시패가 위치하는 패산(왕패)이 사진 화각에 보이지 않음. right 플레이어의 리치봉 슬롯에 파란 리치봉이 꽂혀 있음."
+  }
+ },
+ {
+  "variant": "B0",
+  "shot": "20261024_120755",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "2s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "3p",
+    "6s",
+    "6p",
+    "1z",
+    "6s",
+    "2s",
+    "3p",
+    "0p"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "7m",
+    "6s",
+    "4s",
+    "4z",
+    "3z"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "4s",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 2,
+    "pos": 0
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 8,
+    "tiles": 6,
+    "pos": 6
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 1,
+  "in_tok": 1604,
+  "out_tok": 1591,
+  "ms": 9812,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "rivers": [
+    {
+     "side": "bottom",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "2s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "2p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "right",
+     "tile_count": 8,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "6p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "2s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "0p",
+       "sideways": false,
+       "confidence": 0.98
+      }
+     ]
+    },
+    {
+     "side": "top",
+     "tile_count": 8,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "7m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "3z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "left",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "9m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "2m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "4s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    }
+   ],
+   "notes": "네 플레이어 강 모두 명확하게 식별 가능합니다."
+  }
+ },
+ {
+  "variant": "B",
+  "shot": "20261024_120755",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "3p",
+    "3s",
+    "3p",
+    "0p",
+    "3p",
+    "8s",
+    "3s",
+    "1p"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "1m",
+    "6s",
+    "1s",
+    "4z",
+    "3z",
+    "3m",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "6z"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 9,
+    "tiles": 3,
+    "pos": 3
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 10,
+    "tiles": 7,
+    "pos": 7
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 8,
+    "tiles": 7,
+    "pos": 7
+   }
+  },
+  "calls": 1,
+  "in_tok": 1772,
+  "out_tok": 1674,
+  "ms": 11063,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "rivers": [
+    {
+     "side": "bottom",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "2p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "right",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "3s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "0p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "3p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "3s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "top",
+     "tile_count": 10,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "1s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "3z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 10,
+       "row": 2,
+       "col": 4,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.95
+      }
+     ]
+    },
+    {
+     "side": "left",
+     "tile_count": 8,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "9m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "2m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "6z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    }
+   ],
+   "notes": "All rivers cleanly identified without rotated riichi declarations."
+  }
+ },
+ {
+  "variant": "D",
+  "shot": "20261024_120755",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "4s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "7p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "6z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 8,
+    "pos": 8
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   }
+  },
+  "calls": 4,
+  "in_tok": 6352,
+  "out_tok": 6731,
+  "ms": 33709,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "2p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "왼쪽에 보이는 2m 등은 타가(상가)의 버림패이므로 제외함."
+   },
+   "right": {
+    "tile_count": 8,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "7p",
+      "sideways": false,
+      "confidence": 0.95
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "1줄 6장, 2줄 2장으로 총 8장의 버림패가 있습니다."
+   },
+   "top": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "8m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "None"
+   },
+   "left": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "2m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "6z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "9 tiles in total: 6 in the first row and 3 in the second row. Right-side tiles belong to the kamicha/shimocha."
+   }
+  }
+ },
+ {
+  "variant": "A",
+  "shot": "20261024_122922",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "4s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "2p",
+    "4p",
+    "6p",
+    "6s",
+    "5p",
+    "1z",
+    "4s",
+    "8s"
+   ],
+   "top": [
+    "1s",
+    "6s",
+    "8m",
+    "4z",
+    "3m",
+    "3m",
+    "3z",
+    "1m",
+    "4z"
+   ],
+   "left": [
+    "1z",
+    "1m",
+    "9s",
+    "9m",
+    "1p",
+    "4z",
+    "1p",
+    "8p",
+    "2m"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 8
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 2,
+    "pos": 0
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 0
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 0
+   }
+  },
+  "calls": 1,
+  "in_tok": 2073,
+  "out_tok": 728,
+  "ms": 7151,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "dora_indicators": [
+    {
+     "code": "2s",
+     "confidence": 0.99
+    }
+   ],
+   "ura_dora_indicators": [
+    {
+     "code": "2s",
+     "confidence": 0.99
+    }
+   ],
+   "riichi": [
+    {
+     "side": "bottom",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "right",
+     "riichi": true,
+     "confidence": 0.99
+    },
+    {
+     "side": "top",
+     "riichi": false,
+     "confidence": 0.95
+    },
+    {
+     "side": "left",
+     "riichi": false,
+     "confidence": 0.95
+    }
+   ],
+   "last_discards": [
+    {
+     "side": "bottom",
+     "code": "2z",
+     "confidence": 0.99
+    },
+    {
+     "side": "right",
+     "code": "8s",
+     "confidence": 0.95
+    },
+    {
+     "side": "top",
+     "code": "1m",
+     "confidence": 0.99
+    },
+    {
+     "side": "left",
+     "code": "2m",
+     "confidence": 0.99
+    }
+   ],
+   "rivers": [
+    {
+     "side": "bottom",
+     "codes": [
+      "2z",
+      "1z",
+      "4s",
+      "6s",
+      "8p",
+      "4z",
+      "1p",
+      "2p",
+      "2z"
+     ]
+    },
+    {
+     "side": "right",
+     "codes": [
+      "2p",
+      "4p",
+      "6p",
+      "6s",
+      "5p",
+      "1z",
+      "4s",
+      "8s"
+     ]
+    },
+    {
+     "side": "top",
+     "codes": [
+      "1s",
+      "6s",
+      "8m",
+      "4z",
+      "3m",
+      "3m",
+      "3z",
+      "1m",
+      "4z"
+     ]
+    },
+    {
+     "side": "left",
+     "codes": [
+      "1z",
+      "1m",
+      "9s",
+      "9m",
+      "1p",
+      "4z",
+      "1p",
+      "8p",
+      "2m"
+     ]
+    }
+   ],
+   "notes": "오른쪽 플레이어의 리치봉 슬롯에 파란색 리치봉이 꽂혀 있습니다. 우측 상단 왕패에 2s가 두 장(도라 및 뒷도라) 공개되어 있습니다."
+  }
+ },
+ {
+  "variant": "B0",
+  "shot": "20261024_122922",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "6s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "4p",
+    "2z"
+   ],
+   "right": [
+    "4p",
+    "7p",
+    "6p",
+    "4s",
+    "6p",
+    "4s",
+    "1z",
+    "6s"
+   ],
+   "top": [
+    "4z",
+    "3z",
+    "3m",
+    "8s",
+    "6s",
+    "1s",
+    "1m",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "6z"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 7,
+    "pos": 7
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 2,
+    "pos": 0
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 8,
+    "tiles": 6,
+    "pos": 1
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 8,
+    "tiles": 7,
+    "pos": 7
+   }
+  },
+  "calls": 1,
+  "in_tok": 1608,
+  "out_tok": 1564,
+  "ms": 11068,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "rivers": [
+    {
+     "side": "bottom",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.95
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.95
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "4p",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.98
+      }
+     ]
+    },
+    {
+     "side": "right",
+     "tile_count": 8,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "4p",
+       "sideways": false,
+       "confidence": 0.95
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "7p",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "6p",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "4s",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "6p",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4s",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.95
+      }
+     ]
+    },
+    {
+     "side": "top",
+     "tile_count": 8,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "3z",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.95
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.95
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "1s",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "3m",
+       "sideways": false,
+       "confidence": 0.98
+      }
+     ]
+    },
+    {
+     "side": "left",
+     "tile_count": 8,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "9m",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.95
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "2m",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.98
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "6z",
+       "sideways": false,
+       "confidence": 0.95
+      }
+     ]
+    }
+   ],
+   "notes": "Bottom river has 9 tiles, top/left/right have 8 tiles each. Dora indicators are visible separately on the upper right."
+  }
+ },
+ {
+  "variant": "B",
+  "shot": "20261024_122922",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "4z",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "6p",
+    "4s",
+    "6p",
+    "8p",
+    "2p",
+    "1z",
+    "5s"
+   ],
+   "top": [
+    "1m",
+    "4z",
+    "8m",
+    "6s",
+    "1s",
+    "4z",
+    "3z"
+   ],
+   "left": [
+    "1z",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1m"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 7,
+    "tiles": 1,
+    "pos": 0
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 7,
+    "tiles": 6,
+    "pos": 1
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 7,
+    "tiles": 7,
+    "pos": 5
+   }
+  },
+  "calls": 1,
+  "in_tok": 1776,
+  "out_tok": 1419,
+  "ms": 9700,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "rivers": [
+    {
+     "side": "bottom",
+     "tile_count": 9,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "8s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 8,
+       "row": 2,
+       "col": 2,
+       "code": "2p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 9,
+       "row": 2,
+       "col": 3,
+       "code": "2z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "right",
+     "tile_count": 7,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "6p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "4s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "6p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "2p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "5s",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "top",
+     "tile_count": 7,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "8m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "6s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "1s",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "3z",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    },
+    {
+     "side": "left",
+     "tile_count": 7,
+     "tiles": [
+      {
+       "n": 1,
+       "row": 1,
+       "col": 1,
+       "code": "1z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 2,
+       "row": 1,
+       "col": 2,
+       "code": "9m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 3,
+       "row": 1,
+       "col": 3,
+       "code": "4z",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 4,
+       "row": 1,
+       "col": 4,
+       "code": "1p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 5,
+       "row": 1,
+       "col": 5,
+       "code": "8p",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 6,
+       "row": 1,
+       "col": 6,
+       "code": "2m",
+       "sideways": false,
+       "confidence": 0.99
+      },
+      {
+       "n": 7,
+       "row": 2,
+       "col": 1,
+       "code": "1m",
+       "sideways": false,
+       "confidence": 0.99
+      }
+     ]
+    }
+   ],
+   "notes": "Dora indicator tile shows 2s."
+  }
+ },
+ {
+  "variant": "D",
+  "shot": "20261024_122922",
+  "run": 0,
+  "rivers": {
+   "bottom": [
+    "2m",
+    "2z",
+    "1z",
+    "8s",
+    "6s",
+    "8p",
+    "1p",
+    "2p",
+    "2z"
+   ],
+   "right": [
+    "1z",
+    "9p",
+    "7s",
+    "9p",
+    "7p",
+    "3p",
+    "8s",
+    "7s"
+   ],
+   "top": [
+    "1m",
+    "3m",
+    "4z",
+    "8m",
+    "6s",
+    "3z",
+    "4z",
+    "3z",
+    "3m"
+   ],
+   "left": [
+    "1m",
+    "9m",
+    "4z",
+    "1p",
+    "8p",
+    "2m",
+    "1z",
+    "2z",
+    "1p"
+   ]
+  },
+  "score": {
+   "bottom": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 8,
+    "pos": 3
+   },
+   "right": {
+    "n_true": 8,
+    "n_pred": 8,
+    "tiles": 8,
+    "pos": 8
+   },
+   "top": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   },
+   "left": {
+    "n_true": 9,
+    "n_pred": 9,
+    "tiles": 9,
+    "pos": 9
+   }
+  },
+  "calls": 4,
+  "in_tok": 6352,
+  "out_tok": 3452,
+  "ms": 11794,
+  "n_mismatch": 0,
+  "count_mismatch": 0,
+  "raw": {
+   "bottom": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "2m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "2p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "Row 1 contains 2m, 2z, 1z, 8s, 6s, 8p (with 4z on the far right likely belonging to the adjacent player/next seat or aligned unusually; assuming standard 6-tile row layout, row 1 col 1 is 2m, col 2 is 2z, col 3 is 1z, col 4 is 8s, col 5 is 6s, col 6 is 8p, and the rightmost 4z is either 7th or outside). If 4z is col 6, then 2m is col 0, but standard 6-per-row matches row 2 starting under col 2. Wait, looking closely at row 1: there is a tile cut off on left (above 2m: wait, 2m is below a partial tile? No, top-left is 2m). Let's count row 1: [2m, 2z, 1z, 8s, 6s, 8p, 4z] is 7 tiles! Wait, to the left of 2m is another tile? No, above 2m is a tile? Ah, looking at row 1: [2m] is row 1 col 1? Wait, to its right is 2z, 1z, 8s, 6s, 8p, 4z - that's 7 tiles. Wait, the 4z is on the right, or is 2m partially cut/misaligned? Let's check col alignment: 1p is below 2z, 2p is below 1z, 2z is below 8s. That means row 1 has: 2z (col 1), 1z (col 2), 8s (col 3), 6s (col 4), 8p (col 5), 4z (col 6)! The tile to the left of 2z (2m) is oriented differently or is from the left player's river! Notice 2m is rotated 180 or from the left seat! Actually, 2m's orientation: 二萬 is rightside up for the player. But wait, why are there 7 tiles? Ah, to the top-left is another player's river. The 2m is shifted down from the row 1 line. Wait, no, 2m is next to 2z, but 4z is at the end. Actually 2m is upside down? No, 萬 is on the left, 二 is on the right -> it's sideways! Ah, 2m has 萬 on left, 二 on right! Wait, no: 二 is on top, 萬 is on bottom, but 萬 is on the left? No, 萬 is on the left, 二 is on the right, rotated 90 degrees! No, wait, 萬 is upside down? No, looking closely at 2m: 二 is on the right, 萬 is on the left. It's rotated 90 degrees counter-clockwise! That's another player's river (the player to the left/kamicha). The active player's river consists of Row 1: 2z, 1z, 8s, 6s, 8p, 4z (6 tiles). Row 2: 1p, 2p, 2z (3 tiles). Total 9 tiles!"
+   },
+   "right": {
+    "tile_count": 8,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "9p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "7p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "8s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "7s",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": ""
+   },
+   "top": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "8m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "6s",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "3z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "3m",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "첫 번째 줄 6장(1m, 3m, 북, 8m, 6s, 서), 두 번째 줄 3장(북, 서, 3m). 총 9장 확인됨."
+   },
+   "left": {
+    "tile_count": 9,
+    "tiles": [
+     {
+      "n": 1,
+      "row": 1,
+      "col": 1,
+      "code": "1m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 2,
+      "row": 1,
+      "col": 2,
+      "code": "9m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 3,
+      "row": 1,
+      "col": 3,
+      "code": "4z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 4,
+      "row": 1,
+      "col": 4,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 5,
+      "row": 1,
+      "col": 5,
+      "code": "8p",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 6,
+      "row": 1,
+      "col": 6,
+      "code": "2m",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 7,
+      "row": 2,
+      "col": 1,
+      "code": "1z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 8,
+      "row": 2,
+      "col": 2,
+      "code": "2z",
+      "sideways": false,
+      "confidence": 0.99
+     },
+     {
+      "n": 9,
+      "row": 2,
+      "col": 3,
+      "code": "1p",
+      "sideways": false,
+      "confidence": 0.99
+     }
+    ],
+    "notes": "9 discards recorded for the bottom player. Tiles on the right belong to the right-hand player and were excluded."
+   }
+  }
+ }
+]

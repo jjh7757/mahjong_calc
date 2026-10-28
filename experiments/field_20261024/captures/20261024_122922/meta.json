@@ -1,0 +1,73 @@
+{
+ "time": "2026-10-24T12:29:40.408607",
+ "capture_long_side_px": 4080,
+ "setup": {
+  "source": "remote",
+  "remote_url": "http://192.168.0.64:8765",
+  "zoom": 1.0,
+  "height_cm": 60
+ },
+ "game": {
+  "round": "동2국",
+  "names": [
+   "플레이어 1",
+   "플레이어 2",
+   "플레이어 3",
+   "플레이어 4"
+  ],
+  "bottom_seat": 0,
+  "dealer": 1,
+  "honba": 0,
+  "riichi_seats": []
+ },
+ "winner_side": "right",
+ "timings_ms": {
+  "shrink": 613,
+  "locate": 5934,
+  "pick": 0,
+  "crop": 591,
+  "read": 10820
+ },
+ "warnings": [],
+ "error": null,
+ "merge": {
+  "winner": 1,
+  "is_tsumo": false,
+  "loser": 2,
+  "closed": [
+   "4m",
+   "0m",
+   "7m",
+   "8m",
+   "9m",
+   "1s",
+   "2s",
+   "3s",
+   "4p",
+   "4p",
+   "5z",
+   "5z",
+   "5z",
+   "3m"
+  ],
+  "win_tile": "3m",
+  "melds": [],
+  "red_count": 1,
+  "hand_valid": true,
+  "uncertain": [],
+  "flags": [
+   "winFromDiscard: 손패가 13장이라 위(플레이어 3) 강 끝 3만 로 론으로 봤습니다",
+   "riichiMismatch: 사진에는 리치(횡치)가 보이는데 기록에는 없습니다. 반영할 때 리치봉을 자동으로 넣습니다"
+  ],
+  "riichi": true,
+  "riichi_seats_photo": [
+   1
+  ],
+  "dora_indicators": [
+   "5s"
+  ],
+  "ura_indicators": [
+   "9s"
+  ]
+ }
+}

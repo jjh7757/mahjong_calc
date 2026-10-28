@@ -1,0 +1,61 @@
+{
+ "tiles": [
+  {
+   "tile": "1s",
+   "conf": 0.99
+  },
+  {
+   "tile": "2s",
+   "conf": 0.99
+  },
+  {
+   "tile": "4p",
+   "conf": 0.99
+  },
+  {
+   "tile": "8p",
+   "conf": 0.99
+  },
+  {
+   "tile": "0p",
+   "conf": 0.95
+  },
+  {
+   "tile": "1m",
+   "conf": 0.99
+  },
+  {
+   "tile": "2m",
+   "conf": 0.99
+  },
+  {
+   "tile": "3m",
+   "conf": 0.99
+  },
+  {
+   "tile": "4m",
+   "conf": 0.99
+  },
+  {
+   "tile": "5m",
+   "conf": 0.99
+  },
+  {
+   "tile": "6m",
+   "conf": 0.99
+  },
+  {
+   "tile": "7m",
+   "conf": 0.99
+  }
+ ],
+ "count": 12,
+ "melds": [],
+ "win_tile": {
+  "tile": "6s",
+  "conf": 0.98
+ },
+ "notes": "왼쪽에 따로 놓인 6s는 츠모/론 화료패로 보임. 5p는 가운데 빨간 점이 있으나 적도라 0p로 보임(또는 일반 5p 가능성).",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 4876
+}

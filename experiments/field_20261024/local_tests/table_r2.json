@@ -1,0 +1,86 @@
+# wall 46.1s
+{
+ "dora_indicators": [
+  {
+   "tile": "2s",
+   "conf": 0.85
+  }
+ ],
+ "ura_dora_indicators": [
+  {
+   "tile": "8s",
+   "conf": 0.85
+  }
+ ],
+ "riichi": {
+  "bottom": false,
+  "right": true,
+  "top": false,
+  "left": false
+ },
+ "riichi_conf": {
+  "bottom": 0.95,
+  "right": 0.95,
+  "top": 0.95,
+  "left": 0.95
+ },
+ "last_discards": {
+  "bottom": "2z",
+  "right": "8s",
+  "top": "3m",
+  "left": "1z"
+ },
+ "last_discards_conf": {
+  "bottom": 0.95,
+  "right": 0.95,
+  "top": 0.9,
+  "left": 0.95
+ },
+ "rivers": {
+  "bottom": [
+   "2z",
+   "1z",
+   "4s",
+   "6s",
+   "8p",
+   "4z",
+   "1p",
+   "2p",
+   "2z"
+  ],
+  "right": [
+   "1p",
+   "5p",
+   "8p",
+   "6s",
+   "9p",
+   "1z",
+   "8s",
+   "8s"
+  ],
+  "top": [
+   "4z",
+   "3z",
+   "4z",
+   "8m",
+   "6s",
+   "1s",
+   "1m",
+   "3m",
+   "3m"
+  ],
+  "left": [
+   "2m",
+   "7p",
+   "1p",
+   "4z",
+   "9m",
+   "1m",
+   "4m",
+   "1z"
+  ]
+ },
+ "notes": "우측 상단에 도라 및 뒷도라로 보이는 앞면 패 2장(2s, 8s)이 나란히 놓여 있습니다. 둘 중 어느 쪽이 도라/뒷도라인지 명확하지 않습니다. right 플레이어의 리치봉 슬롯에 파란색 리치봉이 꽂혀 있습니다.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 45985
+}

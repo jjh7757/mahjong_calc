@@ -1,0 +1,60 @@
+{
+ "time": "2026-10-24T14:33:21.309270",
+ "capture_long_side_px": 4080,
+ "setup": {
+  "source": "remote",
+  "remote_url": "http://192.168.0.64:8765",
+  "zoom": 1.0,
+  "height_cm": 60
+ },
+ "game": {
+  "round": "동3국",
+  "names": [
+   "플레이어 1",
+   "플레이어 2",
+   "플레이어 3",
+   "플레이어 4"
+  ],
+  "bottom_seat": 0,
+  "dealer": 2,
+  "honba": 0,
+  "riichi_seats": []
+ },
+ "winner_side": null,
+ "timings_ms": {
+  "shrink": 438,
+  "analyze": 155
+ },
+ "layout_mode": "fixed",
+ "fixed_analysis": {
+  "felt_iou": 0.999,
+  "moved": false,
+  "face_up": [
+   "bottom",
+   "left"
+  ],
+  "dora_box": [
+   504,
+   198,
+   565,
+   250
+  ],
+  "hand_colors": {
+   "bottom": {
+    "back": 0.029,
+    "white": 0.229
+   },
+   "right": {
+    "back": 0.097,
+    "white": 0.254
+   },
+   "left": {
+    "back": 0.0,
+    "white": 0.233
+   }
+  }
+ },
+ "warnings": [],
+ "error": "눕힌 손패가 2자리입니다. 누가 났는지 골라 주세요",
+ "merge": null
+}

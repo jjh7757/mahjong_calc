@@ -1,0 +1,54 @@
+{
+ "tiles": [
+  {
+   "tile": "3s",
+   "conf": 0.99
+  },
+  {
+   "tile": "4s",
+   "conf": 0.99
+  },
+  {
+   "tile": "5p",
+   "conf": 0.99
+  },
+  {
+   "tile": "5p",
+   "conf": 0.99
+  },
+  {
+   "tile": "7z",
+   "conf": 0.99
+  },
+  {
+   "tile": "7z",
+   "conf": 0.99
+  },
+  {
+   "tile": "7z",
+   "conf": 0.99
+  },
+  {
+   "tile": "5z",
+   "conf": 0.99
+  },
+  {
+   "tile": "5z",
+   "conf": 0.99
+  },
+  {
+   "tile": "5z",
+   "conf": 0.99
+  }
+ ],
+ "count": 10,
+ "melds": [],
+ "win_tile": null,
+ "notes": "손패 일부(10장)만 촬영됨",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 4708,
+ "usage": {
+  "input_tokens": 1635,
+  "output_tokens": 296
+ }
+}

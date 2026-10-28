@@ -1,0 +1,64 @@
+{
+ "tiles": [
+  {
+   "tile": "3s",
+   "conf": 0.98
+  },
+  {
+   "tile": "4s",
+   "conf": 0.98
+  },
+  {
+   "tile": "5p",
+   "conf": 0.98
+  },
+  {
+   "tile": "4p",
+   "conf": 0.98
+  },
+  {
+   "tile": "7z",
+   "conf": 0.99
+  },
+  {
+   "tile": "7z",
+   "conf": 0.99
+  },
+  {
+   "tile": "7z",
+   "conf": 0.99
+  },
+  {
+   "tile": "5z",
+   "conf": 0.95
+  },
+  {
+   "tile": "5z",
+   "conf": 0.95
+  },
+  {
+   "tile": "5z",
+   "conf": 0.95
+  }
+ ],
+ "count": 10,
+ "melds": [
+  {
+   "type": "pon",
+   "tiles": [
+    "6z",
+    "6z",
+    "6z"
+   ],
+   "conf": 0.95
+  }
+ ],
+ "win_tile": null,
+ "notes": "가운데 테이블 위에 놓인 패 2장(3s, 8s)은 도라 표시패 또는 다른 영역의 패로 제외함. 우측 하단 울기는 발 퐁.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 5090,
+ "usage": {
+  "input_tokens": 1675,
+  "output_tokens": 300
+ }
+}

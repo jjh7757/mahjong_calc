@@ -1,0 +1,115 @@
+{
+ "hands": [
+  {
+   "side": "bottom",
+   "box": [
+    687,
+    147,
+    969,
+    416
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    498,
+    722,
+    881,
+    887
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "left",
+   "box": [
+    207,
+    206,
+    408,
+    352
+   ],
+   "face_up": true,
+   "conf": 0.92
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    486,
+    366,
+    601,
+    514
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    427,
+    517,
+    614,
+    612
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    326,
+    484,
+    424,
+    617
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "left",
+   "box": [
+    342,
+    358,
+    515,
+    455
+   ],
+   "conf": 0.95
+  }
+ ],
+ "melds": [
+  {
+   "side": "left",
+   "box": [
+    528,
+    0,
+    642,
+    83
+   ],
+   "conf": 0.85
+  }
+ ],
+ "dead_wall": {
+  "box": [
+   500,
+   196,
+   570,
+   252
+  ],
+  "conf": 0.75
+ },
+ "center": {
+  "box": [
+   325,
+   196,
+   620,
+   620
+  ]
+ },
+ "notes": "left 플레이어의 손패가 국사무쌍 텐파이/화료 형태로 공개되어 있으며, left 모서리에 깡(meld)이 놓여 있습니다.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 21444,
+ "usage": {
+  "input_tokens": 1638,
+  "output_tokens": 2488
+ }
+}

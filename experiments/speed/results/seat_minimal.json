@@ -1,0 +1,272 @@
+[
+ {
+  "scene": "A",
+  "photo": "k20_1",
+  "s": 1.36,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "A",
+  "photo": "k24_1",
+  "s": 0.58,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "B",
+  "photo": "k25_1",
+  "s": 1.74,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "B",
+  "photo": "k28_1",
+  "s": 1.42,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "C",
+  "photo": "k15_1",
+  "s": 1.97,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "C",
+  "photo": "k26_1",
+  "s": 1.99,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "D",
+  "photo": "k12_1",
+  "s": 0.67,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "D",
+  "photo": "k16_1",
+  "s": 0.69,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "E",
+  "photo": "k00_1",
+  "s": 1.18,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "E",
+  "photo": "k04_1",
+  "s": 1.09,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "A",
+  "photo": "k20_1",
+  "s": 0.77,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "A",
+  "photo": "k24_1",
+  "s": 0.43,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "B",
+  "photo": "k25_1",
+  "s": 0.75,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "B",
+  "photo": "k28_1",
+  "s": 0.82,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "C",
+  "photo": "k15_1",
+  "s": 0.76,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "C",
+  "photo": "k26_1",
+  "s": 1.17,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "D",
+  "photo": "k12_1",
+  "s": 0.94,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "D",
+  "photo": "k16_1",
+  "s": 0.95,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "E",
+  "photo": "k00_1",
+  "s": 1.06,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "E",
+  "photo": "k04_1",
+  "s": 1.03,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "A",
+  "photo": "k20_1",
+  "s": 0.43,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "A",
+  "photo": "k24_1",
+  "s": 0.62,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "B",
+  "photo": "k25_1",
+  "s": 0.68,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "B",
+  "photo": "k28_1",
+  "s": 0.51,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "C",
+  "photo": "k15_1",
+  "s": 0.88,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "C",
+  "photo": "k26_1",
+  "s": 0.93,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "D",
+  "photo": "k12_1",
+  "s": 0.72,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "D",
+  "photo": "k16_1",
+  "s": 0.85,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "E",
+  "photo": "k00_1",
+  "s": 0.7,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ },
+ {
+  "scene": "E",
+  "photo": "k04_1",
+  "s": 0.8,
+  "in": null,
+  "out": null,
+  "think": null,
+  "error": "ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other thinking level.', 'status': 'INVALID_ARGUMENT'}}"
+ }
+]

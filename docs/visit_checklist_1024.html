@@ -1,0 +1,287 @@
+<title>토요일 마장 체크리스트</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* 레이아웃: 폰 한 줄 세로 목록. 단계마다 접히는 블록, 아래에 스톱워치 고정 */
+:root {
+  --bg: #f3f5f2;          /* 연한 마작 매트 회녹색 */
+  --surface: #ffffff;
+  --fg: #1d2420;
+  --muted: #5c6a62;
+  --line: #d6ddd8;
+  --accent: #17734f;      /* 마작 매트 초록 */
+  --accent-soft: #e2f0e8;
+  --warn: #b5481d;        /* 리치봉 점 같은 주홍 */
+  --warn-soft: #fbe9df;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Consolas", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121714; --surface: #1b221e; --fg: #e4ebe6; --muted: #98a69e; --line: #2d3832;
+    --accent: #4fc28f; --accent-soft: #1d3329; --warn: #f08a5d; --warn-soft: #3a241a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121714; --surface: #1b221e; --fg: #e4ebe6; --muted: #98a69e; --line: #2d3832;
+  --accent: #4fc28f; --accent-soft: #1d3329; --warn: #f08a5d; --warn-soft: #3a241a; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 640px; margin: 0 auto; padding-block: 16px 140px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 14px; }
+header h1 { font-size: 22px; margin: 0; text-wrap: balance; }
+header p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+.progress span { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+summary { list-style: none; cursor: pointer; padding: 12px 14px; display: flex; gap: 10px; align-items: baseline; }
+summary::-webkit-details-marker { display: none; }
+summary .t { font-weight: 700; flex: 1; min-width: 0; }
+summary .when { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+summary .cnt { font-family: var(--font-mono); font-size: 12px; color: var(--accent); font-variant-numeric: tabular-nums; }
+.body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+label.item { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-top: 1px solid var(--line); }
+label.item:first-child { border-top: 0; }
+label.item input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+label.item span { min-width: 0; }
+label.item input:checked + span { color: var(--muted); text-decoration: line-through; }
+code { font-family: var(--font-mono); font-size: 13px; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; word-break: break-all; }
+.note { background: var(--warn-soft); color: var(--fg); border-radius: 8px; padding: 8px 10px; font-size: 14px; }
+.note b { color: var(--warn); }
+.tip { color: var(--muted); font-size: 13px; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { border-top: 1px solid var(--line); padding: 6px 4px; text-align: left; font-size: 14px; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; letter-spacing: .03em; }
+td input { width: 20px; height: 20px; accent-color: var(--accent); }
+.q { border-left: 3px solid var(--accent); padding-left: 10px; }
+.q b { display: block; }
+textarea { width: 100%; box-sizing: border-box; min-height: 52px; font: inherit; font-size: 14px; color: var(--fg);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: inherit; font-size: 13px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--warn); border-color: var(--warn); color: var(--surface); }
+/* 스톱워치 */
+.timer { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line);
+  padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.timer .row { max-width: 640px; margin: 0 auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.timer .clock { font-family: var(--font-mono); font-size: 24px; font-variant-numeric: tabular-nums; min-width: 4.5ch; }
+.btn { font: inherit; font-weight: 600; font-size: 14px; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--accent); background: var(--surface); color: var(--accent); cursor: pointer; }
+.btn.on { background: var(--accent); color: var(--surface); }
+.btn.hand.on { background: var(--warn); border-color: var(--warn); }
+.btn.hand { border-color: var(--warn); color: var(--warn); }
+.btn:focus-visible, .chip:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.stats { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; flex-basis: 100%; }
+.log { font-family: var(--font-mono); font-size: 12px; white-space: pre-wrap; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .progress span { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>토요일 마장 체크리스트</h1>
+    <p>10/24(토) 14:00 이수보드카페유화 · 대탁 · 혼자 촬영 이용 확인됨<br>폰 S25 Ultra = 카메라 헤드, 노트북 에뮬레이터 = 조작</p>
+    <div class="progress" aria-hidden="true"><span id="bar"></span></div>
+  </header>
+
+  <details open data-sec>
+    <summary><span class="t">출발 전 챙길 것</span><span class="cnt"></span></summary>
+    <div class="body">
+      <label class="item"><input type="checkbox"><span>다이소 스틸 삼각대 2.1m(1041116) 1개 + velcro 원랩 타이(1045160). 촬영석 의자를 빼고 그 자리에 테이블에 붙여 세우고, 폰을 거의 수직으로 내려 그 자리 손패와 가운데를 내려다봄. 화료 손패는 항상 촬영석 앞에 놓음</span></label>
+      <label class="item"><input type="checkbox"><span>(선택) 다이소 맥세이프 호환용 와이어 자석 거치대 화이트(1054581) + 폰 맥세이프 케이스. 40~50cm 근접 세트용. 매장 사진상 자동탁 테두리가 두껍고 둥글어 7cm 클램프가 안 물릴 가능성이 큼</span></label>
+      <label class="item"><input type="checkbox"><span>오토락 줄자 19mm×5m(60760), 렌즈에서 매트까지 높이 잼</span></label>
+      <label class="item"><input type="checkbox"><span>노트북 충전기, 폰 충전기·케이블 (헤드는 화면을 켜 둬서 배터리가 빨리 닳음), 보조배터리</span></label>
+      <label class="item"><input type="checkbox"><span>폰 핫스팟 데이터 남았는지 (마장 Wi-Fi 가 막힐 때 대비)</span></label>
+      <label class="item"><input type="checkbox"><span>카톡 답장의 이용 요금 확인, 계산 준비</span></label>
+    </div>
+  </details>
+
+  <details open data-sec>
+    <summary><span class="t">도착 후 연결</span><span class="when">10분</span><span class="cnt"></span></summary>
+    <div class="body">
+      <label class="item"><input type="checkbox"><span>노트북·폰을 마장 Wi-Fi 에 붙임 (비밀번호 물어보기)</span></label>
+      <label class="item"><input type="checkbox"><span>노트북에서 에뮬레이터 <code>pixel_api36</code> 켜고 앱 열기</span></label>
+      <label class="item"><input type="checkbox"><span>폰 잠금 풀고 앱 → <b>카메라 헤드</b> 열기. 화면에 뜬 주소 확인</span></label>
+      <div class="note"><b>주소가 192.168.50.35 가 아니면</b> 에뮬레이터 거치 촬영 → 더보기 → 원격 카메라 주소 → 헤드 화면의 <code>http://IP:8765?t=토큰</code> 을 그대로 입력. 토큰은 집에서 쓰던 것 그대로.</div>
+      <label class="item"><input type="checkbox"><span>"연결했습니다" 확인</span></label>
+      <div class="note"><b>연결 실패(기기 간 통신 차단)면</b> 폰 핫스팟 켜기 → 노트북을 핫스팟에 붙임 → 헤드 화면의 새 주소로 다시 입력. 판독 서버는 핫스팟 데이터로 나감.</div>
+      <label class="item"><input type="checkbox"><span>시험 촬영 1장: 카메라를 테이블로 향하고 촬영 → 판독까지 나오는지</span></label>
+    </div>
+  </details>
+
+  <details open data-sec>
+    <summary><span class="t">대국 설정</span><span class="cnt"></span></summary>
+    <div class="body">
+      <label class="item"><input type="checkbox"><span>에뮬레이터에서 대국 시작 (이름 4개, 25000점) → 메뉴 "거치 촬영"</span></label>
+      <label class="item"><input type="checkbox"><span>거치 화면 AppBar 메뉴에서 "화면 아래쪽 자리" 지정</span></label>
+      <label class="item"><input type="checkbox"><span>더보기 "촬영 기록 저장" 켜짐 확인</span></label>
+    </div>
+  </details>
+
+  <details open data-sec>
+    <summary><span class="t">촬영 세트</span><span class="when">세트당 3화료</span><span class="cnt"></span></summary>
+    <div class="body">
+      <p class="tip" style="margin:0">세트마다 높이를 바꾸면 거치 화면 더보기 "거치 높이" 와 헤드 화면 줌 칩을 같이 바꾼다. 헤드 왼쪽 아래 "패 최소" 상자보다 패가 작으면 그 세트는 기록만 하고 넘어간다. 높이는 렌즈에서 매트까지 수직으로 잰다. 화료자는 촬영석, 방총자·리치 자리는 바꿔 가며 놓는다. 다른 세 손패가 화면 밖이어도 괜찮다.</p>
+      <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>세트</th><th>높이</th><th>줌</th><th>론</th><th>쯔모</th><th>리치+뒷도라</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>60cm</td><td>1x</td><td><input type="checkbox" aria-label="세트1 론"></td><td><input type="checkbox" aria-label="세트1 쯔모"></td><td><input type="checkbox" aria-label="세트1 리치"></td></tr>
+          <tr><td>2</td><td>60cm</td><td>2x</td><td><input type="checkbox" aria-label="세트2 론"></td><td><input type="checkbox" aria-label="세트2 쯔모"></td><td><input type="checkbox" aria-label="세트2 리치"></td></tr>
+          <tr><td>3</td><td>70cm</td><td>1x</td><td><input type="checkbox" aria-label="세트3 론"></td><td><input type="checkbox" aria-label="세트3 쯔모"></td><td><input type="checkbox" aria-label="세트3 리치"></td></tr>
+          <tr><td>4</td><td>70cm</td><td>2x</td><td><input type="checkbox" aria-label="세트4 론"></td><td><input type="checkbox" aria-label="세트4 쯔모"></td><td><input type="checkbox" aria-label="세트4 리치"></td></tr>
+          <tr><td>5</td><td>90cm</td><td>1x</td><td><input type="checkbox" aria-label="세트5 론"></td><td><input type="checkbox" aria-label="세트5 쯔모"></td><td><input type="checkbox" aria-label="세트5 리치"></td></tr>
+          <tr><td>6</td><td>90cm</td><td>2x</td><td><input type="checkbox" aria-label="세트6 론"></td><td><input type="checkbox" aria-label="세트6 쯔모"></td><td><input type="checkbox" aria-label="세트6 리치"></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <label class="item"><input type="checkbox"><span>세트 끝마다 같은 위치에서 폰 기본 카메라 <b>50MP 모드</b>로 테이블 전체 2장 (나중에 해상도만 바꿔 다시 판독). 찍은 뒤 카메라 헤드 다시 열기</span></label>
+      <p class="tip" style="margin:0">화료 하나마다 이 순서로 (울기·횡치·적도라가 들어간 손패를 섞기):</p>
+      <label class="item"><input type="checkbox" data-loop><span>손패 눕히기 · 울기 · 화료패 · 도라 표시패 · 리치봉 놓기</span></label>
+      <label class="item"><input type="checkbox" data-loop><span>리치 화료면 <b>뒷도라를 뒤집은 뒤</b> 촬영</span></label>
+      <label class="item"><input type="checkbox" data-loop><span>틀린 판독은 "판독 수정" 에서 고침, 화료 시트 리치 칩도 보고 틀린 건 끔</span></label>
+      <label class="item"><input type="checkbox" data-loop><span><b>"대국에 반영"</b> 까지 마침 (정답 label.json). 반영 전에 다음 촬영 금지</span></label>
+      <p class="tip" style="margin:0">이 네 칸은 화료마다 다시 쓰는 칸이다. 다 체크하면 자동으로 비워진다.</p>
+    </div>
+  </details>
+
+  <details open data-sec>
+    <summary><span class="t">점수 확정 시간 재기</span><span class="cnt"></span></summary>
+    <div class="body">
+      <p style="margin:0">화료 선언(손패 눕힘)에서 점수가 확정될 때까지. 아래 바의 <b>손계산</b>·<b>앱</b> 버튼을 누르면 시작, 다시 누르면 기록된다. 손계산은 사장님이나 다른 손님이 해 주면 가장 좋다. 비교 기준: 손계산 14~32초 (Projection Mahjong 실험).</p>
+      <div class="log" id="log"></div>
+      <div class="chips"><button class="chip" id="copy" type="button">기록 복사</button><button class="chip" id="clear" type="button">기록 지우기</button></div>
+    </div>
+  </details>
+
+  <details open data-sec>
+    <summary><span class="t">사장님 질문</span><span class="when">시연 1화료 먼저</span><span class="cnt"></span></summary>
+    <div class="body">
+      <div class="q"><b>1. 손님이 점수 계산에서 막히는 일이 자주 있나요?</b><span class="tip">얼마나 자주, 누가 대신 계산해 주는지</span><textarea id="a1" aria-label="답 1"></textarea></div>
+      <div class="q"><b>2. 테이블에 이런 게 있으면 도움이 될까요?</b><span class="tip">어떤 손님·상황에, 무엇이 걸리는지</span><textarea id="a2" aria-label="답 2"></textarea></div>
+      <div class="q"><b>3. 얼마면 달아 보시겠어요?</b><span class="tip">월 구독 / 테이블당 / 시범 설치 무료면?</span><textarea id="a3" aria-label="답 3"></textarea></div>
+      <div class="note"><b>"이런 앱 이미 있던데"</b> 가 나오면: 손패 촬영 앱은 계산만 하고, 이건 테이블 전체를 읽어 리치·방총자·뒷도라까지 잡고 점수판·정산을 자동으로 기록한다고 설명. 그런 앱을 써 봤는지, 왜 안 쓰는지도 물어보기.</div>
+      <p class="tip" style="margin:0">부정적 반응 이유 (누르면 표시)</p>
+      <div class="chips" id="why">
+        <button class="chip" type="button" aria-pressed="false">이미 있다</button>
+        <button class="chip" type="button" aria-pressed="false">필요 없다</button>
+        <button class="chip" type="button" aria-pressed="false">설치 귀찮다</button>
+        <button class="chip" type="button" aria-pressed="false">정확할까</button>
+      </div>
+      <label class="item"><input type="checkbox"><span>써 본 손님 반응도 들었다 (5명 중 몇 명이 또 쓰겠다고 했는지 메모)</span></label>
+      <textarea id="a4" aria-label="손님 반응 메모" placeholder="손님 반응"></textarea>
+    </div>
+  </details>
+
+  <details open data-sec>
+    <summary><span class="t">계속할 기준</span></summary>
+    <div class="body">
+      <p style="margin:0"><b>계속:</b> 사장님이 설치·시범에 관심, 또는 써 본 손님 5명 중 2명 이상 다시 쓰겠다.</p>
+      <p style="margin:0"><b>아니면:</b> 대상을 매장 / 대회 / 오프라인 방송 중 하나로 좁히거나 방향을 바꾼다.</p>
+      <p style="margin:0"><b>정확도 합격:</b> 손패 전부, 도라·뒷도라, 리치 4자리 정답.</p>
+    </div>
+  </details>
+
+  <details open data-sec>
+    <summary><span class="t">떠나기 전</span><span class="cnt"></span></summary>
+    <div class="body">
+      <label class="item"><input type="checkbox"><span>에뮬레이터 Download/mahjong_calc 에 폴더가 화료 수만큼 쌓였는지 (노트북을 끄지 말고 집에 가져가기만)</span></label>
+      <label class="item"><input type="checkbox"><span>스트리머 메시지에 붙일 결과 화면 스크린샷 2장</span></label>
+      <label class="item"><input type="checkbox"><span>위 시간 기록 "기록 복사" 해서 카톡 나에게 보내기</span></label>
+      <p class="tip" style="margin:0">집에서: <code>python experiments/vlm/score_captures.py captures --adb emulator-5554</code> 로 높이·줌별 정확도 집계.</p>
+    </div>
+  </details>
+</div>
+
+<div class="timer" role="region" aria-label="점수 확정 스톱워치">
+  <div class="row">
+    <span class="clock" id="clock">0.0</span>
+    <button class="btn hand" id="tHand" type="button">손계산</button>
+    <button class="btn" id="tApp" type="button">앱</button>
+    <div class="stats" id="stats">기록 없음</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var KEY = 'visit1024';
+  var state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { state = {}; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  state.checks = state.checks || {}; state.times = state.times || []; state.text = state.text || {}; state.why = state.why || {};
+
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('input[type=checkbox]'));
+  boxes.forEach(function (b, i) { b.id = 'c' + i; if (state.checks[b.id]) b.checked = true; });
+  var loop = boxes.filter(function (b) { return b.hasAttribute('data-loop'); });
+
+  function counts() {
+    document.querySelectorAll('[data-sec]').forEach(function (sec) {
+      var bs = sec.querySelectorAll('input[type=checkbox]:not([data-loop])');
+      var c = sec.querySelector('.cnt'); if (!c || !bs.length) return;
+      var n = 0; bs.forEach(function (b) { if (b.checked) n++; });
+      c.textContent = n + '/' + bs.length;
+    });
+    var all = boxes.filter(function (b) { return !b.hasAttribute('data-loop'); });
+    var done = all.filter(function (b) { return b.checked; }).length;
+    document.getElementById('bar').style.width = (100 * done / all.length) + '%';
+  }
+  boxes.forEach(function (b) {
+    b.addEventListener('change', function () {
+      state.checks[b.id] = b.checked;
+      if (b.hasAttribute('data-loop') && loop.every(function (x) { return x.checked; })) {
+        setTimeout(function () { loop.forEach(function (x) { x.checked = false; state.checks[x.id] = false; }); save(); }, 600);
+      }
+      save(); counts();
+    });
+  });
+  counts();
+
+  ['a1', 'a2', 'a3', 'a4'].forEach(function (id) {
+    var t = document.getElementById(id); t.value = state.text[id] || '';
+    t.addEventListener('input', function () { state.text[id] = t.value; save(); });
+  });
+  document.querySelectorAll('#why .chip').forEach(function (c) {
+    var k = c.textContent; if (state.why[k]) c.setAttribute('aria-pressed', 'true');
+    c.addEventListener('click', function () {
+      var on = c.getAttribute('aria-pressed') !== 'true';
+      c.setAttribute('aria-pressed', String(on)); state.why[k] = on; save();
+    });
+  });
+
+  // 스톱워치
+  var clock = document.getElementById('clock'), running = null, t0 = 0, raf = 0;
+  var bH = document.getElementById('tHand'), bA = document.getElementById('tApp');
+  function tick() { clock.textContent = ((performance.now() - t0) / 1000).toFixed(1); raf = requestAnimationFrame(tick); }
+  function render() {
+    var log = document.getElementById('log');
+    log.textContent = state.times.map(function (r, i) { return (i + 1) + '. ' + r.kind + ' ' + r.sec.toFixed(1) + '초  ' + r.at; }).join('\n');
+    function avg(k) { var xs = state.times.filter(function (r) { return r.kind === k; }); if (!xs.length) return '-'; return (xs.reduce(function (s, r) { return s + r.sec; }, 0) / xs.length).toFixed(1) + '초 (' + xs.length + '회)'; }
+    document.getElementById('stats').textContent = state.times.length ? '평균  손계산 ' + avg('손계산') + '  ·  앱 ' + avg('앱') : '기록 없음';
+  }
+  function toggle(kind, btn, other) {
+    if (running === kind) {
+      cancelAnimationFrame(raf);
+      var sec = (performance.now() - t0) / 1000, d = new Date();
+      state.times.push({ kind: kind, sec: sec, at: d.toTimeString().slice(0, 5) });
+      save(); render(); running = null; btn.classList.remove('on'); btn.textContent = kind;
+      return;
+    }
+    if (running) return;
+    running = kind; t0 = performance.now(); btn.classList.add('on'); btn.textContent = kind + ' 멈춤'; other.disabled = true; tick();
+  }
+  bH.addEventListener('click', function () { toggle('손계산', bH, bA); if (!running) bA.disabled = false; });
+  bA.addEventListener('click', function () { toggle('앱', bA, bH); if (!running) bH.disabled = false; });
+  document.getElementById('copy').addEventListener('click', function () {
+    var txt = document.getElementById('log').textContent + '\n' + document.getElementById('stats').textContent;
+    var b = this;
+    try { navigator.clipboard.writeText(txt).then(function () { b.textContent = '복사됨'; }, fallback); } catch (e) { fallback(); }
+    function fallback() { var r = document.createRange(); r.selectNodeContents(document.getElementById('log')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = '선택됨, 길게 눌러 복사'; }
+  });
+  var clr = document.getElementById('clear'), armed = false;
+  clr.addEventListener('click', function () {
+    if (!armed) { armed = true; clr.textContent = '한 번 더 누르면 지움'; setTimeout(function () { armed = false; clr.textContent = '기록 지우기'; }, 3000); return; }
+    state.times = []; save(); render(); armed = false; clr.textContent = '기록 지우기';
+  });
+  render();
+})();
+</script>

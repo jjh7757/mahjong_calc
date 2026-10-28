@@ -1,0 +1,42 @@
+python-dotenv could not parse statement starting at line 21
+python-dotenv could not parse statement starting at line 25
+python-dotenv could not parse statement starting at line 27
+Loading C:\Users\jjh7757\dev\_downloads\nikmomo\mahjong-yolos-best.onnx for ONNX Runtime inference...
+Using ONNX Runtime 1.29.0 with CPUExecutionProvider
+B k25_1 bottom 검출 25  강 21장  줄 [4, 6, 6, 5]  정답 6s
+B k25_1 left   검출 31  강 30장  줄 [5, 4, 4, 7, 6, 4]  정답 3s
+B k25_1 top    검출 44  강 32장  줄 [2, 3, 3, 3, 3, 6, 6, 6]  정답 7z
+B k28_1 bottom 검출 25  강 21장  줄 [2, 2, 6, 6, 5]  정답 6s
+B k28_1 left   검출 32  강 32장  줄 [5, 4, 6, 7, 6, 4]  정답 3s
+B k28_1 top    검출 44  강 32장  줄 [2, 3, 3, 3, 3, 6, 6, 6]  정답 7z
+C k15_1 bottom 검출 25  강 21장  줄 [4, 6, 6, 5]  정답 2z
+C k15_1 right  검출 27  강 15장  줄 [5, 6, 4]  정답 6p
+C k15_1 top    검출 38  강 26장  줄 [2, 2, 1, 2, 2, 6, 6, 5]  정답 3z
+C k26_1 bottom 검출 25  강 21장  줄 [4, 6, 6, 5]  정답 2z
+C k26_1 right  검출 26  강 15장  줄 [5, 6, 4]  정답 6p
+C k26_1 top    검출 39  강 27장  줄 [2, 2, 2, 2, 2, 6, 6, 5]  정답 3z
+D k12_1 right  검출 19  강 17장  줄 [6, 6, 5]  정답 2z
+D k12_1 top    검출 48  강 28장  줄 [2, 2, 2, 2, 2, 2, 6, 5, 5]  정답 3z
+D k12_1 left   검출 39  강 36장  줄 [6, 4, 4, 5, 7, 6, 4]  정답 7z
+D k16_1 right  검출 19  강 17장  줄 [6, 6, 5]  정답 2z
+D k16_1 top    검출 47  강 29장  줄 [2, 2, 2, 2, 2, 2, 6, 6, 5]  정답 3z
+D k16_1 left   검출 37  강 35장  줄 [6, 4, 4, 4, 7, 6, 4]  정답 7z
+  내 강 k25_1 bottom 줄 [6, 6, 5]  가로 [0]
+  내 강 k25_1 left   줄 [6, 6, 4]  가로 []
+  내 강 k25_1 top    줄 [6, 6, 6]  가로 []
+  내 강 k28_1 bottom 줄 [6, 6, 5]  가로 [0]
+  내 강 k28_1 left   줄 [6, 6, 4]  가로 []
+  내 강 k28_1 top    줄 [6, 6, 6]  가로 []
+  내 강 k15_1 bottom 줄 [6, 6, 5]  가로 []
+  내 강 k15_1 right  줄 [5, 5, 4]  가로 []
+  내 강 k15_1 top    줄 [6, 6, 5]  가로 []
+  내 강 k26_1 bottom 줄 [6, 6, 5]  가로 []
+  내 강 k26_1 right  줄 [5, 5, 4]  가로 []
+  내 강 k26_1 top    줄 [6, 6, 5]  가로 []
+  내 강 k12_1 right  줄 [6, 6, 5]  가로 []
+  내 강 k12_1 top    줄 [6, 5, 5]  가로 []
+  내 강 k12_1 left   줄 [6, 6, 4]  가로 []
+  내 강 k16_1 right  줄 [6, 6, 5]  가로 []
+  내 강 k16_1 top    줄 [6, 6, 5]  가로 [1]
+  내 강 k16_1 left   줄 [6, 6, 4]  가로 []
+검출 시간 중앙 0.16초 (CPU)

@@ -1,0 +1,241 @@
+/// 관찰 JSON: 모델이 본 것만 담는다(서버 `/v2/*`). 리치·울기 종류·강 끝 패·도라 판단은 여기 코드가 한다. 순수 Dart.
+///
+/// ```json
+/// {"players": {"bottom": {"hand": {"face_up": true, "tiles": [...], "separate_tile": null},
+///                         "melds": [{"tiles": ["6z","6z","6z"], "sideways": [1], "face_down": []}],
+///                         "river": [{"tile": "1p", "sideways": false}, ...], "riichi_stick": false}, ...},
+///  "dora_indicators": ["9s", "5s"]}
+/// ```
+/// 판단은 [toHandReading]·[toCenterReading] 으로 기존 병합([mergeReading])에 넘긴다.
+library;
+
+import '../engine/calculator.dart' show Tiles;
+import 'table_layout.dart';
+import 'table_reading.dart';
+
+/// 울기 묶음 하나. 종류는 [type] 이 패 구성으로 정한다.
+class ObservedMeld {
+  final List<ReadTile> tiles;
+  final List<int> sideways;
+  final List<int> faceDown;
+  final double conf;
+  const ObservedMeld(this.tiles, {this.sideways = const [], this.faceDown = const [], this.conf = 0});
+
+  static ObservedMeld? fromJson(Map<String, dynamic> j) {
+    final tiles = [
+      for (final c in (j['tiles'] as List<dynamic>?) ?? const [])
+        if (c is String) ?ReadTile.fromCode(c, 1),
+    ];
+    if (tiles.length != 3 && tiles.length != 4) return null;
+    List<int> idx(String k) => [for (final i in (j[k] as List<dynamic>?) ?? const []) if (i is int) i];
+    return ObservedMeld(tiles,
+        sideways: idx('sideways'), faceDown: idx('face_down'), conf: ((j['conf'] as num?) ?? 0).toDouble());
+  }
+
+  /// 4장: 뒤집힌 패가 있으면 안깡, 없으면 명깡. 3장: 모두 같으면 퐁, 같은 수패의 연속이면 치.
+  /// 어느 쪽도 아니면 퐁으로 두고 [consistent] 가 false — 병합이 확인 플래그를 단다.
+  ReadMeldType get type {
+    if (tiles.length == 4) return faceDown.isNotEmpty ? ReadMeldType.kanClosed : ReadMeldType.kanOpen;
+    return _isChi ? ReadMeldType.chi : ReadMeldType.pon;
+  }
+
+  bool get _isChi {
+    final t = [for (final x in tiles) x.tile]..sort();
+    return Tiles.suit(t[0]) < 3 && Tiles.suit(t[0]) == Tiles.suit(t[2]) && t[1] == t[0] + 1 && t[2] == t[0] + 2;
+  }
+
+  bool get consistent => _isChi || tiles.every((t) => t.tile == tiles.first.tile);
+
+  ReadMeld toReadMeld() => ReadMeld(type, tiles, conf: consistent ? conf : 0);
+
+  Map<String, dynamic> toJson() => {
+        'tiles': [for (final t in tiles) t.code],
+        'sideways': sideways,
+        'face_down': faceDown,
+        'conf': conf,
+      };
+}
+
+/// 강의 패 한 장과 가로로 놓였는지.
+class RiverTile {
+  final ReadTile tile;
+  final bool sideways;
+  const RiverTile(this.tile, {this.sideways = false});
+
+  Map<String, dynamic> toJson() => {'tile': tile.code, 'sideways': sideways, 'conf': tile.conf};
+}
+
+class SeatObservation {
+  /// 앞면으로 깐 손패인가(locate). false 면 [handTiles] 는 비어 있다.
+  final bool faceUp;
+  final List<ReadTile> handTiles;
+  final ReadTile? separateTile;
+  final List<ObservedMeld> melds;
+
+  /// 버린 순서대로. 강을 못 찾은 자리는 null.
+  final List<RiverTile>? river;
+  final bool riichiStick;
+
+  const SeatObservation({
+    this.faceUp = false,
+    this.handTiles = const [],
+    this.separateTile,
+    this.melds = const [],
+    this.river,
+    this.riichiStick = false,
+  });
+
+  /// 리치: 리치봉이 있거나 강에 가로로 놓인 패가 있다.
+  bool get riichi => riichiStick || (river?.any((t) => t.sideways) ?? false);
+
+  ReadTile? get lastDiscard => river == null || river!.isEmpty ? null : river!.last.tile;
+
+  Map<String, dynamic> toJson() => {
+        'hand': {
+          'face_up': faceUp,
+          'tiles': [for (final t in handTiles) t.code],
+          'separate_tile': separateTile?.code,
+        },
+        'melds': [for (final m in melds) m.toJson()],
+        'river': river == null ? null : [for (final t in river!) t.toJson()],
+        'riichi_stick': riichiStick,
+      };
+}
+
+class TableObservation {
+  final Map<Side, SeatObservation> players;
+
+  /// 왕패에 앞면으로 보인 표시패 전부(도라·뒷도라 구분 없음).
+  final List<ReadTile> doraIndicators;
+
+  /// 화료자 손패 옆에 따로 놓인 앞면 패([CenterReading.handSideIndicators]).
+  final List<ReadTile> handSideIndicators;
+
+  /// 호출별 토큰 수. 비용 집계용(`hand`, `river_bottom`, `center`, `wall` ...).
+  final Map<String, Map<String, int>> usage;
+
+  const TableObservation({
+    required this.players,
+    this.doraIndicators = const [],
+    this.handSideIndicators = const [],
+    this.usage = const {},
+  });
+
+  SeatObservation seat(Side s) => players[s] ?? const SeatObservation();
+
+  /// 화료자 손패 판독. 떨어뜨려 놓은 한 장이 화료패.
+  HandReading toHandReading(Side winner) {
+    final s = seat(winner);
+    return HandReading(
+      tiles: s.handTiles,
+      melds: [for (final m in s.melds) m.toReadMeld()],
+      winTile: s.separateTile,
+      model: 'observe',
+    );
+  }
+
+  /// 가운데 판독 모양으로. 리치와 강 끝 패는 여기서 코드로 정한다.
+  CenterReading toCenterReading() => CenterReading(
+        doraIndicators: doraIndicators,
+        handSideIndicators: handSideIndicators,
+        riichi: {for (final s in Side.values) s: seat(s).riichi},
+        riichiConf: {for (final s in Side.values) s: seat(s).riichi ? 0.9 : 0.0},
+        lastDiscards: {for (final s in Side.values) s: seat(s).lastDiscard},
+        rivers: {
+          for (final s in Side.values) s: [for (final t in seat(s).river ?? const <RiverTile>[]) t.tile],
+        },
+        model: 'observe',
+      );
+
+  Map<String, dynamic> toJson() => {
+        'players': {for (final s in Side.values) s.name: seat(s).toJson()},
+        'dora_indicators': [for (final t in doraIndicators) t.code],
+        'hand_side_indicators': [for (final t in handSideIndicators) t.code],
+        'usage': usage,
+      };
+}
+
+// ---------------------------------------------------------------- 서버 응답(/v2/*) 해석
+
+List<ReadTile> _tiles(Object? items) => [
+      for (final t in (items as List<dynamic>?) ?? const [])
+        if (t is Map<String, dynamic>) ?ReadTile.fromJson(t),
+    ];
+
+/// `/v2/hand` 응답.
+({List<ReadTile> tiles, ReadTile? separate, List<ObservedMeld> melds}) parseHandV2(Map<String, dynamic> j) => (
+      tiles: _tiles(j['tiles']),
+      separate: ReadTile.fromJson(j['separate_tile'] as Map<String, dynamic>?),
+      melds: [
+        for (final m in (j['melds'] as List<dynamic>?) ?? const [])
+          if (m is Map<String, dynamic>) ?ObservedMeld.fromJson(m),
+      ],
+    );
+
+/// `/v2/meld` 응답. 3~4장이 아니면 null.
+ObservedMeld? parseMeldV2(Map<String, dynamic> j) => ObservedMeld.fromJson(j);
+
+/// `/v2/river` 응답.
+({List<RiverTile> tiles, bool riichiStick}) parseRiverV2(Map<String, dynamic> j) => (
+      tiles: [
+        for (final t in (j['tiles'] as List<dynamic>?) ?? const [])
+          if (t is Map<String, dynamic> && ReadTile.fromJson(t) != null)
+            RiverTile(ReadTile.fromJson(t)!, sideways: t['sideways'] == true),
+      ],
+      riichiStick: j['riichi_stick'] == true,
+    );
+
+/// `/v2/corner` 응답(격자 모서리 칸): 울기 묶음 전부와 묶음 아닌 앞면 패.
+({List<ObservedMeld> melds, List<ReadTile> loose}) parseCornerV2(Map<String, dynamic> j) => (
+      melds: [
+        for (final m in (j['melds'] as List<dynamic>?) ?? const [])
+          if (m is Map<String, dynamic>) ?ObservedMeld.fromJson(m),
+      ],
+      loose: _tiles(j['loose']),
+    );
+
+/// 서버가 같은 자리를 여러 번 읽어 맞춰 본 결과. 모두 같지 않으면 서버가 다른 패의 확신도를 0 으로 낮춰 보낸다.
+typedef SeatAgreement = ({int reads, int agree, bool unanimous, List<String> alternatives});
+
+/// `/v2/seat` 응답(격자 자리 구역): 앞면 여부, 손패, 떨어진 한 장, 울기 전부, 따로 놓인 앞면 패,
+/// 여러 번 읽어 맞춘 결과(없으면 null — 한 번만 읽는 서버).
+typedef SeatV2 = ({
+  bool faceUp,
+  List<ReadTile> tiles,
+  ReadTile? separate,
+  List<ObservedMeld> melds,
+  List<ReadTile> loose,
+  SeatAgreement? agreement,
+});
+
+SeatV2 parseSeatV2(Map<String, dynamic> j) {
+  final h = parseHandV2(j);
+  final a = j['agreement'] as Map<String, dynamic>?;
+  return (
+    faceUp: j['face_up'] == true,
+    tiles: h.tiles,
+    separate: h.separate,
+    melds: h.melds,
+    loose: _tiles(j['loose']),
+    agreement: a == null
+        ? null
+        : (
+            reads: (a['reads'] as num?)?.toInt() ?? 0,
+            agree: (a['agree'] as num?)?.toInt() ?? 0,
+            unanimous: a['unanimous'] == true,
+            alternatives: [for (final s in (a['alternatives'] as List<dynamic>?) ?? const []) '$s'],
+          ),
+  );
+}
+
+/// `/v2/last` 응답 또는 `/v2/last3` 의 `rivers` 한 칸: 그 자리 강의 마지막 패. 강이 없으면 null.
+ReadTile? parseLastV2(Map<String, dynamic> j) => ReadTile.fromJson(j['last_tile'] as Map<String, dynamic>?);
+
+/// `/v2/center`·`/v2/sticks`·`/v2/dora` 응답(sticks 는 indicators 가, dora 는 riichi_sticks 가 없다).
+({List<ReadTile> indicators, Map<Side, bool> sticks}) parseCenterV2(Map<String, dynamic> j) {
+  final sticksJ = (j['riichi_sticks'] as Map<String, dynamic>?) ?? const {};
+  return (
+    indicators: _tiles(j['indicators']),
+    sticks: {for (final s in Side.values) s: sticksJ[s.name] == true},
+  );
+}

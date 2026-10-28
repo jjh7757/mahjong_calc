@@ -1,0 +1,239 @@
+{
+ "photo": "C:\\Users\\jjh7757\\AppData\\Local\\Temp\\claude\\C--Users-jjh7757-dev-mahjong-calc\\65eec9af-1e78-468b-a970-549fa299af1e\\scratchpad\\kakao\\k28.jpg",
+ "winner_side": "right",
+ "warnings": [
+  "river_right 을(를) 읽지 못했습니다: 요청이 너무 잦습니다. 잠시 후 다시 시도하세요.",
+  "river_top 을(를) 읽지 못했습니다: 요청이 너무 잦습니다. 잠시 후 다시 시도하세요.",
+  "river_left 을(를) 읽지 못했습니다: 요청이 너무 잦습니다. 잠시 후 다시 시도하세요.",
+  "river_bottom 을(를) 읽지 못했습니다: 요청이 너무 잦습니다. 잠시 후 다시 시도하세요.",
+  "center 을(를) 읽지 못했습니다: 요청이 너무 잦습니다. 잠시 후 다시 시도하세요."
+ ],
+ "merge": {
+  "winner": 1,
+  "is_tsumo": true,
+  "loser": null,
+  "closed": [
+   "7z",
+   "1m",
+   "1m",
+   "1m",
+   "9s",
+   "9s",
+   "9s",
+   "9p",
+   "9p",
+   "9p"
+  ],
+  "win_tile": "9p",
+  "melds": [],
+  "red_count": 0,
+  "hand_valid": false,
+  "uncertain": [],
+  "flags": [
+   "winTileAssumed: 화료패를 따로 찾지 못해 손패 마지막 장으로 봤습니다",
+   "tileCountMismatch: 손패가 14장이어야 하는데 10장 읽혔습니다"
+  ],
+  "riichi": false,
+  "riichi_seats_photo": [],
+  "dora_indicators": [
+   "1z",
+   "1m"
+  ],
+  "ura_indicators": []
+ },
+ "flags": [
+  "화료패를 따로 찾지 못해 손패 마지막 장으로 봤습니다",
+  "손패가 14장이어야 하는데 10장 읽혔습니다"
+ ],
+ "timings_ms": {
+  "shrink": 297,
+  "locate": 13474,
+  "pick": 0,
+  "crop": 409,
+  "read": 5291
+ },
+ "layout": {
+  "hands": [
+   {
+    "side": "bottom",
+    "box": [
+     838,
+     313,
+     892,
+     680
+    ],
+    "face_up": false,
+    "conf": 0.95
+   },
+   {
+    "side": "right",
+    "box": [
+     215,
+     765,
+     474,
+     837
+    ],
+    "face_up": true,
+    "conf": 0.95
+   },
+   {
+    "side": "top",
+    "box": [
+     64,
+     339,
+     110,
+     597
+    ],
+    "face_up": false,
+    "conf": 0.95
+   },
+   {
+    "side": "left",
+    "box": [
+     193,
+     137,
+     560,
+     222
+    ],
+    "face_up": false,
+    "conf": 0.95
+   }
+  ],
+  "rivers": [
+   {
+    "side": "bottom",
+    "box": [
+     478,
+     426,
+     616,
+     584
+    ],
+    "conf": 0.95
+   },
+   {
+    "side": "right",
+    "box": [
+     321,
+     579,
+     490,
+     690
+    ],
+    "conf": 0.95
+   },
+   {
+    "side": "top",
+    "box": [
+     209,
+     417,
+     316,
+     554
+    ],
+    "conf": 0.95
+   },
+   {
+    "side": "left",
+    "box": [
+     306,
+     345,
+     480,
+     442
+    ],
+    "conf": 0.95
+   }
+  ],
+  "melds": [],
+  "dead_wall": {
+   "box": [
+    154,
+    309,
+    198,
+    357
+   ],
+   "conf": 0.85
+  },
+  "center": {
+   "box": [
+    154,
+    309,
+    616,
+    690
+   ]
+  },
+  "notes": "우측 플레이어 손패 공개 상태. 좌측 패산 일부가 탁 중앙 쪽에 남아 있음.",
+  "model": "gemini-3.8-flash",
+  "latency_ms": 13398,
+  "usage": {
+   "input_tokens": 1638,
+   "output_tokens": 1451
+  }
+ },
+ "observation": {
+  "players": {
+   "bottom": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": null,
+    "riichi_stick": false
+   },
+   "right": {
+    "hand": {
+     "face_up": true,
+     "tiles": [
+      "7z",
+      "1m",
+      "1m",
+      "1m",
+      "9s",
+      "9s",
+      "9s",
+      "9p",
+      "9p",
+      "9p"
+     ],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": null,
+    "riichi_stick": false
+   },
+   "top": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": null,
+    "riichi_stick": false
+   },
+   "left": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": null,
+    "riichi_stick": false
+   }
+  },
+  "dora_indicators": [
+   "1z",
+   "1m"
+  ],
+  "usage": {
+   "wall": {
+    "input_tokens": 1689,
+    "output_tokens": 229
+   },
+   "hand": {
+    "input_tokens": 1511,
+    "output_tokens": 362
+   }
+  }
+ }
+}

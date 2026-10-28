@@ -1,0 +1,88 @@
+{
+ "dora_indicators": [
+  {
+   "tile": "9s",
+   "conf": 0.99
+  },
+  {
+   "tile": "5s",
+   "conf": 0.99
+  }
+ ],
+ "ura_dora_indicators": [],
+ "riichi": {
+  "bottom": false,
+  "right": false,
+  "top": false,
+  "left": false
+ },
+ "riichi_conf": {
+  "bottom": 0.95,
+  "right": 0.95,
+  "top": 0.95,
+  "left": 0.95
+ },
+ "last_discards": {
+  "bottom": "2z",
+  "right": "2s",
+  "top": "3m",
+  "left": "2m"
+ },
+ "last_discards_conf": {
+  "bottom": 0.95,
+  "right": 0.9,
+  "top": 0.95,
+  "left": 0.95
+ },
+ "rivers": {
+  "bottom": [
+   "2z",
+   "1z",
+   "2s",
+   "8s",
+   "8p",
+   "4z",
+   "1p",
+   "2p",
+   "2z"
+  ],
+  "right": [
+   "1p",
+   "8p",
+   "8p",
+   "8s",
+   "7p",
+   "8s",
+   "1z",
+   "2s"
+  ],
+  "top": [
+   "4z",
+   "8s",
+   "8m",
+   "4z",
+   "3m",
+   "1m",
+   "3m"
+  ],
+  "left": [
+   "1z",
+   "1m",
+   "4z",
+   "9m",
+   "1p",
+   "4z",
+   "2s",
+   "1p",
+   "8p",
+   "2m"
+  ]
+ },
+ "notes": "Top left isolated tile pair shows 8s as dora indicator.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 7111,
+ "usage": {
+  "input_tokens": 2088,
+  "output_tokens": 656
+ }
+}

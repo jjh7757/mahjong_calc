@@ -1,0 +1,77 @@
+{
+ "dora_indicators": [
+  {
+   "tile": "9s",
+   "conf": 0.99
+  },
+  {
+   "tile": "5s",
+   "conf": 0.99
+  }
+ ],
+ "ura_dora_indicators": [],
+ "riichi": {
+  "bottom": false,
+  "right": true,
+  "top": false,
+  "left": false
+ },
+ "riichi_conf": {
+  "bottom": 0.0,
+  "right": 0.9,
+  "top": 0.0,
+  "left": 0.0
+ },
+ "last_discards": {
+  "bottom": "2z",
+  "right": "7s",
+  "top": null,
+  "left": "2s"
+ },
+ "last_discards_conf": {
+  "bottom": 0.99,
+  "right": 0.99,
+  "top": 0.0,
+  "left": 0.99
+ },
+ "rivers": {
+  "bottom": [
+   "2z",
+   "1z",
+   "8s",
+   "6s",
+   "8p",
+   "4z",
+   "1p",
+   "2p",
+   "2z"
+  ],
+  "right": [
+   "1z",
+   "9p",
+   "7s",
+   "9p",
+   "7p",
+   "3p",
+   "8s",
+   "7s"
+  ],
+  "top": [],
+  "left": [
+   "1m",
+   "9m",
+   "4z",
+   "1p",
+   "8p",
+   "2m",
+   "1z",
+   "4s",
+   "1p",
+   "2s"
+  ]
+ },
+ "notes": "",
+ "model": "observe",
+ "latency_ms": 0,
+ "usage": {}
+}

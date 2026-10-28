@@ -1,0 +1,101 @@
+{
+ "hands": [
+  {
+   "side": "bottom",
+   "box": [
+    687,
+    147,
+    969,
+    416
+   ],
+   "face_up": true,
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    498,
+    722,
+    881,
+    887
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "left",
+   "box": [
+    207,
+    206,
+    408,
+    352
+   ],
+   "face_up": true,
+   "conf": 0.92
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    486,
+    366,
+    601,
+    514
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    427,
+    517,
+    614,
+    612
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    326,
+    484,
+    424,
+    617
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "left",
+   "box": [
+    342,
+    358,
+    515,
+    455
+   ],
+   "conf": 0.95
+  }
+ ],
+ "melds": [],
+ "dead_wall": {
+  "box": [
+   504,
+   198,
+   565,
+   250
+  ],
+  "conf": 0.0
+ },
+ "center": {
+  "box": [
+   325,
+   196,
+   620,
+   620
+  ]
+ },
+ "notes": "고정 구역(locate 생략)",
+ "model": "fixed",
+ "latency_ms": 0,
+ "usage": {}
+}

@@ -1,0 +1,118 @@
+B k25_1 틀 [whole]
+B k28_1 틀 [whole]
+C k15_1 틀 [s]
+C k26_1 틀 [s]
+D k12_1 틀 [s]
+D k16_1 틀 [s]
+sheet D k16_1 #8 11.2s O11 O11 O10
+sheet D k12_1 #1 12.1s O12 O11 O12
+sheet D k12_1 #0 15.5s O11 O15 O11
+sheet D k16_1 #9 7.9s O7 O8 O7
+base  D k16_1 #4 9.3s O8 O8 O9
+base  C k26_1 #2 21.9s O13 O19 O21
+base  C k15_1 #6 8.6s O8 O8 O8
+sheet D k16_1 #3 7.6s O7 O8 O7
+base  D k12_1 #0 10.6s O10 O10 O10
+base  D k12_1 #8 11.2s O10 O11 O11
+sheet C k15_1 #3 11.6s O9 O9 O11
+base  B k28_1 #2 32.2s O31 O32 x32
+base  D k16_1 #6 7.5s O7 O7 O7
+base  B k25_1 #3 22.5s O18 O19 O22
+base  C k26_1 #8 12.9s O11 O12 O11
+base  B k25_1 #9 9.7s O9 O9 O9
+base  B k28_1 #9 33.4s O33 O33 O33
+base  B k28_1 #1 19.5s O19 O19 O19
+sheet C k26_1 #5 9.7s O9 O9 O10
+base  C k15_1 #5 12.1s O10 O12 O10
+base  D k12_1 #7 13.8s O13 O14 O13
+base  C k15_1 #1 15.4s O15 O10 O8
+base  D k12_1 #2 11.5s O11 O11 O11
+sheet C k15_1 #9 9.5s O9 O9 O7
+base  C k15_1 #4 18.6s O9 O9 O18
+base  D k16_1 #5 10.4s O10 O10 O10
+sheet C k15_1 #4 10.6s O9 O11 O10
+sheet D k12_1 #9 11.1s O11 O10 O9
+sheet C k26_1 #1 8.6s O9 O8 O8
+sheet C k26_1 #6 10.3s O10 O10 O10
+sheet C k26_1 #8 8.7s O8 O9 O8
+sheet D k16_1 #5 12.6s O12 O12 O12
+base  C k26_1 #1 9.1s O9 O9 O8
+sheet D k12_1 #3 8.1s O7 O8 O7
+base  D k12_1 #1 17.0s O17 O16 O16
+sheet C k15_1 #8 7.2s O7 O7 O7
+base  B k25_1 #1 17.4s O9 O17 O8
+sheet C k26_1 #4 10.7s O10 O11 O11
+base  B k25_1 #6 8.5s O8 O8 O8
+base  C k15_1 #0 17.5s O11 O16 O17
+base  D k16_1 #3 12.2s O11 O12 O12
+sheet D k16_1 #0 6.7s O6 O7 O6
+base  B k28_1 #4 10.8s O11 O10 x10
+base  C k15_1 #9 10.9s O11 O9 O9
+sheet D k12_1 #8 8.9s O8 O9 O8
+base  C k26_1 #6 10.1s O9 O9 O10
+sheet D k16_1 #6 7.1s O7 O7 O7
+sheet D k16_1 #2 7.5s O7 O7 O7
+sheet D k16_1 #4 7.7s O7 O8 O7
+base  B k25_1 #7 9.1s O9 O9 O8
+sheet D k16_1 #7 7.3s O7 O7 O7
+base  D k16_1 #0 9.0s O8 O9 O8
+base  D k16_1 #1 7.6s O7 O7 O7
+sheet C k15_1 #1 7.9s O7 O8 O7
+sheet C k15_1 #6 8.4s O8 O8 O7
+base  D k16_1 #2 8.3s O8 O8 O8
+sheet D k12_1 #6 8.0s O7 O8 O8
+base  C k26_1 #3 9.5s O9 O9 O9
+sheet C k15_1 #2 6.9s O6 O6 O7
+base  B k28_1 #5 29.1s O9 O9 x29
+sheet C k26_1 #0 13.2s O13 O13 O10
+sheet D k12_1 #2 11.2s O11 O11 O11
+base  D k16_1 #7 20.0s O19 O20 O20
+base  C k15_1 #8 14.2s O14 O14 O14
+base  B k25_1 #4 10.2s O10 O9 O10
+base  C k15_1 #7 11.2s O10 O11 O11
+base  C k26_1 #4 8.9s O8 O8 O8
+base  C k15_1 #3 20.6s O20 O10 O10
+base  B k25_1 #8 27.9s O9 O9 O28
+base  D k16_1 #9 19.2s O19 O19 O19
+base  B k28_1 #3 25.7s O15 O25 O15
+base  D k12_1 #3 8.6s O8 O8 O8
+base  D k12_1 #9 9.9s O9 O10 O9
+base  B k28_1 #7 12.9s O13 O13 O13
+base  B k28_1 #0 13.9s O14 O13 O13
+sheet D k12_1 #5 7.7s O8 O8 O7
+sheet C k26_1 #9 11.2s O11 O11 O11
+sheet D k12_1 #4 7.1s O7 O6 O6
+base  C k26_1 #7 8.9s O8 O9 O9
+base  B k25_1 #0 30.9s O31 O30 O31
+sheet C k15_1 #5 8.2s O8 O7 O8
+sheet D k12_1 #7 8.2s O7 O8 O7
+base  B k25_1 #5 32.9s O19 O19 O33
+base  B k28_1 #6 32.2s x19 O32 O19
+sheet C k26_1 #7 7.2s O7 O7 O7
+base  C k15_1 #2 20.9s O11 O14 O21
+base  D k12_1 #6 7.7s O7 O7 O7
+sheet C k26_1 #2 6.2s O6 O6 O6
+sheet D k16_1 #1 24.5s O24 O24 O24
+base  B k25_1 #2 36.2s O28 O36 O36
+base  D k16_1 #8 9.8s O8 O9 O9
+sheet C k26_1 #3 6.7s O6 O7 O7
+base  C k26_1 #9 11.0s O10 O10 O10
+sheet C k15_1 #7 9.3s O8 O9 O9
+base  C k26_1 #5 10.3s O10 O10 O9
+base  D k12_1 #4 13.4s O13 O13 O13
+base  B k28_1 #8 15.2s O15 O15 O15
+base  D k12_1 #5 7.3s O7 O7 O7
+sheet C k15_1 #0 7.1s O6 O6 O7
+base  C k26_1 #0 6.9s O6 O6 O7
+
+                     장면     자동 반영     틀린 채 반영     확인 질문   시간 중앙 / p90 / 최대   단독 읽기 정답
+지금 방식(B·C·D)         60   56 ( 93%)     0 (0.0%)    4 (  7%)    11.4 /  30.6 /  35.9초   176/180
+새 방식(B·C·D)          60   56 ( 93%)     0 (0.0%)    4 (  7%)    10.8 /  31.6 /  36.9초   176/180
+  지금 방식 C·D          40   40 (100%)     0 (0.0%)    0 (  0%)    10.4 /  19.7 /  21.3초   120/120
+  새 방식 C·D           40   40 (100%)     0 (0.0%)    0 (  0%)     9.2 /  13.5 /  25.3초   120/120
+  지금 방식 B            20   16 ( 80%)     0 (0.0%)    4 ( 20%)    20.7 /  33.1 /  35.9초   56/60
+  새 방식 B             20   16 ( 80%)     0 (0.0%)    4 ( 20%)    21.7 /  34.1 /  36.9초   56/60
+  base  k28_1 #2 ask   틀린 읽기 1/3 예 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+  base  k28_1 #4 ask   틀린 읽기 1/3 예 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+  base  k28_1 #5 ask   틀린 읽기 1/3 예 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+  base  k28_1 #6 ask   틀린 읽기 1/3 예 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']

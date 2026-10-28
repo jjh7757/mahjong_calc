@@ -1,0 +1,992 @@
+{
+"k25_1|orig|0|0": [
+"bottom",
+"left"
+],
+"k25_1|orig|0|1": [
+"bottom",
+"left"
+],
+"k25_1|orig|0|2": [
+"bottom",
+"left"
+],
+"k25_1|orig|1|0": [
+"bottom",
+"left"
+],
+"k25_1|orig|1|1": [
+"bottom",
+"left"
+],
+"k25_1|orig|1|2": [
+"bottom",
+"left"
+],
+"k25_1|orig|2|0": [
+"bottom",
+"left"
+],
+"k25_1|orig|2|1": [
+"bottom",
+"left"
+],
+"k25_1|orig|2|2": [
+"bottom",
+"left"
+],
+"k25_1|s50|0|0": [
+"bottom",
+"left"
+],
+"k25_1|s50|0|1": [
+"bottom",
+"left"
+],
+"k25_1|s50|0|2": [
+"bottom",
+"left"
+],
+"k25_1|s50|1|0": [
+"bottom",
+"left"
+],
+"k25_1|s50|1|1": [
+"bottom",
+"left"
+],
+"k25_1|s50|1|2": [
+"bottom",
+"left"
+],
+"k25_1|s50|2|0": [
+"bottom",
+"left"
+],
+"k25_1|s50|2|1": [
+"bottom",
+"left"
+],
+"k25_1|s50|2|2": [
+"bottom",
+"left"
+],
+"k25_1|s33|0|0": [
+"bottom",
+"left"
+],
+"k25_1|s33|0|1": [
+"bottom",
+"left"
+],
+"k25_1|s33|0|2": [
+"bottom",
+"left"
+],
+"k25_1|s33|1|0": [
+"bottom",
+"left"
+],
+"k25_1|s33|1|1": [
+"bottom",
+"left"
+],
+"k25_1|s33|1|2": [
+"bottom",
+"left"
+],
+"k25_1|s33|2|0": [
+"bottom",
+"left"
+],
+"k25_1|s33|2|1": [
+"bottom",
+"left"
+],
+"k25_1|s33|2|2": [
+"bottom",
+"left"
+],
+"k25_1|s33blur|0|0": [
+"bottom",
+"left"
+],
+"k25_1|s33blur|0|1": [
+"bottom",
+"left"
+],
+"k25_1|s33blur|0|2": [
+"bottom",
+"left"
+],
+"k25_1|s33blur|1|0": [
+"bottom",
+"left"
+],
+"k25_1|s33blur|1|1": [
+"bottom",
+"left"
+],
+"k25_1|s33blur|1|2": [
+"bottom",
+"left"
+],
+"k25_1|s33blur|2|0": [
+"bottom",
+"left"
+],
+"k25_1|s33blur|2|1": [
+"bottom",
+"left"
+],
+"k25_1|s33blur|2|2": [
+"bottom",
+"left"
+],
+"k25_1|rot15|0|0": [
+"bottom",
+"left"
+],
+"k25_1|rot15|0|1": [
+"bottom",
+"left"
+],
+"k25_1|rot15|0|2": [
+"bottom",
+"left"
+],
+"k25_1|rot15|1|0": [
+"bottom",
+"left"
+],
+"k25_1|rot15|1|1": [
+"bottom",
+"left"
+],
+"k25_1|rot15|1|2": [
+"bottom",
+"left"
+],
+"k25_1|rot15|2|0": [
+"bottom",
+"left"
+],
+"k25_1|rot15|2|1": [
+"bottom",
+"left"
+],
+"k25_1|rot15|2|2": [
+"bottom",
+"left"
+],
+"k28_1|orig|0|0": [
+"bottom",
+"left"
+],
+"k28_1|orig|0|1": [
+"bottom",
+"left"
+],
+"k28_1|orig|0|2": [
+"bottom",
+"left"
+],
+"k28_1|orig|1|0": [
+"bottom",
+"left"
+],
+"k28_1|orig|1|1": [
+"bottom",
+"left"
+],
+"k28_1|orig|1|2": [
+"bottom",
+"left"
+],
+"k28_1|orig|2|0": [
+"bottom",
+"left"
+],
+"k28_1|orig|2|1": [
+"bottom",
+"left"
+],
+"k28_1|orig|2|2": [
+"bottom",
+"left"
+],
+"k28_1|s50|0|0": [
+"bottom",
+"left"
+],
+"k28_1|s50|0|1": [
+"bottom",
+"left"
+],
+"k28_1|s50|0|2": [
+"bottom",
+"left"
+],
+"k28_1|s50|1|0": [
+"bottom",
+"left"
+],
+"k28_1|s50|1|1": [
+"bottom",
+"left"
+],
+"k28_1|s50|1|2": [
+"bottom",
+"left"
+],
+"k28_1|s50|2|0": [
+"bottom",
+"left"
+],
+"k28_1|s50|2|1": [
+"bottom",
+"left"
+],
+"k28_1|s50|2|2": [
+"bottom",
+"left"
+],
+"k28_1|s33|0|0": [
+"bottom",
+"left"
+],
+"k28_1|s33|0|1": [
+"bottom",
+"left"
+],
+"k28_1|s33|0|2": [
+"bottom",
+"left"
+],
+"k28_1|s33|1|0": [
+"bottom",
+"left"
+],
+"k28_1|s33|1|1": [
+"bottom",
+"left"
+],
+"k28_1|s33|1|2": [
+"bottom",
+"left"
+],
+"k28_1|s33|2|0": [
+"bottom",
+"left"
+],
+"k28_1|s33|2|1": [
+"bottom",
+"left"
+],
+"k28_1|s33|2|2": [
+"bottom",
+"left"
+],
+"k28_1|s33blur|0|0": [
+"bottom",
+"left"
+],
+"k28_1|s33blur|0|1": [
+"bottom",
+"left"
+],
+"k28_1|s33blur|0|2": [
+"bottom",
+"left"
+],
+"k28_1|s33blur|1|0": [
+"bottom",
+"left"
+],
+"k28_1|s33blur|1|1": [
+"bottom",
+"left"
+],
+"k28_1|s33blur|1|2": [
+"bottom",
+"left"
+],
+"k28_1|s33blur|2|0": [
+"bottom",
+"left"
+],
+"k28_1|s33blur|2|1": [
+"bottom",
+"left"
+],
+"k28_1|s33blur|2|2": [
+"bottom",
+"left"
+],
+"k28_1|rot15|0|0": [
+"bottom",
+"left"
+],
+"k28_1|rot15|0|1": [
+"bottom",
+"left"
+],
+"k28_1|rot15|0|2": [
+"bottom",
+"left"
+],
+"k28_1|rot15|1|0": [
+"bottom",
+"left"
+],
+"k28_1|rot15|1|1": [
+"bottom",
+"left"
+],
+"k28_1|rot15|1|2": [
+"bottom",
+"left"
+],
+"k28_1|rot15|2|0": [
+"bottom",
+"left"
+],
+"k28_1|rot15|2|1": [
+"bottom",
+"left"
+],
+"k28_1|rot15|2|2": [
+"bottom",
+"left"
+],
+"k15_1|orig|0|0": [
+"left"
+],
+"k15_1|orig|0|1": [
+"left"
+],
+"k15_1|orig|0|2": [
+"left"
+],
+"k15_1|orig|1|0": [
+"left"
+],
+"k15_1|orig|1|1": [
+"left"
+],
+"k15_1|orig|1|2": [
+"left"
+],
+"k15_1|orig|2|0": [
+"left"
+],
+"k15_1|orig|2|1": [
+"left"
+],
+"k15_1|orig|2|2": [
+"left"
+],
+"k15_1|s50|0|0": [
+"left"
+],
+"k15_1|s50|0|1": [
+"left"
+],
+"k15_1|s50|0|2": [
+"left"
+],
+"k15_1|s50|1|0": [
+"left"
+],
+"k15_1|s50|1|1": [
+"left"
+],
+"k15_1|s50|1|2": [
+"left"
+],
+"k15_1|s50|2|0": [
+"left"
+],
+"k15_1|s50|2|1": [
+"left"
+],
+"k15_1|s50|2|2": [
+"left"
+],
+"k15_1|s33|0|0": [
+"left"
+],
+"k15_1|s33|0|1": [
+"left"
+],
+"k15_1|s33|0|2": [
+"left"
+],
+"k15_1|s33|1|0": [
+"left"
+],
+"k15_1|s33|1|1": [
+"left"
+],
+"k15_1|s33|1|2": [
+"left"
+],
+"k15_1|s33|2|0": [
+"left"
+],
+"k15_1|s33|2|1": [
+"left"
+],
+"k15_1|s33|2|2": [
+"left"
+],
+"k15_1|s33blur|0|0": [
+"left"
+],
+"k15_1|s33blur|0|1": [
+"left"
+],
+"k15_1|s33blur|0|2": [
+"left"
+],
+"k15_1|s33blur|1|0": [
+"left"
+],
+"k15_1|s33blur|1|1": [
+"left"
+],
+"k15_1|s33blur|1|2": [
+"left"
+],
+"k15_1|s33blur|2|0": [
+"left"
+],
+"k15_1|s33blur|2|1": [
+"left"
+],
+"k15_1|s33blur|2|2": [
+"left"
+],
+"k15_1|rot15|0|0": [
+"left"
+],
+"k15_1|rot15|0|1": [
+"left"
+],
+"k15_1|rot15|0|2": [
+"left"
+],
+"k15_1|rot15|1|0": [
+"left"
+],
+"k15_1|rot15|1|1": [
+"left"
+],
+"k15_1|rot15|1|2": [
+"left"
+],
+"k15_1|rot15|2|0": [
+"left"
+],
+"k15_1|rot15|2|1": [
+"left"
+],
+"k15_1|rot15|2|2": [
+"left"
+],
+"k26_1|orig|0|0": [
+"left"
+],
+"k26_1|orig|0|1": [
+"left"
+],
+"k26_1|orig|0|2": [
+"left"
+],
+"k26_1|orig|1|0": [
+"left"
+],
+"k26_1|orig|1|1": [
+"left"
+],
+"k26_1|orig|1|2": [
+"left"
+],
+"k26_1|orig|2|0": [
+"left"
+],
+"k26_1|orig|2|1": [
+"left"
+],
+"k26_1|orig|2|2": [
+"left"
+],
+"k26_1|s50|0|0": [
+"left"
+],
+"k26_1|s50|0|1": [
+"left"
+],
+"k26_1|s50|0|2": [
+"left"
+],
+"k26_1|s50|1|0": [
+"left"
+],
+"k26_1|s50|1|1": [
+"left"
+],
+"k26_1|s50|1|2": [
+"left"
+],
+"k26_1|s50|2|0": [
+"left"
+],
+"k26_1|s50|2|1": [
+"left"
+],
+"k26_1|s50|2|2": [
+"left"
+],
+"k26_1|s33|0|0": [
+"left"
+],
+"k26_1|s33|0|1": [
+"left"
+],
+"k26_1|s33|0|2": [
+"left"
+],
+"k26_1|s33|1|0": [
+"left"
+],
+"k26_1|s33|1|1": [
+"left"
+],
+"k26_1|s33|1|2": [
+"left"
+],
+"k26_1|s33|2|0": [
+"left"
+],
+"k26_1|s33|2|1": [
+"left"
+],
+"k26_1|s33|2|2": [
+"left"
+],
+"k26_1|s33blur|0|0": [
+"left"
+],
+"k26_1|s33blur|0|1": [
+"left"
+],
+"k26_1|s33blur|0|2": [
+"left"
+],
+"k26_1|s33blur|1|0": [
+"left"
+],
+"k26_1|s33blur|1|1": [
+"left"
+],
+"k26_1|s33blur|1|2": [
+"left"
+],
+"k26_1|s33blur|2|0": [
+"left"
+],
+"k26_1|s33blur|2|1": [
+"left"
+],
+"k26_1|s33blur|2|2": [
+"left"
+],
+"k26_1|rot15|0|0": [
+"left"
+],
+"k26_1|rot15|0|1": [
+"left"
+],
+"k26_1|rot15|0|2": [
+"left"
+],
+"k26_1|rot15|1|0": [
+"left"
+],
+"k26_1|rot15|1|1": [
+"left"
+],
+"k26_1|rot15|1|2": [
+"left"
+],
+"k26_1|rot15|2|0": [
+"left"
+],
+"k26_1|rot15|2|1": [
+"left"
+],
+"k26_1|rot15|2|2": [
+"left"
+],
+"k12_1|orig|0|0": [
+"bottom",
+"top"
+],
+"k12_1|orig|0|1": [
+"bottom",
+"top"
+],
+"k12_1|orig|0|2": [
+"bottom",
+"top"
+],
+"k12_1|orig|1|0": [
+"bottom",
+"top"
+],
+"k12_1|orig|1|1": [
+"bottom",
+"top"
+],
+"k12_1|orig|1|2": [
+"bottom",
+"top"
+],
+"k12_1|orig|2|0": [
+"bottom",
+"top"
+],
+"k12_1|orig|2|1": [
+"bottom",
+"top"
+],
+"k12_1|orig|2|2": [
+"bottom",
+"top"
+],
+"k12_1|s50|0|0": [
+"bottom",
+"top"
+],
+"k12_1|s50|0|1": [
+"bottom",
+"top"
+],
+"k12_1|s50|0|2": [
+"bottom",
+"top"
+],
+"k12_1|s50|1|0": [
+"bottom",
+"top"
+],
+"k12_1|s50|1|1": [
+"bottom",
+"top"
+],
+"k12_1|s50|1|2": [
+"bottom",
+"top"
+],
+"k12_1|s50|2|0": [
+"bottom",
+"top"
+],
+"k12_1|s50|2|1": [
+"bottom",
+"top"
+],
+"k12_1|s50|2|2": [
+"bottom",
+"top"
+],
+"k12_1|s33|0|0": [
+"bottom",
+"top"
+],
+"k12_1|s33|0|1": [
+"bottom",
+"top"
+],
+"k12_1|s33|0|2": [
+"bottom",
+"top"
+],
+"k12_1|s33|1|0": [
+"bottom",
+"top"
+],
+"k12_1|s33|1|1": [
+"bottom",
+"top"
+],
+"k12_1|s33|1|2": [
+"bottom",
+"top"
+],
+"k12_1|s33|2|0": [
+"bottom",
+"top"
+],
+"k12_1|s33|2|1": [
+"bottom",
+"top"
+],
+"k12_1|s33|2|2": [
+"bottom",
+"top"
+],
+"k12_1|s33blur|0|0": [
+"bottom",
+"top"
+],
+"k12_1|s33blur|0|1": [
+"bottom",
+"top"
+],
+"k12_1|s33blur|0|2": [
+"bottom",
+"top"
+],
+"k12_1|s33blur|1|0": [
+"bottom",
+"top"
+],
+"k12_1|s33blur|1|1": [
+"bottom",
+"top"
+],
+"k12_1|s33blur|1|2": [
+"bottom",
+"top"
+],
+"k12_1|s33blur|2|0": [
+"bottom",
+"top"
+],
+"k12_1|s33blur|2|1": [
+"bottom",
+"top"
+],
+"k12_1|s33blur|2|2": [
+"bottom",
+"top"
+],
+"k12_1|rot15|0|0": [
+"bottom",
+"top"
+],
+"k12_1|rot15|0|1": [
+"bottom",
+"top"
+],
+"k12_1|rot15|0|2": [
+"bottom",
+"top"
+],
+"k12_1|rot15|1|0": [
+"bottom",
+"top"
+],
+"k12_1|rot15|1|1": [
+"bottom",
+"top"
+],
+"k12_1|rot15|1|2": [
+"bottom",
+"top"
+],
+"k12_1|rot15|2|0": [
+"bottom",
+"top"
+],
+"k12_1|rot15|2|1": [
+"bottom",
+"top"
+],
+"k12_1|rot15|2|2": [
+"bottom",
+"top"
+],
+"k16_1|orig|0|0": [
+"bottom",
+"top"
+],
+"k16_1|orig|0|1": [
+"bottom",
+"top"
+],
+"k16_1|orig|0|2": [
+"bottom",
+"top"
+],
+"k16_1|orig|1|0": [
+"bottom",
+"top"
+],
+"k16_1|orig|1|1": [
+"bottom",
+"top"
+],
+"k16_1|orig|1|2": [
+"bottom",
+"top"
+],
+"k16_1|orig|2|0": [
+"bottom",
+"top"
+],
+"k16_1|orig|2|1": [
+"bottom",
+"top"
+],
+"k16_1|orig|2|2": [
+"bottom",
+"top"
+],
+"k16_1|s50|0|0": [
+"bottom",
+"top"
+],
+"k16_1|s50|0|1": [
+"bottom",
+"top"
+],
+"k16_1|s50|0|2": [
+"bottom",
+"top"
+],
+"k16_1|s50|1|0": [
+"bottom",
+"top"
+],
+"k16_1|s50|1|1": [
+"bottom",
+"top"
+],
+"k16_1|s50|1|2": [
+"bottom",
+"top"
+],
+"k16_1|s50|2|0": [
+"bottom",
+"top"
+],
+"k16_1|s50|2|1": [
+"bottom",
+"top"
+],
+"k16_1|s50|2|2": [
+"bottom",
+"top"
+],
+"k16_1|s33|0|0": [
+"bottom",
+"top"
+],
+"k16_1|s33|0|1": [
+"bottom",
+"top"
+],
+"k16_1|s33|0|2": [
+"bottom",
+"top"
+],
+"k16_1|s33|1|0": [
+"bottom",
+"top"
+],
+"k16_1|s33|1|1": [
+"bottom",
+"top"
+],
+"k16_1|s33|1|2": [
+"bottom",
+"top"
+],
+"k16_1|s33|2|0": [
+"bottom",
+"top"
+],
+"k16_1|s33|2|1": [
+"bottom",
+"top"
+],
+"k16_1|s33|2|2": [
+"bottom",
+"top"
+],
+"k16_1|s33blur|0|0": [
+"bottom",
+"top"
+],
+"k16_1|s33blur|0|1": [
+"bottom",
+"top"
+],
+"k16_1|s33blur|0|2": [
+"bottom",
+"top"
+],
+"k16_1|s33blur|1|0": [
+"bottom",
+"top"
+],
+"k16_1|s33blur|1|1": [
+"bottom",
+"top"
+],
+"k16_1|s33blur|1|2": [
+"bottom",
+"top"
+],
+"k16_1|s33blur|2|0": [
+"bottom",
+"top"
+],
+"k16_1|s33blur|2|1": [
+"bottom",
+"top"
+],
+"k16_1|s33blur|2|2": [
+"bottom",
+"top"
+],
+"k16_1|rot15|0|0": [
+"bottom",
+"top"
+],
+"k16_1|rot15|0|1": [
+"bottom",
+"top"
+],
+"k16_1|rot15|0|2": [
+"bottom",
+"top"
+],
+"k16_1|rot15|1|0": [
+"bottom",
+"top"
+],
+"k16_1|rot15|1|1": [
+"bottom",
+"top"
+],
+"k16_1|rot15|1|2": [
+"bottom",
+"top"
+],
+"k16_1|rot15|2|0": [
+"bottom",
+"top"
+],
+"k16_1|rot15|2|1": [
+"bottom",
+"top"
+],
+"k16_1|rot15|2|2": [
+"bottom",
+"top"
+]
+}

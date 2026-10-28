@@ -1,0 +1,102 @@
+{
+ "hands": [
+  {
+   "side": "bottom",
+   "box": [
+    709,
+    166,
+    970,
+    484
+   ],
+   "face_up": true,
+   "conf": 0.98
+  },
+  {
+   "side": "right",
+   "box": [
+    426,
+    686,
+    831,
+    816
+   ],
+   "face_up": true,
+   "conf": 0.96
+  },
+  {
+   "side": "top",
+   "box": [
+    22,
+    307,
+    182,
+    725
+   ],
+   "face_up": true,
+   "conf": 0.95
+  },
+  {
+   "side": "left",
+   "box": [
+    194,
+    181,
+    545,
+    337
+   ],
+   "face_up": true,
+   "conf": 0.96
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    486,
+    349,
+    589,
+    497
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    384,
+    498,
+    566,
+    575
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    294,
+    437,
+    385,
+    571
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "left",
+   "box": [
+    343,
+    334,
+    513,
+    421
+   ],
+   "conf": 0.95
+  }
+ ],
+ "dead_wall": null,
+ "center": {
+  "box": [
+   292,
+   336,
+   591,
+   576
+  ]
+ },
+ "notes": "국이 종료되어 모든 플레이어의 손패가 공개되어(face_up=true) 있고, 산(벽패)이 길게 남아있습니다.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 5948
+}

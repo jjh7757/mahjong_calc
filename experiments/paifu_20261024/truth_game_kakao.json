@@ -1,0 +1,19 @@
+{
+ "image": "C:/Users/jjh7757/Downloads/KakaoTalk_20261023_110025744.jpg",
+ "note": "작혼류 게임 패보 화면(동1국 12순, 네 자리 손패 공개). 사람이 확대해 읽은 정답. 남은 벽패 27(화면 x27)과 장수가 맞는다.",
+ "hands": {
+  "bottom": {"closed": ["3m", "0m", "2p", "3p", "4p", "0p", "5p", "8p", "8p", "8p"], "melds": [["chi", "3s", "4s", "0s"]]},
+  "right": {"closed": ["8m", "9m", "6p", "7p", "7p", "9p", "9p", "3s", "3s", "3s", "6s", "7s", "8s"], "melds": []},
+  "top": {"closed": ["7m", "8m", "9m", "7p", "8p", "9p", "8s", "9s", "5z", "5z", "7s"], "melds": [["pon", "6z", "6z", "6z"]]},
+  "left": {"closed": ["3m", "4m", "4m", "6m", "6m", "5p", "2z"], "melds": [["pon", "1m", "1m", "1m"], ["pon", "5m", "5m", "5m"]]}
+ },
+ "rivers": {
+  "bottom": ["1p", "1p", "4z", "9s", "2z", "2s", "7z", "2m", "5s", "7z", "1s"],
+  "right": ["2z", "1s", "4z", "1p", "5z", "7z", "1z", "1s", "2p", "4s"],
+  "top": ["2z", "4z", "6s", "3p", "7m", "2p", "8m", "1z", "2s", "2m"],
+  "left": ["6s", "9m", "2p", "9p", "2s", "1z", "4z", "2s", "8s", "7p", "6p"]
+ },
+ "dora_indicators": ["2m"],
+ "wall_remaining": 27,
+ "seat_winds": {"top": "1z", "left": "2z", "bottom": "3z", "right": "4z"}
+}

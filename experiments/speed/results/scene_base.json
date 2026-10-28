@@ -1,0 +1,492 @@
+[
+ {
+  "scene": "A",
+  "photo": "k20_1",
+  "wall": 6.44,
+  "calls": {
+   "seat": {
+    "s": 6.37,
+    "in": 2817,
+    "out": 338,
+    "think": 0,
+    "error": null
+   },
+   "sticks": {
+    "s": 6.38,
+    "in": 1439,
+    "out": 145,
+    "think": 217,
+    "error": null
+   },
+   "dora": {
+    "s": 5.8,
+    "in": 1478,
+    "out": 87,
+    "think": 0,
+    "error": null
+   },
+   "last_bottom": {
+    "s": 6.12,
+    "in": 1569,
+    "out": 50,
+    "think": 221,
+    "error": null
+   },
+   "last_right": {
+    "s": 4.6,
+    "in": 1539,
+    "out": 50,
+    "think": 0,
+    "error": null
+   },
+   "last_left": {
+    "s": 4.41,
+    "in": 1539,
+    "out": 50,
+    "think": 0,
+    "error": null
+   }
+  }
+ },
+ {
+  "scene": "A",
+  "photo": "k24_1",
+  "wall": 17.07,
+  "calls": {
+   "seat": {
+    "s": 17.03,
+    "in": 2817,
+    "out": 289,
+    "think": 1357,
+    "error": null
+   },
+   "sticks": {
+    "s": 3.6,
+    "in": 1439,
+    "out": 145,
+    "think": 0,
+    "error": null
+   },
+   "dora": {
+    "s": 4.58,
+    "in": 1478,
+    "out": 58,
+    "think": 0,
+    "error": null
+   },
+   "last_bottom": {
+    "s": 5.27,
+    "in": 1569,
+    "out": 50,
+    "think": 164,
+    "error": null
+   },
+   "last_right": {
+    "s": 3.83,
+    "in": 1539,
+    "out": 50,
+    "think": 0,
+    "error": null
+   },
+   "last_left": {
+    "s": 4.07,
+    "in": 1539,
+    "out": 50,
+    "think": 0,
+    "error": null
+   }
+  }
+ },
+ {
+  "scene": "B",
+  "photo": "k25_1",
+  "wall": 6.42,
+  "calls": {
+   "seat": {
+    "s": 4.9,
+    "in": 2833,
+    "out": 303,
+    "think": 0,
+    "error": null
+   },
+   "sticks": {
+    "s": 6.3,
+    "in": 1438,
+    "out": 145,
+    "think": 272,
+    "error": null
+   },
+   "dora": {
+    "s": 5.42,
+    "in": 1477,
+    "out": 32,
+    "think": 0,
+    "error": null
+   },
+   "last_bottom": {
+    "s": 5.45,
+    "in": 1532,
+    "out": 50,
+    "think": 204,
+    "error": null
+   },
+   "last_top": {
+    "s": 5.47,
+    "in": 1532,
+    "out": 50,
+    "think": 223,
+    "error": null
+   },
+   "last_left": {
+    "s": 4.12,
+    "in": 1544,
+    "out": 50,
+    "think": 0,
+    "error": null
+   }
+  }
+ },
+ {
+  "scene": "B",
+  "photo": "k28_1",
+  "wall": 10.33,
+  "calls": {
+   "seat": {
+    "s": 10.27,
+    "in": 2833,
+    "out": 282,
+    "think": 556,
+    "error": null
+   },
+   "sticks": {
+    "s": 3.5,
+    "in": 1438,
+    "out": 145,
+    "think": 0,
+    "error": null
+   },
+   "dora": {
+    "s": 6.07,
+    "in": 1477,
+    "out": 32,
+    "think": 247,
+    "error": null
+   },
+   "last_bottom": {
+    "s": 3.58,
+    "in": 1532,
+    "out": 50,
+    "think": 0,
+    "error": null
+   },
+   "last_top": {
+    "s": 3.1,
+    "in": 1532,
+    "out": 50,
+    "think": 0,
+    "error": null
+   },
+   "last_left": {
+    "s": 3.33,
+    "in": 1544,
+    "out": 50,
+    "think": 0,
+    "error": null
+   }
+  }
+ },
+ {
+  "scene": "C",
+  "photo": "k15_1",
+  "wall": 5.38,
+  "calls": {
+   "seat": {
+    "s": 4.8,
+    "in": 2900,
+    "out": 322,
+    "think": 0,
+    "error": null
+   },
+   "sticks": {
+    "s": 4.32,
+    "in": 1439,
+    "out": 160,
+    "think": 0,
+    "error": null
+   },
+   "dora": {
+    "s": 5.11,
+    "in": 1478,
+    "out": 15,
+    "think": 0,
+    "error": null
+   },
+   "last_bottom": {
+    "s": 3.64,
+    "in": 1539,
+    "out": 34,
+    "think": 0,
+    "error": null
+   },
+   "last_right": {
+    "s": 3.87,
+    "in": 1539,
+    "out": 143,
+    "think": 0,
+    "error": null
+   },
+   "last_top": {
+    "s": 4.15,
+    "in": 1569,
+    "out": 50,
+    "think": 0,
+    "error": null
+   }
+  }
+ },
+ {
+  "scene": "C",
+  "photo": "k26_1",
+  "wall": 14.01,
+  "calls": {
+   "seat": {
+    "s": 4.82,
+    "in": 2900,
+    "out": 322,
+    "think": 0,
+    "error": null
+   },
+   "sticks": {
+    "s": 3.94,
+    "in": 1439,
+    "out": 145,
+    "think": 0,
+    "error": null
+   },
+   "dora": {
+    "s": 8.2,
+    "in": 1478,
+    "out": 8,
+    "think": 535,
+    "error": null
+   },
+   "last_bottom": {
+    "s": 4.78,
+    "in": 1539,
+    "out": 50,
+    "think": 200,
+    "error": null
+   },
+   "last_right": {
+    "s": 13.65,
+    "in": 1539,
+    "out": 50,
+    "think": 1268,
+    "error": null
+   },
+   "last_top": {
+    "s": 5.51,
+    "in": 1569,
+    "out": 50,
+    "think": 303,
+    "error": null
+   }
+  }
+ },
+ {
+  "scene": "D",
+  "photo": "k12_1",
+  "wall": 14.55,
+  "calls": {
+   "seat": {
+    "s": 14.49,
+    "in": 2839,
+    "out": 282,
+    "think": 1187,
+    "error": null
+   },
+   "sticks": {
+    "s": 4.65,
+    "in": 1435,
+    "out": 145,
+    "think": 156,
+    "error": null
+   },
+   "dora": {
+    "s": 8.16,
+    "in": 1474,
+    "out": 93,
+    "think": 278,
+    "error": null
+   },
+   "last_right": {
+    "s": 3.65,
+    "in": 1547,
+    "out": 50,
+    "think": 0,
+    "error": null
+   },
+   "last_top": {
+    "s": 3.49,
+    "in": 1551,
+    "out": 50,
+    "think": 0,
+    "error": null
+   },
+   "last_left": {
+    "s": 4.55,
+    "in": 1547,
+    "out": 50,
+    "think": 0,
+    "error": null
+   }
+  }
+ },
+ {
+  "scene": "D",
+  "photo": "k16_1",
+  "wall": 34.87,
+  "calls": {
+   "seat": {
+    "s": 4.76,
+    "in": 2839,
+    "out": 282,
+    "think": 0,
+    "error": null
+   },
+   "sticks": {
+    "s": 4.93,
+    "in": 1435,
+    "out": 145,
+    "think": 135,
+    "error": null
+   },
+   "dora": {
+    "s": 5.09,
+    "in": 1474,
+    "out": 44,
+    "think": 0,
+    "error": null
+   },
+   "last_right": {
+    "s": 34.57,
+    "in": 1547,
+    "out": 67,
+    "think": 3569,
+    "error": null
+   },
+   "last_top": {
+    "s": 3.73,
+    "in": 1551,
+    "out": 50,
+    "think": 0,
+    "error": null
+   },
+   "last_left": {
+    "s": 3.85,
+    "in": 1547,
+    "out": 34,
+    "think": 0,
+    "error": null
+   }
+  }
+ },
+ {
+  "scene": "E",
+  "photo": "k00_1",
+  "wall": 6.02,
+  "calls": {
+   "seat": {
+    "s": 5.95,
+    "in": 2859,
+    "out": 340,
+    "think": 0,
+    "error": null
+   },
+   "sticks": {
+    "s": 5.61,
+    "in": 1438,
+    "out": 71,
+    "think": 259,
+    "error": null
+   },
+   "dora": {
+    "s": 3.56,
+    "in": 1477,
+    "out": 15,
+    "think": 0,
+    "error": null
+   },
+   "last_bottom": {
+    "s": 4.33,
+    "in": 1532,
+    "out": 50,
+    "think": 0,
+    "error": null
+   },
+   "last_right": {
+    "s": 3.7,
+    "in": 1544,
+    "out": 50,
+    "think": 0,
+    "error": null
+   },
+   "last_top": {
+    "s": 5.46,
+    "in": 1532,
+    "out": 50,
+    "think": 229,
+    "error": null
+   }
+  }
+ },
+ {
+  "scene": "E",
+  "photo": "k04_1",
+  "wall": 40.65,
+  "calls": {
+   "seat": {
+    "s": 40.57,
+    "in": 2859,
+    "out": 283,
+    "think": 3765,
+    "error": null
+   },
+   "sticks": {
+    "s": 2.94,
+    "in": 1438,
+    "out": 145,
+    "think": 0,
+    "error": null
+   },
+   "dora": {
+    "s": 3.15,
+    "in": 1477,
+    "out": 8,
+    "think": 0,
+    "error": null
+   },
+   "last_bottom": {
+    "s": 4.57,
+    "in": 1532,
+    "out": 34,
+    "think": 183,
+    "error": null
+   },
+   "last_right": {
+    "s": 4.76,
+    "in": 1544,
+    "out": 50,
+    "think": 178,
+    "error": null
+   },
+   "last_top": {
+    "s": 3.29,
+    "in": 1532,
+    "out": 50,
+    "think": 0,
+    "error": null
+   }
+  }
+ }
+]

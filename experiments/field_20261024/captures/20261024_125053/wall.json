@@ -1,0 +1,50 @@
+{
+ "dora_indicators": [
+  {
+   "tile": "9s",
+   "conf": 0.99
+  },
+  {
+   "tile": "5s",
+   "conf": 0.99
+  }
+ ],
+ "ura_dora_indicators": [],
+ "riichi": {
+  "bottom": false,
+  "right": false,
+  "top": false,
+  "left": false
+ },
+ "riichi_conf": {
+  "bottom": 0.5,
+  "right": 0.5,
+  "top": 0.5,
+  "left": 0.5
+ },
+ "last_discards": {
+  "bottom": null,
+  "right": null,
+  "top": null,
+  "left": null
+ },
+ "last_discards_conf": {
+  "bottom": 0.0,
+  "right": 0.0,
+  "top": 0.0,
+  "left": 0.0
+ },
+ "rivers": {
+  "bottom": [],
+  "right": [],
+  "top": [],
+  "left": []
+ },
+ "notes": "이미지에 도라 표시패 2장(9s, 5s)만 크롭되어 있어 강이나 다른 정보는 확인할 수 없습니다.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 3883,
+ "usage": {
+  "input_tokens": 2061,
+  "output_tokens": 262
+ }
+}

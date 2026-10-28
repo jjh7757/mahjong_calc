@@ -1,0 +1,301 @@
+python-dotenv could not parse statement starting at line 21
+python-dotenv could not parse statement starting at line 25
+python-dotenv could not parse statement starting at line 27
+35_zoom3u  정답 15/30  {'A': '2/6', 'B': '1/6', 'C': '6/6', 'D': '6/6', 'E': '0/6'}  시간 중앙 4.6s 최대 9.6s  입력 9497 출력 317 생각 0
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 9s 7s 8s | ['8s 8s 8s 8s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 0s 8s | ['4s 4s 4s 4s']
+   틀림 B k25_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 0s 6s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 0s 4s 7z 7z | []
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 8s 7s 2s | ['8s 8s 8s 8s']
+   틀림 B k25_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 0s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 0s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 8s 7s 8s | ['8s 8s 8s 8s']
+   틀림 B k25_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 0s 4s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 0s 8s 7z 7z | []
+35_zoom3u_ref 정답 16/30  {'A': '0/6', 'B': '4/6', 'C': '6/6', 'D': '6/6', 'E': '0/6'}  시간 중앙 4.6s 최대 6.8s  입력 10654 출력 328 생각 0
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 9s 7s 8s | ['6s 6s 6s 6s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['6s 6s 6s 6s']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 0s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+35flash    정답 10/30  {'A': '0/6', 'B': '0/6', 'C': '4/6', 'D': '6/6', 'E': '0/6'}  시간 중앙 3.5s 최대 4.8s  입력 2850 출력 296 생각 0
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 6s 6s 8s | ['6s 6s 6s 6s']
+   틀림 A k24_1: 3p 3p 4p 4p 4m 5m 6m 6s 0s 8s | ['8s 8s 8s 8s']
+   틀림 B k25_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | []
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 C k26_1: 1z 1z 1z 1m 2m 3m 4m 0m 6m 7m 8m 9m 2z | []
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 6s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 4p 0p 4m 5m 6m 6s 6s 8s | ['6s 6s 6s 6s']
+   틀림 A k24_1: 3p 3p 4p 4p 4m 5m 6m 6s 0s 8s | ['8s 8s 8s 8s']
+   틀림 B k25_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | []
+   틀림 B k28_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 4s 6s 6s 7z 7z | []
+   틀림 A k20_1: 3p 3p 4p 0p 4m 5m 6m 6s 0s 8s | ['6s 6s 6s 6s']
+   틀림 A k24_1: 3p 3p 4p 4p 4m 5m 6m 6s 0s 8s | ['8s 8s 8s 8s']
+   틀림 B k25_1: 7z 1m 1m 1m 8s 8s 8s 6p 6p 6p | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 C k15_1: 1z 1z 1z 1m 2m 3m 4m 0m 6m 7m 8m 9m 2z | []
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 0s 4s 7z 7z | []
+argon      정답 0/30  {'A': '0/6', 'B': '0/6', 'C': '0/6', 'D': '0/6', 'E': '0/6'}  시간 중앙 0.0s 최대 0.0s  입력 0 출력 0 생각 0  오류 30
+   오류: A k20_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: A k24_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: B k25_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: B k28_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: C k15_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: C k26_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: D k12_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: D k16_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: E k00_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: E k04_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: A k20_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: A k24_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: B k25_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: B k28_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: C k15_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: C k26_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: D k12_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: D k16_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: E k00_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: E k04_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: A k20_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: A k24_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: B k25_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: B k28_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: C k15_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: C k26_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: D k12_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: D k16_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: E k00_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+   오류: E k04_1 ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Request rejected in accordance with our terms of use and policies.', 'status':
+b256       정답 12/30  {'A': '0/6', 'B': '0/6', 'C': '6/6', 'D': '6/6', 'E': '0/6'}  시간 중앙 5.5s 최대 46.2s  입력 2850 출력 297 생각 707
+   틀림 A k20_1: 3p 3p 4p 4p 4m 5m 6m 9s 9s 8s | ['4s 4s 4s 4s']
+   틀림 A k24_1: 3p 3p 4p 4p 4m 5m 6m 6s 0s 8s | ['4s 4s 4s 4s']
+   틀림 B k25_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 4p 4p 4m 5m 6m 6s 0s 8s | ['4s 4s 4s 4s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 0s 8s | ['4s 4s 4s 4s']
+   틀림 B k25_1:  | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 4p 4p 4m 5m 6m 6s 0s 8s | ['4s 4s 4s 4s']
+   틀림 A k24_1: 3p 3p 4p 4p 4m 5m 6m 6s 0s 8s | ['4s 4s 4s 4s']
+   틀림 B k25_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 3s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 6s 8s 7z 7z | []
+base       정답 30/60  {'A': '2/12', 'B': '3/12', 'C': '12/12', 'D': '12/12', 'E': '1/12'}  시간 중앙 6.8s 최대 47.0s  입력 2850 출력 301 생각 612
+   틀림 A k20_1: 3p 3p 4p 4p 4m 5m 6m 6s 0s 8s | ['4s 4s 4s 4s']
+   틀림 B k25_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 4p 4p 4m 5m 6m 9s 9s 8s | ['4s 4s 4s 4s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 5s 8s | ['4s 4s 4s 4s']
+   틀림 B k25_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 6s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 4p 4p 4m 5m 6m 9s 9s 8s | ['4s 4s 4s 4s']
+   틀림 A k24_1: 3p 3p 4p 4p 4m 5m 6m 6s 0s 8s | ['8s 8s 8s 8s']
+   틀림 B k25_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 8p 8p 8p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 6s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 4p 4p 4m 5m 6m 6s 0s 8s | ['4s 4s 4s 4s']
+   틀림 B k28_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 4p 4p 4m 5m 6m 9s 7s 8s | ['4s 4s 4s 4s']
+   틀림 A k24_1: 3p 3p 4p 4p 4m 5m 6m 6s 0s 8s | ['4s 4s 4s 4s']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 9s 9s 8s | ['4s 4s 4s 4s']
+   틀림 A k24_1: 3p 3p 4p 4p 4m 5m 6m 6s 7s 8s | ['8s 8s 8s 8s']
+   틀림 B k25_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 9s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 6s 8s 7z 7z | []
+cap800     정답 13/30  {'A': '0/6', 'B': '1/6', 'C': '6/6', 'D': '6/6', 'E': '0/6'}  시간 중앙 4.9s 최대 11.8s  입력 2854 출력 308 생각 0  오류 7
+   틀림 A k20_1: 3p 3p 4p 4p 4m 5m 6m 9s 9s 8s | ['4s 4s 4s 4s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 0s 8s | ['4s 4s 4s 4s']
+   오류: B k25_1 JSONDecodeError: Expecting value: line 4 column 1 (char 34)
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 4p 4p 4m 5m 6m 9s 9s 8s | ['4s 4s 4s 4s']
+   오류: A k24_1 JSONDecodeError: Unterminated string starting at: line 18 column 23 (char 504)
+   오류: B k25_1 JSONDecodeError: Unterminated string starting at: line 4 column 6 (char 39)
+   오류: B k28_1 JSONDecodeError: Unterminated string starting at: line 4 column 6 (char 39)
+   오류: E k00_1 JSONDecodeError: Expecting value: line 4 column 13 (char 46)
+   오류: E k04_1 JSONDecodeError: Unterminated string starting at: line 4 column 14 (char 47)
+   오류: A k20_1 JSONDecodeError: Unterminated string starting at: line 4 column 14 (char 47)
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 0s 8s | ['4s 4s 4s 4s']
+   틀림 B k25_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 0s 8s 7z 7z | []
+er2        정답 15/30  {'A': '0/6', 'B': '6/6', 'C': '3/6', 'D': '6/6', 'E': '0/6'}  시간 중앙 13.6s 최대 50.4s  입력 2851 출력 318 생각 3292  오류 1
+   오류: A k20_1 RuntimeError: Cannot send a request, as the client has been closed.
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 9s 9s 9s 8s | ['6s 6s 6s 6s']
+   틀림 C k15_1:  | []
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 8s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 9s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 9s 8s 2s 2s | ['8s 8s 8s 8s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 6s 8s 8s | ['8s 8s 8s 8s']
+   틀림 C k15_1:  | []
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 9s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 8s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 4p 4p 4m 5m 6m 9s 9s 8s | ['8s 8s 8s 8s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 6s 6s 8s | ['8s 8s 8s 8s']
+   틀림 C k26_1:  | []
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 3s 4s 7z 7z | ['7m 8p 8p']
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 8s 8s 7z 7z | []
+lite       정답 3/30  {'A': '0/6', 'B': '0/6', 'C': '1/6', 'D': '2/6', 'E': '0/6'}  시간 중앙 2.5s 최대 4.0s  입력 2850 출력 358 생각 0
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 8s 7s 8s | ['8s 8s 8s 8s']
+   틀림 A k24_1: 3p 2p 5p 5p 4m 5m 6m 3s 3s 3s | ['2s 2s 2s 2s']
+   틀림 B k25_1: 7z 1m 1m 1m 1s 1s 1s | ['5p 5p 5p']
+   틀림 B k28_1: 7z 1m 1m 1m 2s 2s 2s 8p 8p 8p | ['6z 6z 6z']
+   틀림 C k15_1: 1z 1z 1z 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z | ['7m 7m 7m']
+   틀림 C k26_1: 1z 1z 1z 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z | ['7m 7m 7m']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 5s 5s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 2s 2s 7z 7z | []
+   틀림 A k20_1: 2p 2p 5p 5p 4m 5m 6m 7s 7s 7s 7s | ['8s 8s 8s 8s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 3s 3s 3s | ['8s 8s 8s 8s']
+   틀림 B k25_1: 7z 1m 1m 1m 1p 1p 1p 8p 8p 8p | []
+   틀림 B k28_1: 7z 1m 1m 1m 2s 2s 2s 8p 8p 8p | []
+   틀림 C k26_1: 1z 1z 1z 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z | ['7m 7m 7m']
+   틀림 D k12_1: 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z | ['6m 7m 8m']
+   틀림 D k16_1: 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z | ['6m 7m 8m']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 3s 3s 3s 7z 7z | ['5p 5p 5p']
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 2s 5s 5s 7z 7z | ['2p 2p 7m']
+   틀림 A k20_1: 2p 2p 5p 5p 4m 5m 6m 8s 8s 8s | ['8s 8s 8s 8s']
+   틀림 A k24_1: 3p 2p 8p 8p 4m 5m 6m 3s 3s 3s | ['3s 3s 3s 3s']
+   틀림 B k25_1: 7z 1m 1m 1m 3p 3p 3p | ['8p 8p 8p']
+   틀림 B k28_1: 7z 1m 1m 1m 3s 3s 3s 8p 8p 8p | ['6z 6z 6z']
+   틀림 C k15_1: 1z 1z 1z 1m 2m 3m 4m 5m 6m 7m 8m 2z | ['7m 7m 7m']
+   틀림 C k26_1: 1z 1z 1z 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z 7m | ['7s 7s 7s']
+   틀림 D k12_1: 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z | ['6m 7m 8m']
+   틀림 D k16_1: 1m 2m 3m 4m 5m 6m 7m 8m 9m 2z | ['6m 7m 8m']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 3s 3s 3s 5s 5s 7z 7z | ['5p 5p 5p 7m']
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 2s 7z 7z 7m | ['2p 2p 2p']
+minimal    정답 0/30  {'A': '0/6', 'B': '0/6', 'C': '0/6', 'D': '0/6', 'E': '0/6'}  시간 중앙 0.0s 최대 0.0s  입력 0 출력 0 생각 0  오류 30
+   오류: A k20_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: A k24_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: B k25_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: B k28_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: C k15_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: C k26_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: D k12_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: D k16_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: E k00_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: E k04_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: A k20_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: A k24_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: B k25_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: B k28_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: C k15_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: C k26_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: D k12_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: D k16_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: E k00_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: E k04_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: A k20_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: A k24_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: B k25_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: B k28_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: C k15_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: C k26_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: D k12_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: D k16_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: E k00_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+   오류: E k04_1 ClientError: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'Thinking level MINIMAL is not supported for this model. Please retry with other
+off        정답 15/30  {'A': '0/6', 'B': '3/6', 'C': '6/6', 'D': '6/6', 'E': '0/6'}  시간 중앙 5.9s 최대 64.2s  입력 2850 출력 295 생각 888
+   틀림 A k20_1: 3p 3p 4p 4p 4m 5m 6m 6s 7s 8s | ['4s 4s 4s 4s']
+   틀림 A k24_1: 3p 3p 4p 4p 4m 5m 6m 6s 0s 8s | ['4s 4s 4s 4s']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 4p 4p 4m 5m 6m 9s 0s 8s | ['4s 4s 4s 4s']
+   틀림 A k24_1: 3p 3p 4p 4p 4m 5m 6m 6s 0s 8s | ['4s 4s 4s 4s']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 4p 4p 4m 5m 6m 9s 9s 8s | ['4s 4s 4s 4s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 6s 0s 8s | ['4s 4s 4s 4s']
+   틀림 B k28_1:  | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 6s 8s 7z 7z | []
+pro        정답 10/30  {'A': '2/6', 'B': '0/6', 'C': '2/6', 'D': '6/6', 'E': '0/6'}  시간 중앙 5.2s 최대 8.7s  입력 2851 출력 387 생각 0  오류 1
+   틀림 A k20_1: 3p 4p 5p 5p 4m 5m 6m 6s 6s 8s | ['8s 8s 8s 8s']
+   오류: A k24_1 RuntimeError: Cannot send a request, as the client has been closed.
+   틀림 B k25_1: 7z 1m 1m 1m 2s 2s 2s 3p 3p 3p | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 4s 5s 6s 7p 8p 9p | ['6z 6z 6z']
+   틀림 C k15_1: 1z 1z 1z 1m 2m 3m 4m 0m 6m 7m 8m 9m 2z | []
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 8s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 4s 7z 7z | []
+   틀림 A k24_1: 3p 3p 4p 4p 4m 5m 6m 6s 7s 8s | ['8s 8s 8s 8s']
+   틀림 B k25_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 C k15_1: 1z 1z 1z 1m 2m 3m 4m 0m 6m 7m 8m 9m 2z | []
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 3s 3s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 6s 8s 7z 7z | []
+   틀림 A k20_1: 3p 4p 5p 6p 4m 5m 6m 8s 9s 8s | ['8s 8s 8s 8s']
+   틀림 B k25_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 3s 3s 3s 9p 9p 9p | ['6z 6z 6z']
+   틀림 C k15_1: 1z 1z 1z 1m 2m 3m 4m 0m 6m 7m 8m 9m 2z | []
+   틀림 C k26_1: 1z 1z 1z 1m 2m 3m 4m 0m 6m 7m 8m 9m 2z | []
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 8s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 8s 9s 7z 7z | ['4p 4p 7m']
+ref        정답 18/30  {'A': '2/6', 'B': '1/6', 'C': '6/6', 'D': '6/6', 'E': '3/6'}  시간 중앙 5.9s 최대 38.9s  입력 4007 출력 299 생각 375
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['2s 2s 2s 2s']
+   틀림 B k25_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 B k28_1:  | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 6s 7s 8s | ['2s 2s 2s 2s']
+   틀림 B k25_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 6p 6p 6p | ['6z 6z 6z']
+   틀림 A k20_1: 3p 3p 4p 4p 4m 5m 6m 6s 7s 8s | ['2s 2s 2s 2s']
+   틀림 A k24_1: 3p 3p 4p 4p 4m 5m 6m 6s 7s 8s | ['4s 4s 4s 4s']
+   틀림 B k28_1: 7z 1m 1m 1m 6s 6s 6s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+zoom3      정답 18/30  {'A': '1/6', 'B': '5/6', 'C': '6/6', 'D': '6/6', 'E': '0/6'}  시간 중앙 8.9s 최대 35.8s  입력 6229 출력 298 생각 252
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 9s 9s 8s | ['4s 4s 4s 4s']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 6s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 9s 9s 8s | ['4s 4s 4s 4s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 9s 9s 8s | ['4s 4s 4s 4s']
+   틀림 B k28_1: 7z 1m 1m 1m 8s 8s 8s 9p 9p 9p | ['6z 6z 6z']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 6s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 6s 8s 7z 7z | []
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 9s 7s 8s | ['4s 4s 4s 4s']
+   틀림 A k24_1: 3p 3p 5p 5p 4m 5m 6m 9s 9s 8s | ['4s 4s 4s 4s']
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 3s 8s 7z 7z | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 3s 8s 7z 7z | []
+zoom3u     정답 26/30  {'A': '5/6', 'B': '5/6', 'C': '6/6', 'D': '6/6', 'E': '4/6'}  시간 중앙 6.3s 최대 29.5s  입력 9497 출력 294 생각 221
+   틀림 A k20_1: 3p 3p 5p 5p 4m 5m 6m 9s 9s 8s | ['4s 4s 4s 4s']
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 4s 8s 7z 7z | []
+   틀림 B k25_1:  | []
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 3s 6s 8s 7z 7z | []
+zoom3u_ref 정답 57/60  {'A': '12/12', 'B': '12/12', 'C': '11/12', 'D': '12/12', 'E': '10/12'}  시간 중앙 6.4s 최대 46.0s  입력 10654 출력 305 생각 354
+   틀림 E k04_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []
+   틀림 C k15_1:  | []
+   틀림 E k00_1: 1z 1z 1z 7m 8m 9m 1s 2s 2s 7s 8s 7z 7z | []

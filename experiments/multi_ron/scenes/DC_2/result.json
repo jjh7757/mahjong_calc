@@ -1,0 +1,219 @@
+{
+ "photo": "experiments/multi_ron/photos/DC.jpg",
+ "grid": {
+  "x1": 320,
+  "x2": 760,
+  "y1": 142,
+  "y2": 717
+ },
+ "face_up_candidates": [
+  "bottom",
+  "left"
+ ],
+ "winner_side": "left",
+ "other_winner_sides": [
+  "bottom"
+ ],
+ "pick_loser": null,
+ "pick_flags": [
+  "쯔모로 읽힌 손패가 있어 플레이어 4 만 계산했습니다. 동시 론이면 판독을 고쳐 주세요"
+ ],
+ "others": [],
+ "warnings": [],
+ "merge": {
+  "winner": 3,
+  "is_tsumo": true,
+  "loser": null,
+  "closed": [
+   "1z",
+   "1z",
+   "1z",
+   "1m",
+   "2m",
+   "3m",
+   "4m",
+   "5m",
+   "6m",
+   "7m",
+   "8m",
+   "9m",
+   "2z"
+  ],
+  "win_tile": "2z",
+  "melds": [],
+  "red_count": 0,
+  "hand_valid": false,
+  "uncertain": [],
+  "flags": [
+   "winTileAssumed: 화료패를 따로 찾지 못해 손패 마지막 장으로 봤습니다",
+   "riichiMismatch: 사진에는 리치(횡치)가 보이는데 기록에는 없습니다. 반영할 때 리치봉을 자동으로 넣습니다",
+   "tileCountMismatch: 손패가 14장이어야 하는데 13장 읽혔습니다"
+  ],
+  "riichi": true,
+  "riichi_seats_photo": [
+   3
+  ],
+  "dora_indicators": [
+   "7m",
+   "6s"
+  ],
+  "ura_indicators": []
+ },
+ "flags": [
+  "화료패를 따로 찾지 못해 손패 마지막 장으로 봤습니다",
+  "사진에는 리치(횡치)가 보이는데 기록에는 없습니다. 반영할 때 리치봉을 자동으로 넣습니다",
+  "손패가 14장이어야 하는데 13장 읽혔습니다"
+ ],
+ "total_ms": 9825,
+ "timings_ms": {
+  "shrink": 321,
+  "analyze": 52,
+  "crop": 631,
+  "read": 8816,
+  "pick": 0
+ },
+ "analysis": {
+  "felt_iou": 1.0,
+  "moved": false,
+  "face_up": [
+   "left",
+   "bottom"
+  ],
+  "dora_box": null,
+  "hand_colors": {
+   "bottom": {
+    "back": 0.0,
+    "white": 0.328
+   },
+   "right": {
+    "back": 0.013,
+    "white": 0.173
+   },
+   "top": {
+    "back": 0.032,
+    "white": 0.133
+   },
+   "left": {
+    "back": 0.026,
+    "white": 0.243
+   }
+  },
+  "tile_patterns": {
+   "bottom": 1829,
+   "right": 7,
+   "top": 3,
+   "left": 2112
+  }
+ },
+ "observation": {
+  "players": {
+   "bottom": {
+    "hand": {
+     "face_up": true,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "2z",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": false
+   },
+   "right": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "6p",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": false
+   },
+   "top": {
+    "hand": {
+     "face_up": false,
+     "tiles": [],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": [
+     {
+      "tile": "3z",
+      "sideways": false,
+      "conf": 0.99
+     }
+    ],
+    "riichi_stick": false
+   },
+   "left": {
+    "hand": {
+     "face_up": true,
+     "tiles": [
+      "1z",
+      "1z",
+      "1z",
+      "1m",
+      "2m",
+      "3m",
+      "4m",
+      "5m",
+      "6m",
+      "7m",
+      "8m",
+      "9m",
+      "2z"
+     ],
+     "separate_tile": null
+    },
+    "melds": [],
+    "river": null,
+    "riichi_stick": true
+   }
+  },
+  "dora_indicators": [],
+  "hand_side_indicators": [
+   "7m",
+   "6s"
+  ],
+  "usage": {
+   "dora": {
+    "input_tokens": 1478,
+    "output_tokens": 8
+   },
+   "sticks": {
+    "input_tokens": 1439,
+    "output_tokens": 145
+   },
+   "last3": {
+    "input_tokens": 5809,
+    "output_tokens": 198
+   },
+   "seat_left": {
+    "input_tokens": 32190,
+    "output_tokens": 966
+   },
+   "seat_top": {
+    "input_tokens": 32235,
+    "output_tokens": 478
+   },
+   "seat_bottom": {
+    "input_tokens": 32010,
+    "output_tokens": 846
+   },
+   "seat_right": {
+    "input_tokens": 32079,
+    "output_tokens": 977
+   }
+  }
+ }
+}

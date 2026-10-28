@@ -1,0 +1,115 @@
+{
+ "hands": [
+  {
+   "side": "bottom",
+   "box": [
+    746,
+    107,
+    998,
+    411
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    471,
+    698,
+    867,
+    837
+   ],
+   "face_up": false,
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    104,
+    464,
+    212,
+    644
+   ],
+   "face_up": true,
+   "conf": 0.95
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    507,
+    319,
+    623,
+    479
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    427,
+    481,
+    620,
+    570
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    332,
+    433,
+    427,
+    571
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "left",
+   "box": [
+    359,
+    313,
+    532,
+    411
+   ],
+   "conf": 0.95
+  }
+ ],
+ "melds": [
+  {
+   "side": "top",
+   "box": [
+    33,
+    321,
+    79,
+    420
+   ],
+   "conf": 0.85
+  }
+ ],
+ "dead_wall": {
+  "box": [
+   112,
+   393,
+   163,
+   438
+  ],
+  "conf": 0.88
+ },
+ "center": {
+  "box": [
+   112,
+   310,
+   625,
+   575
+  ]
+ },
+ "notes": "left 플레이어의 손패는 확인되지 않습니다.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 17761,
+ "usage": {
+  "input_tokens": 1638,
+  "output_tokens": 2178
+ }
+}

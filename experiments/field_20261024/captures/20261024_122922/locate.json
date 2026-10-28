@@ -1,0 +1,81 @@
+{
+ "hands": [
+  {
+   "side": "right",
+   "box": [
+    425,
+    691,
+    829,
+    808
+   ],
+   "face_up": true,
+   "conf": 0.98
+  }
+ ],
+ "rivers": [
+  {
+   "side": "bottom",
+   "box": [
+    488,
+    351,
+    589,
+    497
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "right",
+   "box": [
+    384,
+    500,
+    567,
+    575
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "top",
+   "box": [
+    297,
+    439,
+    381,
+    569
+   ],
+   "conf": 0.95
+  },
+  {
+   "side": "left",
+   "box": [
+    346,
+    339,
+    510,
+    420
+   ],
+   "conf": 0.95
+  }
+ ],
+ "dead_wall": {
+  "box": [
+   228,
+   737,
+   296,
+   785
+  ],
+  "conf": 0.9
+ },
+ "center": {
+  "box": [
+   223,
+   333,
+   595,
+   786
+  ]
+ },
+ "notes": "Bottom, left, top 손패는 테이블에 없음/보이지 않으며, right 손패만 앞면으로 놓여 있음. 도라 표시패는 오른쪽 상단 벽패 끝 부근에 놓여 있음.",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 5220,
+ "usage": {
+  "input_tokens": 1521,
+  "output_tokens": 406
+ }
+}

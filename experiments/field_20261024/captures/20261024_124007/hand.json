@@ -1,0 +1,66 @@
+{
+ "tiles": [
+  {
+   "tile": "1s",
+   "conf": 0.99
+  },
+  {
+   "tile": "3s",
+   "conf": 0.99
+  },
+  {
+   "tile": "2s",
+   "conf": 0.98
+  },
+  {
+   "tile": "3s",
+   "conf": 0.99
+  },
+  {
+   "tile": "4s",
+   "conf": 0.99
+  },
+  {
+   "tile": "5p",
+   "conf": 0.99
+  },
+  {
+   "tile": "5p",
+   "conf": 0.99
+  },
+  {
+   "tile": "7z",
+   "conf": 0.99
+  },
+  {
+   "tile": "7z",
+   "conf": 0.99
+  },
+  {
+   "tile": "7z",
+   "conf": 0.99
+  },
+  {
+   "tile": "5z",
+   "conf": 0.99
+  },
+  {
+   "tile": "5z",
+   "conf": 0.99
+  },
+  {
+   "tile": "5z",
+   "conf": 0.99
+  }
+ ],
+ "count": 13,
+ "melds": [],
+ "win_tile": null,
+ "notes": "멘젠 13장 손패 (백 3장 포함)",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 4067,
+ "usage": {
+  "input_tokens": 1614,
+  "output_tokens": 283
+ }
+}

@@ -1,0 +1,38 @@
+Success	k12_1.jpg
+k15_1.jpg
+k16_1.jpg
+k25_1.jpg
+k26_1.jpg
+k28_1.jpg
+k12_1 #0 decode 0.08 white 0.09 mosaic 0.93 (OK) tiled 2.64 (OK)
+k15_1 #0 decode 0.04 white 0.10 mosaic 0.89 (OK) tiled 1.86 (OK)
+k16_1 #0 decode 0.02 white 0.08 mosaic 0.90 (OK) tiled 2.71 (OK)
+k25_1 #0 decode 0.02 white 0.07 mosaic 0.90 (실패→통째) tiled 1.81 (X)
+k26_1 #0 decode 0.04 white 0.09 mosaic 1.15 (OK) tiled 1.78 (OK)
+k28_1 #0 decode 0.02 white 0.08 mosaic 0.90 (실패→통째) tiled 1.77 (X)
+k12_1 #1 decode 0.02 white 0.08 mosaic 0.92 (OK) tiled 2.69 (OK)
+k15_1 #1 decode 0.03 white 0.09 mosaic 0.89 (OK) tiled 1.78 (OK)
+k16_1 #1 decode 0.03 white 0.08 mosaic 0.89 (OK) tiled 2.63 (OK)
+k25_1 #1 decode 0.02 white 0.07 mosaic 0.89 (실패→통째) tiled 1.77 (X)
+k26_1 #1 decode 0.04 white 0.10 mosaic 0.90 (OK) tiled 1.79 (OK)
+k28_1 #1 decode 0.03 white 0.08 mosaic 0.94 (실패→통째) tiled 1.78 (X)
+k12_1 #2 decode 0.02 white 0.08 mosaic 0.89 (OK) tiled 2.65 (OK)
+k15_1 #2 decode 0.03 white 0.09 mosaic 1.02 (OK) tiled 2.14 (OK)
+k16_1 #2 decode 0.03 white 0.09 mosaic 0.95 (OK) tiled 2.86 (OK)
+k25_1 #2 decode 0.02 white 0.07 mosaic 0.91 (실패→통째) tiled 1.82 (X)
+k26_1 #2 decode 0.04 white 0.10 mosaic 0.94 (OK) tiled 1.79 (OK)
+k28_1 #2 decode 0.03 white 0.07 mosaic 0.89 (실패→통째) tiled 1.77 (X)
+k12_1 #3 decode 0.02 white 0.08 mosaic 0.89 (OK) tiled 2.66 (OK)
+k15_1 #3 decode 0.03 white 0.09 mosaic 0.90 (OK) tiled 1.79 (OK)
+k16_1 #3 decode 0.03 white 0.08 mosaic 0.89 (OK) tiled 2.72 (OK)
+k25_1 #3 decode 0.02 white 0.07 mosaic 0.89 (실패→통째) tiled 1.76 (X)
+k26_1 #3 decode 0.04 white 0.10 mosaic 0.90 (OK) tiled 1.85 (OK)
+k28_1 #3 decode 0.03 white 0.08 mosaic 0.88 (실패→통째) tiled 2.00 (X)
+k12_1 #4 decode 0.02 white 0.08 mosaic 0.90 (OK) tiled 2.64 (OK)
+k15_1 #4 decode 0.03 white 0.09 mosaic 0.92 (OK) tiled 1.80 (OK)
+k16_1 #4 decode 0.03 white 0.09 mosaic 0.89 (OK) tiled 2.64 (OK)
+k25_1 #4 decode 0.02 white 0.07 mosaic 0.88 (실패→통째) tiled 1.76 (X)
+k26_1 #4 decode 0.04 white 0.10 mosaic 0.89 (OK) tiled 1.78 (OK)
+k28_1 #4 decode 0.03 white 0.07 mosaic 0.89 (실패→통째) tiled 1.77 (X)
+RESULT {"machine": "aarch64", "load_s": 0.92, "maxrss_mb": 291, "decode_med": 0.027, "white_med": 0.082, "mosaic_med": 0.897, "tiled_med": 1.811, "decode_max": 0.083, "white_max": 0.1, "mosaic_max": 1.153, "tiled_max": 2.861, "mosaic_CD_med": 0.899, "mosaic_B_med": 0.889, "mosaic_ok": 20, "tiled_ok": 20, "n": 30}
+cleaned

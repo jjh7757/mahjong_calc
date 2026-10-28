@@ -1,0 +1,88 @@
+[
+  {
+    "image": "hand_bottom2.jpg",
+    "model": "gemini-pro-latest",
+    "tiles": [
+      "2s",
+      "3s",
+      "4s",
+      "6s",
+      "7s",
+      "8s",
+      "9s",
+      "4p",
+      "5p",
+      "7m",
+      "7m",
+      "0m",
+      "4m",
+      "3m"
+    ],
+    "confidence": [
+      0.99,
+      0.99,
+      0.99,
+      0.95,
+      0.95,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99,
+      0.99
+    ],
+    "notes": "사진이 약간 흐릿하지만 전체적으로 패를 식별하는 데 큰 문제는 없습니다.",
+    "latency_s": 90.34155789998476,
+    "usage": {
+      "input_tokens": 1414,
+      "output_tokens": 13521,
+      "cost_usd": null
+    },
+    "served_by": "gemini-pro-latest"
+  },
+  {
+    "image": "hand_bottom2.jpg",
+    "model": "gemini-3.8-flash",
+    "tiles": [
+      "2s",
+      "3s",
+      "4s",
+      "7s",
+      "8s",
+      "9s",
+      "4p",
+      "5p",
+      "7m",
+      "7m",
+      "0m",
+      "4m",
+      "3m"
+    ],
+    "confidence": [
+      0.99,
+      0.99,
+      0.99,
+      0.98,
+      0.99,
+      0.99,
+      0.99,
+      0.98,
+      0.99,
+      0.99,
+      0.98,
+      0.99,
+      0.99
+    ],
+    "notes": "",
+    "latency_s": 15.103185499989195,
+    "usage": {
+      "input_tokens": 1414,
+      "output_tokens": 1541,
+      "cost_usd": null
+    },
+    "served_by": "gemini-3.8-flash"
+  }
+]

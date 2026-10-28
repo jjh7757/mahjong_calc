@@ -1,0 +1,59 @@
+{
+ "tiles": [
+  {
+   "tile": "1s",
+   "conf": 0.99
+  },
+  {
+   "tile": "6s",
+   "conf": 0.99
+  },
+  {
+   "tile": "6s",
+   "conf": 0.99
+  },
+  {
+   "tile": "6s",
+   "conf": 0.99
+  },
+  {
+   "tile": "5p",
+   "conf": 0.99
+  },
+  {
+   "tile": "5p",
+   "conf": 0.99
+  },
+  {
+   "tile": "7z",
+   "conf": 0.99
+  },
+  {
+   "tile": "7z",
+   "conf": 0.99
+  },
+  {
+   "tile": "7z",
+   "conf": 0.99
+  }
+ ],
+ "count": 9,
+ "melds": [
+  {
+   "type": "pon",
+   "tiles": [
+    "6z",
+    "6z",
+    "6z"
+   ],
+   "conf": 0.98
+  }
+ ],
+ "win_tile": {
+  "tile": "5z",
+  "conf": 0.99
+ },
+ "notes": "",
+ "model": "gemini-3.8-flash",
+ "latency_ms": 4050
+}

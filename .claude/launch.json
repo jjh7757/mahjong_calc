@@ -1,0 +1,66 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--directory",
+        "build/web"
+      ],
+      "port": 8765
+    },
+    {
+      "name": "web-alt",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8771",
+        "--directory",
+        "build/web"
+      ],
+      "port": 8771,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py"
+      ],
+      "port": 8030
+    },
+    {
+      "name": "photos",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8040",
+        "--bind",
+        "127.0.0.1",
+        "-d",
+        "experiments/field_20261024/kakao_photos"
+      ],
+      "port": 8040
+    },
+    {
+      "name": "captures",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8041",
+        "--bind",
+        "127.0.0.1",
+        "-d",
+        "experiments/field_20261024/captures"
+      ],
+      "port": 8041
+    }
+  ]
+}
