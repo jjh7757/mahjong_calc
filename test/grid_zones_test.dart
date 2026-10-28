@@ -9,6 +9,7 @@ import 'package:mahjong_calc/services/recognizer_client.dart';
 import 'package:mahjong_calc/table/fixed_layout.dart';
 import 'package:mahjong_calc/table/grid_zones.dart';
 import 'package:mahjong_calc/table/observation.dart';
+import 'package:mahjong_calc/table/river_tracker.dart';
 import 'package:mahjong_calc/table/table_layout.dart';
 import 'package:mahjong_calc/table/table_reader.dart';
 import 'package:mahjong_calc/table/table_reading.dart';
@@ -172,6 +173,7 @@ void main() {
       Map<String, Object>? agreement,
       List<String>? handonlyTiles,
       bool handonlySeparate = true,
+      String trackedLastTile = '4p',
     }) => MockClient((r) async {
       // 강 끝(/v2/last3)은 한 요청에 사진 여러 장이다. 사진마다 이름·그림을 남긴다.
       final files = RegExp(r'filename="([^"]+)\.jpg"').allMatches(latin1.decode(r.bodyBytes)).toList();
@@ -220,6 +222,11 @@ void main() {
             {'tile': '9s', 'conf': 0.9},
           ],
         }),
+        // 추적이 본 마지막 버림패 한 장만 잘라 읽는 호출.
+        '/v2/last' => _json({
+          'last_tile': {'tile': trackedLastTile, 'conf': 0.9},
+          'tile_count': 1,
+        }),
         '/v2/last3' => _json({
           'rivers': [
             for (final m in files)
@@ -244,6 +251,69 @@ void main() {
         }),
         _ => http.Response('nope', 404),
       };
+    });
+
+    test('추적한 마지막 버림패: 그 패만 따로 잘라 읽어 강 끝 판독이 빈 자리를 채우고, 자리를 방총자 힌트로 넘긴다', () async {
+      final names = <String>[];
+      final images = <String, img.Image>{};
+      final client = RecognizerClient(baseUrl: 'https://x.test', apiKey: 'k', httpClient: server(names, images));
+      // 왼쪽 강 끝은 /v2/last3 가 "강 없음" 으로 답하는 자리. 추적이 그 자리의 마지막 버림 위치를 안다고 치자.
+      final discard = Discard(
+        side: Side.left,
+        box: const NormBox(480, 300, 520, 330),
+        seq: 3,
+        at: DateTime(2026, 10, 28),
+        tiles: 1,
+      );
+      final reading = await TableReader(client).readGrid(table(), grid, trackedDiscard: discard, trackedRiichi: {Side.left});
+      expect(names, contains('last_tracked'));
+      // 패 한 장 크기 상자(여백 60%)만 잘라 보낸다 — 강 끝 크롭(수백 px)보다 훨씬 작다.
+      expect(images['last_tracked']!.width, lessThan(150));
+      expect(images['last_tracked']!.height, lessThan(150));
+      expect(reading.center!.lastDiscardAt(Side.left)?.code, '4p');
+      expect(reading.center!.lastDiscardAt(Side.right)?.code, '4p'); // 촬영 판독 그대로
+      expect(reading.trackedDiscardSide, Side.left);
+      // 리치봉: 촬영 판독(위)에 추적(왼쪽)을 더한다.
+      expect(reading.center!.riichiAt(Side.left), isTrue);
+      expect(reading.center!.riichiAt(Side.top), isTrue);
+      expect(reading.center!.riichiAt(Side.right), isFalse);
+      expect(reading.warnings.where((w) => w.contains('다릅니다')), isEmpty);
+    });
+
+    test('추적한 마지막 버림패가 촬영 판독과 다르면 촬영 판독을 쓰고 경고를 남긴다', () async {
+      final names = <String>[];
+      final images = <String, img.Image>{};
+      final client = RecognizerClient(
+        baseUrl: 'https://x.test',
+        apiKey: 'k',
+        httpClient: server(names, images, trackedLastTile: '6s'),
+      );
+      final discard = Discard(
+        side: Side.right,
+        box: const NormBox(480, 680, 520, 710),
+        seq: 1,
+        at: DateTime(2026, 10, 28),
+        tiles: 1,
+      );
+      final reading = await TableReader(client).readGrid(table(), grid, trackedDiscard: discard);
+      expect(reading.center!.lastDiscardAt(Side.right)?.code, '4p');
+      expect(reading.warnings.join(), contains('6s'));
+      expect(reading.warnings.join(), contains('다릅니다'));
+    });
+
+    test('추적한 버림이 화료자 자리면 따로 읽지 않는다', () async {
+      final names = <String>[];
+      final images = <String, img.Image>{};
+      final client = RecognizerClient(baseUrl: 'https://x.test', apiKey: 'k', httpClient: server(names, images));
+      final discard = Discard(
+        side: Side.bottom,
+        box: const NormBox(700, 480, 740, 510),
+        seq: 1,
+        at: DateTime(2026, 10, 28),
+        tiles: 1,
+      );
+      await TableReader(client).readGrid(table(), grid, trackedDiscard: discard);
+      expect(names, isNot(contains('last_tracked')));
     });
 
     test('픽셀로 화료자를 정하면 그 자리 하나만 읽고, 강은 마지막 패만·리치는 리치봉만 본다', () async {

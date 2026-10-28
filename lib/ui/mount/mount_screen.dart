@@ -27,6 +27,8 @@ import '../../table/seat_map.dart';
 import '../../table/shot_image.dart';
 import '../../table/table_layout.dart';
 import '../../table/table_reader.dart';
+import '../../table/river_change.dart';
+import '../../table/river_tracker.dart';
 import '../../table/tracker.dart';
 import '../game/game_screen.dart';
 import '../game/record_edit.dart';
@@ -144,6 +146,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// 판 상태 추적(울기 미리 읽기, docs/state_tracking_design.md). 격자 + 카메라 헤드일 때만 돈다.
   /// 배경 미리보기 프레임마다 모서리 통계를 내고, 변화가 확정되면 모서리만 잘라 /v2/corner 로 읽어 둔다.
   MeldTracker? _tracker;
+
+  /// 2단계: 강(마지막 버림패 위치 → 방총자·론 패 힌트)·리치봉(띠 변화 → /v2/sticks 두 번 일치) 추적. 같은 프레임을 쓴다.
+  RiverTracker? _riverTracker;
   bool _trackingEnabled = false;
   static const String trackingPref = 'mount.tracking';
 
@@ -170,14 +175,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     CaptureLog.isEnabled().then((v) {
       if (mounted) setState(() => _logEnabled = v);
     });
-    SharedPreferences.getInstance().then((p) {
-      final v = p.getBool(autoRecordPref);
-      if (v != null && mounted) setState(() => _autoRecord = v);
-    }).catchError((_) {});
+    AutoRecordStore.load().then((v) {
+      if (mounted) setState(() => _autoRecord = v);
+    });
   }
 
-  /// 판독이 확실하면 결과 화면에서 [autoRecordDelay] 뒤 대국에 자동 반영(기본 켬, 더보기에서 끔).
-  static const autoRecordPref = 'mount.autoRecord';
+  /// 판독이 확실하면 결과 화면에서 [autoRecordDelay] 뒤 대국에 자동 반영(기본 켬, 룰 설정·더보기에서 끔).
   static const autoRecordDelay = Duration(seconds: 10);
   bool _autoRecord = true;
 
@@ -428,6 +431,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
   Future<void> _saveGrid() async {
     _tracker = null; // 격자가 바뀌면 패 한 장 비율·기준이 달라진다.
+    _riverTracker = null;
     try {
       final p = await SharedPreferences.getInstance();
       await p.setString(gridPref, jsonEncode(_grid.toJson()));
@@ -479,12 +483,20 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     'tracking': _trackingEnabled,
     'shadow': _shadow,
     'tracked_sides': [for (final s in _trackedNow().keys) s.name],
+    'tracked_riichi': [for (final s in _trackedRiichi()) s.name],
+    'tracked_discard': _trackedDiscard()?.toJson(),
     'preview_long_side': _previewFrameLongSide,
   };
 
   // ---------------- 판 상태 추적 ----------------
 
   MeldTracker _trackerFor(GridZones grid) => _tracker ??= MeldTracker(tileFrac: tileFracsOf(grid));
+  RiverTracker _riverTrackerFor(GridZones grid) => _riverTracker ??= RiverTracker(tileFrac: riverTileFracsOf(grid));
+
+  /// 화료 판독에 넘길 힌트: 게임 중 확정한 리치봉 자리, 가장 최근 버림(방총자 후보·론 패 위치).
+  Set<Side> _trackedRiichi() =>
+      _trackingEnabled && _useGrid ? (_riverTracker?.riichi ?? const {}) : const {};
+  Discard? _trackedDiscard() => _trackingEnabled && _useGrid ? _riverTracker?.lastDiscard : null;
 
   /// 화료 때 손패 전용 읽기를 써도 되는 자리와 그 울기(확정 + 그 뒤 변화 없음).
   Map<Side, List<ObservedMeld>> _trackedNow() {
@@ -500,7 +512,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     final first = _trackRoundKey == null;
     _trackRoundKey = key;
     _trackDir = null;
-    if (!first) _tracker?.reset(DateTime.now());
+    if (!first) {
+      _tracker?.reset(DateTime.now());
+      _riverTracker?.reset(DateTime.now());
+    }
   }
 
   /// 배경 미리보기 한 장 → 모서리 통계 → 추적기. 읽을 자리가 나오면 모서리를 읽는다.
@@ -508,24 +523,68 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     final g = gameStore.current;
     if (!_trackingEnabled || !_useGrid || g == null || _trackBusy || _remoteUrl == null || _gridBeforeEdit != null) return;
     final tracker = _trackerFor(_grid);
-    final Map<Side, CornerStats> stats;
+    final river = _riverTrackerFor(_grid);
+    final TableFrameStats stats;
     try {
-      stats = await compute(analyzeCorners, (preview, _grid));
-    } catch (_) {
+      stats = await compute(analyzeTableFrame, (preview, _grid));
+    } catch (e) {
+      debugPrint('[track] analyze failed: $e');
       return;
     }
     if (!mounted) return;
-    final actions = tracker.onFrame(stats, DateTime.now());
+    final now = DateTime.now();
+    final actions = tracker.onFrame(stats.corners, now);
+    final riverActions = river.onFrame(stats.rivers, stats.strips, now);
     setState(() {});
     for (final a in actions) {
       unawaited(_readCorner(a, g));
     }
+    for (final a in riverActions) {
+      unawaited(_readSticks(a, g));
+    }
+  }
+
+  /// 리치봉 띠가 바뀌어 가운데 기기를 `/v2/sticks` 로 읽는다(두 읽기가 같으면 추적기가 확정).
+  Future<void> _readSticks(RiverAction a, Game g) async {
+    final url = _remoteUrl;
+    final river = _riverTracker;
+    if (url == null || river == null) return;
+    _trackBusy = true;
+    final cam = RemoteCamera(url, token: _remoteToken, timeout: const Duration(seconds: 20));
+    final client = RecognizerClient();
+    final seq = ++_trackSeq;
+    try {
+      final src = await _trackSource(cam);
+      final crop = (await _cropInIsolate(src, [CropSpec(_grid.sticksZone)])).first;
+      final j = await client.observe('sticks', crop, filename: 'sticks.jpg');
+      if (!mounted) return;
+      river.onSticksRead(a.frame, parseCenterV2(j).sticks, DateTime.now());
+      unawaited(_saveTrackSticks(g, seq, crop, j));
+    } catch (e) {
+      if (mounted) river.onSticksReadFailed(a.frame, DateTime.now(), '$e');
+    } finally {
+      cam.close();
+      client.close();
+      _trackBusy = false;
+      if (mounted) setState(() {});
+    }
+  }
+
+  Future<void> _saveTrackSticks(Game g, int seq, Uint8List crop, Map<String, dynamic> read) async {
+    if (!_logEnabled) return;
+    final dir = _trackDir ??= '${CaptureLog.newDir()}_track';
+    final stem = 'sticks_${seq.toString().padLeft(3, '0')}';
+    await CaptureLog.saveFile(dir, '$stem.jpg', crop, 'image/jpeg');
+    await CaptureLog.saveFile(dir, '$stem.json', CaptureLog.jsonBytes({'round': g.roundLabel, 'read': read}), 'application/json');
+    await _saveTrackState(g, dir);
   }
 
   /// 모서리 읽기용 사진: 헤드 스트림이 충분히 크면 고해상 미리보기(셔터 없음), 아니면 촬영(셔터음).
+  /// 미리보기는 프레임 긴 변 그대로 받는다 — 네이티브 헤드(HeadCamera)는 스트림이 12MP 라 2000 으로 줄이면 패가 50px 대로
+  /// 떨어진다(NOTES 32·33). 0.3초·0.7MB 라 전체를 받아도 부담이 작다.
   Future<Uint8List> _trackSource(RemoteCamera cam) async {
     final long = _previewFrameLongSide;
-    if (long != null && long >= _trackPreviewMinLongSide) return (await cam.preview(longSide: 2000)).bytes;
+    if (long != null && long >= _trackPreviewMinLongSide) return (await cam.preview(longSide: long)).bytes;
     return (await cam.capture()).bytes;
   }
 
@@ -575,11 +634,19 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       }),
       'application/json',
     );
+    await _saveTrackState(g, dir);
+  }
+
+  /// 추적기 상태 전부(울기·강·리치봉)를 track.json 으로.
+  Future<void> _saveTrackState(Game g, String dir) async {
+    final tracker = _tracker;
+    if (tracker == null) return;
     await CaptureLog.saveFile(
       dir,
       'track.json',
       CaptureLog.jsonBytes({
         ...tracker.toJson(),
+        'rivers': _riverTracker?.toJson(),
         'names': g.names,
         'bottom_seat': g.settings.bottomSeat,
         'round': g.roundLabel,
@@ -625,6 +692,24 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           ),
         ),
       );
+    }
+    // 강·리치봉 추적 요약: 자리별 감지한 버림 수, 마지막 버림 자리, 확정한 리치.
+    final rv = _riverTracker;
+    if (rv != null) {
+      final counts = rv.discardCounts;
+      final last = rv.lastDiscard;
+      if (counts.values.any((n) => n > 0) || rv.riichi.isNotEmpty) {
+        final parts = [
+          '강 ${[for (final s in Side.values) if (counts[s]! > 0) '${g.names[seats.seatOf(s)]} ${counts[s]}'].join(' · ')}',
+          if (last != null) '마지막 ${g.names[seats.seatOf(last.side)]}',
+          if (rv.riichi.isNotEmpty) '리치 ${rv.riichi.map((s) => g.names[seats.seatOf(s)]).join('·')}',
+        ];
+        rows.add(Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Text(parts.join('  |  '), key: const ValueKey('track-river-line'),
+              style: const TextStyle(fontSize: 12, color: Colors.white70)),
+        ));
+      }
     }
     if (rows.isEmpty) return const SizedBox.shrink();
     return Padding(
@@ -833,6 +918,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               },
               tracked: _trackedNow(),
               shadow: _shadow,
+              trackedRiichi: _trackedRiichi(),
+              trackedDiscard: _trackedDiscard(),
               trace: trace,
             )
           : await reader.read(
@@ -864,6 +951,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               seats: seats,
               otherWinners: winnerSides.difference({r.winnerSide!}),
               meldsTracked: r.meldsTracked,
+              loserHint: r.trackedDiscardSide,
             ),
         ],
         g.settings,
@@ -925,6 +1013,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         doraIndicators: merge.situation.doraIndicators.length,
         riichi: merge.situation.riichi,
       );
+      // 테이블 화면이 열린 채 룰 설정에서 바꿨을 수 있어 매번 다시 읽는다.
+      _autoRecord = await AutoRecordStore.load();
+      if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (ctx) => ResultScreen(
@@ -1165,10 +1256,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     if (mounted) setState(() => _logEnabled = next);
                   } else if (v == 'auto') {
                     setState(() => _autoRecord = !_autoRecord);
-                    try {
-                      final p = await SharedPreferences.getInstance();
-                      await p.setBool(autoRecordPref, _autoRecord);
-                    } catch (_) {}
+                    await AutoRecordStore.save(_autoRecord);
                   } else if (v == 'remote') {
                     await _askRemoteUrl();
                   } else if (v == 'scan') {

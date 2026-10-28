@@ -38,6 +38,15 @@ const double lastZoneBand = 0.6;
 /// 리치봉 크롭: 가운데 칸 한가운데에서 이 비율만큼(가운데 기기와 그 둘레).
 const double sticksZoneShare = 0.7;
 
+/// 추적용 강 띠가 시작하는 곳(가운데에서 그 자리 쪽 반폭의 비율). 0 = [lastZone] 전체.
+/// 격자 가운데 칸의 한가운데가 기기 한가운데와 다를 수 있어(장면 D: 아래쪽은 기기가 반폭의 8%, 오른쪽은 20%) 기기 몫을
+/// 떼지 않는다 — 떼면 기기에 붙은 첫 줄을 잃는다. 기기(검정)는 변하지 않으니 띠에 들어 있어도 해가 없다.
+const double riverStart = 0.0;
+
+/// 추적용 리치봉 띠: 가운데에서 [stickStart]~[stickEnd](기기 가장자리 홈이 있는 곳). 강 띠와 겹친다.
+const double stickStart = 0.0;
+const double stickEnd = 0.25;
+
 class GridZones {
   /// 세로선(왼쪽·오른쪽)과 가로선(위·아래), 0~1000.
   final int x1, x2, y1, y2;
@@ -83,6 +92,27 @@ class GridZones {
       Side.top => NormBox(y1, cx - hw, cy, cx + hw),
       Side.left => NormBox(cy - hh, x1, cy + hh, cx),
       Side.right => NormBox(cy - hh, cx, cy + hh, x2),
+    };
+  }
+
+  /// 강 띠(판 상태 추적용): [lastZone] 에서 [riverStart] 부터 그 자리 끝까지(기본은 lastZone 전체).
+  NormBox riverBand(Side side, {double start = riverStart, double band = lastZoneBand}) =>
+      start <= 0 ? lastZone(side, band: band) : _alongSide(side, start, 1.0, band);
+
+  /// 리치봉 띠(판 상태 추적용): 가운데 기기 가장자리(홈) 쪽, [stickStart]~[stickEnd]. 강 띠 안쪽과 겹친다.
+  NormBox stickStrip(Side side, {double start = stickStart, double end = stickEnd, double band = lastZoneBand}) =>
+      _alongSide(side, start, end, band);
+
+  /// 가운데 칸 한가운데에서 [side] 쪽으로 반폭의 [from]~[to] 구간, 옆으로는 [band] 비율.
+  NormBox _alongSide(Side side, double from, double to, double band) {
+    final cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+    final hw = (x2 - x1) / 2, hh = (y2 - y1) / 2;
+    final bw = (hw * band).round(), bh = (hh * band).round();
+    return switch (side) {
+      Side.bottom => NormBox((cy + hh * from).round(), (cx - bw).round(), (cy + hh * to).round(), (cx + bw).round()),
+      Side.top => NormBox((cy - hh * to).round(), (cx - bw).round(), (cy - hh * from).round(), (cx + bw).round()),
+      Side.left => NormBox((cy - bh).round(), (cx - hw * to).round(), (cy + bh).round(), (cx - hw * from).round()),
+      Side.right => NormBox((cy - bh).round(), (cx + hw * from).round(), (cy + bh).round(), (cx + hw * to).round()),
     };
   }
 

@@ -182,6 +182,8 @@ TableMerge mergeReading({
   Set<Side> otherWinners = const {},
   double uncertainBelow = 0.7,
   bool meldsTracked = false,
+  /// 게임 중 추적이 본 "가장 최근에 버린 자리"([RiverTracker.lastDiscard]). 강 끝 패가 여럿 화료될 때 이 자리를 방총자로 고른다.
+  Side? loserHint,
 }) {
   final flags = <MergeFlag>[];
   final winner = seats.seatOf(winnerSide);
@@ -216,14 +218,21 @@ TableMerge mergeReading({
         if (canDealIn(s) && _completes(closed, melds, center.lastDiscardAt(s))) s,
     ];
     if (found.isNotEmpty) {
-      ronFrom = found.length == 1 ? found.single : _nearestAfterWinner(winnerSide, found, seats);
+      final hint = loserHint;
+      final hinted = found.length > 1 && hint != null && found.contains(hint);
+      ronFrom = found.length == 1
+          ? found.single
+          : (hint != null && hinted)
+              ? hint
+              : _nearestAfterWinner(winnerSide, found, seats);
       win = center.lastDiscardAt(ronFrom)!;
       final loserSeat = seats.seatOf(ronFrom);
       flags.add(MergeFlag(
         found.length == 1 ? MergeIssue.winFromDiscard : MergeIssue.loserAmbiguous,
         found.length == 1
             ? '손패가 ${expected - 1}장이라 ${ronFrom.label}(${game.names[loserSeat]}) 강 끝 ${Tiles.name(win.tile)} 로 론으로 봤습니다'
-            : '${found.map((s) => s.label).join('·')} 강 끝 패가 모두 화료됩니다. ${_furitenNote(ronFrom, game.names[loserSeat])}',
+            : '${found.map((s) => s.label).join('·')} 강 끝 패가 모두 화료됩니다. '
+                '${hinted ? _trackedNote(ronFrom, game.names[loserSeat]) : _furitenNote(ronFrom, game.names[loserSeat])}',
       ));
     } else {
       // 화료되는 강 끝이 없다. 강 끝을 못 읽은 자리가 쏘였을 수 있다(판독이 가끔 "강 없음" 으로 답한다).
@@ -306,12 +315,14 @@ TableMerge mergeReading({
     } else if (matches.isEmpty) {
       isTsumo = true;
     } else {
-      final s = _nearestAfterWinner(winnerSide, matches, seats);
+      final hint = loserHint;
+      final hinted = hint != null && matches.contains(hint);
+      final s = (hint != null && hinted) ? hint : _nearestAfterWinner(winnerSide, matches, seats);
       loser = seats.seatOf(s);
       flags.add(MergeFlag(
           MergeIssue.loserAmbiguous,
           '화료패 ${Tiles.name(win.tile)} 이(가) ${matches.map((s) => s.label).join('·')} 강 끝에 모두 있습니다. '
-          '${_furitenNote(s, game.names[loser])}'));
+          '${hinted ? _trackedNote(s, game.names[loser]) : _furitenNote(s, game.names[loser])}'));
     }
   }
 
@@ -378,6 +389,8 @@ TableMerge mergeReading({
 /// 자리**다(예: 순서 A→화료자→B 에서 A·B 강 끝이 같은 패면 방총자는 B). 동시 론의 [Game.ronOrder] 와 같은 계산.
 Side _nearestAfterWinner(Side winner, List<Side> candidates, SeatMap seats) =>
     seats.sideOf(Game.ronOrder(seats.seatOf(winner), candidates.map(seats.seatOf)).first);
+
+String _trackedNote(Side loser, String name) => '게임 중 마지막으로 버린 자리가 ${loser.label}($name)라 그쪽으로 봤습니다';
 
 String _furitenNote(Side loser, String name) =>
     '먼저 버린 패에는 론할 수 없으니(동순 후리텐) 화료자 다음 차례에 가까운 ${loser.label}($name) 로 봤습니다';

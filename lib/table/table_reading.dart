@@ -292,6 +292,12 @@ class TableReading {
 
   /// [hand] 의 울기가 판 상태 추적으로 게임 중에 미리 읽어 둔 것(화료 사진은 손패 칸만 읽음).
   final bool meldsTracked;
+
+  /// 게임 중 강 추적이 본 "가장 최근에 버린 자리". 강 끝 패가 여럿 화료될 때 merge 가 방총자로 고른다(`loserHint`).
+  final Side? trackedDiscardSide;
+
+  /// 게임 중 리치봉 추적이 확정한 자리(촬영 판독과 합쳐 [center] 의 riichi 에 이미 들어 있음, 기록용).
+  final Set<Side> trackedRiichi;
   const TableReading({
     required this.layout,
     this.winnerSide,
@@ -300,5 +306,7 @@ class TableReading {
     this.warnings = const [],
     this.others = const [],
     this.meldsTracked = false,
+    this.trackedDiscardSide,
+    this.trackedRiichi = const {},
   });
 }

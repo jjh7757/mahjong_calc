@@ -1,14 +1,23 @@
 """측정용 로컬 인식 서버(mahjong-recognizer, 8030). Gemini 키는 부트캠프 .env 에서 읽기만 한다(복사 금지).
 판독 설정은 지난 측정(NOTES "3번 동시 + 만장일치", 로컬 8030)과 같게: thinking low, 자리 3번 동시.
+
+  python experiments/yolo/run_local_server.py [--port 8031] [--seat-frame 0]   (launch.json "recognizer-noframe" = 지금 방식 비교용)
 """
+import argparse
 import os
 import sys
 
 from dotenv import load_dotenv
 
+ap = argparse.ArgumentParser()
+ap.add_argument("--port", type=int, default=8030)
+ap.add_argument("--seat-frame", default="1", help="자리 판독 YOLO 틀 + 조각 읽기(app/seat.py). 0 이면 통째 읽기(지금 방식)")
+a = ap.parse_args()
+
 load_dotenv("C:/Users/jjh7757/Downloads/부트캠프/.env")
 os.environ.setdefault("GEMINI_THINKING", "low")
 os.environ.setdefault("RATE_PER_MIN", "1000")
+os.environ["SEAT_FRAME"] = a.seat_frame
 os.environ["RECOGNIZER_API_KEY"] = ""  # 로컬 측정은 인증 없음
 REPO = "C:/Users/jjh7757/dev/mahjong-recognizer"
 os.chdir(REPO)
@@ -16,4 +25,4 @@ sys.path.insert(0, REPO)
 
 import uvicorn  # noqa: E402
 
-uvicorn.run("app.main:app", host="127.0.0.1", port=8030)
+uvicorn.run("app.main:app", host="127.0.0.1", port=a.port)

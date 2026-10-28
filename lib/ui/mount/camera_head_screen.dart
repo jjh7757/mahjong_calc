@@ -1,16 +1,14 @@
-import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:camera/camera.dart';
-import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show MissingPluginException;
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../services/camera_head.dart';
+import '../../services/head_camera.dart';
 import '../../services/screen_wake.dart';
-import '../../services/yuv_jpeg.dart';
 
 /// 카메라 헤드 모드. 이 기기를 테이블 위에 고정해 두고, 같은 Wi-Fi 의 다른 기기(태블릿·노트북)가
 /// 거치 촬영 화면에서 이 화면의 QR 을 스캔해(또는 "원격 카메라 주소" 에 적어) 사진을 받아 간다.
@@ -19,11 +17,9 @@ import '../../services/yuv_jpeg.dart';
 /// QR 에는 주소와 토큰이 들어 있다. 토큰은 기기에 저장해 다시 열어도 같고(한 번 스캔하면 끝),
 /// 오른쪽 위 "새 QR" 로 바꾸면 이전에 스캔한 기기는 더 이상 찍을 수 없다.
 ///
-/// 미리보기는 자르지 않고(조준용) 가능한 한 크게 띄우며, 주소·상태는 그 위에 반투명으로 겹친다.
-/// 줌은 촬영 사진에도 적용된다. 패 최소 상자는 뺐다(고정 거치라 손으로 맞출 일이 없음, 2026-10-27 사용자).
-///
-/// `/preview` 는 셔터 없이 미리보기 프레임(이미지 스트림)에서 작은 JPEG 를 만들어 준다(조작 기기의 테이블 화면 배경).
-/// 스트림은 처음 요청에 켜고, 30초 동안 요청이 없으면 끈다. 촬영 중에는 스트림을 멈춰 사진 해상도를 지킨다.
+/// 카메라는 camera 플러그인이 아니라 전용 [HeadCamera](Android, 셔터 없이 미리보기 + 12MP YUV 스트림)다.
+/// `/capture` 와 `/preview` 모두 스트림의 최신 프레임에서 JPEG 를 만든다 — 셔터음이 없고, 미리보기도 촬영과 같은
+/// 해상도까지 줄 수 있다(판 상태 추적의 울기 모서리 읽기용, NOTES 32). 줌은 둘 다에 적용된다.
 class CameraHeadScreen extends StatefulWidget {
   const CameraHeadScreen({super.key});
 
@@ -31,13 +27,12 @@ class CameraHeadScreen extends StatefulWidget {
   State<CameraHeadScreen> createState() => _CameraHeadScreenState();
 }
 
-class _CameraHeadScreenState extends State<CameraHeadScreen>
-    with WidgetsBindingObserver {
+class _CameraHeadScreenState extends State<CameraHeadScreen> {
   static const String zoomPref = 'cameraHead.zoom';
   static const String tokenPref = 'cameraHead.token';
   static const List<double> zoomSteps = [1, 1.5, 2, 3, 4];
 
-  CameraController? _cam;
+  HeadCamera? _cam;
   String? _camError;
   late final CameraHeadServer _server;
   String? _serverError;
@@ -45,20 +40,12 @@ class _CameraHeadScreenState extends State<CameraHeadScreen>
   double _zoom = 1;
   double _maxZoom = 1;
   bool _showInfo = true;
-
-  /// 미리보기 스트림의 마지막 프레임과 상태.
-  CameraImage? _frame;
-  bool _streaming = false;
-  bool _capturing = false;
-  PreviewFrame? _lastPreview;
-  DateTime? _previewAskedAt;
-  Timer? _idleTimer;
-  static const Duration _previewIdle = Duration(seconds: 30);
+  int _frameW = 0;
+  int _frameH = 0;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _server = CameraHeadServer(
       capture: _capture,
       preview: _preview,
@@ -72,32 +59,14 @@ class _CameraHeadScreenState extends State<CameraHeadScreen>
     ScreenWake.keepOn(true);
     _loadZoom().then((_) => _initCamera());
     _loadToken().then((_) => _startServer());
-    _idleTimer = Timer.periodic(const Duration(seconds: 5), (_) => _stopStreamIfIdle());
   }
 
   @override
   void dispose() {
-    _idleTimer?.cancel();
-    WidgetsBinding.instance.removeObserver(this);
     ScreenWake.keepOn(false);
     _server.stop();
-    _cam?.dispose();
+    _cam?.stop();
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    final c = _cam;
-    if (c == null) return;
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused) {
-      c.dispose();
-      _cam = null;
-      _streaming = false;
-      _frame = null;
-    } else if (state == AppLifecycleState.resumed) {
-      _initCamera();
-    }
   }
 
   Future<void> _loadZoom() async {
@@ -152,49 +121,37 @@ class _CameraHeadScreenState extends State<CameraHeadScreen>
   }
 
   Future<void> _initCamera() async {
+    final c = HeadCamera();
     try {
-      final cams = await availableCameras();
-      if (cams.isEmpty) {
-        if (mounted) setState(() => _camError = '카메라가 없습니다');
-        return;
-      }
-      final back = cams.firstWhere(
-        (c) => c.lensDirection == CameraLensDirection.back,
-        orElse: () => cams.first,
-      );
-      final c = CameraController(
-        back,
-        ResolutionPreset.max,
-        enableAudio: false,
-        imageFormatGroup: ImageFormatGroup.yuv420,
-      );
-      await c.initialize();
-      double maxZoom = 1;
-      try {
-        maxZoom = await c.getMaxZoomLevel();
-      } catch (_) {}
-      if (!mounted) {
-        c.dispose();
-        return;
-      }
-      setState(() {
-        _cam = c;
-        _camError = null;
-        _maxZoom = maxZoom;
-      });
-      await _applyZoom(_zoom, save: false);
+      await c.start(zoom: _zoom);
+    } on MissingPluginException {
+      if (mounted) setState(() => _camError = '이 기기에서는 카메라 헤드를 쓸 수 없습니다(Android 전용)');
+      return;
     } catch (e) {
       if (mounted) setState(() => _camError = '카메라를 열 수 없습니다: $e');
+      return;
     }
+    if (!mounted) {
+      c.stop();
+      return;
+    }
+    setState(() {
+      _cam = c;
+      _camError = null;
+      _maxZoom = c.maxZoom;
+      _frameW = c.streamWidth;
+      _frameH = c.streamHeight;
+      _zoom = _zoom.clamp(1.0, c.maxZoom < 1 ? 1.0 : c.maxZoom).toDouble();
+    });
   }
 
   Future<void> _applyZoom(double z, {bool save = true}) async {
     final c = _cam;
     final upper = _maxZoom < 1 ? 1.0 : _maxZoom;
-    final clamped = z.clamp(1.0, upper).toDouble();
-    if (c != null && c.value.isInitialized) {
+    var clamped = z.clamp(1.0, upper).toDouble();
+    if (c != null) {
       try {
-        await c.setZoomLevel(clamped);
+        clamped = await c.setZoom(clamped);
       } catch (_) {
         return;
       }
@@ -218,73 +175,35 @@ class _CameraHeadScreenState extends State<CameraHeadScreen>
     }
   }
 
-  /// 조작 기기가 /capture 를 부르면 여기서 찍는다.
+  HeadCamera _ready() {
+    final c = _cam;
+    if (c == null || !c.isRunning) {
+      throw StateError('카메라 헤드의 카메라가 준비되지 않았습니다');
+    }
+    return c;
+  }
+
+  /// 조작 기기가 /capture 를 부르면 스트림의 다음 프레임을 원 크기 JPEG 로(셔터 없음).
   Future<Uint8List> _capture() async {
-    final c = _cam;
-    if (c == null || !c.value.isInitialized) {
-      throw StateError('카메라 헤드의 카메라가 준비되지 않았습니다');
-    }
-    _capturing = true;
-    try {
-      // 스트림을 켠 채 찍으면 기기에 따라 사진 해상도가 낮아질 수 있어 잠깐 멈춘다. 다음 /preview 가 다시 켠다.
-      await _stopStream();
-      final x = await c.takePicture();
-      return await x.readAsBytes();
-    } finally {
-      _capturing = false;
-    }
+    final j = await _ready().jpeg(quality: 92, fresh: true);
+    _noteFrame(j);
+    return j.bytes;
   }
 
-  /// 조작 기기가 /preview 를 부르면 미리보기 프레임을 JPEG 로 바꿔 준다(기본 긴 변 960, [longSide] 로 더 크게).
+  /// 조작 기기가 /preview 를 부르면 최신 프레임을 긴 변 [longSide](기본 960)로 줄인 JPEG 로.
+  /// 큰 요청(2000 이상, 판 상태 추적의 울기 모서리 읽기)은 패 무늬가 뭉개지지 않게 품질을 올린다.
   Future<PreviewFrame> _preview(int? longSide) async {
-    _previewAskedAt = DateTime.now();
-    final c = _cam;
-    if (c == null || !c.value.isInitialized) {
-      throw StateError('카메라 헤드의 카메라가 준비되지 않았습니다');
-    }
-    if (_capturing) {
-      final last = _lastPreview;
-      if (last != null) return last;
-      throw StateError('촬영 중');
-    }
-    if (!_streaming) {
-      _frame = null;
-      await c.startImageStream((im) => _frame = im);
-      _streaming = true;
-    }
-    // 첫 프레임을 기다린다(보통 수십 ms).
-    for (var i = 0; i < 40 && _frame == null; i++) {
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    }
-    final im = _frame;
-    if (im == null) throw StateError('미리보기 프레임이 아직 없습니다');
-    final frame = YuvFrame(
-      width: im.width,
-      height: im.height,
-      planes: [for (final p in im.planes) p.bytes],
-      rowStrides: [for (final p in im.planes) p.bytesPerRow],
-      pixelStrides: [for (final p in im.planes) p.bytesPerPixel ?? 1],
-    );
-    final jpeg = await compute(yuvFrameToJpegSized, (frame, longSide ?? 960));
-    final out = PreviewFrame(jpeg, frameWidth: im.width, frameHeight: im.height);
-    _lastPreview = out;
-    return out;
+    final side = longSide ?? 960;
+    final j = await _ready().jpeg(longSide: side, quality: side >= 2000 ? 88 : 75);
+    _noteFrame(j);
+    return PreviewFrame(j.bytes, frameWidth: j.frameWidth, frameHeight: j.frameHeight);
   }
 
-  Future<void> _stopStream() async {
-    final c = _cam;
-    if (!_streaming || c == null) return;
-    _streaming = false;
-    _frame = null;
-    try {
-      await c.stopImageStream();
-    } catch (_) {}
-  }
-
-  void _stopStreamIfIdle() {
-    final t = _previewAskedAt;
-    if (_streaming && (t == null || DateTime.now().difference(t) > _previewIdle)) {
-      unawaited(_stopStream());
+  void _noteFrame(HeadJpeg j) {
+    if (j.frameWidth != _frameW || j.frameHeight != _frameH) {
+      _frameW = j.frameWidth;
+      _frameH = j.frameHeight;
+      if (mounted) setState(() {});
     }
   }
 
@@ -298,6 +217,7 @@ class _CameraHeadScreenState extends State<CameraHeadScreen>
     if (_server.previewCount > 0) b.write(' · 미리보기 ${_server.previewCount}');
     final last = _server.lastCaptureAt;
     if (last != null) b.write(' · 마지막 ${_time(last)}');
+    if (_frameW > 0) b.write(' · 스트림 $_frameW×$_frameH');
     final err = _server.lastError;
     if (err != null) b.write(' · 오류: $err');
     return b.toString();
@@ -313,8 +233,8 @@ class _CameraHeadScreenState extends State<CameraHeadScreen>
         : CameraHeadLink.qrString(_addresses.first, port, token);
     // 수동 입력용(조작 기기의 주소 칸에 그대로 붙여 넣으면 토큰까지 들어간다).
     final urls = [for (final a in _addresses) 'http://$a:$port?t=$token'];
-    final Widget preview = c != null && c.value.isInitialized
-        ? Center(child: CameraPreview(c))
+    final Widget preview = c != null && c.textureId != null
+        ? Center(child: _TexturePreview(cam: c))
         : Center(
             child: Padding(
               padding: const EdgeInsets.all(24),
@@ -352,7 +272,7 @@ class _CameraHeadScreenState extends State<CameraHeadScreen>
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // 줌 선택. 촬영 사진에도 적용된다.
+                // 줌 선택. 촬영·미리보기 모두에 적용된다.
                 Positioned(
                   right: 8,
                   top: 8,
@@ -380,6 +300,25 @@ class _CameraHeadScreenState extends State<CameraHeadScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// 네이티브 미리보기 텍스처. 센서 방향(보통 90)만큼 돌려 화면에 맞게 보여 준다.
+class _TexturePreview extends StatelessWidget {
+  final HeadCamera cam;
+  const _TexturePreview({required this.cam});
+
+  @override
+  Widget build(BuildContext context) {
+    final w = cam.previewWidth > 0 ? cam.previewWidth : 4;
+    final h = cam.previewHeight > 0 ? cam.previewHeight : 3;
+    return RotatedBox(
+      quarterTurns: (cam.sensorOrientation ~/ 90) % 4,
+      child: AspectRatio(
+        aspectRatio: w / h,
+        child: Texture(textureId: cam.textureId!),
       ),
     );
   }

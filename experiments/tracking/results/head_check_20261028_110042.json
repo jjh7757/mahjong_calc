@@ -1,0 +1,166 @@
+{
+ "url": "http://192.168.50.106:8765",
+ "when": "2026-10-28T11:00:26",
+ "status": {
+  "code": 200,
+  "body": "{\"ok\":true,\"auth\":true,\"captures\":0,\"last_capture\":null}",
+  "s": 0.06
+ },
+ "preview_default": {
+  "rows": [
+   {
+    "code": 200,
+    "s": 0.1,
+    "size": [
+     1020,
+     764
+    ],
+    "bytes": 16334,
+    "frame": "4080x3060"
+   },
+   {
+    "code": 200,
+    "s": 0.09,
+    "size": [
+     1020,
+     764
+    ],
+    "bytes": 16334,
+    "frame": "4080x3060"
+   },
+   {
+    "code": 200,
+    "s": 0.13,
+    "size": [
+     1020,
+     764
+    ],
+    "bytes": 16409,
+    "frame": "4080x3060"
+   },
+   {
+    "code": 200,
+    "s": 0.09,
+    "size": [
+     1020,
+     764
+    ],
+    "bytes": 16409,
+    "frame": "4080x3060"
+   },
+   {
+    "code": 200,
+    "s": 0.06,
+    "size": [
+     1020,
+     764
+    ],
+    "bytes": 16409,
+    "frame": "4080x3060"
+   }
+  ]
+ },
+ "preview_w": {
+  "rows": [
+   {
+    "code": 200,
+    "s": 0.11,
+    "size": [
+     2040,
+     1530
+    ],
+    "bytes": 92138,
+    "frame": "4080x3060"
+   },
+   {
+    "code": 200,
+    "s": 0.08,
+    "size": [
+     2040,
+     1530
+    ],
+    "bytes": 92540,
+    "frame": "4080x3060"
+   },
+   {
+    "code": 200,
+    "s": 0.12,
+    "size": [
+     2040,
+     1530
+    ],
+    "bytes": 92010,
+    "frame": "4080x3060"
+   },
+   {
+    "code": 200,
+    "s": 0.14,
+    "size": [
+     2040,
+     1530
+    ],
+    "bytes": 92540,
+    "frame": "4080x3060"
+   },
+   {
+    "code": 200,
+    "s": 0.14,
+    "size": [
+     2040,
+     1530
+    ],
+    "bytes": 93427,
+    "frame": "4080x3060"
+   }
+  ]
+ },
+ "capture": {
+  "code": 200,
+  "s": 0.25,
+  "size": [
+   4080,
+   3060
+  ],
+  "bytes": 419033
+ },
+ "preview_after_capture_s": 0.06,
+ "polls": [
+  {
+   "code": 200,
+   "s": 0.17
+  },
+  {
+   "code": 200,
+   "s": 0.15
+  },
+  {
+   "code": 200,
+   "s": 0.22
+  },
+  {
+   "code": 200,
+   "s": 0.16
+  },
+  {
+   "code": 200,
+   "s": 0.2
+  }
+ ],
+ "gate": {
+  "preview_long": 2040,
+  "stream_frame_long": 4080,
+  "capture_long": 4080,
+  "tile_px_60cm": {
+   "capture": 112,
+   "preview": 56
+  },
+  "tile_px_75cm": {
+   "capture": 90,
+   "preview": 45
+  },
+  "tile_px_90cm": {
+   "capture": 75,
+   "preview": 38
+  }
+ }
+}

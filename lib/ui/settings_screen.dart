@@ -39,6 +39,28 @@ class RulesStore {
   }
 }
 
+/// 거치 촬영 판독이 확실하면 결과 화면에서 10초 뒤 대국에 자동 반영하고 닫을지(기본 켬).
+/// 룰 설정과 거치 화면 더보기가 같은 값을 쓴다.
+class AutoRecordStore {
+  static const key = 'mount.autoRecord';
+
+  static Future<bool> load() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      return p.getBool(key) ?? true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  static Future<void> save(bool on) async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setBool(key, on);
+    } catch (_) {}
+  }
+}
+
 /// 룰 설정 화면.
 class SettingsScreen extends StatelessWidget {
   final HandEditor editor;
@@ -60,6 +82,7 @@ class SettingsScreen extends StatelessWidget {
           body: kioskPage(context, ListView(
             children: [
               const _VoiceSwitch(),
+              const _AutoRecordSwitch(),
               const Divider(height: 1),
               SwitchListTile(
                 title: const Text('쿠이탄'),
@@ -109,6 +132,43 @@ class SettingsScreen extends StatelessWidget {
           ), maxWidth: 820),
         ));
       },
+    );
+  }
+}
+
+/// 자동 반영 켜고 끄기([AutoRecordStore]).
+class _AutoRecordSwitch extends StatefulWidget {
+  const _AutoRecordSwitch();
+
+  @override
+  State<_AutoRecordSwitch> createState() => _AutoRecordSwitchState();
+}
+
+class _AutoRecordSwitchState extends State<_AutoRecordSwitch> {
+  bool? _on;
+
+  @override
+  void initState() {
+    super.initState();
+    AutoRecordStore.load().then((v) {
+      if (mounted) setState(() => _on = v);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      key: const ValueKey('auto-record-switch'),
+      title: const Text('판독 후 자동 반영'),
+      subtitle: const Text('거치 촬영 판독이 확실하면 결과 화면에서 10초 뒤 대국에 기록하고 테이블로 돌아감. '
+          '끄면 "대국에 반영"을 직접 누름'),
+      value: _on ?? true,
+      onChanged: _on == null
+          ? null
+          : (v) {
+              setState(() => _on = v);
+              AutoRecordStore.save(v);
+            },
     );
   }
 }

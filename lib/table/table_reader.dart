@@ -10,6 +10,7 @@ import 'cropper.dart' show CropSpec;
 import 'fixed_layout.dart';
 import 'grid_zones.dart';
 import 'observation.dart';
+import 'river_tracker.dart' show Discard;
 import 'shot_image.dart';
 import 'table_layout.dart';
 import 'table_reading.dart';
@@ -163,6 +164,8 @@ class TableReader {
     bool splitSeat = false,
     Map<Side, List<ObservedMeld>> tracked = const {},
     bool shadow = false,
+    Set<Side> trackedRiichi = const {},
+    Discard? trackedDiscard,
     Side? winnerSide,
     Future<List<Side>?> Function(List<Side> candidates)? pickWinners,
     void Function(ReadStage stage)? onStage,
@@ -182,6 +185,9 @@ class TableReader {
     final ShotAnalysis a;
     final Map<Side, Uint8List> seatCrops, cornerCrops, lastCrops;
     final Uint8List sticksCrop, doraCrop;
+    Uint8List? trackedCrop;
+    final trackedBox = trackedDiscard?.box;
+    final trackSide = trackedDiscard?.side;
     final warnings = <String>[];
     final usage = <String, Map<String, int>>{};
     Future<Map<String, dynamic>?> call(String kind, Uint8List? bytes, String name, {bool required = false}) {
@@ -223,6 +229,7 @@ class TableReader {
         for (final s in Side.values)
           if (s != known) s,
       ];
+      final useTracked = trackedBox != null && trackSide != null && lastSides.contains(trackSide);
 
       onStage?.call(ReadStage.cropping);
       cornerSides = splitSeat ? seatSides : const <Side>[];
@@ -258,17 +265,21 @@ class TableReader {
       cornerF = {for (final s in cornerSides) s: call('corner', cornerCrops[s], 'corner_${s.name}')};
       started.addAll([...seatF.values, ...shadowF.values, ...cornerF.values]);
 
+      // 게임 중 추적이 본 마지막 버림패 위치가 있으면 그 패만 따로 잘라 한 번 더 읽는다(강 끝 틀을 못 잡을 때의 대안).
       final rest = await shot.crop([
         for (final s in lastSides) CropSpec(grid.lastZone(s), side: s),
         CropSpec(grid.sticksZone),
         CropSpec(grid.center),
+        if (trackedBox != null && trackSide != null && lastSides.contains(trackSide))
+          CropSpec(trackedBox, side: trackSide, pad: 0.6),
       ]);
       lastCrops = {for (final (i, s) in lastSides.indexed) s: rest[i]};
       trace?.riverCrops = lastCrops;
-      sticksCrop = rest[rest.length - 2];
+      sticksCrop = rest[lastSides.length];
       trace?.centerCrop = sticksCrop;
-      doraCrop = rest.last;
+      doraCrop = rest[lastSides.length + 1];
       trace?.wallCrop = doraCrop;
+      trackedCrop = useTracked ? rest.last : null;
       lap('crop');
     } catch (_) {
       // 자리 판독을 보낸 뒤 나머지를 자르다 실패하면, 보낸 요청의 오류가 처리되지 않은 채 남지 않게 한다.
@@ -300,6 +311,7 @@ class TableReader {
               });
     final sticksF = call('sticks', sticksCrop, 'sticks');
     final doraF = call('dora', doraCrop, 'dora');
+    final trackedF = call('last', trackedCrop, 'last_tracked');
 
     final seats = <Side, SeatV2>{
       for (final e in seatF.entries)
@@ -367,6 +379,8 @@ class TableReader {
     };
     final sticksJ = await sticksF;
     final doraJ = await doraF;
+    final trackedJ = await trackedF;
+    final trackedTile = trackedJ == null ? null : parseLastV2(trackedJ);
     lap('read');
 
     var sides = [?known];
@@ -426,6 +440,15 @@ class TableReader {
         for (final e in lastJ.entries)
           if (e.key != side) e.key: e.value == null ? null : parseLastV2(e.value!),
       };
+      // 추적이 본 마지막 버림패: 강 끝 판독이 비면 채우고, 둘 다 있는데 다르면 확인을 묻는다(촬영 판독을 믿되 경고).
+      if (trackedTile != null && trackSide != null && trackSide != side && lastTiles.containsKey(trackSide)) {
+        final read = lastTiles[trackSide];
+        if (read == null) {
+          lastTiles[trackSide] = trackedTile;
+        } else if (read.tile != trackedTile.tile) {
+          ws.add('$who${trackSide.label} 강 끝: 촬영 판독 ${read.code} 과 게임 중 본 마지막 버림패 ${trackedTile.code} 이 다릅니다');
+        }
+      }
       final observation = TableObservation(
         players: {
           for (final s in Side.values)
@@ -436,7 +459,8 @@ class TableReader {
               melds: s == side ? melds : const [],
               // 강은 마지막 패 한 장만 읽는다. 가로 여부는 리치 판단에 쓰지 않는다.
               river: lastTiles.containsKey(s) ? [if (lastTiles[s] case final t?) RiverTile(t)] : null,
-              riichiStick: sticks[s] ?? false,
+              // 리치봉: 촬영 판독 ∪ 게임 중 추적이 확정한 것.
+              riichiStick: (sticks[s] ?? false) || trackedRiichi.contains(s),
             ),
         },
         // 가운데(왕패)와 화료자 손패 옆을 따로 넘기고, 어느 쪽을 쓸지는 merge 가 리치 여부로 정한다.
@@ -452,6 +476,8 @@ class TableReader {
         center: observation.toCenterReading(),
         warnings: ws,
         meldsTracked: trackedMode[side] == 'handonly',
+        trackedDiscardSide: trackSide,
+        trackedRiichi: trackedRiichi,
       );
     }
 
@@ -466,6 +492,8 @@ class TableReader {
       warnings: first.warnings,
       others: [for (final s in sides.skip(1)) build(s)],
       meldsTracked: first.meldsTracked,
+      trackedDiscardSide: first.trackedDiscardSide,
+      trackedRiichi: first.trackedRiichi,
     );
   }
 

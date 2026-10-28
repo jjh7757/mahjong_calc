@@ -27,6 +27,44 @@
       "autoPort": false
     },
     {
+      "name": "fake-head-seq2",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/tracking/fake_head.py",
+        "experiments/tracking/seq2",
+        "8777",
+        "--seq",
+        "--hold",
+        "6,6,6,6,6,6"
+      ],
+      "port": 8777,
+      "autoPort": false
+    },
+    {
+      "name": "fake-head",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/tracking/fake_head.py",
+        "experiments/field_20261024/kakao_photos",
+        "8777"
+      ],
+      "port": 8777,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-noframe",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8031",
+        "--seat-frame",
+        "0"
+      ],
+      "port": 8031,
+      "autoPort": false
+    },
+    {
       "name": "recognizer",
       "runtimeExecutable": "python",
       "runtimeArgs": [
