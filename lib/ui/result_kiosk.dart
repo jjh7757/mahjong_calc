@@ -348,11 +348,18 @@ extension _KioskResult on _ResultScreenState {
         if (_others.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              '${_others.length >= 2 ? '트리플론' : '더블론'}: '
-              '${_others.map((o) => '${_game!.names[o.seat]} ${o.result.isValid ? '${_ronOf(o.seat, o.result.basePoints).ron}점' : o.result.error}').join(' · ')}',
-              key: const ValueKey('result-other-wins'),
-              style: const TextStyle(fontSize: 18, color: _gold, fontWeight: FontWeight.w700),
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              children: [
+                Text(
+                  '${_others.length >= 2 ? '트리플론' : '더블론'}: '
+                  '${_others.map((o) => '${_game!.names[o.seat]} ${o.result.isValid ? '${_ronOf(o.seat, o.result.basePoints).ron}점' : o.result.error}').join(' · ')}',
+                  key: const ValueKey('result-other-wins'),
+                  style: const TextStyle(fontSize: 18, color: _gold, fontWeight: FontWeight.w700),
+                ),
+                _singleRonButton(color: Colors.white70),
+              ],
             ),
           ),
       ],

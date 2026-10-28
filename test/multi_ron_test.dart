@@ -178,6 +178,48 @@ void main() {
     });
   });
 
+  group('더블론 자동 판정', () {
+    bool valid(TableMerge m) => calculate(m.hand!, m.situation).isValid;
+
+    test('같은 방총자·같은 화료패로 둘 다 화료형이면 묻지 않는다', () {
+      final ms = _doubleRon(_game());
+      expect(ms.map((m) => m.closed.last.tile).toSet(), hasLength(1));
+      expect(clearDoubleRon(ms, valid), isTrue);
+    });
+
+    test('한쪽이 역 없음·계산 실패면 묻는다', () {
+      final ms = _doubleRon(_game());
+      expect(clearDoubleRon(ms, (m) => m.winner == 2), isFalse);
+    });
+
+    test('쯔모로 읽힌 손패가 있거나 한 명뿐이면 묻는다', () {
+      final g = _game();
+      final tsumo = mergeReading(
+          hand: HandReading.fromJson({
+            'tiles': [for (final c in '1m 2m 3m 4m 5m 6m 7m 8m 9m 2p 3p 5s 5s'.split(' ')) {'tile': c, 'conf': 0.95}],
+            'win_tile': {'tile': '1p', 'conf': 0.95},
+          }),
+          center: _center,
+          winnerSide: Side.top,
+          game: g,
+          seats: _seats);
+      expect(clearDoubleRon([tsumo, _doubleRon(g)[1]], valid), isFalse);
+      expect(clearDoubleRon([_doubleRon(g).first], valid), isFalse);
+    });
+
+    test('방총자를 못 정하면 묻는다', () {
+      final g = _game();
+      final noLoser = mergeReading(
+          hand: _hand('1m 2m 3m 4m 5m 6m 7m 8m 9m 2p 3p 5s 5s'),
+          center: CenterReading.fromJson({'last_discards': <String, String>{}}),
+          winnerSide: Side.top,
+          game: g,
+          seats: _seats,
+          otherWinners: {Side.left});
+      expect(clearDoubleRon([noLoser, _doubleRon(g)[1]], valid), isFalse);
+    });
+  });
+
   group('동시 론 규칙 설정', () {
     test('인정 인원과 트리플론 유국', () {
       expect(const GameSettings().maxRonWinners, 2);
@@ -283,6 +325,26 @@ void widgetTests() {
       expect(g.events.last.description, startsWith('더블론(A) B'));
       expect(g.events.last.description, contains('+공탁 2 B')); // D 의 리치 + B 자동 리치
       expect(g.events.where((e) => e.description == 'B 리치 (자동)'), hasLength(1));
+    });
+
+    testWidgets('"한 명만 론" 을 누르면 함께 론한 사람을 빼고 한 명만 기록한다', (tester) async {
+      _resume();
+      final main = _ron(['2m', '3m', '4m', '3p', '4p', '5p', '6s', '7s', '8s', '5s', '5s', '6m', '7m', '5m']);
+      final other = _ron(['1m', '2m', '3m', '4p', '5p', '6p', '7s', '8s', '9s', '2m', '3m', '5p', '5p', '4m']);
+      await tester.pumpWidget(MaterialApp(
+        home: ResultScreen(result: main, gameSeat: 2, loser: 0, otherWins: [OtherWin(1, other)]),
+      ));
+      await tester.pumpAndSettle();
+      await _tapVisible(tester, find.byKey(const ValueKey('result-single-ron')));
+      expect(find.byKey(const ValueKey('result-other-wins')), findsNothing);
+      await _tapVisible(tester, find.textContaining('대국에 반영'));
+      expect(find.byKey(const ValueKey('extra-win-0')), findsNothing);
+      await _tapVisible(tester, find.text('기록'));
+
+      final g = gameStore.current!;
+      expect(g.scores.reduce((a, b) => a + b), 100000);
+      expect(g.events.last.description, isNot(contains('더블론')));
+      expect(g.scores[1], 25000); // B 는 함께 론에서 빠졌다
     });
   });
 }

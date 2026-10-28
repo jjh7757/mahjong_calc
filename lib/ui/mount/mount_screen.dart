@@ -27,6 +27,7 @@ import '../../table/seat_map.dart';
 import '../../table/shot_image.dart';
 import '../../table/table_layout.dart';
 import '../../table/table_reader.dart';
+import '../../table/table_reading.dart';
 import '../../table/river_change.dart';
 import '../../table/river_tracker.dart';
 import '../../table/scene_shift.dart';
@@ -910,6 +911,24 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
     // 트리플론을 유국으로 하는 규칙에서 선택 창이 바로 도중 유국을 기록했으면 판독을 멈춘다.
     var drawRecorded = false;
+    // 화료자마다 병합한다. 동시 론이면 서로를 방총자 후보에서 뺀다.
+    List<TableMerge> mergeAll(List<TableReading> readings) {
+      final winnerSides = {for (final r in readings) r.winnerSide!};
+      return [
+        for (final r in readings)
+          mergeReading(
+            hand: r.hand!,
+            center: r.center,
+            winnerSide: r.winnerSide!,
+            game: g,
+            seats: seats,
+            otherWinners: winnerSides.difference({r.winnerSide!}),
+            meldsTracked: r.meldsTracked,
+            loserHint: r.trackedDiscardSide,
+          ),
+      ];
+    }
+
     try {
       final reading = _useGrid
           ? await reader.readGrid(
@@ -925,6 +944,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                 }
                 return r;
               },
+              // 눕힌 손패 둘이 같은 방총자·같은 화료패로 둘 다 화료형이면 묻지 않고 더블론(결과 화면에서 한 명으로 되돌림).
+              acceptAll: (rs) => clearDoubleRon(
+                mergeAll(rs),
+                (m) => engine.calculate(m.hand!, m.situation, rules: widget.editor.rules).isValid,
+              ),
               tracked: _trackedNow(),
               shadow: _shadow,
               trackedRiichi: _trackedRiichi(),
@@ -946,26 +970,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       }
       if (!mounted) return;
       setState(() => _lastLayout = reading.layout);
-      // 화료자마다 병합한다. 동시 론이면 서로를 방총자 후보에서 빼고, 규칙(머리치기·인원)에 맞춰 고른다.
+      // 규칙(머리치기·인원)에 맞춰 화료자를 고른다.
       final readings = [reading, ...reading.others];
-      final winnerSides = {for (final r in readings) r.winnerSide!};
-      final picked = pickRonWinners(
-        [
-          for (final r in readings)
-            mergeReading(
-              hand: r.hand!,
-              center: r.center,
-              winnerSide: r.winnerSide!,
-              game: g,
-              seats: seats,
-              otherWinners: winnerSides.difference({r.winnerSide!}),
-              meldsTracked: r.meldsTracked,
-              loserHint: r.trackedDiscardSide,
-            ),
-        ],
-        g.settings,
-        g.names,
-      );
+      final picked = pickRonWinners(mergeAll(readings), g.settings, g.names);
       final merge = picked.kept.first;
       final others = <OtherWin>[];
       final otherFlags = <String>[];
@@ -987,6 +994,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       widget.editor.setFromMerge(merge, g);
       final flags = [
         for (final r in readings) ...r.warnings.where((w) => r == reading || !reading.warnings.contains(w)),
+        if (trace.autoMultiRon && picked.kept.length > 1)
+          '눕힌 손패 둘이 같은 패로 화료형이라 더블론으로 봤습니다. 한 명만 났으면 "한 명만 론" 을 누르세요',
         ...picked.flags.map((f) => f.message),
         ...merge.flags.map((f) => f.message),
         ...otherFlags,

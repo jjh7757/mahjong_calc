@@ -95,6 +95,9 @@ class TableReadTrace {
 
   /// 추적 자리를 어떻게 읽었나: handonly(손패 칸만) · fallback_seat(장수가 안 맞아 자리 전체를 다시 읽음).
   final Map<Side, String> trackedMode = {};
+
+  /// 눕힌 손패 둘을 묻지 않고 더블론으로 정했는지([TableReader.readGrid] 의 acceptAll).
+  bool autoMultiRon = false;
 }
 
 /// 그림자 모드: 같은 사진의 한 자리를 손패 전용(/v2/handonly)과 자리 전체(/v2/seat)로 동시에 읽은 두 답. 기록용(설계 7절).
@@ -147,6 +150,7 @@ class TableReader {
   /// - 화료자 자리(손패 + 오른쪽 모서리) → /v2/seat: 앞면 여부, 손패, 떨어진 한 장, 울기 전부, 따로 놓인 앞면 패.
   ///   화료자는 자리 구역 픽셀(뒷면 연보라가 없는 자리)로 정하고, 못 정하면 네 자리를 모두 읽어 모델의 앞면 답으로 정한다.
   ///   그래도 하나가 아니면 [pickWinners] 로 묻는다. 여럿을 고르면(동시 론) 첫 자리가 대표, 나머지는 [TableReading.others].
+  ///   둘일 때 [acceptAll] 이 두 자리의 판독을 받아들이면 묻지 않고 둘 다 화료자로 한다(더블론 자동 판정).
   /// - 가운데: 다른 자리 쪽을 각각 그 사람 방향으로 세워 강의 **마지막 패 한 장만**, 여러 자리를 한 번에 /v2/last3(누가 쏘였나).
   /// - 리치: 가운데 기기 둘레의 **리치봉만** /v2/sticks. 강의 가로 패는 보지 않는다.
   /// - 도라: 가운데 칸 전체를 /v2/dora 로 읽은 것과 화료자 자리의 따로 놓인 앞면 패(없으면 울기 모양이 아닌 묶음)를
@@ -168,6 +172,7 @@ class TableReader {
     Discard? trackedDiscard,
     Side? winnerSide,
     Future<List<Side>?> Function(List<Side> candidates)? pickWinners,
+    bool Function(List<TableReading> readings)? acceptAll,
     void Function(ReadStage stage)? onStage,
     TableReadTrace? trace,
   }) async {
@@ -388,32 +393,6 @@ class TableReader {
     lap('read');
 
     var sides = [?known];
-    if (sides.isEmpty) {
-      // 손패 4장 이상을 앞면으로 읽은 자리. 패산 더미 때문에 픽셀로 못 정한 자리(장면 C·E 왼쪽)가 여기서 정해진다.
-      final cands = [
-        for (final s in Side.values)
-          if (seats[s] case final v? when v.faceUp && v.tiles.length >= 4) s,
-      ];
-      layout = grid.toLayout(faceUp: cands);
-      trace?.layout = layout;
-      // 둘 이상이면 동시 론일 수 있어 여럿을 고를 수 있게 묻는다(첫 자리가 대표 화료자).
-      sides = cands.length == 1 ? cands : (await pickWinners?.call(cands.isEmpty ? Side.values : cands)) ?? const [];
-      if (sides.isEmpty) {
-        throw TableReadException(
-          cands.isEmpty ? '앞면으로 눕힌 손패를 못 찾았습니다. 누가 났는지 골라 주세요' : '눕힌 손패가 ${cands.length}자리입니다. 누가 났는지 골라 주세요',
-          layout: layout,
-        );
-      }
-    }
-    lap('pick');
-    final side = sides.first;
-    trace?.winnerSide = side;
-    trace?.handCrop = seatCrops[side];
-    for (final s in sides) {
-      if (seats[s] == null) {
-        throw TableReadException('${s.label} 자리를 읽지 못했습니다. 다시 찍어 주세요', layout: layout);
-      }
-    }
     final sticks = sticksJ == null ? const <Side, bool>{} : parseCenterV2(sticksJ).sticks;
     final dora = doraJ == null ? const <ReadTile>[] : parseCenterV2(doraJ).indicators;
 
@@ -485,6 +464,43 @@ class TableReader {
       );
     }
 
+    if (sides.isEmpty) {
+      // 손패 4장 이상을 앞면으로 읽은 자리. 패산 더미 때문에 픽셀로 못 정한 자리(장면 C·E 왼쪽)가 여기서 정해진다.
+      final cands = [
+        for (final s in Side.values)
+          if (seats[s] case final v? when v.faceUp && v.tiles.length >= 4) s,
+      ];
+      layout = grid.toLayout(faceUp: cands);
+      trace?.layout = layout;
+      // 둘이고 [acceptAll] 이 두 판독을 받아들이면(같은 방총자·같은 화료패로 둘 다 화료형) 묻지 않고 더블론.
+      if (cands.length == 2 && acceptAll != null) {
+        sides = cands;
+        if (acceptAll([for (final s in cands) build(s)])) {
+          trace?.autoMultiRon = true;
+        } else {
+          sides = const [];
+        }
+      }
+      // 아니면 동시 론일 수 있어 여럿을 고를 수 있게 묻는다(첫 자리가 대표 화료자).
+      if (sides.isEmpty) {
+        sides = cands.length == 1 ? cands : (await pickWinners?.call(cands.isEmpty ? Side.values : cands)) ?? const [];
+      }
+      if (sides.isEmpty) {
+        throw TableReadException(
+          cands.isEmpty ? '앞면으로 눕힌 손패를 못 찾았습니다. 누가 났는지 골라 주세요' : '눕힌 손패가 ${cands.length}자리입니다. 누가 났는지 골라 주세요',
+          layout: layout,
+        );
+      }
+    }
+    lap('pick');
+    final side = sides.first;
+    trace?.winnerSide = side;
+    trace?.handCrop = seatCrops[side];
+    for (final s in sides) {
+      if (seats[s] == null) {
+        throw TableReadException('${s.label} 자리를 읽지 못했습니다. 다시 찍어 주세요', layout: layout);
+      }
+    }
     final first = build(side);
     trace?.hand = first.hand;
     trace?.center = first.center;

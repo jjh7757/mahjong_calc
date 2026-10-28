@@ -17,6 +17,7 @@ import 'package:mahjong_calc/table/merge.dart';
 import 'package:mahjong_calc/table/seat_map.dart';
 import 'package:mahjong_calc/table/table_layout.dart';
 import 'package:mahjong_calc/table/table_reader.dart';
+import 'package:mahjong_calc/table/table_reading.dart';
 
 void main() {
   final env = Platform.environment;
@@ -48,6 +49,21 @@ void main() {
       );
       final seats = SeatMap(game.settings.bottomSeat);
       final result = <String, Object?>{'photo': path, 'grid': grid.toJson()};
+      List<TableMerge> mergeAll(List<TableReading> rs) {
+        final winnerSides = {for (final r in rs) r.winnerSide!};
+        return [
+          for (final r in rs)
+            mergeReading(
+              hand: r.hand!,
+              center: r.center,
+              winnerSide: r.winnerSide!,
+              game: game,
+              seats: seats,
+              otherWinners: winnerSides.difference({r.winnerSide!}),
+            ),
+        ];
+      }
+
       final sw = Stopwatch()..start();
       try {
         final reading = await TableReader(client).readGrid(
@@ -64,26 +80,16 @@ void main() {
             ];
             return picked.isEmpty ? [c.first] : picked;
           },
+          // AUTO=1 이면 앱처럼 눕힌 손패 둘을 더블론 자동 판정(clearDoubleRon)으로 먼저 본다. 못 받아들이면 위 고르기로.
+          acceptAll: env['AUTO'] == '1'
+              ? (rs) => clearDoubleRon(mergeAll(rs), (m) => engine.calculate(m.hand!, m.situation).isValid)
+              : null,
           trace: trace,
         );
         // 동시 론이면 앱(mount_screen)과 같이 화료자마다 병합하고 규칙에 맞춰 고른다.
         final readings = [reading, ...reading.others];
-        final winnerSides = {for (final r in readings) r.winnerSide!};
-        final picked = pickRonWinners(
-          [
-            for (final r in readings)
-              mergeReading(
-                hand: r.hand!,
-                center: r.center,
-                winnerSide: r.winnerSide!,
-                game: game,
-                seats: seats,
-                otherWinners: winnerSides.difference({r.winnerSide!}),
-              ),
-          ],
-          game.settings,
-          game.names,
-        );
+        final picked = pickRonWinners(mergeAll(readings), game.settings, game.names);
+        result['auto_multi_ron'] = trace.autoMultiRon;
         final merge = picked.kept.first;
         result['winner_side'] = reading.winnerSide!.name;
         if (readings.length > 1) {

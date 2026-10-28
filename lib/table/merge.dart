@@ -395,6 +395,20 @@ String _trackedNote(Side loser, String name) => '게임 중 마지막으로 버�
 String _furitenNote(Side loser, String name) =>
     '먼저 버린 패에는 론할 수 없으니(동순 후리텐) 화료자 다음 차례에 가까운 ${loser.label}($name) 로 봤습니다';
 
+/// 눕힌 손패가 둘일 때 묻지 않고 동시 론으로 볼 수 있나(2026-10-28, 사용자 요청). 둘 다 론으로 계산돼([valid] 가 역 있는
+/// 화료인지 확인), 방총자가 같은 한 사람(화료자가 아닌)이고 화료패가 같아야 한다. 하나라도 어긋나면 false → 지금처럼 묻는다.
+/// 같은 패를 기다리다 론하지 않고 펼친 손패(견逃し·후리텐)는 가려내지 못하므로 결과 화면에 "한 명만 론" 되돌리기가 있다.
+bool clearDoubleRon(List<TableMerge> merges, bool Function(TableMerge m) valid) {
+  if (merges.length != 2) return false;
+  final winners = {for (final m in merges) m.winner};
+  final loser = merges.first.loser;
+  if (winners.length != 2 || loser == null || winners.contains(loser)) return false;
+  for (final m in merges) {
+    if (m.hand == null || m.isTsumo || m.loser != loser || m.closed.isEmpty || !valid(m)) return false;
+  }
+  return merges.first.closed.last.tile == merges.last.closed.last.tile;
+}
+
 /// 동시 론으로 고른 화료자들의 병합 결과를 규칙에 맞춰 고른다. 돌려주는 [kept] 는 방총자 다음 차례부터 가까운 순
 /// (첫 사람이 본장·공탁을 가져가고, 머리치기면 혼자 남는다). [loser] 는 화료자들의 병합이 찾은 방총자(처음 찾은 것).
 /// 쯔모로 읽힌 손패가 있으면 동시 화료가 아니므로 첫 것만 남긴다.

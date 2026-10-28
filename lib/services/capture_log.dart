@@ -191,6 +191,7 @@ class CaptureLog {
       'layout_mode': trace?.layoutMode,
       'tracked_mode': trace == null ? null : {for (final e in trace.trackedMode.entries) e.key.name: e.value},
       'call_ms': trace?.callMs,
+      if (trace?.autoMultiRon ?? false) 'auto_multi_ron': true,
       'fixed_analysis': trace?.analysis?.toJson(),
       'warnings': warnings,
       'error': error,

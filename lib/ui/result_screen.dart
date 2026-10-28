@@ -102,8 +102,11 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   ScoreResult get result => widget.result;
   Game? get _game => gameStore.current;
 
+  /// "한 명만 론" 을 눌렀으면 함께 론한 사람을 빼고 대표 화료자만 기록한다(더블론 자동 판정을 되돌림).
+  bool _singleRon = false;
+
   /// 함께 론한 사람(대국 기록 중이고 론일 때만, 화료자·방총자와 겹치지 않는 것).
-  List<OtherWin> get _others => _game == null || widget.isTsumo
+  List<OtherWin> get _others => _game == null || widget.isTsumo || _singleRon
       ? const []
       : [for (final o in widget.otherWins) if (o.seat != _winner && o.seat != _loser) o];
 
@@ -117,7 +120,14 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(_others.length >= 2 ? '트리플론 — 함께 론한 사람' : '더블론 — 함께 론한 사람', style: text.titleSmall),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(_others.length >= 2 ? '트리플론 — 함께 론한 사람' : '더블론 — 함께 론한 사람', style: text.titleSmall),
+                ),
+                _singleRonButton(),
+              ],
+            ),
             const SizedBox(height: 6),
             for (final o in _others)
               Padding(
@@ -141,6 +151,17 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       ),
     );
   }
+
+  /// 함께 론한 사람을 빼고 [_winner] 한 명만 론으로 한다.
+  Widget _singleRonButton({Color? color}) => TextButton(
+        key: const ValueKey('result-single-ron'),
+        style: color == null ? null : TextButton.styleFrom(foregroundColor: color),
+        onPressed: () {
+          _cancelAuto();
+          setState(() => _singleRon = true);
+        },
+        child: Text(_winner == null ? '한 명만 론' : '한 명만 론 (${_game!.names[_winner!]})'),
+      );
 
   /// 본장 없는 론 지불액(동시 론의 본장은 [Game.multiRonDelta] 가 가까운 쪽에 붙인다).
   Payment _ronOf(int seat, int base) {
