@@ -37,7 +37,7 @@ jobs:
           KEY: ${{ secrets.RECOGNIZER_API_KEY }}
         run: |
           if [ -z "$KEY" ]; then
-            echo "RECOGNIZER_API_KEY secret 이 없어 APK 를 건너뜀 (gh secret set RECOGNIZER_API_KEY < .recognizer_key)"
+            echo "RECOGNIZER_API_KEY secret 이 없어 APK 를 건너뜀 (gh secret set --env-file <RECOGNIZER_API_KEY=... 가 든 dotenv 파일>)"
             echo "present=false" >> "$GITHUB_OUTPUT"
           else
             echo "present=true" >> "$GITHUB_OUTPUT"
