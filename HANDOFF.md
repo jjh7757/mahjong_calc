@@ -12,8 +12,8 @@
 
 | 것 | 위치 |
 | --- | --- |
-| 앱 | `C:\Users\jjh7757\dev\mahjong_calc` (git 아님) |
-| 인식 서버 | `C:\Users\jjh7757\dev\mahjong-recognizer` → GitHub `jjh7757/mahjong-recognizer`, 배포 https://mahjong.ai-agent-develop.cloud |
+| 앱 | `C:\Users\jjh7757\dev\mahjong_calc` — git 저장소(2026-10-28, master). GitHub `jjh7757/mahjong_calc`(비공개) 로 push 하면 `.github/workflows/ci.yml` 이 analyze·test 를 돌리고, Secrets `RECOGNIZER_API_KEY` 가 있으면 release APK 를 artifact 로 올린다. `experiments/` 의 사진·결과물은 .gitignore(스크립트·메모만 커밋) |
+| 인식 서버 | `C:\Users\jjh7757\dev\mahjong-recognizer` → GitHub `jjh7757/mahjong-recognizer`, 배포 https://mahjong.ai-agent-develop.cloud. master push → GitHub Actions `test`(pytest 50개, `requirements-dev.txt`) 통과해야 `deploy`(832e2df, 2026-10-28) |
 | Flutter SDK | `C:\Users\jjh7757\flutter\bin\flutter` (PATH 없음) |
 | JDK / Android SDK | `C:\Users\jjh7757\dev\jdk17`, `C:\Users\jjh7757\dev\android-sdk`, AVD `pixel_api36` |
 | 서버 API 키 | `mahjong_calc\.recognizer_key` (앱 빌드 시 `--dart-define=RECOGNIZER_API_KEY=`) |
