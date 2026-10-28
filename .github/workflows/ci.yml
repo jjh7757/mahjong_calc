@@ -5,6 +5,12 @@ name: ci
 on:
   push:
     branches: [master]
+    paths-ignore:            # 문서·실험 메모만 바뀌면 안 돌린다(APK 빌드 10분 절약)
+      - "**.md"
+      - "docs/**"
+      - "experiments/**"
+      - "screenshots/**"
+      - "community/**"
   pull_request:
   workflow_dispatch:
 
