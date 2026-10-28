@@ -1,0 +1,719 @@
+[
+{
+"name": "B k25_1",
+"now": {
+"ok": false,
+"valid": false,
+"safe": true,
+"right": false,
+"sum": {
+"hand": 5,
+"separate": false,
+"melds": [],
+"loose": 4,
+"detected": 9
+}
+},
+"zones": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 10,
+"separate": false,
+"melds": [
+3
+],
+"loose": 0,
+"detected": 13
+}
+},
+"t_now": 0.8052838000003248,
+"t_zones": 3.4231952999834903
+},
+{
+"name": "B k28_1",
+"now": {
+"ok": false,
+"valid": false,
+"safe": false,
+"right": false,
+"sum": {
+"hand": 6,
+"separate": false,
+"melds": [
+3,
+3
+],
+"loose": 0,
+"detected": 12
+}
+},
+"zones": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 10,
+"separate": false,
+"melds": [
+3
+],
+"loose": 0,
+"detected": 13
+}
+},
+"t_now": 0.8298666000482626,
+"t_zones": 3.313933400029782
+},
+{
+"name": "C k15_1",
+"now": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 13,
+"separate": false,
+"melds": [],
+"loose": 2,
+"detected": 15
+}
+},
+"zones": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 13,
+"separate": false,
+"melds": [],
+"loose": 1,
+"detected": 14
+}
+},
+"t_now": 0.9018650000216439,
+"t_zones": 1.844952299958095
+},
+{
+"name": "C k26_1",
+"now": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 13,
+"separate": false,
+"melds": [],
+"loose": 2,
+"detected": 15
+}
+},
+"zones": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 13,
+"separate": false,
+"melds": [],
+"loose": 2,
+"detected": 15
+}
+},
+"t_now": 0.9163905999739654,
+"t_zones": 1.865046799997799
+},
+{
+"name": "D k12_1",
+"now": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 10,
+"separate": false,
+"melds": [
+3
+],
+"loose": 0,
+"detected": 13
+}
+},
+"zones": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 10,
+"separate": false,
+"melds": [
+3
+],
+"loose": 0,
+"detected": 13
+}
+},
+"t_now": 0.8955462999874726,
+"t_zones": 1.783182899991516
+},
+{
+"name": "D k16_1",
+"now": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 10,
+"separate": false,
+"melds": [
+3
+],
+"loose": 0,
+"detected": 13
+}
+},
+"zones": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 10,
+"separate": false,
+"melds": [
+3
+],
+"loose": 0,
+"detected": 13
+}
+},
+"t_now": 0.8800216999952681,
+"t_zones": 1.7792445999803022
+},
+{
+"name": "C k15_1 울기+1",
+"now": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 10,
+"separate": false,
+"melds": [
+3
+],
+"loose": 2,
+"detected": 15
+}
+},
+"zones": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 10,
+"separate": false,
+"melds": [
+3
+],
+"loose": 1,
+"detected": 14
+}
+},
+"t_now": 0.9182540999609046,
+"t_zones": 1.8709403999964707
+},
+{
+"name": "C k15_1 울기+2",
+"now": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 7,
+"separate": false,
+"melds": [
+3,
+3
+],
+"loose": 2,
+"detected": 15
+}
+},
+"zones": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 7,
+"separate": false,
+"melds": [
+3,
+3
+],
+"loose": 1,
+"detected": 14
+}
+},
+"t_now": 0.9090159999905154,
+"t_zones": 1.8597756000235677
+},
+{
+"name": "C k15_1 울기+3",
+"now": {
+"ok": false,
+"valid": false,
+"safe": false,
+"right": false,
+"sum": {
+"hand": 5,
+"separate": false,
+"melds": [
+3,
+3
+],
+"loose": 4,
+"detected": 15
+}
+},
+"zones": {
+"ok": false,
+"valid": false,
+"safe": false,
+"right": false,
+"sum": {
+"hand": 4,
+"separate": false,
+"melds": [
+3,
+3,
+3,
+3
+],
+"loose": 0,
+"detected": 16
+}
+},
+"t_now": 0.92145799996797,
+"t_zones": 3.6479585000197403
+},
+{
+"name": "C k15_1 울기+4",
+"now": {
+"ok": false,
+"valid": true,
+"safe": false,
+"right": false,
+"sum": {
+"hand": 8,
+"separate": false,
+"melds": [
+3,
+4
+],
+"loose": 1,
+"detected": 16
+}
+},
+"zones": {
+"ok": false,
+"valid": true,
+"safe": false,
+"right": true,
+"sum": {
+"hand": 1,
+"separate": false,
+"melds": [
+4,
+4,
+3,
+3
+],
+"loose": 0,
+"detected": 15
+}
+},
+"t_now": 0.9299730999628082,
+"t_zones": 3.6186494000139646
+},
+{
+"name": "C k26_1 울기+1",
+"now": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 10,
+"separate": false,
+"melds": [
+3
+],
+"loose": 1,
+"detected": 14
+}
+},
+"zones": {
+"ok": false,
+"valid": true,
+"safe": false,
+"right": false,
+"sum": {
+"hand": 11,
+"separate": false,
+"melds": [
+3
+],
+"loose": 2,
+"detected": 16
+}
+},
+"t_now": 0.9028989999787882,
+"t_zones": 2.966734300018288
+},
+{
+"name": "C k26_1 울기+2",
+"now": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 7,
+"separate": false,
+"melds": [
+3,
+3
+],
+"loose": 1,
+"detected": 14
+}
+},
+"zones": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 7,
+"separate": false,
+"melds": [
+3,
+3
+],
+"loose": 2,
+"detected": 15
+}
+},
+"t_now": 0.3365777999861166,
+"t_zones": 0.72167990001617
+},
+{
+"name": "C k26_1 울기+3",
+"now": {
+"ok": false,
+"valid": false,
+"safe": false,
+"right": false,
+"sum": {
+"hand": 4,
+"separate": false,
+"melds": [
+3,
+3
+],
+"loose": 4,
+"detected": 14
+}
+},
+"zones": {
+"ok": false,
+"valid": false,
+"safe": true,
+"right": false,
+"sum": {
+"hand": 4,
+"separate": false,
+"melds": [
+3,
+3
+],
+"loose": 5,
+"detected": 15
+}
+},
+"t_now": 0.334577800007537,
+"t_zones": 1.3773791000130586
+},
+{
+"name": "C k26_1 울기+4",
+"now": {
+"ok": false,
+"valid": true,
+"safe": false,
+"right": false,
+"sum": {
+"hand": 8,
+"separate": false,
+"melds": [
+3,
+3
+],
+"loose": 1,
+"detected": 15
+}
+},
+"zones": {
+"ok": false,
+"valid": false,
+"safe": true,
+"right": false,
+"sum": {
+"hand": 1,
+"separate": false,
+"melds": [
+3,
+3
+],
+"loose": 9,
+"detected": 16
+}
+},
+"t_now": 0.35437570000067353,
+"t_zones": 1.4004151999833994
+},
+{
+"name": "D k12_1 울기+1",
+"now": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 7,
+"separate": false,
+"melds": [
+3,
+3
+],
+"loose": 0,
+"detected": 13
+}
+},
+"zones": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 7,
+"separate": false,
+"melds": [
+3,
+3
+],
+"loose": 0,
+"detected": 13
+}
+},
+"t_now": 0.33156949997646734,
+"t_zones": 0.6531145000481047
+},
+{
+"name": "D k12_1 울기+2",
+"now": {
+"ok": false,
+"valid": false,
+"safe": false,
+"right": false,
+"sum": {
+"hand": 6,
+"separate": false,
+"melds": [],
+"loose": 7,
+"detected": 13
+}
+},
+"zones": {
+"ok": false,
+"valid": true,
+"safe": false,
+"right": true,
+"sum": {
+"hand": 4,
+"separate": false,
+"melds": [
+3,
+3,
+3
+],
+"loose": 1,
+"detected": 14
+}
+},
+"t_now": 0.32757879997370765,
+"t_zones": 1.2893744999892078
+},
+{
+"name": "D k12_1 울기+3",
+"now": {
+"ok": false,
+"valid": false,
+"safe": false,
+"right": false,
+"sum": {
+"hand": 3,
+"separate": false,
+"melds": [],
+"loose": 10,
+"detected": 13
+}
+},
+"zones": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 1,
+"separate": false,
+"melds": [
+3,
+3,
+3,
+3
+],
+"loose": 0,
+"detected": 13
+}
+},
+"t_now": 0.3181171999895014,
+"t_zones": 0.6836744999745861
+},
+{
+"name": "D k16_1 울기+1",
+"now": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 7,
+"separate": false,
+"melds": [
+3,
+3
+],
+"loose": 0,
+"detected": 13
+}
+},
+"zones": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 7,
+"separate": false,
+"melds": [
+3,
+3
+],
+"loose": 0,
+"detected": 13
+}
+},
+"t_now": 0.33106080000288785,
+"t_zones": 0.6504278000211343
+},
+{
+"name": "D k16_1 울기+2",
+"now": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 4,
+"separate": false,
+"melds": [
+3,
+3,
+3
+],
+"loose": 0,
+"detected": 13
+}
+},
+"zones": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 4,
+"separate": false,
+"melds": [
+3,
+3,
+3
+],
+"loose": 0,
+"detected": 13
+}
+},
+"t_now": 0.33538489998318255,
+"t_zones": 0.6373760999995284
+},
+{
+"name": "D k16_1 울기+3",
+"now": {
+"ok": false,
+"valid": false,
+"safe": false,
+"right": false,
+"sum": {
+"hand": 3,
+"separate": false,
+"melds": [],
+"loose": 10,
+"detected": 13
+}
+},
+"zones": {
+"ok": true,
+"valid": true,
+"safe": true,
+"right": true,
+"sum": {
+"hand": 1,
+"separate": false,
+"melds": [
+3,
+3,
+3,
+3
+],
+"loose": 0,
+"detected": 13
+}
+},
+"t_now": 0.3117769999662414,
+"t_zones": 0.6513994000270031
+}
+]

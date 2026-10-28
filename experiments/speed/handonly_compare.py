@@ -2,6 +2,7 @@
 
   python -I -X utf8 experiments/speed/handonly_compare.py --runs 15      (로컬 서버 "recognizer" 8030 + "recognizer-handframe" 8032)
   python -I -X utf8 experiments/speed/handonly_compare.py --show
+  운영: --a https://mahjong.ai-agent-develop.cloud --f 같은 주소 --key-file .recognizer_key --out handonly_prod.json
 
   seat        지금 운영: /v2/seat, 자리 크롭(손패 + 울기), YOLO 틀 + 조각 읽기. 손패 + 울기가 맞아야 정답.
   hand_whole  지금 손패 전용: /v2/handonly, 울기 잘라 낸 크롭, 통째 읽기(서버 8030 = HANDONLY_FRAME 꺼짐).
@@ -51,9 +52,13 @@ def crops(scene: str, photo: str, cut_at: dict[str, float] = CUT) -> tuple[bytes
     return out[0], out[1]
 
 
+KEY = ""  # 운영 서버 API 키(--key-file). 로컬은 비움.
+
+
 def post(url: str, path: str, jpeg: bytes) -> dict:
     t0 = time.perf_counter()
-    r = requests.post(f"{url}{path}", files={"image": ("seat.jpg", jpeg, "image/jpeg")}, timeout=180)
+    r = requests.post(f"{url}{path}", files={"image": ("seat.jpg", jpeg, "image/jpeg")},
+                      headers={"X-Api-Key": KEY} if KEY else {}, timeout=180)
     secs = time.perf_counter() - t0
     if r.status_code != 200:
         return {"error": f"{r.status_code} {r.text[:100]}", "s": secs}
@@ -78,9 +83,10 @@ def run(runs: int, a: str, f: str, gap: float, conds: tuple[str, ...] = CONDS, c
         for i in range(runs):
             for scene, photo, full, cut in items:
                 t_start = time.time()
-                # 추적이 확정한 울기 수(정답 울기 수)를 함께 보낸다 — 틀의 장수 검사(13·14)에 더해진다.
+                # hand_frame 은 추적이 확정한 울기 수(정답 울기 수)를 함께 보낸다 — 틀의 장수 검사(13·14)에 더해진다.
+                # hand_whole 은 울기 수 없이(예전 앱) — 운영(71b43cd~)에선 틀 검사를 못 넘어 통째 읽기가 된다.
                 q = f"/v2/handonly?melds={len(b.TRUTH[scene][2])}"
-                jobs = {"seat": (a, "/v2/seat", full), "hand_whole": (a, q, cut), "hand_frame": (f, q, cut)}
+                jobs = {"seat": (a, "/v2/seat", full), "hand_whole": (a, "/v2/handonly", cut), "hand_frame": (f, q, cut)}
                 jobs = {k: v for k, v in jobs.items() if k in conds}
                 results = dict(zip(jobs, ex.map(lambda j: post(*j), jobs.values())))
                 for cond, r in results.items():
@@ -131,8 +137,11 @@ if __name__ == "__main__":
     ap.add_argument("--conds", default=",".join(CONDS), help="잴 조건만(쉼표)")
     ap.add_argument("--app-cut", action="store_true", help="울기 자르는 곳을 앱 격자 handCell 비율로(APP_CUT)")
     ap.add_argument("--out", default=OUT.name, help="results/ 아래 결과 파일 이름")
+    ap.add_argument("--key-file", default="", help="X-Api-Key 로 보낼 키 파일(운영 서버, 예: .recognizer_key)")
     ap.add_argument("--show", action="store_true")
     args = ap.parse_args()
+    if args.key_file:
+        KEY = Path(args.key_file).read_text(encoding="utf-8").strip()
     out = b.OUT / args.out
     show(json.loads(out.read_text(encoding="utf-8")) if args.show else
          run(args.runs, args.a, args.f, args.gap, tuple(args.conds.split(",")), APP_CUT if args.app_cut else CUT, out))
