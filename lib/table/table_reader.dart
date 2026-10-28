@@ -190,10 +190,11 @@ class TableReader {
     final trackSide = trackedDiscard?.side;
     final warnings = <String>[];
     final usage = <String, Map<String, int>>{};
-    Future<Map<String, dynamic>?> call(String kind, Uint8List? bytes, String name, {bool required = false}) {
+    Future<Map<String, dynamic>?> call(String kind, Uint8List? bytes, String name,
+        {bool required = false, Map<String, String>? query}) {
       if (bytes == null) return Future.value(null);
       final t = Stopwatch()..start();
-      final f = client.observe(kind, bytes, filename: '$name.jpg').then<Map<String, dynamic>?>((j) {
+      final f = client.observe(kind, bytes, filename: '$name.jpg', query: query).then<Map<String, dynamic>?>((j) {
         trace?.callMs[name] = t.elapsedMilliseconds;
         usage[name] = parseUsage(j['usage']);
         return j;
@@ -252,10 +253,13 @@ class TableReader {
       };
       trace?.meldCrops = [...cornerCrops.values];
       onStage?.call(ReadStage.reading);
+      // 손패 전용에는 확정한 울기 수를 같이 보낸다 — 서버가 손패 틀(YOLO + 조각 읽기)의 장수 검사(13·14)에 더한다.
+      // 없으면 틀을 못 잡고 통째로 읽어 느려진다(B·D 60장면 p90 10.7 → 8.0초, metrics 표 2-1).
       seatF = {
         for (final s in seatSides)
           s: trackedSides.contains(s)
-              ? call('handonly', handCrops[s], 'handonly_${s.name}', required: known != null)
+              ? call('handonly', handCrops[s], 'handonly_${s.name}',
+                  required: known != null, query: {'melds': '${tracked[s]!.length}'})
               : call('seat', seatCrops[s], 'seat_${s.name}', required: known != null),
       };
       shadowF = {

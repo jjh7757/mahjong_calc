@@ -174,7 +174,9 @@ void main() {
       List<String>? handonlyTiles,
       bool handonlySeparate = true,
       String trackedLastTile = '4p',
+      List<Uri>? urls,
     }) => MockClient((r) async {
+      urls?.add(r.url);
       // 강 끝(/v2/last3)은 한 요청에 사진 여러 장이다. 사진마다 이름·그림을 남긴다.
       final files = RegExp(r'filename="([^"]+)\.jpg"').allMatches(latin1.decode(r.bodyBytes)).toList();
       final name = files.isEmpty ? '' : files.first.group(1)!;
@@ -427,11 +429,18 @@ void main() {
     test('추적으로 울기를 아는 자리는 손패 칸만 /v2/handonly 로 읽고, 울기를 채워 돌려준다', () async {
       final names = <String>[];
       final images = <String, img.Image>{};
-      final client = RecognizerClient(baseUrl: 'https://x.test', apiKey: 'k', httpClient: server(names, images));
+      final urls = <Uri>[];
+      final client = RecognizerClient(
+        baseUrl: 'https://x.test',
+        apiKey: 'k',
+        httpClient: server(names, images, urls: urls),
+      );
       final trace = TableReadTrace();
       final reading = await TableReader(client).readGrid(table(), grid, tracked: trackedPon, trace: trace);
 
       expect(names, contains('handonly_bottom'));
+      // 확정한 울기 수를 같이 보낸다(서버 손패 틀의 장수 검사용).
+      expect(urls.singleWhere((u) => u.path == '/v2/handonly').queryParameters, {'melds': '1'});
       expect(names, isNot(contains('seat_bottom')));
       // 손패 칸(선 사이)만: 500×200. 자리 전체(750×200)가 아니다.
       expect(images['handonly_bottom']!.width, 500);

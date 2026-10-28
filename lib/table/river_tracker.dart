@@ -4,8 +4,9 @@
 ///   기록하고, 새로 흰 블록이 된 자리([ZoneSnapshot.newWhite])를 그 패의 위치로 둔다. Gemini 호출 없음. 화료 때 가장 최근
 ///   버림이 있는 자리가 **방총자 후보**이고 그 상자가 **론 패 위치**다(테스트 세트에서 강 끝 YOLO 틀이 2삭을 8/8 못 찾던 것의 대안).
 ///   흰 면이 패 1장 줄면 울기로 가져간 것(taken), 2장 넘게 줄면 새 판(cleared)으로 본다.
-/// - **리치봉:** 기기 가장자리 띠([GridZones.stickStrip])의 밝기 블록이 기준과 달라지고 안정이면 `/v2/sticks` 를 읽게 하고
-///   ([RiverAction.readSticks]), 다른 프레임의 두 읽기가 같으면 확정([riichi]). 울기 추적과 같은 틀.
+/// - **리치봉(기본 끔, [RiverTrackerConfig.trackSticks]):** 기기 가장자리 띠([GridZones.stickStrip])의 밝기 블록이 기준과
+///   달라지고 안정이면 `/v2/sticks` 를 읽게 하고([RiverAction.readSticks]), 다른 프레임의 두 읽기가 같으면 확정([riichi]).
+///   울기 추적과 같은 틀.
 ///
 /// 쓰는 쪽(거치 화면)이 3초마다 [TableFrameStats] 의 강·띠 스냅샷을 [onFrame] 에 넣고, 돌려받은 행동을 처리해
 /// [onSticksRead] 로 알려 준다. 화료 때는 [lastDiscard]·[riichi] 를 판독에 힌트로 넘긴다.
@@ -62,7 +63,13 @@ class RiverTrackerConfig {
   final int stickMaxReads;
   final int stickConfirmReads;
 
+  /// 리치봉 띠를 추적할지(기본 끔, 2026-10-28 사용자 결정). 화료 판독이 `/v2/sticks` 를 자리 판독과 나란히 늘 부르므로
+  /// 미리 봐도 시간은 줄지 않고, 추적 결과는 판독에 더하기만 해서(합집합) 게임 중 서버 호출과 잘못 확정할 위험만 는다.
+  /// 켜면 화료 사진에서 놓친 리치봉을 메울 수 있다(효과는 아직 못 잼).
+  final bool trackSticks;
+
   const RiverTrackerConfig({
+    this.trackSticks = false,
     this.moveThreshold = 0.03,
     this.stableFrames = 2,
     this.discardTiles = 0.6,
@@ -131,7 +138,7 @@ class RiverTracker {
     for (final e in riverSnaps.entries) {
       _riverFrame(e.key, e.value, now);
     }
-    return _stickFrame(stripSnaps, now);
+    return config.trackSticks ? _stickFrame(stripSnaps, now) : const [];
   }
 
   void _riverFrame(Side side, ZoneSnapshot cur, DateTime now) {
@@ -283,6 +290,27 @@ class RiverTracker {
       ..atRead = null;
     riichi = {};
     events.add(TrackerEvent(now, Side.bottom, 'reset', reason));
+  }
+
+  /// 장면 전체가 바뀌었다(카메라 움직임·조명, [SceneShiftGate]). 감지한 버림·확정한 리치봉은 두고 픽셀 기준과
+  /// 진행 중인 리치봉 읽기만 버린다 — 다음 프레임이 새 기준.
+  void cameraMoved(DateTime now) {
+    for (final r in rivers.values) {
+      r
+        ..baseline = null
+        ..last = null
+        ..stable = 0;
+    }
+    sticks
+      ..status = riichi.isEmpty ? StickStatus.idle : StickStatus.confirmed
+      ..baseline.clear()
+      ..last.clear()
+      ..stable = 0
+      ..reads = 0
+      ..candidate = null
+      ..pendingFrame = null
+      ..atRead = null;
+    events.add(TrackerEvent(now, Side.bottom, 'rebase', '장면 전체 변화'));
   }
 
   Map<String, dynamic> toJson() => {

@@ -92,8 +92,18 @@ void main() {
     expect(tr.events.last.kind, 'cleared');
   });
 
-  test('리치봉 띠가 바뀌면 읽기를 요청하고 두 읽기가 같으면 확정', () {
+  const withSticks = RiverTrackerConfig(trackSticks: true);
+
+  test('리치봉 추적은 기본으로 꺼져 있어 띠가 바뀌어도 읽지 않는다', () {
     final tr = RiverTracker(tileFrac: frac);
+    for (var i = 0; i < 4; i++) {
+      expect(tr.onFrame(rivers(), strips(shift: i < 2 ? 0 : 40), at(i * 3)), isEmpty);
+    }
+    expect(tr.sticks.status, StickStatus.idle);
+  });
+
+  test('리치봉 띠가 바뀌면 읽기를 요청하고 두 읽기가 같으면 확정', () {
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
     tr.onFrame(rivers(), strips(), at(0));
     expect(tr.onFrame(rivers(), strips(), at(3)), isEmpty);
     // 띠 밝기가 바뀜(막대가 꽂힘).
@@ -116,7 +126,7 @@ void main() {
   });
 
   test('늦은 답·다른 프레임 답은 무시하고, 셋 다 다르면 미확정', () {
-    final tr = RiverTracker(tileFrac: frac);
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
     tr.onFrame(rivers(), strips(), at(0));
     tr.onFrame(rivers(), strips(), at(3));
     tr.onFrame(rivers(), strips(shift: 40), at(6));

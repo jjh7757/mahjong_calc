@@ -79,8 +79,10 @@ class RecognizerClient {
       CenterReading.fromJson(await _post('/v1/table', bytes, filename));
 
   /// 관찰 전용 판독 `/v2/{kind}` (hand · river · center). 응답 JSON 그대로.
-  Future<Map<String, dynamic>> observe(String kind, Uint8List bytes, {String? filename}) =>
-      _post('/v2/$kind', bytes, filename ?? '$kind.jpg');
+  /// [query] 는 URL 쿼리(예: 손패 전용의 `melds` — 추적이 확정한 울기 수).
+  Future<Map<String, dynamic>> observe(String kind, Uint8List bytes, {String? filename, Map<String, String>? query}) =>
+      _post('/v2/$kind${query == null || query.isEmpty ? '' : '?${Uri(queryParameters: query).query}'}', bytes,
+          filename ?? '$kind.jpg');
 
   /// 강 끝 여러 자리를 한 번에 `/v2/last3`(multipart `images` 여러 개, 1~4장). 응답 `rivers` 는 보낸 순서.
   Future<Map<String, dynamic>> observeLasts(List<(Uint8List, String)> images) => _postFiles('/v2/last3', [

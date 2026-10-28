@@ -65,6 +65,17 @@
       "autoPort": false
     },
     {
+      "name": "recognizer-handframe",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/speed/run_handframe_server.py",
+        "--port",
+        "8032"
+      ],
+      "port": 8032,
+      "autoPort": false
+    },
+    {
       "name": "recognizer",
       "runtimeExecutable": "python",
       "runtimeArgs": [

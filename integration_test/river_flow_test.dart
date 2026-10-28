@@ -62,10 +62,7 @@ void main() {
     await waitFor(find.textContaining('마지막 B'), '버림 감지(강 추적 줄)', seconds: 45);
     // ignore: avoid_print
     print('[river] 버림 감지까지 ${sw.elapsed.inSeconds}초');
-    // 리치봉: 띠 변화 → /v2/sticks 두 번 일치면 "리치 B". 합성 막대를 모델이 리치봉으로 안 볼 수도 있어 필수는 아니다.
-    final riichi = await waitFor(find.textContaining('리치 B'), '리치봉 확정', seconds: 60, must: false);
-    // ignore: avoid_print
-    print('[river] 리치봉 확정 ${riichi ? '됨' : '안 됨'} (${sw.elapsed.inSeconds}초)');
+    // 리치봉 추적은 기본으로 꺼져 있다(RiverTrackerConfig.trackSticks) — 리치봉은 화료 판독이 읽는다.
 
     await tester.tap(find.byKey(const ValueKey('mount-shoot')));
     await waitFor(find.textContaining('대국에 반영'), '결과 화면', seconds: 150);
@@ -91,7 +88,7 @@ void main() {
       // ignore: avoid_print
       print('[river] track.json events: $kinds');
       expect(kinds, contains('discard'));
-      expect(kinds.where((k) => '$k'.startsWith('sticks_')), isNotEmpty, reason: '리치봉 띠 변화로 읽기가 일어나야 한다');
+      expect(kinds.where((k) => '$k'.startsWith('sticks_')), isEmpty, reason: '리치봉 추적은 꺼져 있어 읽지 않아야 한다');
     }
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));

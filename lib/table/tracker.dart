@@ -255,8 +255,22 @@ class MeldTracker {
     events.add(TrackerEvent(now, Side.bottom, 'reset', reason));
   }
 
-  /// 카메라가 움직였다(펠트 IoU 검사). 추적을 버린다.
-  void cameraMoved(DateTime now) => reset(now, '카메라 움직임');
+  /// 장면 전체가 바뀌었다(카메라 움직임·조명, [SceneShiftGate]). 확정한 울기는 판의 사실이라 두고, 픽셀 기준과
+  /// 진행 중인 변화·읽기만 버린다 — 다음 프레임이 새 기준. 늦게 온 읽기 답은 [onRead] 가 버린다(reading 이 아니므로).
+  void cameraMoved(DateTime now) {
+    for (final t in seats.values) {
+      t
+        ..baseline = null
+        ..last = null
+        ..stable = 0
+        ..candidate = null
+        ..readsForChange = 0
+        ..pendingFrame = null
+        ..statsAtRead = null
+        ..status = t.melds.isNotEmpty && !t.changedSinceConfirm ? TrackStatus.confirmed : TrackStatus.idle;
+    }
+    events.add(TrackerEvent(now, Side.bottom, 'rebase', '장면 전체 변화'));
+  }
 
   Map<String, dynamic> toJson() => {
         'frame': frame,

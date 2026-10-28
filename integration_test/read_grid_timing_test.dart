@@ -37,6 +37,13 @@ const _repeat = int.fromEnvironment('REPEAT', defaultValue: 2);
 // 운영 서버는 분당 요청 제한이 있어 장면 사이에 쉰다(쉬는 시간은 재는 시간에 안 들어간다).
 const _sleepS = int.fromEnvironment('SLEEP_S', defaultValue: 0);
 
+// ALT_URL 을 주면 같은 사진을 기본 서버(RECOGNIZER_URL)와 이 서버에 **같은 순간** 보내 둘 다 잰다(TIMING 의 server 가
+// "main"/"alt"). 운영 vs 로컬처럼 시간대 차이 없이 서버만 비교할 때. ALT_KEY 는 그 서버의 API 키(로컬은 비움).
+// 두 판독이 기기 isolate 를 나눠 써서 기기 처리 시간은 혼자 잴 때보다 늘 수 있다 — 서버 판독(read) 단계로 비교한다.
+// Gemini 호출이 장면마다 두 배라 분당 제한(20)을 넘지 않게 SLEEP_S 를 넉넉히(45) 준다.
+const _altUrl = String.fromEnvironment('ALT_URL');
+const _altKey = String.fromEnvironment('ALT_KEY');
+
 // 화료패가 사진에 있는 장면 B·C·D(A·E 는 평가에서 뺀다). 격자는 5구역 측정과 같다.
 const _bcd = {
   'B': (['k25', 'k28'], {'x1': 272, 'x2': 735, 'y1': 137, 'y2': 727}),
@@ -129,6 +136,7 @@ class _TwoDecodeShot implements ShotImage {
   @override
   Future<void> close() async {}
 }
+
 Future<ShotAnalysis> _analyze(Uint8List small, FixedTable f) => compute(analyzeShot, (small, f));
 Future<ShotAnalysis> _analyzeGrid(Uint8List small, GridZones g) => compute(analyzeGridShot, (small, g));
 
@@ -147,78 +155,90 @@ void main() {
           await tester.runAsync(() async {
             if (_sleepS > 0) await Future<void>.delayed(const Duration(seconds: _sleepS));
             final bytes = (await http.get(Uri.parse('$_photoUrl/${_photoPath(photo)}'))).bodyBytes;
-            final client = RecognizerClient();
-            final trace = TableReadTrace();
-            final (dealer, honba) = _fieldGame[scene] ?? (0, 0);
-            final game = Game(
-              id: 'photo',
-              startedAt: DateTime(2026, 10, 24),
-              settings: const GameSettings(),
-              names: const ['플레이어 1', '플레이어 2', '플레이어 3', '플레이어 4'],
-              dealer: dealer,
-              roundNumber: dealer + 1,
-              honba: honba,
-            );
-            final out = <String, Object?>{'scene': scene, 'photo': photo, 'run': run, 'bytes': bytes.length};
-            final sw = Stopwatch()..start();
-            try {
-              var shot = bytes;
-              var useGrid = grid;
-              if (_rectifyOn) {
-                final (rect, quad) = await compute(_rectifyJob, bytes);
-                out['rectify_ms'] = sw.elapsedMilliseconds;
-                out['quad'] = quad;
-                if (rect != null) {
-                  shot = rect;
-                  useGrid = standardGrid;
+            Future<void> measure(RecognizerClient client, String server) async {
+              final trace = TableReadTrace();
+              final (dealer, honba) = _fieldGame[scene] ?? (0, 0);
+              final game = Game(
+                id: 'photo',
+                startedAt: DateTime(2026, 10, 24),
+                settings: const GameSettings(),
+                names: const ['플레이어 1', '플레이어 2', '플레이어 3', '플레이어 4'],
+                dealer: dealer,
+                roundNumber: dealer + 1,
+                honba: honba,
+              );
+              final out = <String, Object?>{
+                'scene': scene,
+                'photo': photo,
+                'run': run,
+                'server': server,
+                'bytes': bytes.length,
+              };
+              final sw = Stopwatch()..start();
+              try {
+                var shot = bytes;
+                var useGrid = grid;
+                if (_rectifyOn) {
+                  final (rect, quad) = await compute(_rectifyJob, bytes);
+                  out['rectify_ms'] = sw.elapsedMilliseconds;
+                  out['quad'] = quad;
+                  if (rect != null) {
+                    shot = rect;
+                    useGrid = standardGrid;
+                  }
                 }
+                final reading = await TableReader(client, ops: _isolateOps).readGrid(shot, useGrid, trace: trace);
+                if (_dumpDir.isNotEmpty) {
+                  final d = Directory('$_dumpDir/${photo.replaceAll('/', '_')}')..createSync(recursive: true);
+                  if (trace.handCrop case final c?) File('${d.path}/seat.jpg').writeAsBytesSync(c);
+                  if (trace.centerCrop case final c?) File('${d.path}/sticks.jpg').writeAsBytesSync(c);
+                }
+                final t0 = sw.elapsedMilliseconds;
+                final merge = mergeReading(
+                  hand: reading.hand!,
+                  center: reading.center,
+                  winnerSide: reading.winnerSide!,
+                  game: game,
+                  seats: SeatMap(game.settings.bottomSeat),
+                );
+                final score = merge.hand == null ? null : engine.calculate(merge.hand!, merge.situation);
+                out['merge_score_ms'] = sw.elapsedMilliseconds - t0;
+                out['winner'] = reading.winnerSide!.name;
+                out['points'] = score == null ? null : RegExp(r' (\d{3,6}) \[').firstMatch('$score')?.group(1);
+                out['flags'] = [for (final f in merge.flags) f.issue.name];
+                out['warnings'] = reading.warnings;
+                out['merge'] = CaptureLog.mergeJson(merge);
+                // 확신도 분포를 보려고 판독 원본도(손패 패별 conf, 리치봉 자리별 conf, 도라 표시패 conf).
+                out['hand_read'] = reading.hand?.toJson();
+                out['center_read'] = reading.center?.toJson();
+                // 거치 화면과 같은 자동 반영 조건(null 이면 자동 반영).
+                out['auto_block'] = autoRecordBlocker(
+                  warnings: reading.warnings,
+                  issues: [for (final f in merge.flags) f.issue],
+                  otherWinners: reading.others.length,
+                  isTsumo: merge.isTsumo,
+                  loser: merge.loser,
+                  resultValid: score?.isValid ?? false,
+                  paoBase: score != null && score.isValid ? engine.paoBasePoints(score) : 0,
+                  gameOver: false,
+                  doraIndicators: merge.situation.doraIndicators.length,
+                  riichi: merge.situation.riichi,
+                );
+              } catch (e) {
+                out['error'] = '$e';
+              } finally {
+                client.close();
               }
-              final reading = await TableReader(client, ops: _isolateOps).readGrid(shot, useGrid, trace: trace);
-              if (_dumpDir.isNotEmpty) {
-                final d = Directory('$_dumpDir/${photo.replaceAll('/', '_')}')..createSync(recursive: true);
-                if (trace.handCrop case final c?) File('${d.path}/seat.jpg').writeAsBytesSync(c);
-                if (trace.centerCrop case final c?) File('${d.path}/sticks.jpg').writeAsBytesSync(c);
-              }
-              final t0 = sw.elapsedMilliseconds;
-              final merge = mergeReading(
-                hand: reading.hand!,
-                center: reading.center,
-                winnerSide: reading.winnerSide!,
-                game: game,
-                seats: SeatMap(game.settings.bottomSeat),
-              );
-              final score = merge.hand == null ? null : engine.calculate(merge.hand!, merge.situation);
-              out['merge_score_ms'] = sw.elapsedMilliseconds - t0;
-              out['winner'] = reading.winnerSide!.name;
-              out['points'] = score == null ? null : RegExp(r' (\d{3,6}) \[').firstMatch('$score')?.group(1);
-              out['flags'] = [for (final f in merge.flags) f.issue.name];
-              out['warnings'] = reading.warnings;
-              out['merge'] = CaptureLog.mergeJson(merge);
-              // 확신도 분포를 보려고 판독 원본도(손패 패별 conf, 리치봉 자리별 conf, 도라 표시패 conf).
-              out['hand_read'] = reading.hand?.toJson();
-              out['center_read'] = reading.center?.toJson();
-              // 거치 화면과 같은 자동 반영 조건(null 이면 자동 반영).
-              out['auto_block'] = autoRecordBlocker(
-                warnings: reading.warnings,
-                issues: [for (final f in merge.flags) f.issue],
-                otherWinners: reading.others.length,
-                isTsumo: merge.isTsumo,
-                loser: merge.loser,
-                resultValid: score?.isValid ?? false,
-                paoBase: score != null && score.isValid ? engine.paoBasePoints(score) : 0,
-                gameOver: false,
-                doraIndicators: merge.situation.doraIndicators.length,
-                riichi: merge.situation.riichi,
-              );
-            } catch (e) {
-              out['error'] = '$e';
-            } finally {
-              client.close();
+              out['total_ms'] = sw.elapsedMilliseconds;
+              out['stages_ms'] = trace.timingsMs;
+              // ignore: avoid_print
+              print('TIMING ${jsonEncode(out)}');
             }
-            out['total_ms'] = sw.elapsedMilliseconds;
-            out['stages_ms'] = trace.timingsMs;
-            // ignore: avoid_print
-            print('TIMING ${jsonEncode(out)}');
+
+            await Future.wait([
+              measure(RecognizerClient(), 'main'),
+              if (_altUrl.isNotEmpty) measure(RecognizerClient(baseUrl: _altUrl, apiKey: _altKey), 'alt'),
+            ]);
           });
         }, timeout: const Timeout(Duration(minutes: 3)));
       }

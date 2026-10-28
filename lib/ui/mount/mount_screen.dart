@@ -29,6 +29,7 @@ import '../../table/table_layout.dart';
 import '../../table/table_reader.dart';
 import '../../table/river_change.dart';
 import '../../table/river_tracker.dart';
+import '../../table/scene_shift.dart';
 import '../../table/tracker.dart';
 import '../game/game_screen.dart';
 import '../game/record_edit.dart';
@@ -432,6 +433,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   Future<void> _saveGrid() async {
     _tracker = null; // 격자가 바뀌면 패 한 장 비율·기준이 달라진다.
     _riverTracker = null;
+    _shiftGate.reset();
     try {
       final p = await SharedPreferences.getInstance();
       await p.setString(gridPref, jsonEncode(_grid.toJson()));
@@ -493,6 +495,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   MeldTracker _trackerFor(GridZones grid) => _tracker ??= MeldTracker(tileFrac: tileFracsOf(grid));
   RiverTracker _riverTrackerFor(GridZones grid) => _riverTracker ??= RiverTracker(tileFrac: riverTileFracsOf(grid));
 
+  /// 카메라가 움직이거나 조명이 한꺼번에 바뀐 프레임이면 두 추적기가 사건 대신 기준만 다시 잡게 한다.
+  final SceneShiftGate _shiftGate = SceneShiftGate();
+
   /// 화료 판독에 넘길 힌트: 게임 중 확정한 리치봉 자리, 가장 최근 버림(방총자 후보·론 패 위치).
   Set<Side> _trackedRiichi() =>
       _trackingEnabled && _useGrid ? (_riverTracker?.riichi ?? const {}) : const {};
@@ -533,6 +538,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     }
     if (!mounted) return;
     final now = DateTime.now();
+    if (_shiftGate.check(stats)) {
+      tracker.cameraMoved(now);
+      river.cameraMoved(now);
+    }
     final actions = tracker.onFrame(stats.corners, now);
     final riverActions = river.onFrame(stats.rivers, stats.strips, now);
     setState(() {});
