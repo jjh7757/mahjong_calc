@@ -3,7 +3,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 /// 매장 손님 설문(구글 폼 응답 링크, docs/survey_questions.md).
 const surveyUrl =
-    'https://docs.google.com/forms/d/e/1FAIpQLSepPD32ktGthkUfxecaDqmfgRC2dACvcjKRHcMuREnNKvE0hQ/viewform';
+    'https://docs.google.com/forms/d/e/1FAIpQLSedm1H2rNsRlGejkKA_Bk18hDHIxRO82WP8VZUOYLn2saN4Mw/viewform';
 
 /// 설문 QR 을 크게 띄운다. 손님이 자기 폰으로 찍어 들어간다.
 Future<void> showSurveyQr(BuildContext context) {
