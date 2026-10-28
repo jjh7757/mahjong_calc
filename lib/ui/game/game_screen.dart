@@ -5,6 +5,7 @@ import '../../engine/calculator.dart';
 import '../../game/game.dart';
 import '../../game/game_store.dart';
 import '../kiosk.dart';
+import '../name_keyboard.dart';
 import 'history_screen.dart';
 import 'record_edit.dart';
 import 'settlement_screen.dart';
@@ -107,6 +108,17 @@ class _SetupFormState extends State<_SetupForm> {
     final expected = _start * 4 - _sticks * 1000;
     final sum = _scoreList.fold(0, (a, b) => a + b);
     return sum == expected ? null : expected;
+  }
+
+  Future<void> _editName(int i) async {
+    final cur = _names[i].text;
+    final v = await showNameKeyboard(
+      context,
+      title: '${Game.windNames[i]}가 이름',
+      initial: cur,
+      replaceOnType: cur == '플레이어 ${i + 1}',
+    );
+    if (v != null && mounted) setState(() => _names[i].text = v);
   }
 
   void _setStart(int v) {
@@ -238,12 +250,18 @@ class _SetupFormState extends State<_SetupForm> {
         for (var i = 0; i < 4; i++)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
+            // 누르면 앱 안 키보드 패널(기기 키보드 없이 터치만으로).
             child: TextField(
+              key: ValueKey('setup-name-$i'),
               controller: _names[i],
+              readOnly: true,
+              showCursor: false,
+              onTap: () => _editName(i),
               decoration: InputDecoration(
                 labelText: '${Game.windNames[i]}가',
                 border: const OutlineInputBorder(),
                 isDense: true,
+                suffixIcon: const Icon(Icons.keyboard),
               ),
             ),
           ),
