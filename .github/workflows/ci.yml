@@ -11,6 +11,10 @@ on:
 env:
   FLUTTER_VERSION: "3.47.7"   # 로컬과 같은 버전(.dart_tool/package_config.json)
 
+concurrency:                  # 같은 브랜치에 새 push 가 오면 돌던 실행은 취소
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -53,6 +57,10 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+      - uses: gradle/actions/setup-gradle@v4   # ~/.gradle 캐시(의존성·래퍼) — 두 번째 빌드부터 빨라진다
+        if: steps.key.outputs.present == 'true'
+        with:
+          cache-read-only: false
       - name: APK 빌드 (release, 운영 키)
         if: steps.key.outputs.present == 'true'
         run: flutter build apk --release --dart-define=RECOGNIZER_API_KEY=${{ secrets.RECOGNIZER_API_KEY }}
