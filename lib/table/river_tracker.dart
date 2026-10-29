@@ -118,6 +118,17 @@ class RiverTracker {
   /// 확정한 리치봉 자리.
   Set<Side> riichi = {};
 
+  /// 리치봉을 확정한 순간의 그 자리 버림 수·전체 버림 수·그때까지 '울어 가져감'(taken) 수. 더블리치 추론용(2026-10-29):
+  /// 자기 버림 1장·전체 4장 이하·가져감 0 이면 첫 순 리치 = 더블리치 후보([doubleRiichiCandidates]). 카메라가 움직여
+  /// 수가 초기화됐을 수 있으니 결과는 "확인" 플래그와 함께 쓴다.
+  final Map<Side, ({int own, int total, int taken})> riichiAt = {};
+  int _taken = 0;
+
+  Set<Side> get doubleRiichiCandidates => {
+        for (final e in riichiAt.entries)
+          if (e.value.own == 1 && e.value.total <= 4 && e.value.taken == 0) e.key,
+      };
+
   RiverTracker({required this.tileFrac, this.config = const RiverTrackerConfig()});
 
   /// 가장 최근 버림(네 자리 중). 없으면 null.
@@ -175,6 +186,7 @@ class RiverTracker {
       } else {
         // 패가 하나 사라짐 = 다른 사람이 울어 가져감. 마지막 버림이 사라진 것이니 론 패 후보에서 뺀다.
         _log(now, side, 'taken', '${(-delta).toStringAsFixed(1)}장');
+        _taken++;
       }
       r.lastDiscard = null;
       r.baseline = cur;
@@ -250,6 +262,11 @@ class RiverTracker {
     };
     final agree = st.candidate != null && _same(st.candidate!, seen);
     if (agree || config.stickConfirmReads <= 1) {
+      final total = rivers.values.fold(0, (a, r) => a + r.discards);
+      for (final s in seen) {
+        if (!riichi.contains(s)) riichiAt[s] = (own: rivers[s]!.discards, total: total, taken: _taken);
+      }
+      riichiAt.removeWhere((s, _) => !seen.contains(s));
       riichi = seen;
       st.status = StickStatus.confirmed;
       st.baseline
@@ -289,6 +306,8 @@ class RiverTracker {
       ..pendingFrame = null
       ..atRead = null;
     riichi = {};
+    riichiAt.clear();
+    _taken = 0;
     events.add(TrackerEvent(now, Side.bottom, 'reset', reason));
   }
 
@@ -320,6 +339,10 @@ class RiverTracker {
             e.key.name: {'discards': e.value.discards, 'last': e.value.lastDiscard?.toJson()},
         },
         'riichi': [for (final s in riichi) s.name],
+        'riichi_at': {
+          for (final e in riichiAt.entries) e.key.name: {'own': e.value.own, 'total': e.value.total, 'taken': e.value.taken},
+        },
+        'double_riichi': [for (final s in doubleRiichiCandidates) s.name],
         'sticks': {'status': sticks.status.name, 'reads': sticks.reads},
         'events': [for (final e in events) e.toJson()],
       };

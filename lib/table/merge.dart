@@ -42,6 +42,10 @@ enum MergeIssue {
   /// 리치가 아니면 도라는 왕패에 남는다(사용자 관찰) — 그 밖에서 읽은 것은 격자 선에 잘려 일부만 읽혔을 수 있어
   /// 자동 반영하지 않는다(2026-10-29 사용자 결정: 바깥 띠 구조 앱 흐름 D 4회가 도라 일부만 읽힌 채 자동 반영).
   doraFallback,
+
+  /// 게임 중 추적이 화료자의 리치봉을 그 자리 첫 버림에서 봤다(전체 4장 이하·가져감 없음) → 더블 리치로 계산.
+  /// 추정이라 자동 반영하지 않고 확인을 받는다(결과 화면 상황 칩으로 바로 고칠 수 있다). 2026-10-29.
+  doubleRiichiTracked,
 }
 
 class MergeFlag {
@@ -189,6 +193,8 @@ TableMerge mergeReading({
   bool meldsTracked = false,
   /// 게임 중 추적이 본 "가장 최근에 버린 자리"([RiverTracker.lastDiscard]). 강 끝 패가 여럿 화료될 때 이 자리를 방총자로 고른다.
   Side? loserHint,
+  /// 추적이 화료자의 리치를 첫 순 리치로 봤다([TableReading.trackedDoubleRiichi] 에 화료자 자리가 있음).
+  bool doubleRiichiHint = false,
 }) {
   final flags = <MergeFlag>[];
   final winner = seats.seatOf(winnerSide);
@@ -303,6 +309,15 @@ TableMerge mergeReading({
     ));
   }
 
+  // 더블리치: 추적 힌트가 있고 리치가 살아 있을 때만. 추정이라 확인 플래그.
+  final doubleRiichi = riichi && doubleRiichiHint;
+  if (doubleRiichi) {
+    flags.add(const MergeFlag(
+      MergeIssue.doubleRiichiTracked,
+      '추적이 첫 버림에서 리치봉을 봤습니다 — 더블 리치로 계산했습니다. 아니면 결과 화면의 "리치" 칩을 누르세요',
+    ));
+  }
+
   // 론/쯔모·방총자
   var isTsumo = false;
   int? loser;
@@ -351,7 +366,8 @@ TableMerge mergeReading({
     isTsumo: isTsumo,
     seatWind: game.seatWindOf(winner),
     roundWind: game.roundWindTile,
-    riichi: riichi,
+    riichi: riichi && !doubleRiichi,
+    doubleRiichi: doubleRiichi,
     doraIndicators: [for (final d in indicators) d.tile],
     honba: game.honba,
   );

@@ -183,6 +183,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   bool _wallBusy = false;
   bool _wallTried = false;
 
+  /// 판 시작 자동 찾기가 실패하면 [_wallRetryGap] 뒤 한 번 더(같은 판일 때만). 매장에서 손 가림·조명으로 한 번 놓친 판을
+  /// 건지려고(2026-10-29). 수동 "도라 산 찾기" 는 세지 않는다.
+  int _wallAutoTries = 0;
+  Timer? _wallRetryTimer;
+  static const int _wallMaxAutoTries = 2;
+  static const Duration _wallRetryGap = Duration(seconds: 30);
+
   /// 갤러리 사진에서 "자동 맞추기" 로 찾은 도라 산(그 사진 한 장에만 쓴다).
   WallZone? _galleryWall;
 
@@ -239,6 +246,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   void dispose() {
     _bgTimer?.cancel();
     _autoSetupTimer?.cancel();
+    _wallRetryTimer?.cancel();
     VolumeKeys.stop();
     WidgetsBinding.instance.removeObserver(this);
     _cam?.dispose();
@@ -605,6 +613,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     'rectify': _rectify,
     'tracked_sides': [for (final s in _trackedNow().keys) s.name],
     'tracked_riichi': [for (final s in _trackedRiichi()) s.name],
+    'tracked_double_riichi': [for (final s in _trackedDoubleRiichi()) s.name],
     'tracked_discard': _trackedDiscard()?.toJson(),
     'preview_long_side': _previewFrameLongSide,
   };
@@ -620,6 +629,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// 화료 판독에 넘길 힌트: 게임 중 확정한 리치봉 자리, 가장 최근 버림(방총자 후보·론 패 위치).
   Set<Side> _trackedRiichi() =>
       _trackingEnabled && _useGrid ? (_riverTracker?.riichi ?? const {}) : const {};
+  Set<Side> _trackedDoubleRiichi() =>
+      _trackingEnabled && _useGrid ? (_riverTracker?.doubleRiichiCandidates ?? const {}) : const {};
   Discard? _trackedDiscard() => _trackingEnabled && _useGrid ? _riverTracker?.lastDiscard : null;
 
   /// 화료 때 손패 전용 읽기를 써도 되는 자리와 그 울기(확정 + 그 뒤 변화 없음).
@@ -643,6 +654,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _riverTracker?.reset(DateTime.now());
       _wall = null;
       _wallTried = false;
+      _wallAutoTries = 0;
+      _wallRetryTimer?.cancel();
+      _wallRetryTimer = null;
     }
   }
 
@@ -697,8 +711,22 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       if (!mounted) return;
       final w = parseWallV2(j);
       setState(() => _wall = w);
+      if (!manual) _wallAutoTries++;
+      final retry = w == null && !manual && _wallAutoTries < _wallMaxAutoTries;
+      if (retry) {
+        final key = _trackRoundKey;
+        _wallRetryTimer?.cancel();
+        _wallRetryTimer = Timer(_wallRetryGap, () {
+          if (!mounted || _trackRoundKey != key || _wall != null || _wallBusy) return;
+          unawaited(_locateWall(g));
+        });
+      }
       if (manual || w == null) {
-        _toast(w == null ? '도라 산을 찾지 못했습니다. 더보기 "도라 산 찾기" 로 다시 해 보세요.' : '도라 산을 찾았습니다. 틀렸으면 주황 상자를 끌어 고치세요.');
+        _toast(w == null
+            ? (retry
+                ? '도라 산을 찾지 못했습니다. ${_wallRetryGap.inSeconds}초 뒤 한 번 더 찾습니다.'
+                : '도라 산을 찾지 못했습니다. "도라 산 찾기" 로 다시 해 보세요.')
+            : '도라 산을 찾았습니다. 틀렸으면 주황 상자를 끌어 고치세요.');
       }
       unawaited(_saveWall(g, small, j));
     } catch (e) {
@@ -1310,6 +1338,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             otherWinners: winnerSides.difference({r.winnerSide!}),
             meldsTracked: r.meldsTracked,
             loserHint: r.trackedDiscardSide,
+            doubleRiichiHint: r.trackedDoubleRiichi.contains(r.winnerSide!),
           ),
       ];
     }
@@ -1341,6 +1370,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               tracked: _trackedNow(),
               shadow: _shadow,
               trackedRiichi: _trackedRiichi(),
+              trackedDoubleRiichi: _trackedDoubleRiichi(),
               trackedDiscard: _trackedDiscard(),
               trace: trace,
             )
@@ -1442,7 +1472,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     builder: (_) => InputScreen(editor: widget.editor, popAfterRecord: true)))
                 : () => Navigator.of(ctx).popUntil((r) => r.isFirst),
             photoRiichiSeats: Set.of(merge.photoRiichiSeats),
-            winnerRiichi: merge.situation.riichi,
+            winnerRiichi: merge.situation.riichi || merge.situation.doubleRiichi,
             rules: widget.editor.rules,
             onWinRecorded: (o) => saveCaptureLabel(widget.editor, o),
             onRecorded: widget.editor.clear,

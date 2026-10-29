@@ -102,6 +102,41 @@ void main() {
     expect(tr.sticks.status, StickStatus.idle);
   });
 
+  test('첫 버림(자기 1장·전체 4장 이하) 뒤 리치봉이 확정되면 더블리치 후보, 세 번째 버림 뒤면 아니다', () {
+    void run({required int discards, required bool expectCandidate}) {
+      final tr = RiverTracker(tileFrac: frac, config: withSticks);
+      tr.onFrame(rivers(), strips(), at(0));
+      tr.onFrame(rivers(), strips(), at(3));
+      var t = 6;
+      var blocks = <int>{};
+      for (var i = 0; i < discards; i++) {
+        blocks = {...blocks, 2 * i, 2 * i + 1};
+        tr.onFrame(rivers(bottom: blocks), strips(), at(t));
+        tr.onFrame(rivers(bottom: blocks), strips(), at(t + 3));
+        t += 6;
+      }
+      expect(tr.discardCounts[Side.bottom], discards);
+      // 리치봉이 꽂힘 → 두 읽기로 확정.
+      tr.onFrame(rivers(bottom: blocks), strips(shift: 40), at(t));
+      final a1 = tr.onFrame(rivers(bottom: blocks), strips(shift: 40), at(t + 3));
+      expect(a1.length, 1);
+      tr.onSticksRead(a1.single.frame, {Side.bottom: true, Side.top: false, Side.left: false, Side.right: false}, at(t + 4));
+      final a2 = tr.onFrame(rivers(bottom: blocks), strips(shift: 40), at(t + 9));
+      expect(a2.length, 1);
+      tr.onSticksRead(a2.single.frame, {Side.bottom: true, Side.top: false, Side.left: false, Side.right: false}, at(t + 10));
+      expect(tr.riichi, {Side.bottom});
+      expect(tr.riichiAt[Side.bottom]?.own, discards);
+      expect(tr.doubleRiichiCandidates, expectCandidate ? {Side.bottom} : isEmpty);
+      expect((tr.toJson()['double_riichi'] as List).isNotEmpty, expectCandidate);
+      tr.reset(at(t + 20));
+      expect(tr.riichiAt, isEmpty);
+      expect(tr.doubleRiichiCandidates, isEmpty);
+    }
+
+    run(discards: 1, expectCandidate: true);
+    run(discards: 3, expectCandidate: false);
+  });
+
   test('리치봉 띠가 바뀌면 읽기를 요청하고 두 읽기가 같으면 확정', () {
     final tr = RiverTracker(tileFrac: frac, config: withSticks);
     tr.onFrame(rivers(), strips(), at(0));

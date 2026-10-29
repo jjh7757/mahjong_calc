@@ -311,6 +311,9 @@ class TableReading {
 
   /// 게임 중 리치봉 추적이 확정한 자리(촬영 판독과 합쳐 [center] 의 riichi 에 이미 들어 있음, 기록용).
   final Set<Side> trackedRiichi;
+
+  /// 추적이 "첫 순 리치" 로 본 자리(더블리치 후보, `RiverTracker.doubleRiichiCandidates`). merge 가 확인 플래그와 함께 쓴다.
+  final Set<Side> trackedDoubleRiichi;
   const TableReading({
     required this.layout,
     this.winnerSide,
@@ -321,5 +324,6 @@ class TableReading {
     this.meldsTracked = false,
     this.trackedDiscardSide,
     this.trackedRiichi = const {},
+    this.trackedDoubleRiichi = const {},
   });
 }

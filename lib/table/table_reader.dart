@@ -186,6 +186,7 @@ class TableReader {
     Map<Side, List<ObservedMeld>> tracked = const {},
     bool shadow = false,
     Set<Side> trackedRiichi = const {},
+    Set<Side> trackedDoubleRiichi = const {},
     Discard? trackedDiscard,
     Side? winnerSide,
     Side? dealer,
@@ -517,6 +518,7 @@ class TableReader {
         meldsTracked: trackedMode[side] == 'handonly',
         trackedDiscardSide: trackSide,
         trackedRiichi: trackedRiichi,
+        trackedDoubleRiichi: trackedDoubleRiichi,
       );
     }
 
@@ -570,6 +572,7 @@ class TableReader {
       meldsTracked: first.meldsTracked,
       trackedDiscardSide: first.trackedDiscardSide,
       trackedRiichi: first.trackedRiichi,
+      trackedDoubleRiichi: first.trackedDoubleRiichi,
     );
   }
 

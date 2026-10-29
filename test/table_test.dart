@@ -485,6 +485,38 @@ void main() {
       expect(t.hasFlag(MergeIssue.riichiMismatch), isTrue);
     });
 
+    test('추적이 첫 순 리치로 본 화료자는 더블 리치로 계산하고 doubleRiichiTracked 확인 플래그', () {
+      final m = mergeReading(
+        hand: HandReading.fromJson({
+          'tiles': _tiles('1m 2m 3m 4p 5p 6p 7s 8s 9s 1z 1z 2m 3m'),
+          'win_tile': {'tile': '4m', 'conf': 0.9},
+        }),
+        center: CenterReading.fromJson(
+            _center(riichi: {'top': true}, last: {'right': '1z', 'top': '9p', 'left': '4m'})),
+        winnerSide: Side.top,
+        game: _game(riichi: {2}),
+        seats: seats,
+        doubleRiichiHint: true,
+      );
+      expect(m.situation.doubleRiichi, isTrue);
+      expect(m.situation.riichi, isFalse);
+      expect(m.hasFlag(MergeIssue.doubleRiichiTracked), isTrue);
+      expect(infoOnlyIssues.contains(MergeIssue.doubleRiichiTracked), isFalse); // 자동 반영 안 함
+      // 힌트가 없으면 그냥 리치.
+      final n = mergeReading(
+        hand: HandReading.fromJson({
+          'tiles': _tiles('1m 2m 3m 4p 5p 6p 7s 8s 9s 1z 1z 2m 3m'),
+          'win_tile': {'tile': '4m', 'conf': 0.9},
+        }),
+        center: CenterReading.fromJson(_center(riichi: {'top': true}, last: {'left': '4m'})),
+        winnerSide: Side.top,
+        game: _game(riichi: {2}),
+        seats: seats,
+      );
+      expect(n.situation.doubleRiichi, isFalse);
+      expect(n.situation.riichi, isTrue);
+    });
+
     test('울린 손패면 사진·기록의 리치를 버리고 riichiImpossible 플래그', () {
       // 실기기 기록(2026-10-23): 발 퐁 손패인데 중앙 판독이 리치 램프를 봤다.
       final m = mergeReading(
