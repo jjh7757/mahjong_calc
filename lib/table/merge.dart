@@ -37,6 +37,11 @@ enum MergeIssue {
   uncertainTiles,
   invalidHand,
   multiRon,
+
+  /// 도라 표시패를 그 판의 왕패 상자도, 리치 화료자 손패 옆도 아닌 곳(선 기준 구역·가운데 칸 예비)에서 읽었다.
+  /// 리치가 아니면 도라는 왕패에 남는다(사용자 관찰) — 그 밖에서 읽은 것은 격자 선에 잘려 일부만 읽혔을 수 있어
+  /// 자동 반영하지 않는다(2026-10-29 사용자 결정: 바깥 띠 구조 앱 흐름 D 4회가 도라 일부만 읽힌 채 자동 반영).
+  doraFallback,
 }
 
 class MergeFlag {
@@ -333,9 +338,15 @@ TableMerge mergeReading({
   // 깡이 있으면 도라 2장·뒷도라 1장처럼 홀수일 수 있어 장수 짝 검사는 하지 않는다(사용자 결정).
   final centerIndicators = [...?center?.doraIndicators, ...?center?.uraIndicators];
   final handSide = center?.handSideIndicators ?? const <ReadTile>[];
-  final indicators = riichi
-      ? (handSide.isNotEmpty ? handSide : centerIndicators)
-      : (centerIndicators.isNotEmpty ? centerIndicators : handSide);
+  final fromHandSide = riichi ? handSide.isNotEmpty : centerIndicators.isEmpty && handSide.isNotEmpty;
+  final indicators = fromHandSide ? handSide : centerIndicators;
+  final from = center?.doraFrom;
+  if (!fromHandSide && (from == DoraFrom.center || from == DoraFrom.dealerZone)) {
+    flags.add(MergeFlag(
+        MergeIssue.doraFallback,
+        '도라 표시패(${indicators.map((t) => t.code).join(' ')})를 왕패 상자 없이 '
+        '${from == DoraFrom.center ? '가운데 칸' : '선 기준 구역'}에서 읽었습니다. 빠진 표시패가 없는지 확인하세요'));
+  }
   final situation = Situation(
     isTsumo: isTsumo,
     seatWind: game.seatWindOf(winner),

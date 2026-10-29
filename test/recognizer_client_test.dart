@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -78,6 +79,48 @@ void main() {
       expect(r.tiles.single.code, '1z');
       expect(r.reading.melds, isEmpty);
       expect(r.reading.winTile, isNull);
+    });
+
+    test('recognizeSeat: /v2/seat 로 보내고 손패 + 떨어진 한 장을 이어 붙인다', () async {
+      final dir = await Directory.systemTemp.createTemp('seat');
+      final file = File('${dir.path}/hand.jpg')..writeAsBytesSync(_bytes);
+      http.Request? seen;
+      final c = _client((req) async {
+        seen = req;
+        return _json({
+          'face_up': true,
+          'tiles': [
+            {'tile': '3m', 'conf': 0.95},
+            {'tile': '0p', 'conf': 0.5},
+          ],
+          'separate_tile': {'tile': '4s', 'conf': 0.9},
+          'melds': [],
+          'loose': [],
+          'notes': '',
+          'model': 'm',
+          'latency_ms': 4200,
+        });
+      });
+      final r = await c.recognizeSeat(file);
+      expect(seen!.url.toString(), 'https://example.test/v2/seat');
+      expect(latin1.decode(seen!.bodyBytes), contains('filename="hand.jpg"'));
+      expect(r.tiles.map((t) => t.code), ['3m', '0p', '4s']);
+      expect(r.tiles[1].confidence, 0.5);
+      expect(r.latencyMs, 4200);
+      c.close();
+      await dir.delete(recursive: true);
+    });
+
+    test('recognizeSeat: 앞면이 아니면 패 없이 이유를 남긴다', () async {
+      final dir = await Directory.systemTemp.createTemp('seat');
+      final file = File('${dir.path}/hand.jpg')..writeAsBytesSync(_bytes);
+      final c = _client((_) async => _json(
+          {'face_up': false, 'tiles': [], 'separate_tile': null, 'notes': '', 'model': 'm', 'latency_ms': 1}));
+      final r = await c.recognizeSeat(file);
+      expect(r.tiles, isEmpty);
+      expect(r.notes, isNotEmpty);
+      c.close();
+      await dir.delete(recursive: true);
     });
 
     test('locate → TableLayout', () async {

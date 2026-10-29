@@ -10,7 +10,10 @@ import 'dart:async';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'package:image/image.dart' as img;
+
 import 'cropper.dart';
+import 'rectify.dart' as rect;
 
 abstract class ShotImage {
   /// 판정·locate 용 축소 JPEG(긴 변 [locateMaxSide]). [shrinkForLocate] 와 같은 바이트.
@@ -19,9 +22,16 @@ abstract class ShotImage {
   /// 구역별 크롭 JPEG(순서 유지). [cropMany] 와 같은 바이트.
   Future<List<Uint8List>> crop(List<CropSpec> specs);
 
+  /// 펠트 네 모서리를 찾아 들고 있는 이미지를 펴서(작탁 + 둘레 테두리만, [rect.rectify]) 바꾼다. 이후 [shrink]·[crop] 은
+  /// 편 이미지에서 하고, 격자는 [rect.standardGrid] 를 쓴다. 펠트를 못 찾으면 그대로 두고 null.
+  Future<rect.FeltQuad?> rectify();
+
   /// 들고 있는 이미지를 놓는다. 여러 번 불러도 된다.
   Future<void> close();
 }
+
+/// 편 사진 한 변(px). 측정(`read_grid_timing_test.dart` RECTIFY, 개발 세트 합성 기울기 18/18)과 같은 값.
+const int rectifySize = 3200;
 
 /// 같은 isolate 에서 바로(테스트·웹). 처음 쓸 때 디코딩한다.
 class DirectShotImage implements ShotImage {
@@ -38,6 +48,15 @@ class DirectShotImage implements ShotImage {
   Future<List<Uint8List>> crop(List<CropSpec> specs) async => [
     for (final s in specs) _im.cropJpeg(s.box, side: s.side, pad: s.pad),
   ];
+
+  @override
+  Future<rect.FeltQuad?> rectify() async {
+    final im = _im.image;
+    final q = rect.findFeltQuad(img.copyResize(im, width: 1000));
+    if (q == null) return null;
+    _image = TableImage(rect.rectify(im, q, size: rectifySize));
+    return q;
+  }
 
   @override
   Future<void> close() async => _image = null;
@@ -74,6 +93,9 @@ class IsolateShotImage implements ShotImage {
   Future<List<Uint8List>> crop(List<CropSpec> specs) async => (await _ask('crop', specs) as List).cast<Uint8List>();
 
   @override
+  Future<rect.FeltQuad?> rectify() async => await _ask('rectify') as rect.FeltQuad?;
+
+  @override
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
@@ -91,6 +113,7 @@ class IsolateShotImage implements ShotImage {
         reply.send(switch (cmd) {
           'shrink' => await shot.shrink(),
           'crop' => await shot.crop((arg as List).cast<CropSpec>()),
+          'rectify' => await shot.rectify(),
           _ => ('error', '모르는 요청: $cmd'),
         });
       } catch (e) {

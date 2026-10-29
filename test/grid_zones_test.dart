@@ -57,6 +57,15 @@ void main() {
       expect(grid.center, const NormBox(200, 250, 800, 750));
     });
 
+    test('손패 칸 폭 비율 = 세운 자리 크롭에서 왼쪽부터 손패 칸이 차지하는 몫', () {
+      expect(grid.handFrac(Side.bottom), closeTo(500 / 750, 1e-9));
+      expect(grid.handFrac(Side.right), closeTo(600 / 800, 1e-9));
+      expect(grid.handFrac(Side.top), closeTo(500 / 750, 1e-9));
+      expect(grid.handFrac(Side.left), closeTo(600 / 800, 1e-9));
+      // 장면 D 격자(초기값): 아래 (745−280)/(1000−280), 실험 seat_zones.py HAND_FRAC 과 같은 식.
+      expect(GridZones.initial.handFrac(Side.bottom), closeTo((745 - 280) / (1000 - 280), 1e-9));
+    });
+
     test('다섯 구역이 겹치지 않고 사진 전체를 덮는다', () {
       final zones = [for (final s in Side.values) grid.seat(s), grid.center];
       var area = 0;
@@ -91,6 +100,91 @@ void main() {
         grid,
       );
       expect(GridZones.initial.valid, isTrue);
+      // 도라 구역도 왕복하고, 예전 저장값(dora 없음)은 기본 도라 구역.
+      final custom = grid.copyWith(doraRel: (u0: -100, v0: 800, u1: 400, v1: 1300));
+      expect(GridZones.fromJson(custom.toJson()), custom);
+      expect(GridZones.fromJson({'x1': 250, 'x2': 750, 'y1': 200, 'y2': 800})!.doraRel, doraRelDefault);
+    });
+
+    test('처음 설정 틀 → 손패+울기 바깥 띠 선(안쪽 끝 − 1.5u)과 리치봉 상자(기기 + 0.5u), 펠트 위 패는 울기에서 뺌', () {
+      // u = 손패 줄 길이 / 13 = 390 / 13 = 30
+      final setup = <String, dynamic>{
+        'seats': <String, dynamic>{
+          'bottom': {'hand': [880, 300, 920, 690], 'melds': [890, 800, 930, 960]},
+          'top': {'hand': [40, 310, 80, 700], 'melds': [150, 300, 190, 350]}, // 손패보다 패 1장 넘게 안쪽 → 울기 아님
+          'left': {'hand': [300, 40, 690, 80], 'melds': null},
+          'right': {'hand': [310, 920, 700, 960], 'melds': [20, 900, 120, 960]},
+        },
+        'device': [420, 430, 580, 570],
+      };
+      final g = proposeGrid(setup, keep: grid)!;
+      expect([g.x1, g.x2, g.y1, g.y2], [125, 855, 125, 835]);
+      expect(g.sticks!.toList(), [405, 415, 595, 585]);
+      expect(g.doraRel, grid.doraRel);
+      // 손패 틀이 하나라도 없으면 제안하지 않는다
+      final seats = Map<String, dynamic>.from(setup['seats'] as Map)..['left'] = {'hand': null, 'melds': null};
+      expect(proposeGrid({...setup, 'seats': seats}), isNull);
+    });
+
+    test('리치봉 상자를 돌리면 자를 때 돌린 상자를 감싸는 상자, 각도도 JSON 왕복', () {
+      final g = grid.copyWith(sticks: const NormBox(400, 450, 600, 550), sticksAngle: 30);
+      final b = g.sticksZone;
+      expect(b.ymin, lessThan(400));
+      expect(b.xmin, lessThan(450));
+      expect(GridZones.fromJson(g.toJson()), g);
+      expect(grid.copyWith(sticks: const NormBox(400, 450, 600, 550)).sticksZone.toList(), [400, 450, 600, 550]);
+    });
+
+    test('도라 크롭: 가운데 칸을 화료자 아닌 쪽으로만 넓힌다', () {
+      expect(grid.doraSearchZone().toList(), [160, 210, 840, 790]);
+      expect(grid.doraSearchZone(except: {Side.bottom}).toList(), [160, 210, 800, 790]);
+      expect(grid.doraSearchZone(except: Side.values.toSet()).toList(), grid.center.toList());
+    });
+
+    test('리치봉 상자: 있으면 그 상자로 자르고 추적 띠도 그 안, JSON 왕복, 없으면 가운데 칸 비율', () {
+      final g = grid.copyWith(sticks: const NormBox(420, 430, 580, 570));
+      expect(g.sticksZone.toList(), [420, 430, 580, 570]);
+      expect(GridZones.fromJson(g.toJson()), g);
+      final strip = g.stickStrip(Side.bottom);
+      expect(strip.ymax, 580);
+      expect(strip.ymin, greaterThan(500));
+      expect(grid.sticksZone.toList(), isNot([420, 430, 580, 570]));
+      expect(GridZones.fromJson(grid.toJson())!.sticks, isNull);
+    });
+
+    test('선 기준 도라 구역: 선 앞 패산 오른쪽 끝(자리·가운데 경계에 걸침), 선이 바뀌면 그 자리 쪽으로 돈다', () {
+      // 아래가 선: 아래 선(y2=800) 위아래, 가운데 칸 오른쪽 절반부터 오른쪽 모서리 쪽까지.
+      expect(grid.doraZone(Side.bottom).toList(), [650, 500, 950, 875]);
+      // 오른쪽이 선: 오른쪽 선(x2) 양옆, 그 사람의 오른쪽(사진 위쪽) 끝.
+      expect(grid.doraZone(Side.right).toList(), [50, 625, 500, 875]);
+      // 위가 선: 위 선(y1) 위아래, 그 사람의 오른쪽(사진 왼쪽) 끝.
+      expect(grid.doraZone(Side.top).toList(), [50, 125, 350, 500]);
+      // 왼쪽이 선: 왼쪽 선(x1) 양옆, 그 사람의 오른쪽(사진 아래쪽) 끝.
+      expect(grid.doraZone(Side.left).toList(), [500, 125, 950, 375]);
+    });
+
+    test('도라 상자를 옮기면 아래 기준으로 저장해 다른 선 자리에도 같은 모양으로 돈다', () {
+      const box = NormBox(550, 150, 900, 300);
+      final moved = grid.withDoraZone(Side.left, box);
+      expect(moved.doraZone(Side.left).toList(), box.toList());
+      // 왼쪽에서 맞춘 상자를 아래 자리로 돌리면 아래 선 쪽에 온다.
+      final b = moved.doraZone(Side.bottom);
+      expect(b.ymin, lessThan(grid.y2));
+      expect(b.ymax, greaterThan(grid.y2));
+      // 선을 옮겨도 가운데 칸 기준이라 상자가 따라간다.
+      final shifted = moved.copyWith(x1: 300);
+      expect(shifted.doraZone(Side.left).xmin, greaterThan(box.xmin));
+    });
+  });
+
+  group('왕패(도라 산) 응답', () {
+    test('상자·자리를 읽고, 못 찾았거나 상자가 틀리면 null, 자리를 모르면 아래', () {
+      final w = parseWallV2({'found': true, 'box': [455, 223, 709, 389], 'side': 'left'})!;
+      expect(w.box.toList(), [455, 223, 709, 389]);
+      expect(w.side, Side.left);
+      expect(parseWallV2({'found': false, 'box': null}), isNull);
+      expect(parseWallV2({'found': true, 'box': [500, 300, 400, 200]}), isNull);
+      expect(parseWallV2({'found': true, 'box': [1, 2, 3, 4], 'side': null})!.side, Side.bottom);
     });
   });
 
@@ -169,6 +263,8 @@ void main() {
       Map<String, img.Image> images, {
       Set<String> faceUp = const {'bottom'},
       List<String> dora = const ['5s'],
+      List<String>? dealerDora,
+      List<String> wallDora = const ['3m'],
       List<String> loose = const [],
       Map<String, Object>? agreement,
       List<String>? handonlyTiles,
@@ -246,9 +342,14 @@ void main() {
         '/v2/sticks' => _json({
           'riichi_sticks': {'bottom': false, 'right': false, 'top': true, 'left': false},
         }),
+        '/v2/walldora' => _json({
+          'indicators': [
+            for (final c in wallDora) {'tile': c, 'conf': 0.9},
+          ],
+        }),
         '/v2/dora' => _json({
           'indicators': [
-            for (final c in dora) {'tile': c, 'conf': 0.9},
+            for (final c in (name == 'dora_dealer' ? dealerDora ?? dora : dora)) {'tile': c, 'conf': 0.9},
           ],
         }),
         _ => http.Response('nope', 404),
@@ -321,11 +422,15 @@ void main() {
     test('픽셀로 화료자를 정하면 그 자리 하나만 읽고, 강은 마지막 패만·리치는 리치봉만 본다', () async {
       final names = <String>[];
       final images = <String, img.Image>{};
-      final client = RecognizerClient(baseUrl: 'https://x.test', apiKey: 'k', httpClient: server(names, images));
+      final urls = <Uri>[];
+      final client =
+          RecognizerClient(baseUrl: 'https://x.test', apiKey: 'k', httpClient: server(names, images, urls: urls));
       final trace = TableReadTrace();
       final reading = await TableReader(client).readGrid(table(), grid, trace: trace);
 
       expect(names.toSet(), {'seat_bottom', 'last_right', 'last_top', 'last_left', 'sticks', 'dora'});
+      // 자리 판독에는 손패 칸 폭 비율을 같이 보낸다(서버가 틀을 못 잡으면 손패 칸·모서리 칸으로 나눠 다시 잡음).
+      expect(urls.singleWhere((u) => u.path == '/v2/seat').queryParameters, {'hand_frac': '0.667'});
       // 장면 시간을 정하는 자리 판독을 먼저 보낸다(나머지 구역은 그 뒤에 잘라 보냄).
       expect(names.first, 'seat_bottom');
       // 아래 자리 = 750×200 그대로, 오른쪽 강 끝은 오른쪽 자리 방향으로 세워 가로·세로가 바뀐다.
@@ -333,7 +438,9 @@ void main() {
       expect(images['seat_bottom']!.height, 200);
       expect(images['last_right']!.width, 360);
       expect(images['last_right']!.height, 250);
-      expect(images['dora']!.width, 500, reason: '도라는 가운데 칸 전체에서');
+      // 도라는 가운데 칸을 화료자(아래) 아닌 쪽으로 넓혀서: 폭 500 + 왼쪽·오른쪽 40, 높이 600 + 위 40(아래는 그대로).
+      expect(images['dora']!.width, 580, reason: '도라는 가운데 칸을 넓혀서');
+      expect(images['dora']!.height, 640);
 
       expect(reading.winnerSide, Side.bottom);
       expect(trace.layoutMode, 'grid');
@@ -345,6 +452,38 @@ void main() {
       expect(c.riichiAt(Side.top), isTrue);
       expect(c.riichiAt(Side.right), isFalse);
       expect(c.doraIndicators.single.code, '5s');
+    });
+
+    test('rectify: 펠트를 찾으면 사진을 펴서(3200 정사각) 표준 격자로 자르고, 손패 칸 비율도 표준 격자 것', () async {
+      final names = <String>[];
+      final images = <String, img.Image>{};
+      final urls = <Uri>[];
+      final client =
+          RecognizerClient(baseUrl: 'https://x.test', apiKey: 'k', httpClient: server(names, images, urls: urls));
+      final trace = TableReadTrace();
+      final reading = await TableReader(client).readGrid(table(), grid, rectify: true, trace: trace);
+
+      expect(trace.feltQuad, isNotNull);
+      expect(trace.timingsMs, contains('rectify'));
+      expect(reading.winnerSide, Side.bottom);
+      // 표준 격자(200/800)의 아래 자리 = 편 사진(3200) 아래 20% 전체 폭.
+      expect(images['seat_bottom']!.width, 2560);
+      expect(images['seat_bottom']!.height, 640);
+      expect(urls.singleWhere((u) => u.path == '/v2/seat').queryParameters, {'hand_frac': '0.750'});
+    });
+
+    test('rectify: 펠트가 없으면 맞춘 격자 그대로', () async {
+      final names = <String>[];
+      final images = <String, img.Image>{};
+      final client = RecognizerClient(baseUrl: 'https://x.test', apiKey: 'k', httpClient: server(names, images));
+      final trace = TableReadTrace();
+      final gray = img.Image(width: 1000, height: 1000);
+      img.fill(gray, color: img.ColorRgb8(128, 128, 128));
+      await TableReader(client)
+          .readGrid(Uint8List.fromList(img.encodeJpg(gray)), grid, rectify: true, trace: trace, pickWinners: (c) async => [c.first])
+          .catchError((Object _) => TableReading(layout: grid.toLayout(faceUp: const [])));
+      expect(trace.feltQuad, isNull);
+      expect(images['seat_bottom']!.width, 750, reason: '원본 1000px 의 맞춘 격자(아래 자리 750×200)로 자름');
     });
 
     test('픽셀로 못 정하면 네 자리를 다 읽어 모델이 앞면이라 한 자리를 화료자로', () async {
@@ -520,6 +659,68 @@ void main() {
       expect([for (final t in reading.center!.handSideIndicators) t.code], ['7m', '6s']);
     });
 
+    test('선을 알면 선 기준 도라 구역을 따로 잘라 같이 읽고, 거기서 찾으면 그것을 쓴다', () async {
+      final names = <String>[];
+      final images = <String, img.Image>{};
+      final client = RecognizerClient(
+        baseUrl: 'https://x.test',
+        apiKey: 'k',
+        httpClient: server(names, images, dora: ['5s'], dealerDora: ['7m', '6s']),
+      );
+      final trace = TableReadTrace();
+      final reading = await TableReader(client).readGrid(table(), grid, dealer: Side.left, trace: trace);
+      expect(names, containsAll(['dora', 'dora_dealer']));
+      expect([for (final t in reading.center!.doraIndicators) t.code], ['7m', '6s']);
+      // 왼쪽 선 쪽으로 세운 크롭: 도라 구역 [500,125,950,375] 는 세로로 길고, 왼쪽으로 세우면 가로가 길다.
+      expect(images['dora_dealer']!.width, greaterThan(images['dora_dealer']!.height));
+      expect(trace.dealerDoraCrop, isNotNull);
+    });
+
+    test('선 기준 도라 구역에서 못 찾으면 가운데 칸 도라를 쓴다, 선을 모르면 부르지 않는다', () async {
+      final client = RecognizerClient(
+        baseUrl: 'https://x.test',
+        apiKey: 'k',
+        httpClient: server([], {}, dora: ['5s'], dealerDora: []),
+      );
+      final reading = await TableReader(client).readGrid(table(), grid, dealer: Side.bottom);
+      expect([for (final t in reading.center!.doraIndicators) t.code], ['5s']);
+
+      final names = <String>[];
+      await TableReader(RecognizerClient(baseUrl: 'https://x.test', apiKey: 'k', httpClient: server(names, {})))
+          .readGrid(table(), grid);
+      expect(names, isNot(contains('dora_dealer')));
+    });
+
+    test('그 판의 왕패 상자가 있으면 그 상자를 패산 자리 쪽으로 세워 /v2/walldora 로 읽고(선 기준 구역은 안 부름), 찾으면 그것', () async {
+      final names = <String>[];
+      final images = <String, img.Image>{};
+      final client = RecognizerClient(
+        baseUrl: 'https://x.test',
+        apiKey: 'k',
+        httpClient: server(names, images, dora: ['5s'], dealerDora: ['9p'], wallDora: ['3m', '4s']),
+      );
+      const wall = (box: NormBox(300, 100, 700, 200), side: Side.left);
+      final reading = await TableReader(client).readGrid(table(), grid, dealer: Side.bottom, wall: wall);
+      expect(names, containsAll(['dora', 'dora_wall']));
+      expect(names, isNot(contains('dora_dealer')));
+      expect([for (final t in reading.center!.doraIndicators) t.code], ['3m', '4s']);
+      expect(reading.center!.doraFrom, DoraFrom.wall);
+      // 세로로 긴 왼쪽 패산 상자를 왼쪽 자리 쪽으로 세우면 가로가 길다.
+      expect(images['dora_wall']!.width, greaterThan(images['dora_wall']!.height));
+    });
+
+    test('왕패 상자에서 못 읽으면 가운데 칸 도라를 쓴다', () async {
+      final client = RecognizerClient(
+        baseUrl: 'https://x.test',
+        apiKey: 'k',
+        httpClient: server([], {}, dora: ['5s'], wallDora: []),
+      );
+      const wall = (box: NormBox(300, 100, 700, 200), side: Side.left);
+      final reading = await TableReader(client).readGrid(table(), grid, wall: wall);
+      expect([for (final t in reading.center!.doraIndicators) t.code], ['5s']);
+      expect(reading.center!.doraFrom, DoraFrom.center);
+    });
+
     test('서버가 여러 번 읽은 답이 엇갈렸으면 경고를 남긴다(만장일치면 없음)', () async {
       Future<List<String>> warnings(Map<String, Object> agreement) async {
         final client = RecognizerClient(
@@ -544,13 +745,15 @@ void main() {
     test('나눠 읽기: 손패 칸은 /v2/seat, 모서리 칸은 /v2/corner 로 따로 보내 울기·따로 놓인 패를 합친다', () async {
       final names = <String>[];
       final images = <String, img.Image>{};
+      final urls = <Uri>[];
       final client = RecognizerClient(
         baseUrl: 'https://x.test',
         apiKey: 'k',
-        httpClient: server(names, images, dora: [], loose: ['7m']),
+        httpClient: server(names, images, dora: [], loose: ['7m'], urls: urls),
       );
       final reading = await TableReader(client).readGrid(table(), grid, splitSeat: true);
       expect(names.toSet(), {'seat_bottom', 'corner_bottom', 'last_right', 'last_top', 'last_left', 'sticks', 'dora'});
+      expect(urls.singleWhere((u) => u.path == '/v2/seat').queryParameters, isEmpty, reason: '손패 칸만 보내면 비율 없음');
       // 아래 손패 칸 500×200, 오른쪽 아래 모서리 칸 250×200.
       expect(images['seat_bottom']!.width, 500);
       expect(images['corner_bottom']!.width, 250);

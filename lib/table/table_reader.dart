@@ -10,6 +10,7 @@ import 'cropper.dart' show CropSpec;
 import 'fixed_layout.dart';
 import 'grid_zones.dart';
 import 'observation.dart';
+import 'rectify.dart' show FeltQuad, standardGrid;
 import 'river_tracker.dart' show Discard;
 import 'shot_image.dart';
 import 'table_layout.dart';
@@ -22,6 +23,10 @@ typedef AnalyzeGridFn = Future<ShotAnalysis> Function(Uint8List small, GridZones
 typedef OpenShotFn = Future<ShotImage> Function(Uint8List original);
 
 /// 이미지 처리 함수 묶음. 기본값은 같은 isolate 에서 바로 돌린다.
+/// 왕패 상자 크롭 여백(상자 크기 비율). 사용자가 옮긴 상자나 Gemini 상자가 조금 어긋나도 표시패가 들어오게.
+/// `experiments/speed/dora_locate.py` 의 왕패 도라 읽기(B·C·D 16/18, C 6/6)와 같은 값.
+const double wallZonePad = 0.1;
+
 /// [openShot] 은 격자 판독([TableReader.readGrid])이 원본을 한 번만 디코딩해 축소본·크롭을 만들 때 쓴다.
 class ImageOps {
   final ShrinkFn shrink;
@@ -60,6 +65,10 @@ class TableReadTrace {
 
   /// 왕패(도라 표시패) 구역만 잘라 낸 것. locate 가 dead_wall 을 찾았을 때만.
   Uint8List? wallCrop;
+
+  /// 도라 구역 크롭: 그 판의 왕패 상자(`readGrid(wall:)`, 패산 자리 쪽으로 세운 것) 또는 선 기준 도라 구역
+  /// ([GridZones.doraZone], 선 쪽으로 세운 것). 둘 다 없으면 null.
+  Uint8List? dealerDoraCrop;
   TableLayout? layout;
   Side? winnerSide;
   HandReading? hand;
@@ -98,6 +107,9 @@ class TableReadTrace {
 
   /// 눕힌 손패 둘을 묻지 않고 더블론으로 정했는지([TableReader.readGrid] 의 acceptAll).
   bool autoMultiRon = false;
+
+  /// 사진을 펴서 읽었으면 찾은 펠트 네 모서리(원본 사진 정규화 좌표). 펴기를 껐거나 펠트를 못 찾으면 null.
+  FeltQuad? feltQuad;
 }
 
 /// 그림자 모드: 같은 사진의 한 자리를 손패 전용(/v2/handonly)과 자리 전체(/v2/seat)로 동시에 읽은 두 답. 기록용(설계 7절).
@@ -162,15 +174,22 @@ class TableReader {
   /// [tracked] 는 판 상태 추적이 게임 중에 확정한 자리별 울기. 그 자리는 손패 칸만 /v2/handonly 로 읽고 울기를 채운다.
   /// 손패 장수가 울기와 맞지 않으면 자리 전체를 /v2/seat 로 다시 읽는다(지금 방식으로 복귀). [shadow] 면 처음부터
   /// 둘 다 보내 두 답을 [TableReadTrace.shadow] 에 남긴다(결과는 손패 전용 쪽, 실험용 — 설계 docs/state_tracking_design.md 7절).
+  ///
+  /// [rectify] 면 먼저 펠트 네 모서리로 사진을 펴서 작탁(+ 둘레 흰 테두리)만 남기고 [standardGrid] 로 나눈다(사용자 제안
+  /// 2026-10-28 "처음 자를 때 작탁만"; 기운 탁자도 축에 맞는 격자로). 펠트를 못 찾으면 [grid] 그대로. 편 사진에서는 원본 좌표인
+  /// [trackedDiscard] 의 위치를 쓰지 않는다(자리만 방총자 힌트로).
   Future<TableReading> readGrid(
     Uint8List original,
     GridZones grid, {
+    bool rectify = false,
     bool splitSeat = false,
     Map<Side, List<ObservedMeld>> tracked = const {},
     bool shadow = false,
     Set<Side> trackedRiichi = const {},
     Discard? trackedDiscard,
     Side? winnerSide,
+    Side? dealer,
+    WallZone? wall,
     Future<List<Side>?> Function(List<Side> candidates)? pickWinners,
     bool Function(List<TableReading> readings)? acceptAll,
     void Function(ReadStage stage)? onStage,
@@ -186,12 +205,28 @@ class TableReader {
     onStage?.call(ReadStage.decoding);
     // 원본은 한 번만 디코딩한다(축소본·크롭을 같은 이미지에서). 다 자르면 바로 놓는다.
     final shot = await ops.openShot(original);
+    var rectified = false;
+    if (rectify) {
+      try {
+        final q = await shot.rectify();
+        trace?.feltQuad = q;
+        if (q != null) {
+          grid = standardGrid.copyWith(doraRel: grid.doraRel);
+          rectified = true;
+        }
+      } catch (_) {
+        // 펴기가 깨져도 원본 그대로 읽는다.
+      }
+      lap('rectify');
+    }
+    // 편 사진은 좌표가 달라 원본 좌표인 왕패 상자를 쓰지 않는다(선 기준 구역으로).
+    final useWall = wall != null && !rectified;
     final Uint8List small;
     final ShotAnalysis a;
     final Map<Side, Uint8List> seatCrops, cornerCrops, lastCrops;
     final Uint8List sticksCrop, doraCrop;
-    Uint8List? trackedCrop;
-    final trackedBox = trackedDiscard?.box;
+    Uint8List? trackedCrop, dealerDoraCrop;
+    final trackedBox = rectified ? null : trackedDiscard?.box;
     final trackSide = trackedDiscard?.side;
     final warnings = <String>[];
     final usage = <String, Map<String, int>>{};
@@ -211,6 +246,10 @@ class TableReader {
               return null;
             });
     }
+
+    // 자리 전체 크롭이면 손패 칸 폭 비율을 같이 보낸다 — 서버가 손패 틀을 못 잡으면 손패 칸·모서리 칸으로 나눠 한 번 더 잡는다
+    // (먼 자리 B 틀 0/2 → 2/2, 검사 통과한 틀린 틀 0, metrics 표 2-3). 예전 서버는 모르는 쿼리를 무시한다.
+    Map<String, String>? seatQuery(Side s) => splitSeat ? null : {'hand_frac': grid.handFrac(s).toStringAsFixed(3)};
 
     final Side? known;
     final List<Side> seatSides, lastSides, cornerSides, trackedSides;
@@ -265,11 +304,11 @@ class TableReader {
           s: trackedSides.contains(s)
               ? call('handonly', handCrops[s], 'handonly_${s.name}',
                   required: known != null, query: {'melds': '${tracked[s]!.length}'})
-              : call('seat', seatCrops[s], 'seat_${s.name}', required: known != null),
+              : call('seat', seatCrops[s], 'seat_${s.name}', required: known != null, query: seatQuery(s)),
       };
       shadowF = {
         for (final s in trackedSides)
-          if (shadow) s: call('seat', seatCrops[s], 'seat_${s.name}'),
+          if (shadow) s: call('seat', seatCrops[s], 'seat_${s.name}', query: seatQuery(s)),
       };
       cornerF = {for (final s in cornerSides) s: call('corner', cornerCrops[s], 'corner_${s.name}')};
       started.addAll([...seatF.values, ...shadowF.values, ...cornerF.values]);
@@ -278,7 +317,10 @@ class TableReader {
       final rest = await shot.crop([
         for (final s in lastSides) CropSpec(grid.lastZone(s), side: s),
         CropSpec(grid.sticksZone),
-        CropSpec(grid.center),
+        // 도라 크롭은 가운데 칸을 화료자 아닌 쪽으로 조금 넓혀 선에 걸친 표시패까지(화료자를 모르면 넓히지 않음).
+        CropSpec(grid.doraSearchZone(except: seatSides.toSet())),
+        if (useWall) CropSpec(wall.box, side: wall.side, pad: wallZonePad)
+        else if (dealer != null) CropSpec(grid.doraZone(dealer), side: dealer),
         if (trackedBox != null && trackSide != null && lastSides.contains(trackSide))
           CropSpec(trackedBox, side: trackSide, pad: 0.6),
       ]);
@@ -288,6 +330,8 @@ class TableReader {
       trace?.centerCrop = sticksCrop;
       doraCrop = rest[lastSides.length + 1];
       trace?.wallCrop = doraCrop;
+      dealerDoraCrop = useWall || dealer != null ? rest[lastSides.length + 2] : null;
+      trace?.dealerDoraCrop = dealerDoraCrop;
       trackedCrop = useTracked ? rest.last : null;
       lap('crop');
     } catch (_) {
@@ -320,6 +364,9 @@ class TableReader {
               });
     final sticksF = call('sticks', sticksCrop, 'sticks');
     final doraF = call('dora', doraCrop, 'dora');
+    final dealerDoraF = useWall
+        ? call('walldora', dealerDoraCrop, 'dora_wall')
+        : call('dora', dealerDoraCrop, 'dora_dealer');
     final trackedF = call('last', trackedCrop, 'last_tracked');
 
     final seats = <Side, SeatV2>{
@@ -349,7 +396,7 @@ class TableReader {
         trackedMode[s] = 'handonly';
         continue;
       }
-      final full = shadowJ ?? await call('seat', seatCrops[s], 'seat_${s.name}');
+      final full = shadowJ ?? await call('seat', seatCrops[s], 'seat_${s.name}', query: seatQuery(s));
       trackedMode[s] = 'fallback_seat';
       warnings.add('${s.label} 자리: 미리 읽은 울기 ${melds.length}묶음과 손패 $count장이 맞지 않아 자리 전체를 다시 읽었습니다');
       seats[s] = full != null
@@ -388,13 +435,21 @@ class TableReader {
     };
     final sticksJ = await sticksF;
     final doraJ = await doraF;
+    final dealerDoraJ = await dealerDoraF;
     final trackedJ = await trackedF;
     final trackedTile = trackedJ == null ? null : parseLastV2(trackedJ);
     lap('read');
 
     var sides = [?known];
     final sticks = sticksJ == null ? const <Side, bool>{} : parseCenterV2(sticksJ).sticks;
-    final dora = doraJ == null ? const <ReadTile>[] : parseCenterV2(doraJ).indicators;
+    // 도라 표시패: 그 판의 왕패 상자([wall], 판 시작 때 찾아 둔 것) 또는 선 기준 도라 구역에서 읽었으면 그것,
+    // 없으면 가운데 칸. 둘을 나란히 불러 시간은 늘지 않는다. 리치 화료면 merge 가 화료자 손패 옆을 먼저 쓴다.
+    final dealerDora = dealerDoraJ == null ? const <ReadTile>[] : parseCenterV2(dealerDoraJ).indicators;
+    final centerDora = doraJ == null ? const <ReadTile>[] : parseCenterV2(doraJ).indicators;
+    final dora = dealerDora.isNotEmpty ? dealerDora : centerDora;
+    final doraFrom = dealerDora.isNotEmpty
+        ? (useWall ? DoraFrom.wall : DoraFrom.dealerZone)
+        : (centerDora.isNotEmpty ? DoraFrom.center : null);
 
     /// 화료자 [side] 하나의 판독. 강 끝·리치봉·도라는 같은 사진 것을 나눠 쓴다.
     TableReading build(Side side) {
@@ -448,6 +503,7 @@ class TableReader {
         },
         // 가운데(왕패)와 화료자 손패 옆을 따로 넘기고, 어느 쪽을 쓸지는 merge 가 리치 여부로 정한다.
         doraIndicators: dora,
+        doraFrom: doraFrom,
         handSideIndicators: h.loose.isNotEmpty ? h.loose : stray,
         usage: usage,
       );

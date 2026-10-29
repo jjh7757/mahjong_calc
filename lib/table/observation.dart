@@ -108,6 +108,9 @@ class TableObservation {
   /// 왕패에 앞면으로 보인 표시패 전부(도라·뒷도라 구분 없음).
   final List<ReadTile> doraIndicators;
 
+  /// [doraIndicators] 를 읽은 곳([CenterReading.doraFrom]).
+  final DoraFrom? doraFrom;
+
   /// 화료자 손패 옆에 따로 놓인 앞면 패([CenterReading.handSideIndicators]).
   final List<ReadTile> handSideIndicators;
 
@@ -117,6 +120,7 @@ class TableObservation {
   const TableObservation({
     required this.players,
     this.doraIndicators = const [],
+    this.doraFrom,
     this.handSideIndicators = const [],
     this.usage = const {},
   });
@@ -137,6 +141,7 @@ class TableObservation {
   /// 가운데 판독 모양으로. 리치와 강 끝 패는 여기서 코드로 정한다.
   CenterReading toCenterReading() => CenterReading(
         doraIndicators: doraIndicators,
+        doraFrom: doraFrom,
         handSideIndicators: handSideIndicators,
         riichi: {for (final s in Side.values) s: seat(s).riichi},
         riichiConf: {for (final s in Side.values) s: seat(s).riichi ? 0.9 : 0.0},
@@ -226,6 +231,17 @@ SeatV2 parseSeatV2(Map<String, dynamic> j) {
             alternatives: [for (final s in (a['alternatives'] as List<dynamic>?) ?? const []) '$s'],
           ),
   );
+}
+
+/// 왕패(도라 산) 상자와 그 패산이 놓인 자리(사진 기준). 크롭을 그 자리 쪽으로 세우면 표시패가 바로 선다.
+typedef WallZone = ({NormBox box, Side side});
+
+/// `/v2/wall` 응답 → 왕패 상자. 못 찾았으면 null. 자리를 모르면 아래(돌리지 않음).
+WallZone? parseWallV2(Map<String, dynamic> j) {
+  if (j['found'] != true) return null;
+  final box = NormBox.fromList(j['box'] as List<dynamic>?);
+  if (box == null) return null;
+  return (box: box, side: SideX.parse(j['side'] as String?) ?? Side.bottom);
 }
 
 /// `/v2/last` 응답 또는 `/v2/last3` 의 `rivers` 한 칸: 그 자리 강의 마지막 패. 강이 없으면 null.

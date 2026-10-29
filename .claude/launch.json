@@ -84,6 +84,21 @@
       "port": 8030
     },
     {
+      "name": "recognizer-base",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8031",
+        "--seat-split",
+        "0",
+        "--seat-table",
+        "0"
+      ],
+      "port": 8031,
+      "autoPort": false
+    },
+    {
       "name": "photos",
       "runtimeExecutable": "python",
       "runtimeArgs": [

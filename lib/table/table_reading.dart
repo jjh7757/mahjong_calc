@@ -145,9 +145,18 @@ class HandReading {
       melds.fold(0, (a, m) => a + m.tiles.length);
 }
 
+/// 도라 표시패를 어디서 읽었나(격자 판독). 리치 화료면 merge 가 화료자 손패 옆([CenterReading.handSideIndicators])을 먼저 쓴다.
+/// - wall: 그 판의 왕패 상자(판 시작 때 찾은 도라 산)
+/// - dealerZone: 왕패 상자가 없어 선 기준 도라 구역에서
+/// - center: 왕패 상자가 없어 가운데 칸 전체에서(예비)
+enum DoraFrom { wall, dealerZone, center }
+
 /// `/v1/table` 응답.
 class CenterReading {
   final List<ReadTile> doraIndicators;
+
+  /// [doraIndicators] 를 읽은 곳(격자 판독만). 모르면 null(예전 locate 흐름).
+  final DoraFrom? doraFrom;
 
   /// 리치 화료 뒤 공개한 뒷도라 표시패. 공개 전 사진이면 비어 있다.
   final List<ReadTile> uraIndicators;
@@ -171,6 +180,7 @@ class CenterReading {
 
   const CenterReading({
     this.doraIndicators = const [],
+    this.doraFrom,
     this.uraIndicators = const [],
     this.handSideIndicators = const [],
     this.riichi = const {},
@@ -213,6 +223,7 @@ class CenterReading {
     }
     return CenterReading(
       doraIndicators: dora,
+      doraFrom: DoraFrom.values.asNameMap()[j['dora_from']],
       uraIndicators: tiles('ura_dora_indicators'),
       handSideIndicators: tiles('hand_side_indicators'),
       riichi: riichi,
@@ -242,6 +253,7 @@ class CenterReading {
       ? this
       : CenterReading(
           doraIndicators: wall.doraIndicators,
+          doraFrom: DoraFrom.wall,
           uraIndicators: wall.uraIndicators,
           handSideIndicators: handSideIndicators,
           riichi: riichi,
@@ -257,6 +269,7 @@ class CenterReading {
   /// 서버 응답과 같은 모양. 촬영 기록 저장용.
   Map<String, dynamic> toJson() => {
     'dora_indicators': [for (final t in doraIndicators) t.toJson()],
+    'dora_from': doraFrom?.name,
     'ura_dora_indicators': [for (final t in uraIndicators) t.toJson()],
     'hand_side_indicators': [for (final t in handSideIndicators) t.toJson()],
     'riichi': {for (final s in Side.values) s.name: riichiAt(s)},

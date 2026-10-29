@@ -99,6 +99,7 @@ class CaptureLog {
         ('river_${e.key.name}.jpg', e.value, 'image/jpeg'),
       if (trace?.observation != null) ('observation.json', jsonBytes(trace!.observation!.toJson()), 'application/json'),
       if (trace?.wallCrop != null) ('wall.jpg', trace!.wallCrop!, 'image/jpeg'),
+      if (trace?.dealerDoraCrop != null) ('dora_dealer.jpg', trace!.dealerDoraCrop!, 'image/jpeg'),
       if (trace?.wall != null) ('wall.json', jsonBytes(trace!.wall!.toJson()), 'application/json'),
       if (trace?.layout != null) ('locate.json', jsonBytes(trace!.layout!.toJson()), 'application/json'),
       if (trace?.hand != null) ('hand.json', jsonBytes(trace!.hand!.toJson()), 'application/json'),
@@ -192,6 +193,7 @@ class CaptureLog {
       'tracked_mode': trace == null ? null : {for (final e in trace.trackedMode.entries) e.key.name: e.value},
       'call_ms': trace?.callMs,
       if (trace?.autoMultiRon ?? false) 'auto_multi_ron': true,
+      if (trace?.feltQuad case final q?) 'felt_quad': q.toJson(),  // 펴서 읽었으면 원본 사진의 펠트 네 모서리
       'fixed_analysis': trace?.analysis?.toJson(),
       'warnings': warnings,
       'error': error,

@@ -13,6 +13,7 @@ import 'package:image/image.dart' as img;
 
 import 'fixed_layout.dart' show FeltMask;
 import 'grid_zones.dart';
+import 'table_layout.dart' show NormBox;
 
 /// 펠트 네 모서리(사진 정규화 좌표 0~1). 위·오른쪽·아래·왼쪽은 사진 기준이다(펴면 그대로 위·오른쪽…).
 class FeltQuad {
@@ -70,6 +71,17 @@ FeltQuad? findFeltQuad(img.Image small, {double minArea = 0.15}) {
   return q.area < minArea ? null : q;
 }
 
+/// 작탁 기울기(도, 사진에서 시계 방향 +): 펠트 네 변이 가로·세로에서 벗어난 각도의 평균. 원근으로 위·아래 변(왼쪽·오른쪽 변)의
+/// 기울기가 서로 다르게 보여도 네 변을 평균하면 상쇄된다. [aspect] = 사진 가로/세로(모서리는 정규화 좌표라 픽셀처럼 되돌린다).
+/// 사용자 제안(2026-10-29): 수직 격자를 그대로 쓰지 말고 작탁 기울기를 재서 사진을 돌려 탁자를 반듯하게 세운 뒤 격자로 나눈다
+/// (원근까지 펴는 [rectify] 는 반듯한 B·C·D 에서 점수 정답 23 → 12 로 나빠져 기본 끔).
+double tableTilt(FeltQuad q, {double aspect = 4 / 3}) {
+  double a(math.Point<double> p, math.Point<double> r) => math.atan2(r.y - p.y, (r.x - p.x) * aspect);
+  double v(math.Point<double> p, math.Point<double> r) => math.atan2(-(r.x - p.x) * aspect, r.y - p.y);
+  final edges = [a(q.topLeft, q.topRight), a(q.bottomLeft, q.bottomRight), v(q.topLeft, q.bottomLeft), v(q.topRight, q.bottomRight)];
+  return edges.reduce((x, y) => x + y) / 4 * 180 / math.pi;
+}
+
 /// 펠트를 정사각형으로 편 사진(한 변 [size]px). 펠트 둘레에 한 변의 [margin] 만큼 테두리를 더 넣는다
 /// (편 사진에서 펠트는 [feltSpan] 안). 사진 밖은 검게.
 img.Image rectify(img.Image src, FeltQuad quad, {double margin = rectifyMargin, int size = 2800}) {
@@ -88,6 +100,22 @@ img.Image rectify(img.Image src, FeltQuad quad, {double margin = rectifyMargin, 
 
 /// 펠트 둘레 테두리(펠트 한 변 대비).
 const double rectifyMargin = 0.12;
+
+/// 작탁 바깥 끝(펠트 + 둘레 흰 테두리)을 감싸는 축 정렬 상자(0~1000). 펴지 않고 구역 크롭만 이 상자로 자를 때 쓴다
+/// (사용자 제안 2026-10-28 "처음 자를 때 작탁만"). [margin] 은 펠트 한 변 대비 테두리 몫.
+NormBox tableBoxOf(FeltQuad quad, {double margin = tableClipMargin}) {
+  final c = quad.grown(1 + 2 * margin).corners;
+  int n(double v) => (v * 1000).round().clamp(0, 1000);
+  return NormBox(
+    n(c.map((p) => p.y).reduce(math.min)),
+    n(c.map((p) => p.x).reduce(math.min)),
+    n(c.map((p) => p.y).reduce(math.max)),
+    n(c.map((p) => p.x).reduce(math.max)),
+  );
+}
+
+/// 작탁 흰 테두리 몫(펠트 한 변 대비). B·C·D 갤러리 사진에서 테두리 바깥 끝을 보고 정함.
+const double tableClipMargin = 0.07;
 
 /// 편 사진에서 펠트가 차지하는 구간(0~1000).
 (int, int) get feltSpan {

@@ -28,6 +28,7 @@ import 'package:mahjong_calc/table/merge.dart';
 import 'package:mahjong_calc/table/seat_map.dart';
 import 'package:mahjong_calc/table/shot_image.dart';
 import 'package:mahjong_calc/table/rectify.dart';
+import 'package:mahjong_calc/table/table_layout.dart';
 import 'package:mahjong_calc/table/table_reader.dart';
 import 'package:image/image.dart' as img;
 
@@ -65,12 +66,13 @@ const _gridB1 = _useInitial ? _initialGrid : {'x1': 315, 'x2': 760, 'y1': 200, '
 const _gridB2 = _useInitial ? _initialGrid : {'x1': 355, 'x2': 760, 'y1': 200, 'y2': 740}; // 14:34
 // FIELD_GRIDS="사진=x1,x2,y1,y2;…" 면 사진마다 그 격자(YOLO 자동 격자 비교용, experiments/yolo/auto_grid.py --set field).
 const _fieldGrids = String.fromEnvironment('FIELD_GRIDS');
-Map<String, int>? _gridOverride(String photo) {
+Map<String, Object>? _gridOverride(String photo) {
   for (final e in _fieldGrids.split(';')) {
     final [p, v] = e.split('=').length == 2 ? e.split('=') : ['', ''];
     if (p != photo) continue;
     final n = [for (final x in v.split(',')) int.parse(x)];
-    return {'x1': n[0], 'x2': n[1], 'y1': n[2], 'y2': n[3]};
+    // 8개면 뒤 4개는 리치봉 상자(ymin, xmin, ymax, xmax).
+    return {'x1': n[0], 'x2': n[1], 'y1': n[2], 'y2': n[3], if (n.length >= 8) 'sticks': n.sublist(4, 8)};
   }
   return null;
 }
@@ -100,7 +102,21 @@ String _photoPath(String p) => _set == 'field' ? '20261024_$p/original.jpg' : '$
 const _dumpDir = String.fromEnvironment('DUMP_DIR');
 
 // RECTIFY=true: 펠트 네 모서리로 사진을 펴고(lib/table/rectify.dart) 표준 격자로 읽는다. 펠트를 못 찾으면 원래 격자.
+// (예전 실험 방식: 펴서 JPEG 로 다시 인코딩한 뒤 readGrid. 앱은 readGrid(rectify:) 로 디코딩한 이미지를 바로 편다.)
 const _rectifyOn = bool.fromEnvironment('RECTIFY');
+
+// PAIR_RECTIFY=true: 같은 사진을 같은 순간 두 번 — 앱 흐름 그대로(server "plain")와 readGrid(rectify: true)("rect").
+// 같은 서버(RECOGNIZER_URL)로. Gemini 호출이 두 배라 SLEEP_S 를 넉넉히.
+const _pairRectify = bool.fromEnvironment('PAIR_RECTIFY');
+
+// PAIR_DEALER=true: 같은 사진을 같은 순간 두 번 — 선 기준 도라 구역 없이("plain")와 있이("dealer", readGrid(dealer:)).
+// 선 자리는 대국 기록(친 자리 → 사진 쪽), DEALER_SIDE(bottom|right|top|left)를 주면 그 쪽으로(B·C·D 는 사진에 친 정보가 없다).
+const _pairDealer = bool.fromEnvironment('PAIR_DEALER');
+
+// PAIR_GRID=true: 같은 사진을 같은 순간 두 번 — 장면 격자(사용자가 맞춘 것, "plain")와 FIELD_GRIDS 의 격자("auto",
+// 예: experiments/speed/setup_frames.py 가 Gemini 틀로 제안한 격자). FIELD_GRIDS 에 없는 사진은 auto 도 장면 격자(grid_fallback).
+const _pairGrid = bool.fromEnvironment('PAIR_GRID');
+const _dealerSide = String.fromEnvironment('DEALER_SIDE');
 
 /// 펴기(isolate): 원본 → (편 JPEG, 모서리) 또는 펠트를 못 찾으면 (null, null).
 (Uint8List?, Map<String, Object>?) _rectifyJob(Uint8List original) {
@@ -134,6 +150,8 @@ class _TwoDecodeShot implements ShotImage {
   @override
   Future<List<Uint8List>> crop(List<CropSpec> specs) => _crop(original, specs);
   @override
+  Future<FeltQuad?> rectify() async => null;
+  @override
   Future<void> close() async {}
 }
 
@@ -147,15 +165,18 @@ void main() {
     final sceneGrid = GridZones.fromJson(gridJ)!;
     for (final photo in photos) {
       final override = _gridOverride(photo);
-      final grid = override == null ? sceneGrid : GridZones.fromJson(override)!;
+      final autoGrid = override == null ? sceneGrid : GridZones.fromJson(override)!;
+      final grid = _pairGrid ? sceneGrid : autoGrid;
       // FIELD_GRIDS 를 줬는데 그 사진 격자가 없으면(자동 격자 실패) 재지 않는다.
-      final skip = _fieldGrids.isNotEmpty && override == null;
+      // PAIR_GRID 면 FIELD_GRIDS 에 없는 사진도 잰다(auto 도 장면 격자, grid_fallback — 자동 맞추기 실패 → 사람이 맞춘 격자).
+      final skip = !_pairGrid && _fieldGrids.isNotEmpty && override == null;
       for (var run = 1; run <= _repeat; run++) {
         testWidgets(skip: skip, '$scene $photo #$run', (tester) async {
           await tester.runAsync(() async {
             if (_sleepS > 0) await Future<void>.delayed(const Duration(seconds: _sleepS));
             final bytes = (await http.get(Uri.parse('$_photoUrl/${_photoPath(photo)}'))).bodyBytes;
-            Future<void> measure(RecognizerClient client, String server) async {
+            Future<void> measure(RecognizerClient client, String server,
+                {bool rect = false, bool dealerBox = false, GridZones? useGridFor}) async {
               final trace = TableReadTrace();
               final (dealer, honba) = _fieldGame[scene] ?? (0, 0);
               final game = Game(
@@ -177,7 +198,9 @@ void main() {
               final sw = Stopwatch()..start();
               try {
                 var shot = bytes;
-                var useGrid = grid;
+                var useGrid = useGridFor ?? grid;
+                out['grid'] = useGrid.toJson()..remove('dora');
+                if (useGridFor != null && override == null) out['grid_fallback'] = true;
                 if (_rectifyOn) {
                   final (rect, quad) = await compute(_rectifyJob, bytes);
                   out['rectify_ms'] = sw.elapsedMilliseconds;
@@ -187,7 +210,13 @@ void main() {
                     useGrid = standardGrid;
                   }
                 }
-                final reading = await TableReader(client, ops: _isolateOps).readGrid(shot, useGrid, trace: trace);
+                final dealer = !dealerBox
+                    ? null
+                    : (SideX.parse(_dealerSide) ?? SeatMap(game.settings.bottomSeat).sideOf(game.dealer));
+                if (dealer != null) out['dealer_side'] = dealer.name;
+                final reading = await TableReader(client, ops: _isolateOps)
+                    .readGrid(shot, useGrid, rectify: rect, dealer: dealer, trace: trace);
+                if (rect) out['quad'] = trace.feltQuad?.toJson();
                 if (_dumpDir.isNotEmpty) {
                   final d = Directory('$_dumpDir/${photo.replaceAll('/', '_')}')..createSync(recursive: true);
                   if (trace.handCrop case final c?) File('${d.path}/seat.jpg').writeAsBytesSync(c);
@@ -207,6 +236,8 @@ void main() {
                 out['points'] = score == null ? null : RegExp(r' (\d{3,6}) \[').firstMatch('$score')?.group(1);
                 out['flags'] = [for (final f in merge.flags) f.issue.name];
                 out['warnings'] = reading.warnings;
+                out['dora'] = [for (final t in merge.situation.doraIndicators) engine.Tiles.name(t)];
+                out['call_ms'] = trace.callMs;
                 out['merge'] = CaptureLog.mergeJson(merge);
                 // 확신도 분포를 보려고 판독 원본도(손패 패별 conf, 리치봉 자리별 conf, 도라 표시패 conf).
                 out['hand_read'] = reading.hand?.toJson();
@@ -236,7 +267,10 @@ void main() {
             }
 
             await Future.wait([
-              measure(RecognizerClient(), 'main'),
+              measure(RecognizerClient(), _pairRectify || _pairDealer || _pairGrid ? 'plain' : 'main'),
+              if (_pairGrid) measure(RecognizerClient(), 'auto', useGridFor: autoGrid),
+              if (_pairRectify) measure(RecognizerClient(), 'rect', rect: true),
+              if (_pairDealer) measure(RecognizerClient(), 'dealer', dealerBox: true),
               if (_altUrl.isNotEmpty) measure(RecognizerClient(baseUrl: _altUrl, apiKey: _altKey), 'alt'),
             ]);
           });

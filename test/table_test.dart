@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:mahjong_calc/engine/calculator.dart' show Tiles;
 import 'package:mahjong_calc/game/game.dart';
+import 'package:mahjong_calc/table/auto_record.dart';
 import 'package:mahjong_calc/table/cropper.dart';
 import 'package:mahjong_calc/table/merge.dart';
 import 'package:mahjong_calc/table/observation.dart';
@@ -282,6 +283,51 @@ void main() {
         );
         expect(m.situation.doraIndicators, [p('5s'), p('2m'), p('9s')]);
         expect(m.flags.map((f) => f.issue), isNot(contains(MergeIssue.tileCountMismatch)));
+      });
+
+      group('왕패 상자 없이 읽은 도라는 자동 반영하지 않는다(doraFallback)', () {
+        CenterReading from(DoraFrom? f, {String dora = '3z', String side = ''}) =>
+            CenterReading.fromJson({...center(dora: dora, side: side).toJson(), 'dora_from': f?.name});
+        List<MergeIssue> issues(CenterReading c, {bool riichi = false}) => [
+              for (final f in mergeReading(
+                hand: hand,
+                center: c,
+                winnerSide: Side.bottom,
+                game: _game(riichi: riichi ? {0} : null),
+                seats: seats,
+              ).flags)
+                f.issue,
+            ];
+
+        test('가운데 칸·선 기준 구역에서 읽은 도라 → 확인 플래그, 자동 반영 막힘', () {
+          expect(issues(from(DoraFrom.center)), contains(MergeIssue.doraFallback));
+          expect(issues(from(DoraFrom.dealerZone)), contains(MergeIssue.doraFallback));
+          final block = autoRecordBlocker(
+            warnings: const [],
+            issues: issues(from(DoraFrom.center)),
+            otherWinners: 0,
+            isTsumo: true,
+            loser: null,
+            resultValid: true,
+            paoBase: 0,
+            gameOver: false,
+            doraIndicators: 1,
+            riichi: false,
+          );
+          expect(block, contains('doraFallback'));
+        });
+
+        test('왕패 상자에서 읽었거나, 리치 화료라 손패 옆을 썼거나, 출처를 모르면(예전 흐름) 막지 않는다', () {
+          expect(issues(from(DoraFrom.wall)), isNot(contains(MergeIssue.doraFallback)));
+          expect(issues(from(DoraFrom.center, side: '5s 9s'), riichi: true), isNot(contains(MergeIssue.doraFallback)));
+          expect(issues(from(null)), isNot(contains(MergeIssue.doraFallback)));
+          // 리치 화료인데 손패 옆이 비어 가운데 칸으로 넘어가면 막는다
+          expect(issues(from(DoraFrom.center), riichi: true), contains(MergeIssue.doraFallback));
+        });
+
+        test('도라 출처는 JSON 으로 저장·복원된다', () {
+          expect(CenterReading.fromJson(from(DoraFrom.wall).toJson()).doraFrom, DoraFrom.wall);
+        });
       });
 
       test('손패 옆 표시패는 JSON 으로 저장·복원된다', () {

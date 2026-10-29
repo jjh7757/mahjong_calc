@@ -4,18 +4,24 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../game/game_store.dart';
 import '../services/recognizer_client.dart';
 import 'hand_editor.dart';
 import 'kiosk.dart';
+import 'mount/mount_screen.dart';
 
-/// 사진으로 손패 입력: 카메라/갤러리 선택 → 서버 인식 → 손패 채우기.
+/// 바텀시트에서 "테이블 전체 사진" 을 고른 표시.
+const Object _tablePhoto = 'table';
+
+/// 사진으로 손패 입력: 카메라/갤러리 선택 → 서버 자리 판독(/v2/seat, 거치 촬영과 같은 방식) → 손패 채우기.
 Future<void> showPhotoInput(BuildContext context, HandEditor editor) async {
   if (!RecognizerConfig.isConfigured) {
     _toast(context, '인식 서버 키가 설정되지 않은 빌드입니다');
     return;
   }
 
-  final source = await showModalBottomSheet<ImageSource>(
+  final hasGame = gameStore.current != null;
+  final source = await showModalBottomSheet<Object>(
     context: context,
     builder: (ctx) => SafeArea(
       child: Column(
@@ -39,19 +45,33 @@ Future<void> showPhotoInput(BuildContext context, HandEditor editor) async {
             title: const Text('갤러리에서 고르기'),
             onTap: () => Navigator.pop(ctx, ImageSource.gallery),
           ),
+          // 테이블 전체 사진은 태블릿 거치 촬영과 같은 흐름으로(격자 맞추기 → 화료자 자리 판독 → 대국 반영).
+          ListTile(
+            key: const ValueKey('photo-table'),
+            leading: const Icon(Icons.grid_view_outlined),
+            title: const Text('테이블 전체 사진 (갤러리)'),
+            subtitle: Text(hasGame ? '격자를 맞춘 뒤 화료자 손패·강·도라를 읽어 대국에 반영' : '대국 기록 중에만 쓸 수 있습니다'),
+            enabled: hasGame,
+            onTap: () => Navigator.pop(ctx, _tablePhoto),
+          ),
           const SizedBox(height: 8),
         ],
       ),
     ),
   );
   if (source == null || !context.mounted) return;
+  if (identical(source, _tablePhoto)) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => MountScreen(editor: editor, openGallery: true)));
+    return;
+  }
 
   final XFile? picked;
   try {
+    // 자리 판독은 ULTRA_HIGH 로 읽어 서버가 긴 변 3072 까지 받는다(작게 줄이면 틀 잡기·판독 효과가 준다).
     picked = await ImagePicker().pickImage(
-      source: source,
-      maxWidth: 1600,
-      maxHeight: 1600,
+      source: source as ImageSource,
+      maxWidth: 3072,
+      maxHeight: 3072,
       imageQuality: 88,
     );
   } catch (e) {
@@ -65,7 +85,7 @@ Future<void> showPhotoInput(BuildContext context, HandEditor editor) async {
     context: context,
     barrierDismissible: false,
     builder: (ctx) => kioskWrap(ctx, _RecognizingDialog(
-      future: client.recognize(File(picked!.path)),
+      future: client.recognizeSeat(File(picked!.path)),
       onCancel: client.close,
     )),
   );

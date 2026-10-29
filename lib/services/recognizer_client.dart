@@ -72,6 +72,28 @@ class RecognizerClient {
     return RecognizeResult(tiles, reading.notes, reading.model, reading.latencyMs, reading: reading);
   }
 
+  /// 손패 사진을 거치 촬영과 같은 자리 판독 `/v2/seat`(손패 틀 + 조각 읽기, 3번 동시 + 만장일치)로 읽는다.
+  /// [RecognizeResult.tiles] 는 손패 + 떨어진 한 장(화료패, 맨 끝). 울기는 [recognizeBytes] 처럼 손패 입력에 넣지 않는다.
+  Future<RecognizeResult> recognizeSeat(File image) async {
+    final json = await _post('/v2/seat', await image.readAsBytes(), image.uri.pathSegments.last);
+    final sep = json['separate_tile'];
+    final tiles = [
+      ...((json['tiles'] as List<dynamic>?) ?? const []),
+      if (sep is Map<String, dynamic>) sep,
+    ]
+        .whereType<Map<String, dynamic>>()
+        .map((t) => RecognizedTile(t['tile'] as String, ((t['conf'] as num?) ?? 0).toDouble()))
+        .toList();
+    final faceDown = json['face_up'] == false;
+    final notes = (json['notes'] as String?) ?? '';
+    return RecognizeResult(
+      tiles,
+      faceDown && notes.isEmpty ? '앞면으로 눕힌 손패가 보이지 않습니다' : notes,
+      (json['model'] as String?) ?? '',
+      ((json['latency_ms'] as num?) ?? 0).toInt(),
+    );
+  }
+
   Future<TableLayout> locate(Uint8List bytes, {String filename = 'table.jpg'}) async =>
       TableLayout.fromJson(await _post('/v1/locate', bytes, filename));
 
