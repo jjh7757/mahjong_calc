@@ -159,7 +159,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
   /// 2단계: 강(마지막 버림패 위치 → 방총자·론 패 힌트)·리치봉(띠 변화 → /v2/sticks 두 번 일치) 추적. 같은 프레임을 쓴다.
   RiverTracker? _riverTracker;
-  bool _trackingEnabled = false;
+  /// 기본 켬(2026-10-29, 사용자: 터치 없는 자동화). 격자 + 카메라 헤드가 아니면 켜져 있어도 돌지 않는다.
+  bool _trackingEnabled = true;
   static const String trackingPref = 'mount.tracking';
 
   /// 그림자 모드(실험): 추적 자리의 화료 때 손패 전용과 자리 전체를 같은 사진으로 동시에 읽어 둘 다 기록한다.
@@ -184,6 +185,17 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
   /// "자동 맞추기"(처음 설정 틀 `/v2/setup` + 도라 산 `/v2/wall`)를 부르는 중.
   bool _setupBusy = false;
+
+  /// 대국 시작 직후(테이블 화면이 첫 화면이고 기록이 아직 없는 대국) 카메라가 준비되면 자동 맞추기를 한 번 돈다
+  /// (2026-10-29, 사용자: "대국 시작 직후 자동 맞추기 한 번"). 네 자리 손패를 못 찾으면(패를 아직 안 돌렸을 때)
+  /// [_autoSetupRetryGap] 뒤 다시, 최대 [_autoSetupMaxTries]회. 맞으면 격자를 저장한다. 같은 대국엔 앱이 켜져 있는 동안 한 번만.
+  bool _autoSetupOnStart = true;
+  static const String autoSetupPref = 'mount.autoSetupOnStart';
+  static String? _autoSetupGameId;
+  int _autoSetupTries = 0;
+  Timer? _autoSetupTimer;
+  static const int _autoSetupMaxTries = 3;
+  static const Duration _autoSetupRetryGap = Duration(seconds: 20);
 
   /// 지금 판(국·본장·기록 수). 바뀌면 추적을 비운다.
   String? _trackRoundKey;
@@ -217,6 +229,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     _bgTimer?.cancel();
+    _autoSetupTimer?.cancel();
     VolumeKeys.stop();
     WidgetsBinding.instance.removeObserver(this);
     _cam?.dispose();
@@ -268,6 +281,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _previewFrameLongSide = p.frameLongSide;
       setState(() => _lastShot = p.bytes);
       await _measureCapture(p.bytes, capture: false);
+      _maybeAutoSetup();
       await _trackFrame(p.bytes);
     } on RemoteCameraException catch (e) {
       // 예전 헤드 앱(404)이나 토큰 거절이면 그만 묻는다. 연결 오류는 다음 차례에 다시.
@@ -288,7 +302,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _remoteToken = p.getString(remoteTokenPref);
       _heightCm = p.getInt(heightPref);
       _useGrid = p.getBool(useGridPref) ?? true;
-      _trackingEnabled = p.getBool(trackingPref) ?? false;
+      _trackingEnabled = p.getBool(trackingPref) ?? true;
+      _autoSetupOnStart = p.getBool(autoSetupPref) ?? true;
       _shadow = p.getBool(shadowPref) ?? false;
       _rectify = p.getBool(rectifyPref) ?? false;
       final g = p.getString(gridPref);
@@ -407,9 +422,34 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         _cam = c;
         _camError = null;
       });
+      _maybeAutoSetup();
     } catch (e) {
       if (mounted) setState(() => _camError = '카메라를 열 수 없습니다: $e');
     }
+  }
+
+  /// 대국 시작 직후 자동 맞추기 한 번(조건은 [_autoSetupOnStart] 설명). 카메라가 준비될 때마다 불리고, 조건이 맞을 때만 돈다.
+  void _maybeAutoSetup() {
+    final g = gameStore.current;
+    if (!mounted || !widget.isHome || !_autoSetupOnStart || !_useGrid) return;
+    if (g == null || g.isOver || _autoSetupGameId == g.id) return;
+    // "중간부터 기록 시작" 의 점수 조정(adjust)은 판이 돈 기록이 아니다. 화료·유국·리치가 하나라도 있으면 시작 직후가 아니다.
+    if (g.events.any((e) => e.kind != 'adjust' && e.kind != 'note')) return;
+    if (_busy || _setupBusy || _gridBeforeEdit != null || _galleryShot != null) return;
+    if (_cam == null && _remoteUrl == null) return;
+    _autoSetupGameId = g.id;
+    _autoSetupTries = 0;
+    unawaited(_autoSetupAttempt());
+  }
+
+  Future<void> _autoSetupAttempt() async {
+    if (!mounted || _busy || _setupBusy || _gridBeforeEdit != null) return;
+    _autoSetupTries++;
+    final last = _autoSetupTries >= _autoSetupMaxTries;
+    final ok = await _autoSetup(auto: true, lastTry: last);
+    if (!mounted || ok || last) return;
+    _autoSetupTimer?.cancel();
+    _autoSetupTimer = Timer(_autoSetupRetryGap, () => unawaited(_autoSetupAttempt()));
   }
 
   // ---------------- 입력 ----------------
@@ -664,16 +704,17 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
   /// 격자 맞추기 "자동 맞추기": 사진 한 장(갤러리 사진이면 그것)을 줄여 처음 설정 틀(`/v2/setup`)과 도라 산(`/v2/wall`)을
   /// 나란히 부르고, 손패+울기 바깥 띠 선·리치봉 상자([proposeGrid])와 도라 산 상자를 채운다. 사용자가 끌어 고친 뒤 저장/읽기.
-  Future<void> _autoSetup() async {
-    if (_setupBusy) return;
+  /// 네 자리 손패를 찾아 격자를 바꿨으면 true. [auto](대국 시작 직후)면 격자를 저장하고, 실패 안내는 [lastTry] 일 때만.
+  Future<bool> _autoSetup({bool auto = false, bool lastTry = true}) async {
+    if (_setupBusy) return false;
     final gallery = _galleryShot;
     setState(() => _setupBusy = true);
     final client = RecognizerClient();
     try {
       final src = gallery ?? await _currentPhoto();
       if (src == null) {
-        _toast('사진이 없습니다. 카메라가 준비되면 다시 누르세요.');
-        return;
+        if (!auto) _toast('사진이 없습니다. 카메라가 준비되면 다시 누르세요.');
+        return false;
       }
       final small = await _shrinkInIsolate(src);
       final setupF = client.observe('setup', small, filename: 'setup.jpg');
@@ -681,7 +722,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           onError: (Object _) => null);
       final setup = await setupF;
       final wallJ = await wallF;
-      if (!mounted) return;
+      if (!mounted) return false;
       final proposed = proposeGrid(setup, keep: _grid);
       final wall = wallJ == null ? null : parseWallV2(wallJ);
       setState(() {
@@ -692,13 +733,19 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           _wall = wall;
         }
       });
-      _toast([
-        proposed == null ? '네 자리 손패를 다 찾지 못해 격자는 그대로입니다' : '손패+울기 띠와 리치봉 상자를 맞췄습니다',
-        wall == null ? '도라 산은 못 찾았습니다' : '도라 산을 찾았습니다',
-        '틀렸으면 끌어 고치세요',
-      ].join('. '));
+      if (auto && proposed != null) await _saveGrid();
+      if (!auto || proposed != null || lastTry) {
+        final body = [
+          proposed == null ? '네 자리 손패를 다 찾지 못해 격자는 그대로입니다' : '손패+울기 띠와 리치봉 상자를 맞췄습니다',
+          wall == null ? '도라 산은 못 찾았습니다' : '도라 산을 찾았습니다',
+          auto ? '틀렸으면 더보기 "구역 격자 맞추기" 에서 고치세요' : '틀렸으면 끌어 고치세요',
+        ].join('. ');
+        _toast(auto ? '대국 시작 자동 맞추기: $body' : body, long: auto);
+      }
+      return proposed != null;
     } catch (e) {
-      if (mounted) _toast('자동 맞추기 실패: $e');
+      if (mounted && (!auto || lastTry)) _toast('자동 맞추기 실패: $e');
+      return false;
     } finally {
       client.close();
       if (mounted) setState(() => _setupBusy = false);
@@ -1504,6 +1551,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     await _saveGrid();
                   } else if (v == 'wall') {
                     await _locateWall(g, manual: true);
+                  } else if (v == 'autoSetup') {
+                    setState(() => _autoSetupOnStart = !_autoSetupOnStart);
+                    try {
+                      final p = await SharedPreferences.getInstance();
+                      await p.setBool(autoSetupPref, _autoSetupOnStart);
+                    } catch (_) {}
+                    if (_autoSetupOnStart) _maybeAutoSetup();
                   } else if (v == 'gridEdit') {
                     setState(() {
                       _useGrid = true;
@@ -1555,6 +1609,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     key: ValueKey('mount-grid-edit-menu'),
                     value: 'gridEdit',
                     child: Text('구역 격자 맞추기…'),
+                  ),
+                  CheckedPopupMenuItem(
+                    key: const ValueKey('mount-auto-setup-menu'),
+                    value: 'autoSetup',
+                    checked: _autoSetupOnStart,
+                    enabled: _useGrid,
+                    child: const Text('대국 시작 직후 격자 자동 맞추기 (한 번)'),
                   ),
                   CheckedPopupMenuItem(
                     key: const ValueKey('mount-tracking-menu'),

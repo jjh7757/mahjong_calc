@@ -30,6 +30,7 @@ void main() {
       'mount.remoteUrl': headUrl,
       'mount.remoteToken': 'local',
       'mount.tracking': true,
+      'mount.autoSetupOnStart': false, // 대국 시작 자동 맞추기는 이 흐름에 안 섞는다(격자 고정)
       'mount.useGrid': true,
     });
     gameStore.resume(

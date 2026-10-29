@@ -78,6 +78,7 @@
 ## 바로 다음 세션에서 할 것
 
 **2026-10-29 에 한 것(이 세션, metrics 표 1·6·9·10, 메모리 `dead-wall-location-rule`·`camera-setup-over-tilt-fix`):**
+- **대국 시작 직후 자동 맞추기 한 번 + 판 상태 추적 기본 켬(10-29 저녁, 사용자 요청):** 테이블 화면(`MountScreen(isHome: true)`)이 기록 없는 대국을 보고 카메라(이 기기 또는 헤드 미리보기 첫 프레임)가 준비되면 `_maybeAutoSetup` → `_autoSetup(auto: true)`(`/v2/setup`+`/v2/wall`). 네 자리 손패를 못 찾으면(패를 아직 안 돌림) 20초 뒤 다시, 최대 3회, 맞으면 격자 저장(`_saveGrid`). 같은 대국엔 앱이 켜져 있는 동안 한 번(`_autoSetupGameId`). 더보기 "대국 시작 직후 격자 자동 맞추기 (한 번)"(`mount.autoSetupOnStart`, 기본 켬). `mount.tracking` 기본값 false → true(격자+헤드가 아니면 켜져 있어도 안 돈다). 통합 테스트 `tracking_flow`·`river_flow` 는 자동 맞추기 끔. 테스트 404·analyze 이상 없음, **실기기·APK 미확인**.
 - **폰 사진 입력:** 계산기 "사진" 의 손패 사진은 `/v2/seat`(`recognizer_client.dart` `recognizeSeat`, 3072px), 새 항목 "테이블 전체 사진 (갤러리)" → 거치 화면 + 갤러리 사진 위 격자 맞추기 → "이 격자로 읽기"(`mount_screen.dart` `_galleryShot`·`_readGallery`, 맞춘 격자는 그 사진에만). 폰 S25 Ultra 로 장면 C 배만 16000 확인(약 18초).
 - **도라:** 선 기준 도라 구역(`GridZones.doraZone`, 주사위 탁이면 예비일 뿐), **판 시작 도라 산(왕패) 상자** — 판 상태 추적의 새 판 첫 버림 때 `/v2/wall` 한 번(+ 더보기 "도라 산 찾기"), 리치 아닌 화료는 그 상자를 `/v2/walldora` 로. 프롬프트는 판 시작 전용·일자 7줄(사용자 지시: 쓸데없는 문구 금지). 합성(왕패에 七萬 붙임) 17/18, 도라 17/18.
 - **도라 안전 규칙:** 왕패 상자·리치 손패 옆이 아닌 곳(가운데 칸·선 기준 구역)에서 읽은 도라는 `MergeIssue.doraFallback` → 자동 반영 안 함(결과 화면 "확인할 것"). 가운데 칸 도라 크롭은 화료자 아닌 쪽으로 40/1000 넓힘(`doraSearchZone`) — 선에 걸친 표시패까지.
