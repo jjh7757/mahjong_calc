@@ -3,10 +3,11 @@
 /// - **강:** 자리별 강 띠([GridZones.riverBand])의 흰 면이 패 1장 분량 늘고 두 프레임 안정이면 "버림"([Discard]) 으로
 ///   기록하고, 새로 흰 블록이 된 자리([ZoneSnapshot.newWhite])를 그 패의 위치로 둔다. Gemini 호출 없음. 화료 때 가장 최근
 ///   버림이 있는 자리가 **방총자 후보**이고 그 상자가 **론 패 위치**다(테스트 세트에서 강 끝 YOLO 틀이 2삭을 8/8 못 찾던 것의 대안).
-///   흰 면이 패 1장 줄면 울기로 가져간 것(taken), 2장 넘게 줄면 새 판(cleared)으로 본다.
-/// - **리치봉(기본 끔, [RiverTrackerConfig.trackSticks]):** 기기 가장자리 띠([GridZones.stickStrip])의 밝기 블록이 기준과
+///   흰 면이 패 1장 줄면 울기로 가져간 것(taken), 2장 넘게 줄면 새 판(cleared)으로 본다. 강 띠는 가운데 기기까지 덮지만
+///   매장(AMOS) 리치봉은 파란 막대라 흰 면에 안 잡힌다(2026-10-29 사용자 확인). 흰 리치봉을 쓰는 곳이면 홈의 봉이 버림으로 잡힌다.
+/// - **리치봉([RiverTrackerConfig.trackSticks], 2026-10-29 부터 기본 켬):** 기기 가장자리 띠([GridZones.stickStrip])의 밝기 블록이 기준과
 ///   달라지고 안정이면 `/v2/sticks` 를 읽게 하고([RiverAction.readSticks]), 다른 프레임의 두 읽기가 같으면 확정([riichi]).
-///   울기 추적과 같은 틀.
+///   울기 추적과 같은 틀. 띠가 처음 바뀐 순간의 버림 수로 더블리치·일발 후보를 낸다.
 ///
 /// 쓰는 쪽(거치 화면)이 3초마다 [TableFrameStats] 의 강·띠 스냅샷을 [onFrame] 에 넣고, 돌려받은 행동을 처리해
 /// [onSticksRead] 로 알려 준다. 화료 때는 [lastDiscard]·[riichi] 를 판독에 힌트로 넘긴다.
@@ -59,22 +60,37 @@ class RiverTrackerConfig {
   /// 리치봉 띠의 기준 대비 밝기 차이가 이 이상이면 읽기.
   final double stickDiff;
 
+  /// 또는 밝기가 크게 바뀐 블록이 띠의 이 비율 이상이면 읽기. 매장 리치봉은 홈에 꽂는 파란 막대라 띠 평균으로는
+  /// 묽어진다(합성: 리치봉 상자 격자에서 평균 0.018 · 바뀐 블록 0.11, 손이 지나간 프레임 0.03, 고정 폰 0).
+  final double stickChangedFrac;
+
   final Duration stickMinGap;
   final int stickMaxReads;
   final int stickConfirmReads;
 
-  /// 리치봉 띠를 추적할지(기본 끔, 2026-10-28 사용자 결정). 화료 판독이 `/v2/sticks` 를 자리 판독과 나란히 늘 부르므로
-  /// 미리 봐도 시간은 줄지 않고, 추적 결과는 판독에 더하기만 해서(합집합) 게임 중 서버 호출과 잘못 확정할 위험만 는다.
-  /// 켜면 화료 사진에서 놓친 리치봉을 메울 수 있다(효과는 아직 못 잼).
+  /// 리치봉 띠를 추적할지. 10-28 에 껐다(화료 판독이 `/v2/sticks` 를 늘 부르니 시간은 안 줄고 게임 중 호출만 는다).
+  /// 10-29 다시 기본 켬(사용자 결정): 리치 시점을 알아야 더블리치·일발을 자동으로 낼 수 있다. 장면 전체 변화 검사 뒤
+  /// 헛 리치봉 읽기는 고정·움직인 폰 모두 0회(metrics 표 8).
   final bool trackSticks;
 
+  /// 리치봉 띠 변화를 본 뒤 이 시간 안에 그 자리에서 잡힌 버림은 리치 선언패(횡치)로 본다 — 패를 놓고 봉을 꽂으니
+  /// 같은 프레임이나 한 프레임 늦게 잡힌다. 리치한 사람의 다음 버림은 세 사람이 돈 뒤라 이보다 늦다.
+  final Duration riichiTileLag;
+
+  /// 강 띠의 흰 면이 패 이 장수 미만이면 빈 강으로 본다(더블리치는 빈 강을 본 판에서만).
+  final double emptyTiles;
+
   const RiverTrackerConfig({
-    this.trackSticks = false,
+    this.trackSticks = true,
+    this.riichiTileLag = const Duration(seconds: 6),
+    this.emptyTiles = 0.5,
+
     this.moveThreshold = 0.03,
     this.stableFrames = 2,
     this.discardTiles = 0.6,
     this.clearTiles = 2.0,
     this.stickDiff = 0.04,
+    this.stickChangedFrac = 0.06,
     this.stickMinGap = const Duration(seconds: 5),
     this.stickMaxReads = 3,
     this.stickConfirmReads = 2,
@@ -87,6 +103,11 @@ class RiverSeatState {
   int stable = 0;
   int discards = 0;
   Discard? lastDiscard;
+
+  /// 새 판(추적기 생성·[RiverTracker.reset]) 뒤 이 강이 빈 것을 본 적이 있다. 판 중간에 추적을 시작하면 버림 수가
+  /// 그때부터라 "첫 버림" 을 믿을 수 없다.
+  bool seenEmpty = false;
+
 }
 
 enum StickStatus { idle, moving, changed, reading, confirmed, unconfirmed }
@@ -118,15 +139,32 @@ class RiverTracker {
   /// 확정한 리치봉 자리.
   Set<Side> riichi = {};
 
-  /// 리치봉을 확정한 순간의 그 자리 버림 수·전체 버림 수·그때까지 '울어 가져감'(taken) 수. 더블리치 추론용(2026-10-29):
-  /// 자기 버림 1장·전체 4장 이하·가져감 0 이면 첫 순 리치 = 더블리치 후보([doubleRiichiCandidates]). 카메라가 움직여
-  /// 수가 초기화됐을 수 있으니 결과는 "확인" 플래그와 함께 쓴다.
-  final Map<Side, ({int own, int total, int taken})> riichiAt = {};
+  /// 리치한 순간의 그 자리 버림 수(선언패 포함)·전체 버림 수·그때까지 '울어 가져감'(taken) 수·시각. 확정은 두 읽기
+  /// 뒤라 10초쯤 늦으므로 띠가 처음 바뀐 순간([_changeAt])의 수를 쓴다. 더블리치·일발 추론용(2026-10-29) — 버림을
+  /// 놓치거나 카메라가 움직였을 수 있으니 결과는 "확인" 플래그와 함께 쓴다.
+  /// [fresh] = 그 순간까지 네 강이 모두 빈 것을 본 적이 있다(버림 수가 판 처음부터 센 것).
+  final Map<Side, ({int own, int total, int taken, DateTime at, bool fresh})> riichiAt = {};
   int _taken = 0;
 
+  /// 리치봉 띠가 바뀐 순간의 자리별 버림 수(확정되면 [riichiAt] 으로 옮긴다).
+  ({Map<Side, int> own, int total, int taken, DateTime at, bool fresh})? _changeAt;
+
+  bool get _fresh => rivers.values.every((r) => r.seenEmpty);
+
+  /// 첫 순 리치(더블리치 후보): 판 처음부터 셌고, 자기 버림 1장(선언패를 못 잡았으면 0)·전체 4장 이하·가져감 0.
   Set<Side> get doubleRiichiCandidates => {
         for (final e in riichiAt.entries)
-          if (e.value.own == 1 && e.value.total <= 4 && e.value.taken == 0) e.key,
+          if (e.value.fresh && e.value.own <= 1 && e.value.total <= 4 && e.value.taken == 0) e.key,
+      };
+
+  /// 일발 후보: 리치 뒤 그 자리가 더 버리지 않았고(다음 쯔모까지) 아무도 강에서 울어 가져가지 않았다.
+  /// 안깡·가깡은 강에 안 보이니 쓰는 쪽이 [meldGrewSince](울기 추적)로 거른다.
+  Set<Side> ippatsuCandidates({bool Function(DateTime since)? meldGrewSince}) => {
+        for (final e in riichiAt.entries)
+          if (rivers[e.key]!.discards == e.value.own &&
+              _taken == e.value.taken &&
+              !(meldGrewSince?.call(e.value.at) ?? false))
+            e.key,
       };
 
   RiverTracker({required this.tileFrac, this.config = const RiverTrackerConfig()});
@@ -169,12 +207,14 @@ class RiverTracker {
     if (r.stable < config.stableFrames - 1) return;
     final frac = tileFrac[side] ?? 0;
     if (frac <= 0) return;
+    if (cur.whiteFrac / frac < config.emptyTiles) r.seenEmpty = true;
     final delta = (cur.whiteFrac - r.baseline!.whiteFrac) / frac;
     if (delta >= config.discardTiles) {
       final box = cur.newWhite(r.baseline!);
       r.discards++;
       r.lastDiscard = Discard(side: side, box: box, seq: ++_seq, at: now, tiles: delta);
       _log(now, side, 'discard', '${delta.toStringAsFixed(1)}장 ${box ?? '(위치 모름)'}');
+      _lateRiichiTile(side, now);
       r.baseline = cur;
     } else if (delta <= -config.discardTiles) {
       // 흰 면이 줄어듦. 손이 강 위에 잠깐 머문 것일 수 있어(합성 프레임에서 손이 6초 멈추자 taken·cleared 로 오인)
@@ -225,7 +265,10 @@ class RiverTracker {
     var changed = false;
     for (final e in snaps.entries) {
       final base = st.baseline[e.key];
-      if (base != null && e.value.diff(base) > config.stickDiff) changed = true;
+      if (base != null &&
+          (e.value.diff(base) > config.stickDiff || e.value.changedFrac(base) >= config.stickChangedFrac)) {
+        changed = true;
+      }
     }
     final pending = st.status == StickStatus.changed || (st.status == StickStatus.unconfirmed && st.candidate != null);
     if (!changed && !pending) {
@@ -236,6 +279,13 @@ class RiverTracker {
       st.reads = 0;
       st.candidate = null;
       st.status = StickStatus.changed;
+      _changeAt = (
+        own: {for (final e in rivers.entries) e.key: e.value.discards},
+        total: _totalDiscards,
+        taken: _taken,
+        at: now,
+        fresh: _fresh,
+      );
       _log(now, Side.bottom, 'sticks_changed', '');
     }
     if (st.lastReadAt != null && now.difference(st.lastReadAt!) < config.stickMinGap) return const [];
@@ -262,9 +312,12 @@ class RiverTracker {
     };
     final agree = st.candidate != null && _same(st.candidate!, seen);
     if (agree || config.stickConfirmReads <= 1) {
-      final total = rivers.values.fold(0, (a, r) => a + r.discards);
+      final c = _changeAt;
       for (final s in seen) {
-        if (!riichi.contains(s)) riichiAt[s] = (own: rivers[s]!.discards, total: total, taken: _taken);
+        if (riichi.contains(s)) continue;
+        riichiAt[s] = c != null
+            ? (own: c.own[s] ?? 0, total: c.total, taken: c.taken, at: c.at, fresh: c.fresh)
+            : (own: rivers[s]!.discards, total: _totalDiscards, taken: _taken, at: now, fresh: _fresh);
       }
       riichiAt.removeWhere((s, _) => !seen.contains(s));
       riichi = seen;
@@ -307,6 +360,7 @@ class RiverTracker {
       ..atRead = null;
     riichi = {};
     riichiAt.clear();
+    _changeAt = null;
     _taken = 0;
     events.add(TrackerEvent(now, Side.bottom, 'reset', reason));
   }
@@ -340,12 +394,36 @@ class RiverTracker {
         },
         'riichi': [for (final s in riichi) s.name],
         'riichi_at': {
-          for (final e in riichiAt.entries) e.key.name: {'own': e.value.own, 'total': e.value.total, 'taken': e.value.taken},
+          for (final e in riichiAt.entries)
+            e.key.name: {
+              'own': e.value.own,
+              'total': e.value.total,
+              'taken': e.value.taken,
+              'at': e.value.at.toIso8601String(),
+              'fresh': e.value.fresh,
+            },
         },
         'double_riichi': [for (final s in doubleRiichiCandidates) s.name],
+        'ippatsu': [for (final s in ippatsuCandidates()) s.name],
         'sticks': {'status': sticks.status.name, 'reads': sticks.reads},
         'events': [for (final e in events) e.toJson()],
       };
+
+
+  int get _totalDiscards => rivers.values.fold(0, (a, r) => a + r.discards);
+
+  /// 리치봉 띠 변화 직후 그 자리에서 잡힌 버림은 선언패다 — 변화 순간의 수에 넣는다(아직 확정 전이면 [_changeAt],
+  /// 이미 확정했으면 [riichiAt]).
+  void _lateRiichiTile(Side side, DateTime now) {
+    final c = _changeAt;
+    if (c == null || now.difference(c.at) > config.riichiTileLag) return;
+    final own = {...c.own, side: (c.own[side] ?? 0) + 1};
+    _changeAt = (own: own, total: c.total + 1, taken: c.taken, at: c.at, fresh: c.fresh);
+    final r = riichiAt[side];
+    if (r != null && r.at == c.at) {
+      riichiAt[side] = (own: r.own + 1, total: r.total + 1, taken: r.taken, at: r.at, fresh: r.fresh);
+    }
+  }
 
   void _log(DateTime now, Side side, String kind, String detail) => events.add(TrackerEvent(now, side, kind, detail));
 

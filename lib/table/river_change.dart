@@ -58,6 +58,16 @@ class ZoneSnapshot {
     return sum / gray.length / 255;
   }
 
+  /// 밝기가 [minDelta] 이상 바뀐 블록의 비율(0~1). 넓은 띠 안의 작은 물건(홈에 꽂은 리치봉)은 평균 차([diff])로는 묽어진다.
+  double changedFrac(ZoneSnapshot o, {int minDelta = 25}) {
+    if (!_sameShape(o) || blocks == 0) return blocks == 0 && o.blocks == 0 ? 0 : 1;
+    var n = 0;
+    for (var i = 0; i < gray.length; i++) {
+      if ((gray[i] - o.gray[i]).abs() >= minDelta) n++;
+    }
+    return n / gray.length;
+  }
+
   /// 흰 면이 패 몇 장 분량인지.
   double tiles(double tileFrac) => tileFrac <= 0 ? 0 : whiteFrac / tileFrac;
 

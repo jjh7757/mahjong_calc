@@ -92,10 +92,11 @@ void main() {
     expect(tr.events.last.kind, 'cleared');
   });
 
-  const withSticks = RiverTrackerConfig(trackSticks: true);
+  const withSticks = RiverTrackerConfig();
 
-  test('리치봉 추적은 기본으로 꺼져 있어 띠가 바뀌어도 읽지 않는다', () {
-    final tr = RiverTracker(tileFrac: frac);
+  test('리치봉 추적은 기본으로 켜져 있고, 끄면 띠가 바뀌어도 읽지 않는다', () {
+    expect(const RiverTrackerConfig().trackSticks, isTrue);
+    final tr = RiverTracker(tileFrac: frac, config: const RiverTrackerConfig(trackSticks: false));
     for (var i = 0; i < 4; i++) {
       expect(tr.onFrame(rivers(), strips(shift: i < 2 ? 0 : 40), at(i * 3)), isEmpty);
     }
@@ -137,6 +138,87 @@ void main() {
     run(discards: 3, expectCandidate: false);
   });
 
+  /// 아래 자리 버림 [before] 장 뒤 리치. [tileLate] 면 선언패가 리치봉보다 한 프레임 늦게 잡힌다.
+  /// 확정까지 마친 추적기와 다음 시각을 돌려준다.
+  ({RiverTracker tr, int t, Set<int> blocks}) riichiAfter(int before, {bool tileLate = false}) {
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
+    tr.onFrame(rivers(), strips(), at(0));
+    tr.onFrame(rivers(), strips(), at(3));
+    var t = 6;
+    var blocks = <int>{};
+    for (var i = 0; i < before; i++) {
+      blocks = {...blocks, 2 * i, 2 * i + 1};
+      tr.onFrame(rivers(bottom: blocks), strips(), at(t));
+      tr.onFrame(rivers(bottom: blocks), strips(), at(t + 3));
+      t += 6;
+    }
+    // 선언패 + 리치봉.
+    final withTile = {...blocks, 2 * before, 2 * before + 1};
+    tr.onFrame(rivers(bottom: tileLate ? blocks : withTile), strips(shift: 40), at(t));
+    final a1 = tr.onFrame(rivers(bottom: tileLate ? blocks : withTile), strips(shift: 40), at(t + 3));
+    tr.onSticksRead(a1.single.frame, {Side.bottom: true, Side.top: false, Side.left: false, Side.right: false}, at(t + 4));
+    if (tileLate) tr.onFrame(rivers(bottom: withTile), strips(shift: 40), at(t + 6)); // 손이 강 위에 남아 한 프레임 늦게
+    final a2 = tr.onFrame(rivers(bottom: withTile), strips(shift: 40), at(t + 9));
+    tr.onSticksRead(a2.single.frame, {Side.bottom: true, Side.top: false, Side.left: false, Side.right: false}, at(t + 10));
+    expect(tr.riichi, {Side.bottom});
+    return (tr: tr, t: t + 12, blocks: withTile);
+  }
+
+  test('리치 시점의 수는 확정이 아니라 띠가 바뀐 순간 것이고, 선언패가 늦게 잡혀도 선언패로 센다', () {
+    for (final late in [false, true]) {
+      final r = riichiAfter(0, tileLate: late);
+      expect(r.tr.riichiAt[Side.bottom]!.own, 1, reason: 'tileLate=$late');
+      expect(r.tr.doubleRiichiCandidates, {Side.bottom});
+      expect(r.tr.ippatsuCandidates(), {Side.bottom});
+    }
+  });
+
+  test('판 중간에 추적을 시작해 빈 강을 못 봤으면 버림 1장 뒤 리치여도 더블리치 후보가 아니다(일발은 그대로)', () {
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
+    const old = {0, 1, 2, 3, 4, 5}; // 이미 3장 버려진 강에서 시작
+    tr.onFrame(rivers(bottom: old), strips(), at(0));
+    tr.onFrame(rivers(bottom: old), strips(), at(3));
+    const withTile = {0, 1, 2, 3, 4, 5, 6, 7};
+    tr.onFrame(rivers(bottom: withTile), strips(shift: 40), at(6));
+    final a1 = tr.onFrame(rivers(bottom: withTile), strips(shift: 40), at(9));
+    tr.onSticksRead(a1.single.frame, {Side.bottom: true, Side.top: false, Side.left: false, Side.right: false}, at(10));
+    final a2 = tr.onFrame(rivers(bottom: withTile), strips(shift: 40), at(15));
+    tr.onSticksRead(a2.single.frame, {Side.bottom: true, Side.top: false, Side.left: false, Side.right: false}, at(16));
+    expect(tr.riichiAt[Side.bottom]!.own, 1);
+    expect(tr.riichiAt[Side.bottom]!.fresh, isFalse);
+    expect(tr.doubleRiichiCandidates, isEmpty);
+    expect(tr.ippatsuCandidates(), {Side.bottom});
+  });
+
+  test('일발 후보: 리치 뒤 그 자리가 또 버리거나, 누가 강에서 가져가거나, 울기가 늘면 아니다', () {
+    // 또 버림.
+    var r = riichiAfter(2);
+    expect(r.tr.ippatsuCandidates(), {Side.bottom});
+    expect(r.tr.doubleRiichiCandidates, isEmpty);
+    final more = {...r.blocks, 6, 7};
+    r.tr.onFrame(rivers(bottom: more), strips(shift: 40), at(r.t + 20));
+    r.tr.onFrame(rivers(bottom: more), strips(shift: 40), at(r.t + 23));
+    expect(r.tr.discardCounts[Side.bottom], 4);
+    expect(r.tr.ippatsuCandidates(), isEmpty);
+    expect(r.tr.riichi, {Side.bottom}); // 리치는 그대로
+
+    // 다른 사람이 울어 감(강 패가 하나 줄어듦, 세 프레임).
+    r = riichiAfter(2);
+    final fewer = r.blocks.difference({4, 5});
+    for (var i = 0; i < 3; i++) {
+      r.tr.onFrame(rivers(bottom: fewer), strips(shift: 40), at(r.t + 20 + 3 * i));
+    }
+    expect(r.tr.events.last.kind, 'taken');
+    expect(r.tr.ippatsuCandidates(), isEmpty);
+
+    // 안깡 등 강에 안 보이는 울기: 울기 추적이 리치 뒤에 늘었다고 알려 주면 아니다.
+    r = riichiAfter(2);
+    final riichiTime = r.tr.riichiAt[Side.bottom]!.at;
+    expect(r.tr.ippatsuCandidates(meldGrewSince: (t) => !t.isAfter(riichiTime)), isEmpty);
+    expect(r.tr.ippatsuCandidates(meldGrewSince: (_) => false), {Side.bottom});
+    expect((r.tr.toJson()['ippatsu'] as List), ['bottom']);
+  });
+
   test('리치봉 띠가 바뀌면 읽기를 요청하고 두 읽기가 같으면 확정', () {
     final tr = RiverTracker(tileFrac: frac, config: withSticks);
     tr.onFrame(rivers(), strips(), at(0));
@@ -158,6 +240,33 @@ void main() {
     // 확정 뒤 같은 띠면 더 읽지 않는다.
     expect(tr.onFrame(rivers(), strips(shift: 40), at(20)), isEmpty);
     expect(tr.onFrame(rivers(), strips(shift: 40), at(23)), isEmpty);
+  });
+
+  test('띠 평균은 거의 그대로여도 몇 블록이 크게 바뀌면(홈에 꽂은 파란 리치봉) 읽기를 요청한다', () {
+    Map<Side, ZoneSnapshot> stripsStick() => {
+          for (final s in Side.values)
+            s: () {
+              final z = snap(s, const {});
+              if (s == Side.right) {
+                for (final i in [3, 11, 19]) {
+                  z.gray[i] = 140; // 펠트 80 → 140, 3/32 블록
+                }
+              }
+              return z;
+            }(),
+        };
+    expect(stripsStick()[Side.right]!.diff(strips()[Side.right]!), lessThan(0.04));
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
+    tr.onFrame(rivers(), strips(), at(0));
+    tr.onFrame(rivers(), strips(), at(3));
+    // 평균 차이가 움직임 문턱보다 작아 첫 프레임부터 안정으로 보고 바로 읽는다.
+    expect(tr.onFrame(rivers(), stripsStick(), at(6)), hasLength(1));
+    // 블록 비율 문턱을 높이면 읽지 않는다(평균 차이만으로는 못 잡음).
+    final off = RiverTracker(tileFrac: frac, config: const RiverTrackerConfig(stickChangedFrac: 0.5));
+    off.onFrame(rivers(), strips(), at(0));
+    off.onFrame(rivers(), strips(), at(3));
+    expect(off.onFrame(rivers(), stripsStick(), at(6)), isEmpty);
+    expect(off.onFrame(rivers(), stripsStick(), at(9)), isEmpty);
   });
 
   test('늦은 답·다른 프레임 답은 무시하고, 셋 다 다르면 미확정', () {

@@ -1,10 +1,14 @@
 // 강·리치봉 추적(2단계) 흐름을 노트북에서 끝까지 본다. 가짜 헤드가 장면 D(k16)로 "오른쪽 자리 버림 전 → 손 → 버림 →
-// 안정 → 리치봉 → 안정 → 화료" 를 6초씩 재생한다(experiments/tracking/make_seq2.py --side right, launch.json "fake-head-seq2").
+// 안정 → 리치봉 → 안정 → 화료" 를 6초씩 재생한다(experiments/tracking/make_seq2.py --side right --slot … --color blue:
+// 매장 리치봉 = 기기 홈에 꽂는 파란 막대, launch.json "fake-head-seq4rb"). 격자는 자동 맞추기처럼 리치봉 상자를 둔 것.
 // 먼저 띄울 것: 가짜 헤드(8777) + 로컬 인식 서버(launch.json "recognizer", 8030).
 //   flutter test integration_test/river_flow_test.dart -d windows \
 //     --dart-define=RECOGNIZER_URL=http://127.0.0.1:8030 --dart-define=RECOGNIZER_API_KEY=local
-// 확인: 테이블 화면의 강 추적 줄에 "마지막 <오른쪽 자리 이름>" 이 뜨고, 리치봉 읽기가 두 번 일어나며, 화료 촬영 기록의
-// setup.tracked_discard 가 오른쪽 자리다(그 패를 따로 잘라 /v2/last 로 읽는 경로).
+// 확인: 테이블 화면의 강 추적 줄에 "마지막 <오른쪽 자리 이름>" 이 뜨고, 리치봉 읽기가 두 번 일어나 "리치 B" 로 확정되며,
+// 화료 촬영 기록의 setup.tracked_discard 가 오른쪽 자리다(그 패를 따로 잘라 /v2/last 로 읽는 경로).
+// 리치 뒤 오른쪽이 더 버리지 않았으니 일발 후보(tracked_ippatsu), 장면 D 는 판 중간이라(빈 강을 못 봄) 더블리치 후보는 없다.
+// 시퀀스 만들기: python experiments/tracking/make_seq2.py experiments/field_20261024/kakao_photos/k16.jpg
+//   experiments/tracking/seq4rb --side right --slot 2170,1020,2222,1270 --color blue
 import 'dart:convert';
 import 'dart:io';
 
@@ -15,6 +19,8 @@ import 'package:mahjong_calc/game/game.dart';
 import 'package:mahjong_calc/game/game_store.dart';
 import 'package:mahjong_calc/main.dart';
 import 'package:mahjong_calc/services/capture_log.dart';
+import 'package:mahjong_calc/table/grid_zones.dart';
+import 'package:mahjong_calc/table/table_layout.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -32,6 +38,8 @@ void main() {
       'mount.tracking': true,
       'mount.autoSetupOnStart': false, // 대국 시작 자동 맞추기는 이 흐름에 안 섞는다(격자 고정)
       'mount.useGrid': true,
+      // 장면 D 의 기기(Gemini /v2/setup 틀) + 여유: 리치봉 띠가 기기 가장자리 홈을 덮는다.
+      'mount.grid': jsonEncode(GridZones.initial.copyWith(sticks: const NormBox(268, 385, 495, 591)).toJson()),
     });
     gameStore.resume(
       const ['A', 'B', 'C', 'D'],
@@ -63,7 +71,10 @@ void main() {
     await waitFor(find.textContaining('마지막 B'), '버림 감지(강 추적 줄)', seconds: 45);
     // ignore: avoid_print
     print('[river] 버림 감지까지 ${sw.elapsed.inSeconds}초');
-    // 리치봉 추적은 기본으로 꺼져 있다(RiverTrackerConfig.trackSticks) — 리치봉은 화료 판독이 읽는다.
+    // 리치봉 추적(기본 켬, 2026-10-29): 띠 변화 → /v2/sticks 두 번 → 확정되면 강 추적 줄에 "리치 B".
+    await waitFor(find.textContaining('리치 B'), '리치봉 확정(강 추적 줄)', seconds: 90);
+    // ignore: avoid_print
+    print('[river] 리치봉 확정까지 ${sw.elapsed.inSeconds}초');
 
     await tester.tap(find.byKey(const ValueKey('mount-shoot')));
     await waitFor(find.textContaining('대국에 반영'), '결과 화면', seconds: 150);
@@ -81,7 +92,13 @@ void main() {
     expect(discard!['side'], 'right');
     expect(discard['box'], isNotNull);
     // ignore: avoid_print
-    print('[river] tracked_discard $discard, tracked_riichi ${setup['tracked_riichi']}');
+    print('[river] tracked_discard $discard, tracked_riichi ${setup['tracked_riichi']}, '
+        'tracked_double_riichi ${setup['tracked_double_riichi']}, tracked_ippatsu ${setup['tracked_ippatsu']}');
+    // ignore: avoid_print
+    print('[river] merge ${meta['merge']}');
+    expect(setup['tracked_riichi'], contains('right'));
+    expect(setup['tracked_ippatsu'], ['right']);
+    expect(setup['tracked_double_riichi'], isEmpty);
     if (track.isNotEmpty) {
       final tj = jsonDecode(File('${track.last.path}/track.json').readAsStringSync()) as Map<String, dynamic>;
       final rivers = tj['rivers'] as Map<String, dynamic>?;
@@ -89,7 +106,7 @@ void main() {
       // ignore: avoid_print
       print('[river] track.json events: $kinds');
       expect(kinds, contains('discard'));
-      expect(kinds.where((k) => '$k'.startsWith('sticks_')), isEmpty, reason: '리치봉 추적은 꺼져 있어 읽지 않아야 한다');
+      expect(kinds, contains('sticks_confirmed'));
     }
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));

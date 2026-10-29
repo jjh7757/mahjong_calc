@@ -517,6 +517,48 @@ void main() {
       expect(n.situation.riichi, isTrue);
     });
 
+    test('추적이 일발 후보로 본 리치 화료자는 일발로 계산하고 ippatsuTracked 확인 플래그, 리치가 없으면 무시', () {
+      HandReading hand() => HandReading.fromJson({
+            'tiles': _tiles('1m 2m 3m 4p 5p 6p 7s 8s 9s 1z 1z 2m 3m'),
+            'win_tile': {'tile': '4m', 'conf': 0.9},
+          });
+      final m = mergeReading(
+        hand: hand(),
+        center: CenterReading.fromJson(_center(riichi: {'top': true}, last: {'left': '4m'})),
+        winnerSide: Side.top,
+        game: _game(riichi: {2}),
+        seats: seats,
+        ippatsuHint: true,
+      );
+      expect(m.situation.ippatsu, isTrue);
+      expect(m.situation.riichi, isTrue);
+      expect(m.hasFlag(MergeIssue.ippatsuTracked), isTrue);
+      expect(infoOnlyIssues.contains(MergeIssue.ippatsuTracked), isFalse); // 자동 반영 안 함
+      // 더블 리치와 겹칠 수 있다.
+      final d = mergeReading(
+        hand: hand(),
+        center: CenterReading.fromJson(_center(riichi: {'top': true}, last: {'left': '4m'})),
+        winnerSide: Side.top,
+        game: _game(riichi: {2}),
+        seats: seats,
+        doubleRiichiHint: true,
+        ippatsuHint: true,
+      );
+      expect(d.situation.doubleRiichi, isTrue);
+      expect(d.situation.ippatsu, isTrue);
+      // 리치가 없으면 힌트가 있어도 일발 없음.
+      final n = mergeReading(
+        hand: hand(),
+        center: CenterReading.fromJson(_center(last: {'left': '4m'})),
+        winnerSide: Side.top,
+        game: _game(),
+        seats: seats,
+        ippatsuHint: true,
+      );
+      expect(n.situation.ippatsu, isFalse);
+      expect(n.hasFlag(MergeIssue.ippatsuTracked), isFalse);
+    });
+
     test('울린 손패면 사진·기록의 리치를 버리고 riichiImpossible 플래그', () {
       // 실기기 기록(2026-10-23): 발 퐁 손패인데 중앙 판독이 리치 램프를 봤다.
       final m = mergeReading(

@@ -46,6 +46,10 @@ enum MergeIssue {
   /// 게임 중 추적이 화료자의 리치봉을 그 자리 첫 버림에서 봤다(전체 4장 이하·가져감 없음) → 더블 리치로 계산.
   /// 추정이라 자동 반영하지 않고 확인을 받는다(결과 화면 상황 칩으로 바로 고칠 수 있다). 2026-10-29.
   doubleRiichiTracked,
+
+  /// 게임 중 추적이 화료자가 리치 뒤 아직 버리지 않았고 아무도 울지 않았다고 봤다 → 일발로 계산.
+  /// 버림을 놓쳤을 수 있는 추정이라 자동 반영하지 않고 확인을 받는다(결과 화면 "일발" 칩으로 고침). 2026-10-29.
+  ippatsuTracked,
 }
 
 class MergeFlag {
@@ -195,6 +199,8 @@ TableMerge mergeReading({
   Side? loserHint,
   /// 추적이 화료자의 리치를 첫 순 리치로 봤다([TableReading.trackedDoubleRiichi] 에 화료자 자리가 있음).
   bool doubleRiichiHint = false,
+  /// 추적이 화료자를 일발 후보로 봤다([TableReading.trackedIppatsu] 에 화료자 자리가 있음).
+  bool ippatsuHint = false,
 }) {
   final flags = <MergeFlag>[];
   final winner = seats.seatOf(winnerSide);
@@ -318,6 +324,15 @@ TableMerge mergeReading({
     ));
   }
 
+  // 일발: 리치가 살아 있고 추적이 리치 뒤 버림·울기를 못 봤을 때만. 추정이라 확인 플래그.
+  final ippatsu = riichi && ippatsuHint;
+  if (ippatsu) {
+    flags.add(const MergeFlag(
+      MergeIssue.ippatsuTracked,
+      '추적이 리치 뒤 화료자의 버림·울기를 못 봤습니다 — 일발로 계산했습니다. 아니면 결과 화면의 "일발" 칩을 누르세요',
+    ));
+  }
+
   // 론/쯔모·방총자
   var isTsumo = false;
   int? loser;
@@ -368,6 +383,7 @@ TableMerge mergeReading({
     roundWind: game.roundWindTile,
     riichi: riichi && !doubleRiichi,
     doubleRiichi: doubleRiichi,
+    ippatsu: ippatsu,
     doraIndicators: [for (final d in indicators) d.tile],
     honba: game.honba,
   );

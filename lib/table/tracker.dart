@@ -92,6 +92,9 @@ class TrackedSeat {
   List<ObservedMeld> melds = const [];
   DateTime? confirmedAt;
 
+  /// 확정한 울기 장수가 늘어난 마지막 시각(새 울기·가깡). 일발이 깨졌는지 보는 데 쓴다(2026-10-29).
+  DateTime? grewAt;
+
   /// 확정 뒤 모서리가 또 바뀌었다(아직 새로 확정 못 함). 그동안 [melds] 는 믿지 않는다.
   bool changedSinceConfirm = false;
 
@@ -120,6 +123,9 @@ class MeldTracker {
   MeldTracker({required this.tileFrac, this.config = const TrackerConfig()});
 
   TrackedSeat seat(Side side) => seats[side]!;
+
+  /// [since] 뒤에 어느 자리든 울기가 늘었는가(울기·깡은 일발을 깬다).
+  bool grewSince(DateTime since) => seats.values.any((t) => t.grewAt != null && t.grewAt!.isAfter(since));
 
   /// 화료 때 믿고 쓸 울기. 확정됐고 그 뒤 변화가 없을 때만. 아니면 null(지금 방식으로 자리 전체를 읽는다).
   List<ObservedMeld>? trackedMelds(Side side) {
@@ -206,6 +212,7 @@ class MeldTracker {
     final enough = agree || config.confirmReads <= 1 || shortcut;
 
     if (!fewer && enough) {
+      if (readTiles > t.readTileCount) t.grewAt = now;
       t.melds = melds;
       t.confirmedAt = now;
       t.status = TrackStatus.confirmed;

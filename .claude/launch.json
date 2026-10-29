@@ -41,6 +41,20 @@
       "autoPort": false
     },
     {
+      "name": "fake-head-seq4rb",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/tracking/fake_head.py",
+        "experiments/tracking/seq4rb",
+        "8777",
+        "--seq",
+        "--hold",
+        "6,6,6,6,6,6"
+      ],
+      "port": 8777,
+      "autoPort": false
+    },
+    {
       "name": "fake-head",
       "runtimeExecutable": "python",
       "runtimeArgs": [

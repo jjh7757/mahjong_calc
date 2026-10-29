@@ -624,6 +624,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     'tracked_sides': [for (final s in _trackedNow().keys) s.name],
     'tracked_riichi': [for (final s in _trackedRiichi()) s.name],
     'tracked_double_riichi': [for (final s in _trackedDoubleRiichi()) s.name],
+    'tracked_ippatsu': [for (final s in _trackedIppatsu()) s.name],
     'tracked_discard': _trackedDiscard()?.toJson(),
     'preview_long_side': _previewFrameLongSide,
   };
@@ -641,6 +642,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _trackingEnabled && _useGrid ? (_riverTracker?.riichi ?? const {}) : const {};
   Set<Side> _trackedDoubleRiichi() =>
       _trackingEnabled && _useGrid ? (_riverTracker?.doubleRiichiCandidates ?? const {}) : const {};
+  Set<Side> _trackedIppatsu() => _trackingEnabled && _useGrid
+      ? (_riverTracker?.ippatsuCandidates(meldGrewSince: (t) => _tracker?.grewSince(t) ?? false) ?? const {})
+      : const {};
   Discard? _trackedDiscard() => _trackingEnabled && _useGrid ? _riverTracker?.lastDiscard : null;
 
   /// 화료 때 손패 전용 읽기를 써도 되는 자리와 그 울기(확정 + 그 뒤 변화 없음).
@@ -1399,6 +1403,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             meldsTracked: r.meldsTracked,
             loserHint: r.trackedDiscardSide,
             doubleRiichiHint: r.trackedDoubleRiichi.contains(r.winnerSide!),
+            ippatsuHint: r.trackedIppatsu.contains(r.winnerSide!),
           ),
       ];
     }
@@ -1431,6 +1436,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               shadow: _shadow,
               trackedRiichi: _trackedRiichi(),
               trackedDoubleRiichi: _trackedDoubleRiichi(),
+              trackedIppatsu: _trackedIppatsu(),
               trackedDiscard: _trackedDiscard(),
               trace: trace,
             )

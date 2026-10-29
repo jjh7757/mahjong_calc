@@ -314,6 +314,9 @@ class TableReading {
 
   /// 추적이 "첫 순 리치" 로 본 자리(더블리치 후보, `RiverTracker.doubleRiichiCandidates`). merge 가 확인 플래그와 함께 쓴다.
   final Set<Side> trackedDoubleRiichi;
+
+  /// 추적이 "리치 뒤 아직 안 버림·울기 없음" 으로 본 자리(일발 후보, `RiverTracker.ippatsuCandidates`). merge 가 확인 플래그와 함께 쓴다.
+  final Set<Side> trackedIppatsu;
   const TableReading({
     required this.layout,
     this.winnerSide,
@@ -325,5 +328,6 @@ class TableReading {
     this.trackedDiscardSide,
     this.trackedRiichi = const {},
     this.trackedDoubleRiichi = const {},
+    this.trackedIppatsu = const {},
   });
 }

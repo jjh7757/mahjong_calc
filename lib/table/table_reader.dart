@@ -187,6 +187,7 @@ class TableReader {
     bool shadow = false,
     Set<Side> trackedRiichi = const {},
     Set<Side> trackedDoubleRiichi = const {},
+    Set<Side> trackedIppatsu = const {},
     Discard? trackedDiscard,
     Side? winnerSide,
     Side? dealer,
@@ -519,6 +520,7 @@ class TableReader {
         trackedDiscardSide: trackSide,
         trackedRiichi: trackedRiichi,
         trackedDoubleRiichi: trackedDoubleRiichi,
+        trackedIppatsu: trackedIppatsu,
       );
     }
 
@@ -573,6 +575,7 @@ class TableReader {
       trackedDiscardSide: first.trackedDiscardSide,
       trackedRiichi: first.trackedRiichi,
       trackedDoubleRiichi: first.trackedDoubleRiichi,
+      trackedIppatsu: first.trackedIppatsu,
     );
   }
 

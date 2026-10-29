@@ -14,6 +14,13 @@ from PIL import Image, ImageDraw
 
 src, out = sys.argv[1], sys.argv[2]
 SIDE = sys.argv[sys.argv.index("--side") + 1] if "--side" in sys.argv else "bottom"  # bottom | right
+# --stick real: 실제 크기 리치봉(폭 ≈ 패 긴 변 × 0.3 ≈ 1cm, 길이 ≈ × 2.6 ≈ 9cm). 기본은 처음 만든 가는 막대(폭 16px).
+REAL_STICK = "--stick" in sys.argv and sys.argv[sys.argv.index("--stick") + 1] == "real"
+# --slot x0,y0,x1,y1 (원본 px): 리치봉을 기기 홈 안에 놓는다(홈 안쪽 90%, 긴 쪽 방향으로). 격자 가운데 칸의 한가운데는 기기
+# 한가운데와 다를 수 있어(장면 D 는 아래로 치우침) 띠 기준으로 그리면 홈을 벗어나 옆 자리 강까지 걸친다(2026-10-29 사용자 지적).
+SLOT = [int(v) for v in sys.argv[sys.argv.index("--slot") + 1].split(",")] if "--slot" in sys.argv else None
+# --color white|blue: 흰 리치봉(빨간 점) 또는 이 매장 홈에 꽂혀 있는 파란 막대 색.
+COLOR = sys.argv[sys.argv.index("--color") + 1] if "--color" in sys.argv else "white"
 os.makedirs(out, exist_ok=True)
 im = Image.open(src).convert("RGB")
 W, H = im.size
@@ -81,14 +88,34 @@ im.save(f"{out}/f3.jpg", quality=92)
 sx0, sy0, sx1, sy1 = px(strip)
 f4 = im.copy()
 d = ImageDraw.Draw(f4)
-if SIDE == "bottom":
+if REAL_STICK:
+    half_w, half_l, dot = int(th * 0.15), int(th * 1.3), int(th * 0.1)
+if SLOT:
+    x0, y0, x1, y1 = SLOT
+    mx, my = (x1 - x0) // 20, (y1 - y0) // 20
+    fill = (250, 250, 250) if COLOR == "white" else (40, 90, 200)
+    d.rectangle((x0 + mx, y0 + my, x1 - mx, y1 - my), fill=fill)
+    r = min(x1 - x0, y1 - y0) // 6
+    cx_, cy_ = (x0 + x1) // 2, (y0 + y1) // 2
+    d.ellipse((cx_ - r, cy_ - r, cx_ + r, cy_ + r), fill=(220, 30, 30) if COLOR == "white" else (240, 240, 240))
+elif SIDE == "bottom":
     smid = (sy0 + sy1) // 2
-    d.rectangle((sx0 + (sx1 - sx0) // 3, smid - 8, sx1 - (sx1 - sx0) // 3, smid + 8), fill=(250, 250, 250))
-    d.ellipse(((sx0 + sx1) // 2 - 6, smid - 6, (sx0 + sx1) // 2 + 6, smid + 6), fill=(220, 30, 30))
+    cxs = (sx0 + sx1) // 2
+    if REAL_STICK:
+        d.rectangle((cxs - half_l, smid - half_w, cxs + half_l, smid + half_w), fill=(250, 250, 250))
+        d.ellipse((cxs - dot, smid - dot, cxs + dot, smid + dot), fill=(220, 30, 30))
+    else:
+        d.rectangle((sx0 + (sx1 - sx0) // 3, smid - 8, sx1 - (sx1 - sx0) // 3, smid + 8), fill=(250, 250, 250))
+        d.ellipse((cxs - 6, smid - 6, cxs + 6, smid + 6), fill=(220, 30, 30))
 else:
     smid = (sx0 + sx1) // 2
-    d.rectangle((smid - 8, sy0 + (sy1 - sy0) // 3, smid + 8, sy1 - (sy1 - sy0) // 3), fill=(250, 250, 250))
-    d.ellipse((smid - 6, (sy0 + sy1) // 2 - 6, smid + 6, (sy0 + sy1) // 2 + 6), fill=(220, 30, 30))
+    cys = (sy0 + sy1) // 2
+    if REAL_STICK:
+        d.rectangle((smid - half_w, cys - half_l, smid + half_w, cys + half_l), fill=(250, 250, 250))
+        d.ellipse((smid - dot, cys - dot, smid + dot, cys + dot), fill=(220, 30, 30))
+    else:
+        d.rectangle((smid - 8, sy0 + (sy1 - sy0) // 3, smid + 8, sy1 - (sy1 - sy0) // 3), fill=(250, 250, 250))
+        d.ellipse((smid - 6, cys - 6, smid + 6, cys + 6), fill=(220, 30, 30))
 f4.save(f"{out}/f4.jpg", quality=92)
 f4.save(f"{out}/f5.jpg", quality=92)
 f4.save(f"{out}/f6.jpg", quality=92)

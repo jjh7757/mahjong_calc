@@ -56,6 +56,10 @@ void main() {
     expect(tr.trackedMelds(Side.bottom), hasLength(1));
     expect(tr.events.last.kind, 'confirmed');
     expect(tr.events.last.detail, contains('픽셀 장수 일치'));
+    // 울기가 는 시각(일발 깨짐 판정용).
+    expect(tr.seat(Side.bottom).grewAt, at(7));
+    expect(tr.grewSince(at(6)), isTrue);
+    expect(tr.grewSince(at(7)), isFalse);
     // 그 뒤 같은 프레임이 이어져도 다시 읽지 않는다.
     expect(tr.onFrame(frameOf(0.03), at(9)), isEmpty);
     expect(tr.onFrame(frameOf(0.03), at(12)), isEmpty);

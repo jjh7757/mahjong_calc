@@ -214,6 +214,8 @@ class CaptureLog {
     'uncertain': merge.uncertain.toList()..sort(),
     'flags': [for (final f in merge.flags) f.toString()],
     'riichi': merge.situation.riichi,
+    'double_riichi': merge.situation.doubleRiichi,
+    'ippatsu': merge.situation.ippatsu,
     'riichi_seats_photo': merge.photoRiichiSeats.toList()..sort(),
     'dora_indicators': [for (final t in merge.situation.doraIndicators) tileCode(t)],
     'ura_indicators': [for (final t in merge.situation.uraIndicators) tileCode(t)],
