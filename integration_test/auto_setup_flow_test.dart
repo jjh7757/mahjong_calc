@@ -165,10 +165,10 @@ void main() {
             seconds: 30);
         final tableAt = DateTime.now();
 
-        // 1) 자동 맞추기: 토스트 "대국 시작 자동 맞추기 (N.N초): ..." 가 뜰 때까지.
+        // 1) 자동 맞추기: 토스트 "격자 자동 맞추기 (N.N초, 이 카메라로 처음): ..." 가 뜰 때까지(장면마다 설정을 비워 카메라를 새로 본 것과 같다).
         String? setupToast;
         await waitFor(tester, () {
-          final f = find.textContaining('대국 시작 자동 맞추기');
+          final f = find.textContaining('격자 자동 맞추기');
           if (f.evaluate().isEmpty) return false;
           setupToast = (f.evaluate().first.widget as Text).data;
           return true;

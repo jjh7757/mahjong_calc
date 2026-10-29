@@ -186,12 +186,17 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// "자동 맞추기"(처음 설정 틀 `/v2/setup` + 도라 산 `/v2/wall`)를 부르는 중.
   bool _setupBusy = false;
 
-  /// 대국 시작 직후(테이블 화면이 첫 화면이고 기록이 아직 없는 대국) 카메라가 준비되면 자동 맞추기를 한 번 돈다
-  /// (2026-10-29, 사용자: "대국 시작 직후 자동 맞추기 한 번"). 네 자리 손패를 못 찾으면(패를 아직 안 돌렸을 때)
-  /// [_autoSetupRetryGap] 뒤 다시, 최대 [_autoSetupMaxTries]회. 맞으면 격자를 저장한다. 같은 대국엔 앱이 켜져 있는 동안 한 번만.
+  /// 격자 자동 맞추기는 **카메라를 놓을 때 한 번**(2026-10-29 사용자: "대국마다 할 필요가 있나" — 판마다 잡는 것은 도라 산만).
+  /// 격자를 저장할 때 어느 카메라로 잡았는지([gridSourcePref] = 헤드 주소 또는 'local')를 같이 적고, 테이블 화면에서
+  /// 카메라가 준비됐을 때 저장된 격자의 카메라와 지금 카메라가 다르면(처음 설치, 새 헤드 QR, 헤드 ↔ 이 기기 카메라) 자동 맞추기를
+  /// 돈다. 같은 카메라면 저장된 격자(사용자가 고친 것 포함)를 그대로 쓴다. 네 자리 손패를 못 찾으면(패를 아직 안 돌렸을 때)
+  /// [_autoSetupRetryGap] 뒤 다시, 최대 [_autoSetupMaxTries]회. 맞으면 격자를 저장한다. 같은 카메라엔 앱이 켜져 있는 동안 한 번만.
+  /// 같은 주소의 폰을 다른 자리에 다시 거치한 경우는 못 알아보므로 "격자 편집" 의 "자동 맞추기" 를 누른다.
   bool _autoSetupOnStart = true;
   static const String autoSetupPref = 'mount.autoSetupOnStart';
-  static String? _autoSetupGameId;
+  static const String gridSourcePref = 'mount.gridSource';
+  String? _gridSource;
+  static String? _autoSetupDoneFor;
   int _autoSetupTries = 0;
   Timer? _autoSetupTimer;
   /// 10회 × 20초 ≈ 3분 반: 대국 시작을 누른 뒤 패가 올라오고 배패가 끝날 때까지 기다릴 수 있게(10-29 처음엔 3회 ≈ 1분).
@@ -305,6 +310,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _useGrid = p.getBool(useGridPref) ?? true;
       _trackingEnabled = p.getBool(trackingPref) ?? true;
       _autoSetupOnStart = p.getBool(autoSetupPref) ?? true;
+      _gridSource = p.getString(gridSourcePref);
       _shadow = p.getBool(shadowPref) ?? false;
       _rectify = p.getBool(rectifyPref) ?? false;
       final g = p.getString(gridPref);
@@ -430,15 +436,19 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   }
 
   /// 대국 시작 직후 자동 맞추기 한 번(조건은 [_autoSetupOnStart] 설명). 카메라가 준비될 때마다 불리고, 조건이 맞을 때만 돈다.
+  /// 지금 카메라의 정체(격자를 어느 카메라로 잡았는지 적어 둘 값).
+  String get _cameraId => _remoteUrl ?? 'local';
+
   void _maybeAutoSetup() {
     final g = gameStore.current;
     if (!mounted || !widget.isHome || !_autoSetupOnStart || !_useGrid) return;
-    if (g == null || g.isOver || _autoSetupGameId == g.id) return;
-    // "중간부터 기록 시작" 의 점수 조정(adjust)은 판이 돈 기록이 아니다. 화료·유국·리치가 하나라도 있으면 시작 직후가 아니다.
-    if (g.events.any((e) => e.kind != 'adjust' && e.kind != 'note')) return;
+    if (g == null || g.isOver) return;
     if (_busy || _setupBusy || _gridBeforeEdit != null || _galleryShot != null) return;
     if (_cam == null && _remoteUrl == null) return;
-    _autoSetupGameId = g.id;
+    // 이 카메라로 이미 잡은(또는 사용자가 저장한) 격자가 있으면 그대로 쓴다.
+    final cam = _cameraId;
+    if (_gridSource == cam || _autoSetupDoneFor == cam) return;
+    _autoSetupDoneFor = cam;
     _autoSetupTries = 0;
     unawaited(_autoSetupAttempt());
   }
@@ -505,10 +515,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     _tracker = null; // 격자가 바뀌면 패 한 장 비율·기준이 달라진다.
     _riverTracker = null;
     _shiftGate.reset();
+    _gridSource = _cameraId;
     try {
       final p = await SharedPreferences.getInstance();
       await p.setString(gridPref, jsonEncode(_grid.toJson()));
       await p.setBool(useGridPref, _useGrid);
+      await p.setString(gridSourcePref, _gridSource!);
     } catch (_) {}
   }
 
@@ -749,7 +761,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           wall == null ? '도라 산은 못 찾았습니다' : '도라 산을 찾았습니다',
           auto ? '틀렸으면 더보기 "구역 격자 맞추기" 에서 고치세요' : '틀렸으면 끌어 고치세요',
         ].join('. ');
-        _toast(auto ? '대국 시작 자동 맞추기 ($secs초): $body' : '$body ($secs초)', long: auto);
+        _toast(auto ? '격자 자동 맞추기 ($secs초, 이 카메라로 처음): $body' : '$body ($secs초)', long: auto);
       }
       return proposed != null;
     } catch (e) {
@@ -1673,7 +1685,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     value: 'autoSetup',
                     checked: _autoSetupOnStart,
                     enabled: _useGrid,
-                    child: const Text('대국 시작 직후 격자 자동 맞추기 (한 번)'),
+                    child: const Text('카메라가 바뀌면 격자 자동 맞추기 (카메라마다 한 번)'),
                   ),
                   CheckedPopupMenuItem(
                     key: const ValueKey('mount-tracking-menu'),
