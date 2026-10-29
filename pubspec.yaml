@@ -43,6 +43,8 @@ dependencies:
   mobile_scanner: ^7.4.2
   flutter_tts: ^4.2.5
   audioplayers: ^6.8.1
+  # 배경 프레임을 판마다 zip 하나로 묶는다(image 가 이미 쓰는 것, lib/table/frame_recorder.dart).
+  archive: ^4.5.2
 
 dev_dependencies:
   flutter_test:

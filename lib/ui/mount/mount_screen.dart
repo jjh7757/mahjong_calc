@@ -20,6 +20,7 @@ import '../../table/auto_record.dart';
 import '../../table/corner_change.dart';
 import '../../table/cropper.dart';
 import '../../table/fixed_layout.dart';
+import '../../table/frame_recorder.dart';
 import '../../table/grid_zones.dart';
 import '../../table/merge.dart';
 import '../../table/observation.dart';
@@ -219,6 +220,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   bool _trackBusy = false;
   int _trackSeq = 0;
 
+  /// 배경 프레임 중 추적 변화 주변만 모아 판마다 `<시각>_track/frames_##.zip` 으로(촬영 기록이 켜졌을 때, 2026-10-29).
+  final FrameRecorder _frames = FrameRecorder();
+  int _framesPart = 0;
+  int _meldEventsSeen = 0;
+  int _riverEventsSeen = 0;
+
   /// 미리보기 스트림이 이 긴 변 이상이면 모서리 읽기용 사진도 고해상 미리보기로(셔터 없음), 아니면 촬영.
   static const int _trackPreviewMinLongSide = 1600;
   static const Duration _bgInterval = Duration(seconds: 3);
@@ -244,6 +251,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _flushFrames('dispose');
     _bgTimer?.cancel();
     _autoSetupTimer?.cancel();
     _wallRetryTimer?.cancel();
@@ -502,6 +510,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
   /// 카메라 헤드에 찍어 달라고 하고, 받은 사진을 미리보기 자리에 보여 준 뒤 판독한다([read] 가 false 면 보여 주기만).
   Future<void> _shootRemote(String url, {bool read = true}) async {
+    // 화료 직전까지의 프레임을 먼저 남긴다(판독 중 앱이 닫혀도 남게).
+    if (read) _flushFrames('capture');
     setState(() => _busy = true);
     final cam = RemoteCamera(url, token: _remoteToken);
     final RemoteShot shot;
@@ -647,6 +657,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     final key = '${g.id}/${g.roundLabel}/${g.honba}/$hands';
     if (_trackRoundKey == key) return;
     final first = _trackRoundKey == null;
+    _flushFrames('round');
+    _frames.reset();
+    _framesPart = 0;
     _trackRoundKey = key;
     _trackDir = null;
     if (!first) {
@@ -675,12 +688,14 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     }
     if (!mounted) return;
     final now = DateTime.now();
-    if (_shiftGate.check(stats)) {
+    final shifted = _shiftGate.check(stats);
+    if (shifted) {
       tracker.cameraMoved(now);
       river.cameraMoved(now);
     }
     final actions = tracker.onFrame(stats.corners, now);
     final riverActions = river.onFrame(stats.rivers, stats.strips, now);
+    _recordFrame(preview, now, tracker, river, shifted);
     setState(() {});
     for (final a in actions) {
       unawaited(_readCorner(a, g));
@@ -693,6 +708,51 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _wallTried = true;
       unawaited(_locateWall(g));
     }
+  }
+
+  /// 배경 프레임 한 장을 [_frames] 에 넣는다(변화 주변·10장마다 한 장만 남음). 꽉 차면 그만큼 저장한다.
+  void _recordFrame(Uint8List jpeg, DateTime now, MeldTracker tracker, RiverTracker river, bool shifted) {
+    if (!_logEnabled) return;
+    final why = frameChanges(
+      melds: tracker,
+      river: river,
+      meldEventsFrom: _meldEventsSeen,
+      riverEventsFrom: _riverEventsSeen,
+      sceneShift: shifted,
+    );
+    _meldEventsSeen = tracker.events.length;
+    _riverEventsSeen = river.events.length;
+    _frames.add(jpeg, now, why: why);
+    if (_frames.isFull) _flushFrames('full');
+  }
+
+  /// 모은 프레임을 판 기록 폴더에 `frames_##.zip` 으로(판이 바뀔 때·꽉 찼을 때·화료 촬영 직전·화면을 닫을 때).
+  void _flushFrames(String reason) {
+    final frames = _frames.take();
+    if (frames.isEmpty || !_logEnabled) return;
+    final g = gameStore.current;
+    final dir = _trackDir ??= '${CaptureLog.newDir()}_track';
+    final name = 'frames_${(++_framesPart).toString().padLeft(2, '0')}.zip';
+    final meta = <String, dynamic>{
+      'reason': reason,
+      'round_key': _trackRoundKey,
+      'part': _framesPart,
+      'seen': _frames.seen,
+      'interval_s': _bgInterval.inSeconds,
+      'keep': {'before': _frames.before, 'after': _frames.after, 'every': _frames.every},
+      'names': g?.names,
+      'bottom_seat': g?.settings.bottomSeat,
+      'preview_long_side': _previewFrameLongSide,
+      'grid': _grid.toJson(),
+    };
+    unawaited(() async {
+      try {
+        final zip = await compute(encodeFramesZip, (frames, meta));
+        await CaptureLog.saveFile(dir, name, zip, 'application/zip');
+      } catch (e) {
+        debugPrint('[frames] $name 저장 실패: $e');
+      }
+    }());
   }
 
   /// 지금 카메라 사진 한 장(줄여서)으로 왕패 상자를 찾는다. [manual] 이면 결과를 알린다.
