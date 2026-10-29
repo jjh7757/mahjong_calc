@@ -8,6 +8,7 @@ import '../../table/seat_map.dart';
 import '../../table/table_layout.dart';
 
 /// 테이블 사진 가운데에 겹치는 점수 상자(작혼의 가운데 점수판처럼).
+/// 배경은 반투명이라 밑의 강·기기(리치봉)가 비친다. 글자는 그림자로 흰 패 위에서도 읽힌다(2026-10-29 사용자: 상자가 가운데 패를 가림).
 ///
 /// 가운데에 국·본장·공탁, 네 변에 그 쪽에 앉은 사람의 바람·점수·이름·리치봉.
 /// - 점수를 누르면 몇 초 동안 다른 사람과의 점수 차를 보여 준다.
@@ -92,22 +93,27 @@ class _TableScorePanelState extends State<TableScorePanel> {
       height: size,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xE6141210),
+          color: const Color(0x73141210),
           borderRadius: BorderRadius.circular(size * 0.06),
           border: Border.all(color: const Color(0x66E2C178), width: 1.5),
-          boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 12)],
         ),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              left: edge,
-              right: edge,
-              top: edge,
-              bottom: edge,
-              child: _center(g),
-            ),
-            for (final side in Side.values) _seatCell(g, side, edge),
-          ],
+        child: DefaultTextStyle.merge(
+          style: const TextStyle(shadows: [
+            Shadow(color: Color(0xE6000000), blurRadius: 4),
+            Shadow(color: Color(0xCC000000), offset: Offset(0, 1), blurRadius: 2),
+          ]),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                left: edge,
+                right: edge,
+                top: edge,
+                bottom: edge,
+                child: _center(g),
+              ),
+              for (final side in Side.values) _seatCell(g, side, edge),
+            ],
+          ),
         ),
       ),
     );
@@ -230,6 +236,8 @@ class _TableScorePanelState extends State<TableScorePanel> {
                         fontSize: 14 * s,
                         fontWeight: FontWeight.w800,
                         color: dealer ? const Color(0xFF2A1F08) : Colors.white,
+                        // 금색 칸의 어두운 글자엔 상자 전체의 검은 그림자가 번져 보인다.
+                        shadows: dealer ? const [] : null,
                       ),
                     ),
                   ),

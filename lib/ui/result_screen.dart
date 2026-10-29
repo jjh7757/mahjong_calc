@@ -617,7 +617,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + MediaQuery.paddingOf(context).bottom),
         children: [
           if (widget.flags.isNotEmpty)
             Card(

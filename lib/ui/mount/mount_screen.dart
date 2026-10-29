@@ -1893,7 +1893,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             ],
           ),
           body: kiosk
-              ? _kioskBody(g, seats)
+              // 태블릿 작업 표시줄(아래 48dp)이 버튼 칸 아래를 덮지 않게(2026-10-29 SM-X236N).
+              ? SafeArea(top: false, child: _kioskBody(g, seats))
               : widget.isHome
                   ? _phoneBody(g, seats)
                   : SafeArea(
@@ -2207,8 +2208,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       return Column(children: [Expanded(child: _preview(g, seats)), _gridEditPanel()]);
     }
     final canShoot = !_busy && (_cam != null || _remoteUrl != null);
+    // 화면 높이가 900dp 미만(태블릿 가로 800dp, 노트북 창 720)이면 작은 버튼 — 큰 버튼이면 아래 기록 칸이 0 이 돼
+    // "기록" 줄이 안내 글과 겹친다(2026-10-29 SM-X236N, 헤드 연결로 안내가 3줄이 됐을 때).
+    final compact = MediaQuery.sizeOf(context).height < 900;
     Widget big(String label, IconData icon, VoidCallback? onPressed, {Key? key, bool primary = false}) =>
-        _bigButton(label, icon, onPressed, key: key, primary: primary);
+        _bigButton(label, icon, onPressed, key: key, primary: primary, compact: compact);
 
     void push(Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
     return Row(
@@ -2410,8 +2414,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               child: TableScorePanel(
                 game: g,
                 seats: seats,
-                // 작은 폰은 칸이 좁아 170 아래로도 줄인다(칸의 85% 를 넘지 않게).
-                size: (c.biggest.shortestSide * 0.45).clamp(170.0, 340.0).clamp(0.0, c.biggest.shortestSide * 0.85),
+                // 가운데 강·기기를 덜 가리게 짧은 변의 34%(전엔 45%, 2026-10-29 사용자). 작은 폰은 칸의 85% 를 넘지 않게.
+                size: (c.biggest.shortestSide * 0.34).clamp(150.0, 300.0).clamp(0.0, c.biggest.shortestSide * 0.85),
               ),
             ),
           ),

@@ -242,8 +242,9 @@ class _SetupFormState extends State<_SetupForm> {
 
   @override
   Widget build(BuildContext context) {
+    // 패딩을 직접 주면 ListView 가 아래 시스템 영역(태블릿 작업 표시줄)을 더하지 않아 맨 아래 "대국 시작" 이 가린다(2026-10-29 SM-X236N).
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + MediaQuery.paddingOf(context).bottom),
       children: [
         Text('자리 순서 (동 → 남 → 서 → 북)', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),

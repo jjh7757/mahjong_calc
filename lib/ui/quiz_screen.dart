@@ -112,7 +112,7 @@ class _QuizScreenState extends State<QuizScreen> {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.fromLTRB(12, 12, 12, 12 + MediaQuery.paddingOf(context).bottom),
         children: [
           _HandCard(problem: problem),
           const SizedBox(height: 12),

@@ -20,37 +20,41 @@ extension _KioskResult on _ResultScreenState {
     return Theme(
       data: kioskDarkTheme().copyWith(scaffoldBackgroundColor: _base),
       child: Scaffold(
-        body: GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          // 아무 데나 누르면 연출을 건너뛴다.
-          onTap: _reveal.isCompleted ? null : _skip,
-          child: LayoutBuilder(
-            builder: (context, box) => FittedBox(
-              child: SizedBox(
-                width: _w,
-                height: (_w * box.maxHeight / box.maxWidth).clamp(600.0, 960.0),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    const Positioned.fill(child: CustomPaint(painter: _BandPainter())),
-                    _topBar(context),
-                    Positioned(left: 150, top: 70, right: 170, child: _handRow()),
-                    Positioned(right: 48, top: 44, child: _sealMark(widget.isTsumo ? '쯔모' : '론')),
-                    ..._doraRows(),
-                    ..._yakuRows(n),
-                    Positioned(left: 690, top: 300, child: _fadeIn(n, _hanFuCircle())),
-                    if (stamp.isNotEmpty)
-                      Positioned(
-                        left: 70,
-                        bottom: 18,
-                        child: _fadeIn(n + 1, _gradeText(stamp), stamp: true),
-                      ),
-                    Positioned(right: 56, bottom: 92, child: _fadeIn(n + 1, _scoreBlock(context))),
-                    // 상황 칩(리치·더블 리치·일발·…): 등급 도장 위, 점수 왼쪽. 누르면 바로 다시 계산.
-                    if (_hand != null && _shownSit != null)
-                      Positioned(left: 60, bottom: 176, child: _situationChips(kiosk: true)!),
-                    Positioned(right: 40, bottom: 22, child: _buttons(context)),
-                  ],
+        // 태블릿(Android 15+ 끝까지 그리기)에선 상태 표시줄·작업 표시줄이 캔버스 위에 겹친다 — 그 안쪽에 맞춘다
+        // (2026-10-29 SM-X236N: "대국에 반영" 버튼 아래 절반이 작업 표시줄에 가림).
+        body: SafeArea(
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            // 아무 데나 누르면 연출을 건너뛴다.
+            onTap: _reveal.isCompleted ? null : _skip,
+            child: LayoutBuilder(
+              builder: (context, box) => FittedBox(
+                child: SizedBox(
+                  width: _w,
+                  height: (_w * box.maxHeight / box.maxWidth).clamp(600.0, 960.0),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const Positioned.fill(child: CustomPaint(painter: _BandPainter())),
+                      _topBar(context),
+                      Positioned(left: 150, top: 70, right: 170, child: _handRow()),
+                      Positioned(right: 48, top: 44, child: _sealMark(widget.isTsumo ? '쯔모' : '론')),
+                      ..._doraRows(),
+                      ..._yakuRows(n),
+                      Positioned(left: 690, top: 300, child: _fadeIn(n, _hanFuCircle())),
+                      if (stamp.isNotEmpty)
+                        Positioned(
+                          left: 70,
+                          bottom: 18,
+                          child: _fadeIn(n + 1, _gradeText(stamp), stamp: true),
+                        ),
+                      Positioned(right: 56, bottom: 92, child: _fadeIn(n + 1, _scoreBlock(context))),
+                      // 상황 칩(리치·더블 리치·일발·…): 등급 도장 위, 점수 왼쪽. 누르면 바로 다시 계산.
+                      if (_hand != null && _shownSit != null)
+                        Positioned(left: 60, bottom: 176, child: _situationChips(kiosk: true)!),
+                      Positioned(right: 40, bottom: 22, child: _buttons(context)),
+                    ],
+                  ),
                 ),
               ),
             ),

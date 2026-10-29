@@ -262,6 +262,9 @@ void main() {
               }
               out['total_ms'] = sw.elapsedMilliseconds;
               out['stages_ms'] = trace.timingsMs;
+              // Android logcat 은 한 줄을 1000자 남짓에서 자른다 — 시간만 담은 짧은 줄을 먼저(2026-10-29 태블릿).
+              // ignore: avoid_print
+              print('TIMES ${jsonEncode({for (final k in ['scene', 'photo', 'run', 'server', 'points', 'winner', 'error', 'merge_score_ms', 'total_ms', 'stages_ms']) k: out[k]})}');
               // ignore: avoid_print
               print('TIMING ${jsonEncode(out)}');
             }

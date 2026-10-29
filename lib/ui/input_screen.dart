@@ -71,7 +71,7 @@ class InputScreen extends StatelessWidget {
             ],
           ),
           body: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+            padding: EdgeInsets.fromLTRB(12, 8, 12, 16 + MediaQuery.paddingOf(context).bottom),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
