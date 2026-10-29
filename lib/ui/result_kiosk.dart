@@ -47,7 +47,7 @@ extension _KioskResult on _ResultScreenState {
                       ),
                     Positioned(right: 56, bottom: 92, child: _fadeIn(n + 1, _scoreBlock(context))),
                     // 상황 칩(리치·더블 리치·일발·…): 등급 도장 위, 점수 왼쪽. 누르면 바로 다시 계산.
-                    if (widget.hand != null && _sit != null)
+                    if (_hand != null && _shownSit != null)
                       Positioned(left: 60, bottom: 176, child: _situationChips(kiosk: true)!),
                     Positioned(right: 40, bottom: 22, child: _buttons(context)),
                   ],
@@ -76,10 +76,14 @@ extension _KioskResult on _ResultScreenState {
                 icon: const Icon(Icons.arrow_back, color: Colors.white70),
                 onPressed: () => Navigator.of(context).maybePop(),
               ),
-              if (g != null && _winner != null)
-                Text(
-                  '${g.names[_winner!]} · ${g.roundLabel}',
-                  style: const TextStyle(fontSize: 18, color: Colors.white70, fontWeight: FontWeight.w600),
+              if (g != null && _shownSeat != null)
+                Flexible(
+                  child: Text(
+                    '${g.names[_shownSeat!]} · ${g.roundLabel}${_pageLabel == null ? '' : ' · $_pageLabel'}',
+                    key: const ValueKey('result-kiosk-who'),
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 18, color: Colors.white70, fontWeight: FontWeight.w600),
+                  ),
                 ),
             ],
           ),
@@ -100,7 +104,7 @@ extension _KioskResult on _ResultScreenState {
 
   /// 손패: 화료패를 뺀 나머지를 정렬해 늘어놓고, 화료패는 오른쪽에 떼어 둔다. 그 뒤에 울기. 칸에 맞게 패 크기를 줄인다.
   Widget _handRow() {
-    final hand = widget.hand;
+    final hand = _hand;
     final d = result.decomposition;
     if (hand == null) {
       // 손패 없이 계산(천화·지화)이면 분해만 보여 준다.
@@ -136,7 +140,7 @@ extension _KioskResult on _ResultScreenState {
 
   /// 도라 줄(왼쪽)과 뒷도라 줄(오른쪽, 리치 화료이거나 뒷도라가 있을 때).
   List<Widget> _doraRows() {
-    final sit = _sit;
+    final sit = _shownSit;
     if (sit == null) return const [];
     final ura = sit.riichi || sit.doubleRiichi || sit.uraIndicators.isNotEmpty;
     return [
@@ -348,7 +352,7 @@ extension _KioskResult on _ResultScreenState {
         ),
         const SizedBox(height: 4),
         Text(_paymentLine(p), style: const TextStyle(fontSize: 20, color: Colors.white70)),
-        if (_others.isNotEmpty)
+        if (_others.isNotEmpty && _page == 0)
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Wrap(
@@ -381,6 +385,15 @@ extension _KioskResult on _ResultScreenState {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
       textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
     );
+    final next = FilledButton.styleFrom(
+      backgroundColor: const Color(0xFF2B3D66),
+      foregroundColor: Colors.white,
+      side: const BorderSide(color: _gold, width: 1.5),
+      minimumSize: const Size(0, 50),
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+      textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+    );
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -396,9 +409,11 @@ extension _KioskResult on _ResultScreenState {
         ],
         OutlinedButton(style: style, onPressed: () => _showDetails(context), child: const Text('부수·점수 이동')),
         const SizedBox(width: 10),
+        // 동시 론: 이전·다음 화료자. 기록은 마지막 화료자 차례에서 모두 함께.
+        for (final b in _pageButtons(style: style, nextStyle: next)) ...[b, const SizedBox(width: 10)],
         if (_autoActive)
           _autoBar(kiosk: true)
-        else
+        else if (_nextWin == null)
           OutlinedButton.icon(
             style: style.copyWith(
               backgroundColor: const WidgetStatePropertyAll(Color(0xFF2B3D66)),

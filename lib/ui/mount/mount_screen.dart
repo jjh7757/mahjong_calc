@@ -1407,6 +1407,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             m.winner,
             engine.calculate(m.hand!, m.situation, rules: widget.editor.rules),
             riichi: m.situation.riichi,
+            hand: m.hand,
+            situation: m.situation,
           ),
         );
       }

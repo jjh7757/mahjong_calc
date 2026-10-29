@@ -16,11 +16,14 @@ import 'tile_view.dart';
 part 'result_kiosk.dart';
 
 /// 동시 론(더블론·트리플론)의 다른 화료자: 대국 자리, 계산 결과, 그 손패를 리치로 계산했는지.
+/// [hand]·[situation] 이 있으면 결과 화면에서 그 사람 차례에 손패를 그리고 상황 칩으로 다시 계산한다.
 class OtherWin {
   final int seat;
   final ScoreResult result;
   final bool riichi;
-  const OtherWin(this.seat, this.result, {this.riichi = false});
+  final Hand? hand;
+  final Situation? situation;
+  const OtherWin(this.seat, this.result, {this.riichi = false, this.hand, this.situation});
 }
 
 /// 계산 결과 화면. 작혼처럼 역이 한 줄씩 나오고, 끝나면 네 자리 점수 이동을 보여 준다.
@@ -106,7 +109,53 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   /// 상황 칩(리치·더블 리치·일발·해저/하저·영상개화/창깡)으로 고친 상황과 그 결과. 처음엔 넘어온 것 그대로.
   late Situation? _sit = widget.situation;
   late ScoreResult _result = widget.result;
-  ScoreResult get result => _result;
+
+  /// 동시 론이면 화료자마다 결과를 차례로 보여 준다(2026-10-29, 사용자: 더블론 결과 화면 연속 2개).
+  /// 0 은 대표 화료자, k 는 [_pages] 의 k-1 번째. 점수 이동판·기록은 어느 쪽에서든 모두를 합쳐 계산한다.
+  int _page = 0;
+
+  /// 차례로 보여 줄 함께 론한 사람(계산이 된 사람만).
+  List<OtherWin> get _pages => [for (final o in _others) if (o.result.isValid) o];
+
+  /// 지금 보이는 함께 론한 사람. 대표 화료자 차례면 null.
+  OtherWin? get _shown {
+    final p = _pages;
+    return _page >= 1 && _page <= p.length ? p[_page - 1] : null;
+  }
+
+  /// 지금 보이는 사람의 결과·손패·상황·자리.
+  ScoreResult get result => _shown?.result ?? _result;
+  Hand? get _hand => _shown == null ? widget.hand : _shown!.hand;
+  Situation? get _shownSit => _shown == null ? _sit : _shown!.situation;
+  int? get _shownSeat => _shown?.seat ?? _winner;
+
+  /// 다음 차례 화료자(없으면 null, 그러면 이 화면에서 기록한다).
+  OtherWin? get _nextWin {
+    final p = _pages;
+    return _page < p.length ? p[_page] : null;
+  }
+
+  /// "더블론 1/2" 같은 차례 표시. 동시 론이 아니면 null.
+  String? get _pageLabel {
+    final p = _pages;
+    if (p.isEmpty) return null;
+    final page = _page.clamp(0, p.length);
+    return '${_others.length >= 2 ? '트리플론' : '더블론'} ${page + 1}/${p.length + 1}';
+  }
+
+  /// [page] 차례로 넘기고 그 사람의 연출(역·음성)을 처음부터 한다.
+  Future<void> _goPage(int page) async {
+    _playGen++;
+    setState(() {
+      _page = page;
+      _skipped = false;
+      _gradeSaid = false;
+    });
+    _reveal.duration = Duration(milliseconds: _perYaku * result.yaku.length + _tail);
+    _reveal.value = 0;
+    await Announcer.stop();
+    if (mounted) _play();
+  }
 
   /// 이 손패를 리치로 계산했는지(칩으로 바꿨으면 그것). "대국에 반영" 의 자동 리치봉에 쓴다.
   bool get _winnerRiichi => _sit == null ? widget.winnerRiichi : (_sit!.riichi || _sit!.doubleRiichi);
@@ -115,14 +164,22 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   /// 칩으로 상황을 고쳐 바로 다시 계산한다(2026-10-29, 사용자: 더블 리치·일발을 "판독 수정" 없이 결과 화면에서).
   /// 연출·음성은 건너뛰고, 10초 자동 반영은 멈춘다(사용자가 손댄 결과는 직접 반영).
   void _applySituation(Situation s, String what) {
-    final hand = widget.hand;
+    final hand = _hand;
     if (hand == null) return;
     _cancelAuto();
     _skipped = true;
     Announcer.stop();
+    final shown = _shown;
     setState(() {
-      _sit = s;
-      _result = calculate(hand, s, rules: widget.rules);
+      final r = calculate(hand, s, rules: widget.rules);
+      if (shown == null) {
+        _sit = s;
+        _result = r;
+      } else {
+        // 함께 론한 사람 차례면 그 사람 것만 고친다(기록·점수 이동판에도 반영).
+        final i = _otherWins.indexOf(shown);
+        _otherWins[i] = OtherWin(shown.seat, r, riichi: s.riichi || s.doubleRiichi, hand: hand, situation: s);
+      }
     });
     _reveal.value = 1;
     ScaffoldMessenger.maybeOf(context)
@@ -132,8 +189,8 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
 
   /// 상황 칩 줄. 손패·상황을 모르면(옛 호출) 없음. 울었으면 리치 칩은 뺀다.
   Widget? _situationChips({required bool kiosk}) {
-    final hand = widget.hand;
-    final s = _sit;
+    final hand = _hand;
+    final s = _shownSit;
     if (hand == null || s == null) return null;
     const gold = Color(0xFFF2C14E);
     Widget chip(String key, String label, bool on, Situation Function(bool next) change) {
@@ -212,10 +269,36 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   /// "한 명만 론" 을 눌렀으면 함께 론한 사람을 빼고 대표 화료자만 기록한다(더블론 자동 판정을 되돌림).
   bool _singleRon = false;
 
+  /// 함께 론한 사람. 그 사람 차례에 상황 칩으로 고치면 바뀐다.
+  late final List<OtherWin> _otherWins = List.of(widget.otherWins);
+
   /// 함께 론한 사람(대국 기록 중이고 론일 때만, 화료자·방총자와 겹치지 않는 것).
   List<OtherWin> get _others => _game == null || widget.isTsumo || _singleRon
       ? const []
-      : [for (final o in widget.otherWins) if (o.seat != _winner && o.seat != _loser) o];
+      : [for (final o in _otherWins) if (o.seat != _winner && o.seat != _loser) o];
+
+  /// 대표 화료자 차례가 아니면 "이전", 다음 화료자가 있으면 "다음: 이름" 버튼. [style] 은 키오스크용.
+  List<Widget> _pageButtons({ButtonStyle? style, ButtonStyle? nextStyle}) {
+    final next = _nextWin;
+    return [
+      if (_page > 0)
+        OutlinedButton.icon(
+          key: const ValueKey('result-prev-win'),
+          style: style,
+          icon: const Icon(Icons.chevron_left),
+          label: const Text('이전'),
+          onPressed: () => _goPage(_page - 1),
+        ),
+      if (next != null)
+        FilledButton.icon(
+          key: const ValueKey('result-next-win'),
+          style: nextStyle,
+          icon: const Icon(Icons.chevron_right),
+          label: Text('다음: ${_game!.names[next.seat]} 결과'),
+          onPressed: () => _goPage(_page + 1),
+        ),
+    ];
+  }
 
   /// 함께 론한 사람 카드: 이름, 역 요약, 론 점수(본장 제외).
   Widget _othersCard(TextTheme text, ColorScheme scheme) {
@@ -297,24 +380,29 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   bool _gradeSaid = false;
   bool _voice = false;
 
+  /// 연출 차례 번호. 화료자 차례를 넘기면 늘려 앞 사람의 음성 연출을 멈춘다.
+  int _playGen = 0;
+
   /// 작혼처럼 "론/쯔모" 를 외치고, 역 한 줄을 띄울 때마다 그 역을 읽고 다 읽으면 다음 줄을 띄운다.
   /// 마지막에 판·부와 등급 도장이 나올 때 등급을 읽는다. 음성이 꺼졌거나 못 읽으면 원래 시간표대로 띄운다.
   Future<void> _play() async {
+    final gen = _playGen;
+    bool stale() => !mounted || _skipped || gen != _playGen;
     _voice = await Announcer.enabled();
-    if (!mounted || _skipped) return;
+    if (stale()) return;
     if (!_voice || !await Announcer.say(widget.isTsumo ? '쯔모' : '론')) {
       _voice = false;
-      if (mounted && !_skipped) _reveal.forward();
+      if (!stale()) _reveal.forward();
       return;
     }
     final n = result.yaku.length;
     final total = _perYaku * n + _tail;
     for (var i = 0; i < n; i++) {
-      if (!mounted || _skipped) return;
+      if (stale()) return;
       _reveal.animateTo((_perYaku * i + 320) / total);
       await Announcer.say(yakuSpeech(result.yaku[i]));
     }
-    if (!mounted || _skipped) return;
+    if (stale()) return;
     _reveal.forward();
     _sayGrade();
   }
@@ -356,7 +444,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   /// 연출이 끝나면 카운트다운을 시작한다(대국 기록 중, 화료자를 알고, 론이면 방총자도 알 때만).
   void _startAuto() {
     final after = widget.autoRecordAfter;
-    if (after == null || _autoCancelled || _autoTimer != null || !result.isValid) return;
+    if (after == null || _autoCancelled || _autoTimer != null || !_result.isValid) return;
     if (_game == null || _winner == null || (!widget.isTsumo && _loser == null) || _others.isNotEmpty) return;
     setState(() => _autoLeft = after.inSeconds);
     _autoTimer = Timer.periodic(const Duration(seconds: 1), (t) {
@@ -382,9 +470,9 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     _autoTimer?.cancel();
     if (!mounted || _game == null || _winner == null) return;
     final outcome = recordWinDirect(
-      basePoints: result.basePoints,
+      basePoints: _result.basePoints,
       isTsumo: widget.isTsumo,
-      summary: result.summary,
+      summary: _result.summary,
       winner: _winner!,
       loser: _loser,
       photoRiichiSeats: widget.photoRiichiSeats,
@@ -515,9 +603,10 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     final n = result.yaku.length;
     final stamp = result.isYakuman ? _yakumanTotal(result) : result.limit.label;
 
+    final pageLabel = _pageLabel;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('결과'),
+        title: Text(pageLabel == null ? '결과' : '${_game!.names[_shownSeat!]} 결과 · $pageLabel'),
         actions: [
           if (widget.onFix != null)
             TextButton.icon(
@@ -637,20 +726,25 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                       if (_autoActive)
                         _autoBar(kiosk: false)
                       else
-                        FilledButton.tonalIcon(
-                          icon: const Icon(Icons.scoreboard_outlined, size: 18),
-                          label: Text('대국에 반영 (${_game!.roundLabel})'),
-                          onPressed: () => _record(context),
-                        ),
+                        // 동시 론이면 마지막 화료자 차례에서 모두 함께 기록한다.
+                        Wrap(spacing: 8, runSpacing: 6, children: [
+                          ..._pageButtons(),
+                          if (_nextWin == null)
+                            FilledButton.tonalIcon(
+                              icon: const Icon(Icons.scoreboard_outlined, size: 18),
+                              label: Text('대국에 반영 (${_game!.roundLabel})'),
+                              onPressed: () => _record(context),
+                            ),
+                        ]),
                     ],
                   ],
                 ),
               ),
             ),
           ),
-          if (_others.isNotEmpty) _othersCard(text, scheme),
+          if (_others.isNotEmpty && _page == 0) _othersCard(text, scheme),
           const SizedBox(height: 8),
-          if (widget.hand != null && _sit != null) _Section(title: '상황 고치기', child: _situationChips(kiosk: false)!),
+          if (_hand != null && _shownSit != null) _Section(title: '상황 고치기', child: _situationChips(kiosk: false)!),
           _Section(title: '점수 이동', child: _cross()),
           if (!result.isYakuman)
             _Section(
@@ -687,14 +781,18 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     void changed(VoidCallback f) {
       // 자리를 직접 고치면 자동 반영을 멈춘다(사용자가 확인하며 반영).
       _cancelAuto();
-      setState(f);
+      setState(() {
+        f();
+        // 화료자·방총자를 바꿔 함께 론한 사람이 줄었으면 대표 화료자 차례로.
+        if (_page > _pages.length) _page = 0;
+      });
       onChanged?.call();
     }
 
     if (g == null) {
       final winner = widget.seatWind - Tiles.east; // 친(동)이 자리 0
       final delta = Game.winDelta(
-          dealer: 0, winner: winner, payment: result.payment, isTsumo: tsumo, loser: _loser);
+          dealer: 0, winner: winner, payment: _result.payment, isTsumo: tsumo, loser: _loser);
       final seats = [
         for (var side = 0; side < 4; side++)
           () {
@@ -730,7 +828,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         delta = Game.multiRonDelta(
           loser: _loser!,
           ron: {
-            winner: _ronOf(winner, result.basePoints).ron,
+            winner: _ronOf(winner, _result.basePoints).ron,
             for (final o in others)
               if (o.result.isValid) o.seat: _ronOf(o.seat, o.result.basePoints).ron,
           },
@@ -740,7 +838,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         );
       } else {
         final pay = payment(
-          result.basePoints,
+          _result.basePoints,
           Situation(
               isTsumo: tsumo,
               seatWind: winner == g.dealer ? Tiles.east : Tiles.south,
@@ -806,14 +904,14 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     final outcome = await showWinSheet(
       context,
       _game!,
-      basePoints: result.basePoints,
+      basePoints: _result.basePoints,
       isTsumo: widget.isTsumo,
-      summary: result.summary,
+      summary: _result.summary,
       winner: _winner,
       loser: _loser == _winner ? null : _loser,
       photoRiichiSeats: widget.photoRiichiSeats,
       winnerRiichi: _winnerRiichi,
-      paoBase: paoBasePoints(result),
+      paoBase: paoBasePoints(_result),
       extraWins: [
         for (final o in _others)
           if (o.result.isValid)

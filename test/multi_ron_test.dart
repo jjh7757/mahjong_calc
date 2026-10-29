@@ -252,6 +252,19 @@ ScoreResult _ron(List<String> codes, {bool riichi = false}) {
   return r;
 }
 
+/// 남가(자풍 남) 론 손패의 결과와 손패·상황(결과 화면 상황 칩용).
+(ScoreResult, Hand, Situation) _ronHand(List<String> codes) {
+  final e = HandEditor();
+  for (final c in codes) {
+    e.closed.add(HandTile(Tiles.parse(c)));
+  }
+  e.isTsumo = false;
+  e.seatWind = Tiles.south;
+  final r = e.calculate();
+  assert(r.isValid, r.error);
+  return (r, e.hand!, e.situation);
+}
+
 void _resume() => gameStore.resume(
       const ['A', 'B', 'C', 'D'],
       const GameSettings(),
@@ -315,6 +328,9 @@ void widgetTests() {
       ));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('result-other-wins')), findsOneWidget);
+      // 대표 화료자 차례엔 기록 대신 다음 화료자 결과로 넘어간다.
+      expect(find.textContaining('대국에 반영'), findsNothing);
+      await _tapVisible(tester, find.byKey(const ValueKey('result-next-win')));
       await _tapVisible(tester, find.textContaining('대국에 반영'));
       expect(find.byKey(const ValueKey('extra-win-0')), findsOneWidget);
       await _tapVisible(tester, find.text('2명 론 기록'));
@@ -325,6 +341,72 @@ void widgetTests() {
       expect(g.events.last.description, startsWith('더블론(A) B'));
       expect(g.events.last.description, contains('+공탁 2 B')); // D 의 리치 + B 자동 리치
       expect(g.events.where((e) => e.description == 'B 리치 (자동)'), hasLength(1));
+    });
+
+    testWidgets('더블론이면 화료자마다 결과 화면을 차례로 보여 준다', (tester) async {
+      _resume();
+      final main = _ron(['2m', '3m', '4m', '3p', '4p', '5p', '6s', '7s', '8s', '5s', '5s', '6m', '7m', '5m']);
+      final (other, hand, sit) = _ronHand(['1z', '1z', '1z', '4p', '5p', '6p', '7s', '8s', '9s', '2m', '3m', '5p', '5p', '4m']);
+      await tester.pumpWidget(MaterialApp(
+        home: ResultScreen(
+          result: main,
+          gameSeat: 2,
+          loser: 0,
+          otherWins: [OtherWin(1, other, hand: hand, situation: sit)],
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('C 결과 · 더블론 1/2'), findsOneWidget);
+      expect(find.text('장풍패'), findsNothing); // B 의 역(장풍 동)은 아직 안 보인다
+      await _tapVisible(tester, find.byKey(const ValueKey('result-next-win')));
+      expect(find.text('B 결과 · 더블론 2/2'), findsOneWidget);
+      expect(find.byKey(const ValueKey('result-other-wins')), findsNothing);
+      expect(find.byKey(const ValueKey('result-next-win')), findsNothing);
+      expect(find.byKey(const ValueKey('result-single-ron')), findsNothing);
+      expect(find.text('장풍패'), findsOneWidget);
+      expect(find.textContaining('${other.payment.total}점'), findsWidgets);
+
+      // B 차례의 상황 칩은 B 만 다시 계산하고, 기록 시트에도 그 값이 간다.
+      await _tapVisible(tester, find.byKey(const ValueKey('result-chip-riichi')));
+      expect(find.text('리치'), findsWidgets);
+      // 칩까지 내려가 위쪽 결과 카드가 목록에서 빠졌으니 다시 올린다.
+      await tester.drag(find.byType(ListView), const Offset(0, 2000));
+      await tester.pumpAndSettle();
+      await _tapVisible(tester, find.byKey(const ValueKey('result-prev-win')));
+      expect(find.text('C 결과 · 더블론 1/2'), findsOneWidget);
+      await _tapVisible(tester, find.byKey(const ValueKey('result-next-win')));
+      await _tapVisible(tester, find.textContaining('대국에 반영'));
+      await _tapVisible(tester, find.text('2명 론 기록'));
+
+      final g = gameStore.current!;
+      expect(g.scores.reduce((a, b) => a + b), 100000);
+      expect(g.events.last.description, startsWith('더블론(A) B'));
+      expect(g.events.where((e) => e.description == 'B 리치 (자동)'), hasLength(1));
+    });
+
+    testWidgets('키오스크도 화료자마다 차례로', (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      _resume();
+      final main = _ron(['2m', '3m', '4m', '3p', '4p', '5p', '6s', '7s', '8s', '5s', '5s', '6m', '7m', '5m']);
+      final (other, hand, sit) = _ronHand(['1z', '1z', '1z', '4p', '5p', '6p', '7s', '8s', '9s', '2m', '3m', '5p', '5p', '4m']);
+      await tester.pumpWidget(MaterialApp(
+        home: ResultScreen(
+          result: main,
+          gameSeat: 2,
+          loser: 0,
+          otherWins: [OtherWin(1, other, hand: hand, situation: sit)],
+        ),
+      ));
+      await tester.pumpAndSettle();
+      expect(find.text('C · 동1국 · 더블론 1/2'), findsOneWidget);
+      expect(find.text('대국에 반영 (동1국)'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('result-next-win')));
+      await tester.pumpAndSettle();
+      expect(find.text('B · 동1국 · 더블론 2/2'), findsOneWidget);
+      expect(find.text('대국에 반영 (동1국)'), findsOneWidget);
+      expect(find.byKey(const ValueKey('result-prev-win')), findsOneWidget);
     });
 
     testWidgets('"한 명만 론" 을 누르면 함께 론한 사람을 빼고 한 명만 기록한다', (tester) async {
