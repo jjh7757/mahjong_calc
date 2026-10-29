@@ -149,6 +149,10 @@ class RiverTracker {
   /// 리치봉 띠가 바뀐 순간의 자리별 버림 수(확정되면 [riichiAt] 으로 옮긴다).
   ({Map<Side, int> own, int total, int taken, DateTime at, bool fresh})? _changeAt;
 
+  /// 이번 변화(확정 전까지)에서 띠가 실제로 바뀐 자리. 리치 시점은 이 자리에만 적는다 — 추적 전부터 꽂혀 있던 봉은
+  /// 확정 읽기에 같이 나오지만 언제 리치했는지 모른다(태블릿 통합 테스트 10-29: 장면 D 의 위·아래 봉이 방금 리치로 적힘).
+  final Set<Side> _changedSides = {};
+
   bool get _fresh => rivers.values.every((r) => r.seenEmpty);
 
   /// 첫 순 리치(더블리치 후보): 판 처음부터 셌고, 자기 버림 1장(선언패를 못 잡았으면 0)·전체 4장 이하·가져감 0.
@@ -262,14 +266,12 @@ class RiverTracker {
     st.stable++;
     if (st.stable < config.stableFrames - 1 || st.status == StickStatus.reading) return const [];
 
-    var changed = false;
-    for (final e in snaps.entries) {
-      final base = st.baseline[e.key];
-      if (base != null &&
-          (e.value.diff(base) > config.stickDiff || e.value.changedFrac(base) >= config.stickChangedFrac)) {
-        changed = true;
-      }
-    }
+    final changedNow = <Side>{
+      for (final e in snaps.entries)
+        if (st.baseline[e.key] case final base?)
+          if (e.value.diff(base) > config.stickDiff || e.value.changedFrac(base) >= config.stickChangedFrac) e.key,
+    };
+    final changed = changedNow.isNotEmpty;
     final pending = st.status == StickStatus.changed || (st.status == StickStatus.unconfirmed && st.candidate != null);
     if (!changed && !pending) {
       if (st.status == StickStatus.moving) st.status = riichi.isEmpty ? StickStatus.idle : StickStatus.confirmed;
@@ -279,6 +281,9 @@ class RiverTracker {
       st.reads = 0;
       st.candidate = null;
       st.status = StickStatus.changed;
+      _changedSides
+        ..clear()
+        ..addAll(changedNow);
       _changeAt = (
         own: {for (final e in rivers.entries) e.key: e.value.discards},
         total: _totalDiscards,
@@ -288,6 +293,7 @@ class RiverTracker {
       );
       _log(now, Side.bottom, 'sticks_changed', '');
     }
+    _changedSides.addAll(changedNow);
     if (st.lastReadAt != null && now.difference(st.lastReadAt!) < config.stickMinGap) return const [];
     if (st.reads >= config.stickMaxReads) {
       if (st.status != StickStatus.unconfirmed) _log(now, Side.bottom, 'sticks_unconfirmed', '읽기 ${st.reads}번 불일치');
@@ -314,7 +320,7 @@ class RiverTracker {
     if (agree || config.stickConfirmReads <= 1) {
       final c = _changeAt;
       for (final s in seen) {
-        if (riichi.contains(s)) continue;
+        if (riichi.contains(s) || !_changedSides.contains(s)) continue;
         riichiAt[s] = c != null
             ? (own: c.own[s] ?? 0, total: c.total, taken: c.taken, at: c.at, fresh: c.fresh)
             : (own: rivers[s]!.discards, total: _totalDiscards, taken: _taken, at: now, fresh: _fresh);
@@ -361,6 +367,7 @@ class RiverTracker {
     riichi = {};
     riichiAt.clear();
     _changeAt = null;
+    _changedSides.clear();
     _taken = 0;
     events.add(TrackerEvent(now, Side.bottom, 'reset', reason));
   }

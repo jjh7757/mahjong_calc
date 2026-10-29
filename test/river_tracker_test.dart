@@ -269,6 +269,25 @@ void main() {
     expect(off.onFrame(rivers(), stripsStick(), at(9)), isEmpty);
   });
 
+  test('추적 전부터 꽂혀 있던 리치봉은 리치로 넣되 리치 시점은 적지 않는다(띠가 바뀐 자리만 일발·더블리치 후보)', () {
+    // 위 자리 봉은 처음부터 있음(기준에 포함), 아래 자리 띠만 바뀜. 서버는 둘 다 리치로 답한다.
+    Map<Side, ZoneSnapshot> stripsBottom(int shift) =>
+        {for (final s in Side.values) s: snap(s, const {}, grayShift: s == Side.bottom ? shift : 0)};
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
+    tr.onFrame(rivers(), stripsBottom(0), at(0));
+    tr.onFrame(rivers(), stripsBottom(0), at(3));
+    tr.onFrame(rivers(), stripsBottom(40), at(6));
+    final a1 = tr.onFrame(rivers(), stripsBottom(40), at(9));
+    const both = {Side.bottom: true, Side.top: true, Side.left: false, Side.right: false};
+    tr.onSticksRead(a1.single.frame, both, at(10));
+    final a2 = tr.onFrame(rivers(), stripsBottom(40), at(15));
+    tr.onSticksRead(a2.single.frame, both, at(16));
+    expect(tr.riichi, {Side.bottom, Side.top});
+    expect(tr.riichiAt.keys, [Side.bottom]);
+    expect(tr.ippatsuCandidates(), {Side.bottom});
+    expect(tr.doubleRiichiCandidates, {Side.bottom});
+  });
+
   test('늦은 답·다른 프레임 답은 무시하고, 셋 다 다르면 미확정', () {
     final tr = RiverTracker(tileFrac: frac, config: withSticks);
     tr.onFrame(rivers(), strips(), at(0));

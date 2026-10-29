@@ -72,7 +72,8 @@ void main() {
     // ignore: avoid_print
     print('[river] 버림 감지까지 ${sw.elapsed.inSeconds}초');
     // 리치봉 추적(기본 켬, 2026-10-29): 띠 변화 → /v2/sticks 두 번 → 확정되면 강 추적 줄에 "리치 B".
-    await waitFor(find.textContaining('리치 B'), '리치봉 확정(강 추적 줄)', seconds: 90);
+    // 장면 D 는 위·아래 홈에 처음부터 봉이 있어 "리치 A·B·C" 처럼 함께 뜬다.
+    await waitFor(find.textContaining(RegExp(r'리치 [^ ]*B')), '리치봉 확정(강 추적 줄)', seconds: 90);
     // ignore: avoid_print
     print('[river] 리치봉 확정까지 ${sw.elapsed.inSeconds}초');
 
@@ -81,6 +82,14 @@ void main() {
     // ignore: avoid_print
     print('[river] 화료 결과까지 ${sw.elapsed.inSeconds}초');
 
+    if (!(Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+      // 기기에선 촬영 기록이 /sdcard/Download/mahjong_calc 에 남는다(앱이 다시 못 읽음) — adb 로 meta.json 의
+      // setup.tracked_* 를 확인한다(2026-10-29 태블릿 SM-X236N 에서 이렇게 확인).
+      // ignore: avoid_print
+      print('[river] 기기 실행: 촬영 기록 확인은 adb 로');
+      await tester.pumpWidget(const SizedBox());
+      return;
+    }
     final root = Directory('$out/mahjong_calc');
     final dirs = root.listSync().whereType<Directory>().toList()..sort((a, b) => a.path.compareTo(b.path));
     final capture = dirs.lastWhere((d) => !d.path.endsWith('_track'));
@@ -97,6 +106,7 @@ void main() {
     // ignore: avoid_print
     print('[river] merge ${meta['merge']}');
     expect(setup['tracked_riichi'], contains('right'));
+    // 위·아래 봉은 추적 전부터 있었으니 리치 시점을 모른다 → 일발 후보는 오른쪽만.
     expect(setup['tracked_ippatsu'], ['right']);
     expect(setup['tracked_double_riichi'], isEmpty);
     if (track.isNotEmpty) {
