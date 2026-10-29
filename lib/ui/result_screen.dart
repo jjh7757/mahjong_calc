@@ -66,6 +66,9 @@ class ResultScreen extends StatefulWidget {
   /// 거치 촬영 판독이 확실할 때 자동 반영: 연출이 끝나고 이 시간이 지나면 시트 없이 대국에 기록하고 닫는다.
   /// 그 전에 "취소" 하거나 점수 이동판에서 자리를 바꾸면 평소처럼 "대국에 반영" 을 직접 누른다. null 이면 끔.
   final Duration? autoRecordAfter;
+
+  /// 상황 칩으로 다시 계산할 때 쓰는 룰(입력 화면·거치 촬영의 룰 설정).
+  final RuleSet rules;
   const ResultScreen({
     super.key,
     required this.result,
@@ -83,6 +86,7 @@ class ResultScreen extends StatefulWidget {
     this.winnerRiichi = false,
     this.otherWins = const [],
     this.autoRecordAfter,
+    this.rules = RuleSet.standard,
   });
 
   @override
@@ -99,8 +103,111 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   late int? _winner = widget.gameSeat;
   late int? _loser = widget.loser;
 
-  ScoreResult get result => widget.result;
+  /// 상황 칩(리치·더블 리치·일발·해저/하저·영상개화/창깡)으로 고친 상황과 그 결과. 처음엔 넘어온 것 그대로.
+  late Situation? _sit = widget.situation;
+  late ScoreResult _result = widget.result;
+  ScoreResult get result => _result;
+
+  /// 이 손패를 리치로 계산했는지(칩으로 바꿨으면 그것). "대국에 반영" 의 자동 리치봉에 쓴다.
+  bool get _winnerRiichi => _sit == null ? widget.winnerRiichi : (_sit!.riichi || _sit!.doubleRiichi);
   Game? get _game => gameStore.current;
+
+  /// 칩으로 상황을 고쳐 바로 다시 계산한다(2026-10-29, 사용자: 더블 리치·일발을 "판독 수정" 없이 결과 화면에서).
+  /// 연출·음성은 건너뛰고, 10초 자동 반영은 멈춘다(사용자가 손댄 결과는 직접 반영).
+  void _applySituation(Situation s, String what) {
+    final hand = widget.hand;
+    if (hand == null) return;
+    _cancelAuto();
+    _skipped = true;
+    Announcer.stop();
+    setState(() {
+      _sit = s;
+      _result = calculate(hand, s, rules: widget.rules);
+    });
+    _reveal.value = 1;
+    ScaffoldMessenger.maybeOf(context)
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text('$what(으)로 다시 계산했습니다'), duration: const Duration(seconds: 3)));
+  }
+
+  /// 상황 칩 줄. 손패·상황을 모르면(옛 호출) 없음. 울었으면 리치 칩은 뺀다.
+  Widget? _situationChips({required bool kiosk}) {
+    final hand = widget.hand;
+    final s = _sit;
+    if (hand == null || s == null) return null;
+    const gold = Color(0xFFF2C14E);
+    Widget chip(String key, String label, bool on, Situation Function(bool next) change) {
+      final next = !on;
+      final child = Text(
+        label,
+        style: TextStyle(
+          fontSize: kiosk ? 16 : 13,
+          fontWeight: FontWeight.w700,
+          color: kiosk ? (on ? const Color(0xFF2A1F08) : Colors.white) : null,
+        ),
+      );
+      if (!kiosk) {
+        return FilterChip(
+          key: ValueKey('result-chip-$key'),
+          label: child,
+          selected: on,
+          onSelected: (_) => _applySituation(change(next), label),
+        );
+      }
+      return InkWell(
+        key: ValueKey('result-chip-$key'),
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => _applySituation(change(next), label),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: on ? gold : const Color(0xE61B2640),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: on ? gold : const Color(0xFF5B6F99)),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (on)
+              const Padding(
+                padding: EdgeInsets.only(right: 6),
+                child: Icon(Icons.check, size: 16, color: Color(0xFF2A1F08)),
+              ),
+            child,
+          ]),
+        ),
+      );
+    }
+
+    final chips = <Widget>[
+      if (hand.isClosed) ...[
+        chip('riichi', '리치', s.riichi, (v) => s.copyWith(riichi: v, doubleRiichi: false, ippatsu: v && s.ippatsu)),
+        chip('double-riichi', '더블 리치', s.doubleRiichi,
+            (v) => s.copyWith(doubleRiichi: v, riichi: false, ippatsu: v && s.ippatsu)),
+        chip('ippatsu', '일발', s.ippatsu, (v) => s.copyWith(ippatsu: v, riichi: v && !s.doubleRiichi ? true : s.riichi)),
+      ],
+      chip('last-tile', s.isTsumo ? '해저로월' : '하저로어', s.lastTile, (v) => s.copyWith(lastTile: v)),
+      if (s.isTsumo)
+        chip('rinshan', '영상개화', s.rinshan, (v) => s.copyWith(rinshan: v))
+      else
+        chip('chankan', '창깡', s.chankan, (v) => s.copyWith(chankan: v)),
+    ];
+    if (!kiosk) return Wrap(spacing: 6, runSpacing: 4, children: chips);
+    return Container(
+      key: const ValueKey('result-chips'),
+      padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+      decoration: BoxDecoration(
+        color: const Color(0xCC0E1526),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: const Color(0xFF3B4C73)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        const Padding(
+          padding: EdgeInsets.only(right: 12),
+          child: Text('상황 고치기', style: TextStyle(color: Colors.white70, fontSize: 14)),
+        ),
+        for (final c in chips) Padding(padding: const EdgeInsets.only(right: 8), child: c),
+      ]),
+    );
+  }
 
   /// "한 명만 론" 을 눌렀으면 함께 론한 사람을 빼고 대표 화료자만 기록한다(더블론 자동 판정을 되돌림).
   bool _singleRon = false;
@@ -281,7 +388,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       winner: _winner!,
       loser: _loser,
       photoRiichiSeats: widget.photoRiichiSeats,
-      winnerRiichi: widget.winnerRiichi,
+      winnerRiichi: _winnerRiichi,
     );
     widget.onWinRecorded?.call(outcome);
     widget.onRecorded?.call();
@@ -543,6 +650,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
           ),
           if (_others.isNotEmpty) _othersCard(text, scheme),
           const SizedBox(height: 8),
+          if (widget.hand != null && _sit != null) _Section(title: '상황 고치기', child: _situationChips(kiosk: false)!),
           _Section(title: '점수 이동', child: _cross()),
           if (!result.isYakuman)
             _Section(
@@ -616,7 +724,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     if (winner != null) {
       auto = g.autoRiichiCandidates(widget.photoRiichiSeats,
           winner: winner,
-          winnerRiichi: widget.winnerRiichi,
+          winnerRiichi: _winnerRiichi,
           otherWinners: {for (final o in others) o.seat: o.riichi});
       if (others.isNotEmpty && _loser != null) {
         delta = Game.multiRonDelta(
@@ -704,7 +812,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       winner: _winner,
       loser: _loser == _winner ? null : _loser,
       photoRiichiSeats: widget.photoRiichiSeats,
-      winnerRiichi: widget.winnerRiichi,
+      winnerRiichi: _winnerRiichi,
       paoBase: paoBasePoints(result),
       extraWins: [
         for (final o in _others)

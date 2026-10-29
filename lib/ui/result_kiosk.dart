@@ -46,6 +46,9 @@ extension _KioskResult on _ResultScreenState {
                         child: _fadeIn(n + 1, _gradeText(stamp), stamp: true),
                       ),
                     Positioned(right: 56, bottom: 92, child: _fadeIn(n + 1, _scoreBlock(context))),
+                    // 상황 칩(리치·더블 리치·일발·…): 등급 도장 위, 점수 왼쪽. 누르면 바로 다시 계산.
+                    if (widget.hand != null && _sit != null)
+                      Positioned(left: 60, bottom: 176, child: _situationChips(kiosk: true)!),
                     Positioned(right: 40, bottom: 22, child: _buttons(context)),
                   ],
                 ),
@@ -133,7 +136,7 @@ extension _KioskResult on _ResultScreenState {
 
   /// 도라 줄(왼쪽)과 뒷도라 줄(오른쪽, 리치 화료이거나 뒷도라가 있을 때).
   List<Widget> _doraRows() {
-    final sit = widget.situation;
+    final sit = _sit;
     if (sit == null) return const [];
     final ura = sit.riichi || sit.doubleRiichi || sit.uraIndicators.isNotEmpty;
     return [

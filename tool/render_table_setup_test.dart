@@ -175,6 +175,12 @@ void main() {
                     ]),
                     const SizedBox(height: 12),
                     Row(children: [
+                      Expanded(child: big('천화', Icons.auto_awesome)),
+                      const SizedBox(width: 12),
+                      Expanded(child: big('지화', Icons.auto_awesome_outlined)),
+                    ]),
+                    const SizedBox(height: 12),
+                    Row(children: [
                       Expanded(child: big('갤러리', Icons.photo_library_outlined)),
                       const SizedBox(width: 12),
                       Expanded(child: big('기록', Icons.scoreboard_outlined)),
@@ -187,13 +193,24 @@ void main() {
                       style: TextStyle(fontSize: 12, color: Colors.white60),
                     ),
                     const SizedBox(height: 8),
-                    Row(children: [
+                    Wrap(children: [
                       TextButton(onPressed: () {}, child: const Text('점수표')),
                       TextButton(onPressed: () {}, child: const Text('룰 설정')),
                       TextButton.icon(
                         onPressed: () {},
                         icon: const Icon(Icons.grid_4x4, size: 16),
                         label: const Text('격자 편집'),
+                      ),
+                      TextButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.view_week_outlined, size: 16),
+                        label: Text(wall == null ? '도라 산 찾기' : '도라 산 다시 찾기'),
+                      ),
+                      TextButton.icon(
+                        onPressed: () {},
+                        style: TextButton.styleFrom(foregroundColor: const Color(0xFF66BB6A)),
+                        icon: const Icon(Icons.videocam, size: 16),
+                        label: const Text('헤드 연결됨'),
                       ),
                     ]),
                   ],

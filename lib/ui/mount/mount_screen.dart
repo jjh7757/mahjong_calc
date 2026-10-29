@@ -150,6 +150,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// 헤드가 미리보기를 못 주거나(예전 앱) 토큰을 거절하면 더 묻지 않는다. 주소를 바꾸면 다시 시도.
   bool _bgStopped = false;
 
+  /// 마지막 헤드 미리보기 오류(없으면 연결됨). 테이블 화면 "헤드" 버튼이 빨강/초록으로 보여 주고, 누르면 다시 붙거나 QR 스캔.
+  String? _headError;
+
   /// 헤드 미리보기 스트림의 원 프레임 긴 변(px). 해상도 게이트(울기 모서리를 미리보기로 읽을 수 있나) 판단용. 모르면 null.
   int? _previewFrameLongSide;
 
@@ -285,14 +288,19 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       final p = await cam.preview();
       if (!mounted || _busy) return;
       _previewFrameLongSide = p.frameLongSide;
-      setState(() => _lastShot = p.bytes);
+      setState(() {
+        _lastShot = p.bytes;
+        _headError = null;
+      });
       await _measureCapture(p.bytes, capture: false);
       _maybeAutoSetup();
       await _trackFrame(p.bytes);
     } on RemoteCameraException catch (e) {
       // 예전 헤드 앱(404)이나 토큰 거절이면 그만 묻는다. 연결 오류는 다음 차례에 다시.
       if (e.unsupported || e.unauthorized) _bgStopped = true;
-    } catch (_) {
+      if (mounted) setState(() => _headError = e.message);
+    } catch (e) {
+      if (mounted) setState(() => _headError = '연결 안 됨 ($e)');
     } finally {
       cam.close();
       _bgFetching = false;
@@ -774,6 +782,64 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   }
 
   String get _wallStatus => _wallBusy ? ' · 도라 산 찾는 중' : (_wall != null ? ' · 도라 산 잡음' : '');
+
+  /// 테이블 화면 "도라 산 찾기" 버튼(더보기에도 있음; 매장에서 판 시작에 못 잡았을 때 바로 누르려고, 2026-10-29).
+  Widget _wallButton(Game g) => TextButton.icon(
+        key: const ValueKey('table-wall'),
+        onPressed: _wallBusy || _busy || (_cam == null && _remoteUrl == null) ? null : () => _locateWall(g, manual: true),
+        icon: _wallBusy
+            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+            : const Icon(Icons.view_week_outlined, size: 16),
+        label: Text(_wallBusy ? '도라 산 찾는 중…' : (_wall == null ? '도라 산 찾기' : '도라 산 다시 찾기')),
+      );
+
+  /// 테이블 화면 "헤드" 버튼: 연결됨(초록)/끊김(빨강)/헤드 없음. 끊겼으면 누르면 다시 붙어 보고, 안 되면 QR 스캔을 권한다.
+  Widget _headButton() {
+    final url = _remoteUrl;
+    if (url == null) {
+      return TextButton.icon(
+        key: const ValueKey('table-head'),
+        onPressed: _busy ? null : _scanQr,
+        icon: const Icon(Icons.qr_code_scanner, size: 16),
+        label: const Text('헤드 QR'),
+      );
+    }
+    final ok = _headError == null && _bgTimer != null && !_bgStopped;
+    final color = ok ? const Color(0xFF66BB6A) : const Color(0xFFEF5350);
+    return TextButton.icon(
+      key: const ValueKey('table-head'),
+      style: TextButton.styleFrom(foregroundColor: color),
+      onPressed: _busy
+          ? null
+          : () async {
+              if (ok) {
+                _toast('카메라 헤드 연결됨 ($url)');
+                return;
+              }
+              // 다시 붙어 본다(토큰 거절·옛 헤드로 멈춘 것도 풀고). 안 되면 QR 스캔.
+              _bgStopped = false;
+              setState(() => _headError = null);
+              _startBg();
+              await _tickBg();
+              if (!mounted) return;
+              if (_headError == null) {
+                _toast('카메라 헤드에 다시 연결했습니다');
+              } else {
+                final m = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+                m.showSnackBar(
+                  SnackBar(
+                    content: Text('헤드 연결 실패: $_headError'),
+                    duration: const Duration(seconds: 10),
+                    persist: false,
+                    action: SnackBarAction(label: 'QR 스캔', onPressed: _scanQr),
+                  ),
+                );
+              }
+            },
+      icon: Icon(ok ? Icons.videocam : Icons.videocam_off, size: 16),
+      label: Text(ok ? '헤드 연결됨' : '헤드 끊김 · 다시 연결'),
+    );
+  }
 
   /// 자동 맞추기 입력 사진(줄인 것)과 `/v2/setup`·`/v2/wall` 응답·제안 격자를 촬영 기록 `<시각>_track/setup_###` 에 남긴다
   /// (매장에서 자동 맞추기가 틀리거나 실패했을 때 뒤에 원인을 보려고, 2026-10-29).
@@ -1377,6 +1443,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                 : () => Navigator.of(ctx).popUntil((r) => r.isFirst),
             photoRiichiSeats: Set.of(merge.photoRiichiSeats),
             winnerRiichi: merge.situation.riichi,
+            rules: widget.editor.rules,
             onWinRecorded: (o) => saveCaptureLabel(widget.editor, o),
             onRecorded: widget.editor.clear,
             autoRecordAfter: _autoRecord && autoBlock == null ? autoRecordDelay : null,
@@ -1898,6 +1965,14 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         gap,
         Row(
           children: [
+            Expanded(child: big('천화', Icons.auto_awesome, _busy ? null : () => _firstTurnWin(g, dealer: true))),
+            gap,
+            Expanded(child: big('지화', Icons.auto_awesome_outlined, _busy ? null : () => _firstTurnWin(g, dealer: false))),
+          ],
+        ),
+        gap,
+        Row(
+          children: [
             Expanded(
               child: big('갤러리', Icons.photo_library_outlined, _busy ? null : _pickFromGallery,
                   key: const ValueKey('mount-gallery')),
@@ -1940,6 +2015,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               icon: const Icon(Icons.grid_4x4, size: 16),
               label: const Text('격자 편집'),
             ),
+            _wallButton(g),
+            _headButton(),
           ],
         ),
       ],
@@ -1978,6 +2055,52 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         ],
       );
     });
+  }
+
+  /// 천화(친)·지화(자, 자리를 고름): 손패 없이 그 역만 하나로 결과 화면 → "대국에 반영"
+  /// (2026-10-29 사용자: 천화·지화는 테이블 화면에서 바로). 다른 역만이 겹치면 "직접 계산" 에서 손패를 넣는다.
+  Future<void> _firstTurnWin(Game g, {required bool dealer}) async {
+    int? seat = g.dealer;
+    if (!dealer) {
+      seat = await showDialog<int>(
+        context: context,
+        builder: (ctx) => kioskWrap(
+          ctx,
+          SimpleDialog(
+            title: const Text('지화 — 누가 났나요?'),
+            children: [
+              for (var s = 0; s < 4; s++)
+                if (s != g.dealer)
+                  SimpleDialogOption(
+                    key: ValueKey('chiihou-seat-$s'),
+                    onPressed: () => Navigator.pop(ctx, s),
+                    child: Text('${engine.Tiles.name(g.seatWindOf(s))}  ${g.names[s]}', style: const TextStyle(fontSize: 18)),
+                  ),
+            ],
+          ),
+        ),
+      );
+      if (seat == null || !mounted) return;
+    }
+    final sit = engine.Situation(
+      isTsumo: true,
+      seatWind: g.seatWindOf(seat),
+      roundWind: g.roundWindTile,
+      honba: g.honba,
+    );
+    final result = engine.firstTurnWinOnly(sit);
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ResultScreen(
+          result: result,
+          isTsumo: true,
+          seatWind: sit.seatWind,
+          gameSeat: seat,
+          onRecorded: widget.editor.clear,
+          rules: widget.editor.rules,
+        ),
+      ),
+    );
   }
 
   /// 키오스크: 왼쪽 테이블 사진(가운데 점수판), 오른쪽 큰 버튼(화료 촬영·직접 계산·리치·유국).
@@ -2019,6 +2142,21 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                 ],
               ),
               const SizedBox(height: 12),
+              // 천화·지화: 사진 없이 바로 역만 결과 화면(유국 텐파이는 "유국" 창에서 고른다).
+              Row(
+                children: [
+                  Expanded(
+                    child: big('천화', Icons.auto_awesome, _busy ? null : () => _firstTurnWin(g, dealer: true),
+                        key: const ValueKey('table-tenhou')),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: big('지화', Icons.auto_awesome_outlined, _busy ? null : () => _firstTurnWin(g, dealer: false),
+                        key: const ValueKey('table-chiihou')),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -2041,7 +2179,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                 style: const TextStyle(fontSize: 12, color: Colors.white60),
               ),
               const SizedBox(height: 8),
-              Row(
+              Wrap(
                 children: [
                   TextButton(onPressed: () => push(ScoreTableScreen(rules: widget.editor.rules)), child: const Text('점수표')),
                   TextButton(onPressed: () => push(SettingsScreen(editor: widget.editor)), child: const Text('룰 설정')),
@@ -2057,6 +2195,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     icon: const Icon(Icons.grid_4x4, size: 16),
                     label: const Text('격자 편집'),
                   ),
+                  _wallButton(g),
+                  _headButton(),
                 ],
               ),
             ],

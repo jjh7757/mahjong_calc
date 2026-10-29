@@ -110,6 +110,37 @@ class Situation {
   });
 
   bool get isDealer => seatWind == Tiles.east;
+
+  Situation copyWith({
+    bool? isTsumo,
+    int? seatWind,
+    int? roundWind,
+    bool? riichi,
+    bool? doubleRiichi,
+    bool? ippatsu,
+    bool? lastTile,
+    bool? rinshan,
+    bool? chankan,
+    bool? firstTurnWin,
+    List<int>? doraIndicators,
+    List<int>? uraIndicators,
+    int? honba,
+  }) =>
+      Situation(
+        isTsumo: isTsumo ?? this.isTsumo,
+        seatWind: seatWind ?? this.seatWind,
+        roundWind: roundWind ?? this.roundWind,
+        riichi: riichi ?? this.riichi,
+        doubleRiichi: doubleRiichi ?? this.doubleRiichi,
+        ippatsu: ippatsu ?? this.ippatsu,
+        lastTile: lastTile ?? this.lastTile,
+        rinshan: rinshan ?? this.rinshan,
+        chankan: chankan ?? this.chankan,
+        firstTurnWin: firstTurnWin ?? this.firstTurnWin,
+        doraIndicators: doraIndicators ?? this.doraIndicators,
+        uraIndicators: uraIndicators ?? this.uraIndicators,
+        honba: honba ?? this.honba,
+      );
 }
 
 /// 룰 옵션.
