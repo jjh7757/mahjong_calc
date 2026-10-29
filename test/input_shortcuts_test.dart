@@ -99,6 +99,10 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(const MahjongApp(loadSavedRules: false));
+    // 첫 화면은 로비(폰도 태블릿과 같은 흐름, 2026-10-29) → 점수 계산 타일.
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('lobby-calc')));
+    await tester.pumpAndSettle();
 
     // 123m 456p 789s 23m 55p: 1m·4m 양면 대기
     for (final code in parseTiles('123m456p789s23m55p').tiles) {

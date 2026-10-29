@@ -113,6 +113,10 @@ void main() {
     );
 
     await tester.pumpWidget(const MahjongApp(loadSavedRules: false));
+    // 대국 중 첫 화면은 테이블(폰도 같음, 2026-10-29) → 직접 계산.
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('table-calc')));
+    await tester.pumpAndSettle();
     expect(find.textContaining('대국 남2국 1본장'), findsOneWidget);
 
     // C 는 남2국에서 남가(친 B 의 다음).
@@ -138,15 +142,18 @@ void main() {
     // 화료자 C 가 미리 선택돼 있고 방총자만 고르면 된다.
     await tester.tap(find.widgetWithText(ChoiceChip, 'A').last);
     await tester.pump();
-    await tester.tap(find.text('기록'));
+    await tester.tap(find.text('기록').last);
     await tester.pumpAndSettle();
 
     final g = gameStore.current!;
     expect(g.scores[2], 26300);
     expect(g.scores[0], 23700);
     expect(g.roundLabel, '남3국');
-    // 결과 화면이 닫히고 손패가 비워졌다.
-    expect(find.text('손패 0/14'), findsOneWidget);
+    // 결과·계산 화면이 닫히고 테이블 화면(다음 국)으로 돌아왔다. 손패는 비워졌다.
+    expect(find.byKey(const ValueKey('table-calc')), findsOneWidget);
     expect(find.textContaining('대국 남3국'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('table-calc')));
+    await tester.pumpAndSettle();
+    expect(find.text('손패 0/14'), findsOneWidget);
   });
 }

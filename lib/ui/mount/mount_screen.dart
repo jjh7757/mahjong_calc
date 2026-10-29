@@ -1555,9 +1555,18 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     onPressed: () => kioskLobbyFor.value = g.id,
                   )
                 : null,
-            title: Text(kiosk ? '대국 ${g.roundLabel}' : '거치 촬영 ${g.roundLabel}'),
+            title: Text(kiosk || widget.isHome ? '대국 ${g.roundLabel}' : '거치 촬영 ${g.roundLabel}'),
             actions: [
-              if (widget.isHome && !g.isOver)
+              // 폰은 제목(국·본장) 자리가 좁아 글자 없이 아이콘만.
+              if (widget.isHome && !g.isOver && !kiosk)
+                IconButton(
+                  key: const ValueKey('table-end'),
+                  tooltip: '대국 종료 (정산)',
+                  icon: const Icon(Icons.stop_circle_outlined),
+                  onPressed: () => Navigator.of(context)
+                      .push(MaterialPageRoute(builder: (_) => SettlementScreen(game: g))),
+                )
+              else if (widget.isHome && !g.isOver)
                 TextButton.icon(
                   key: const ValueKey('table-end'),
                   icon: const Icon(Icons.stop_circle_outlined),
@@ -1708,7 +1717,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           ),
           body: kiosk
               ? _kioskBody(g, seats)
-              : SafeArea(
+              : widget.isHome
+                  ? _phoneBody(g, seats)
+                  : SafeArea(
             top: false,
             child: Column(
               children: [
@@ -1755,7 +1766,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             ),
           ),
         );
-        return kiosk ? Theme(data: kioskDarkTheme(), child: scaffold) : scaffold;
+        // 폰도 대국 중 첫 화면(테이블)이면 키오스크와 같은 어두운 테마.
+        return kiosk || widget.isHome ? Theme(data: kioskDarkTheme(), child: scaffold) : scaffold;
       },
     );
   }
@@ -1795,33 +1807,175 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// 테이블 화면의 큰 버튼. [compact] = 폰(높이·글자를 줄임).
+  Widget _bigButton(String label, IconData icon, VoidCallback? onPressed,
+      {Key? key, bool primary = false, bool compact = false}) {
+    final child = FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: compact ? 20 : 26),
+          SizedBox(width: compact ? 6 : 10),
+          Text(label, style: TextStyle(fontSize: compact ? (primary ? 18 : 15) : 20)),
+        ],
+      ),
+    );
+    final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(compact ? 12 : 14));
+    final pad = compact ? const EdgeInsets.symmetric(horizontal: 6) : null;
+    return SizedBox(
+      height: compact ? (primary ? 60 : 48) : (primary ? 96 : 68),
+      child: primary
+          ? FilledButton(key: key, style: FilledButton.styleFrom(shape: shape, padding: pad), onPressed: onPressed, child: child)
+          : OutlinedButton(
+              key: key,
+              style: OutlinedButton.styleFrom(shape: shape, padding: pad, foregroundColor: Colors.white),
+              onPressed: onPressed,
+              child: child,
+            ),
+    );
+  }
+
+  /// 대국이 끝났을 때(토비·아가리야메·종료) 버튼 칸 위의 안내.
+  Widget _overBanner(Game g, {bool compact = false}) => Container(
+        key: const ValueKey('table-over-banner'),
+        padding: compact ? const EdgeInsets.fromLTRB(10, 6, 10, 6) : const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        margin: EdgeInsets.only(bottom: compact ? 8 : 12),
+        decoration: BoxDecoration(
+          color: g.anyBusted ? kioskRed.withValues(alpha: 0.25) : kioskGold.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: g.anyBusted ? kioskRed : kioskGold),
+        ),
+        child: Text(g.endNote, style: TextStyle(color: Colors.white, fontSize: compact ? 13 : 14, height: 1.4)),
+      );
+
+  /// 폰 테이블 화면(대국 중 첫 화면): 세로면 위 테이블 사진(가운데 점수판) + 아래 버튼 칸, 가로면 오른쪽 버튼 칸.
+  /// 버튼·키는 키오스크 오른쪽 칸과 같고 크기만 줄였다. 기록은 최근 2개만 보이고 전부는 "기록".
+  Widget _phoneBody(Game g, SeatMap seats) {
+    if (_gridBeforeEdit != null) {
+      return SafeArea(top: false, child: Column(children: [Expanded(child: _preview(g, seats)), _gridEditPanel()]));
+    }
+    final canShoot = !_busy && (_cam != null || _remoteUrl != null);
+    void push(Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+    Widget big(String label, IconData icon, VoidCallback? onPressed, {Key? key, bool primary = false}) =>
+        _bigButton(label, icon, onPressed, key: key, primary: primary, compact: true);
+    const gap = SizedBox(width: 8, height: 8);
+    final panel = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (g.isOver) ...[
+          _overBanner(g, compact: true),
+          big('정산', Icons.calculate_outlined, () => push(SettlementScreen(game: g)),
+              key: const ValueKey('table-settle'), primary: true),
+        ] else
+          big('화료 촬영', Icons.camera_alt, canShoot ? _shoot : null, key: const ValueKey('mount-shoot'), primary: true),
+        gap,
+        Row(
+          children: [
+            Expanded(
+              child: big('직접 계산', Icons.calculate_outlined, _busy ? null : _openCalculator,
+                  key: const ValueKey('table-calc')),
+            ),
+            gap,
+            Expanded(child: big('리치', Icons.flag_outlined, _busy ? null : () => showRiichiPicker(context, g))),
+            gap,
+            Expanded(child: big('유국', Icons.block, _busy ? null : () => showDrawDialog(context, g))),
+          ],
+        ),
+        gap,
+        Row(
+          children: [
+            Expanded(
+              child: big('갤러리', Icons.photo_library_outlined, _busy ? null : _pickFromGallery,
+                  key: const ValueKey('mount-gallery')),
+            ),
+            gap,
+            Expanded(child: big('기록', Icons.scoreboard_outlined, () => push(const GameScreen()))),
+          ],
+        ),
+        _meldChips(g, seats),
+        const SizedBox(height: 4),
+        _eventsHeader(g),
+        if (g.events.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 6),
+            child: Text('기록 없음', style: TextStyle(color: Colors.white38, fontSize: 13)),
+          )
+        else
+          for (var idx = g.events.length - 1; idx >= 0 && idx >= g.events.length - 2; idx--) _eventTile(g, idx),
+        Text(
+          '아래 ${g.names[seats.seatOf(Side.bottom)]} · 오른쪽 ${g.names[seats.seatOf(Side.right)]} · '
+          '위 ${g.names[seats.seatOf(Side.top)]} · 왼쪽 ${g.names[seats.seatOf(Side.left)]}\n'
+          '${_remoteUrl == null ? '이 기기 카메라 · 볼륨키로도 찍힙니다' : '카메라 헤드 $_remoteUrl'}'
+          '${_logEnabled ? '' : ' · 기록 저장 꺼짐'}$_wallStatus',
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 11, color: Colors.white60),
+        ),
+        Wrap(
+          children: [
+            TextButton(onPressed: () => push(ScoreTableScreen(rules: widget.editor.rules)), child: const Text('점수표')),
+            TextButton(onPressed: () => push(SettingsScreen(editor: widget.editor)), child: const Text('룰 설정')),
+            TextButton.icon(
+              key: const ValueKey('table-grid-edit'),
+              onPressed: _busy
+                  ? null
+                  : () => setState(() {
+                        _useGrid = true;
+                        _gridBeforeEdit = _grid;
+                      }),
+              icon: const Icon(Icons.grid_4x4, size: 16),
+              label: const Text('격자 편집'),
+            ),
+          ],
+        ),
+      ],
+    );
+    return LayoutBuilder(builder: (context, box) {
+      // 가로(폰을 눕힘): 사진이 넓게 오른쪽에 버튼 칸. 칸이 높이를 넘으면 스크롤.
+      if (box.maxWidth > box.maxHeight) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: _preview(g, seats)),
+            Container(
+              width: 300,
+              color: kioskSurface,
+              child: SafeArea(
+                left: false,
+                child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(12, 10, 12, 8), child: panel),
+              ),
+            ),
+          ],
+        );
+      }
+      // 세로: 버튼 칸은 화면의 60% 까지(작은 폰은 칸 안에서 스크롤), 나머지가 사진.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: _preview(g, seats)),
+          Container(
+            constraints: BoxConstraints(maxHeight: box.maxHeight * 0.6),
+            color: kioskSurface,
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(padding: const EdgeInsets.fromLTRB(12, 10, 12, 4), child: panel),
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
   /// 키오스크: 왼쪽 테이블 사진(가운데 점수판), 오른쪽 큰 버튼(화료 촬영·직접 계산·리치·유국).
   Widget _kioskBody(Game g, SeatMap seats) {
     if (_gridBeforeEdit != null) {
       return Column(children: [Expanded(child: _preview(g, seats)), _gridEditPanel()]);
     }
     final canShoot = !_busy && (_cam != null || _remoteUrl != null);
-    Widget big(String label, IconData icon, VoidCallback? onPressed, {Key? key, bool primary = false}) {
-      final child = FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [Icon(icon, size: 26), const SizedBox(width: 10), Text(label, style: const TextStyle(fontSize: 20))],
-        ),
-      );
-      final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(14));
-      return SizedBox(
-        height: primary ? 96 : 68,
-        child: primary
-            ? FilledButton(key: key, style: FilledButton.styleFrom(shape: shape), onPressed: onPressed, child: child)
-            : OutlinedButton(
-                key: key,
-                style: OutlinedButton.styleFrom(shape: shape, foregroundColor: Colors.white),
-                onPressed: onPressed,
-                child: child,
-              ),
-      );
-    }
+    Widget big(String label, IconData icon, VoidCallback? onPressed, {Key? key, bool primary = false}) =>
+        _bigButton(label, icon, onPressed, key: key, primary: primary);
 
     void push(Widget screen) => Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
     return Row(
@@ -1837,17 +1991,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             children: [
               // 대국이 끝났으면(토비·아가리야메·종료) 촬영 대신 정산이 큰 버튼.
               if (g.isOver) ...[
-                Container(
-                  key: const ValueKey('table-over-banner'),
-                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: g.anyBusted ? kioskRed.withValues(alpha: 0.25) : kioskGold.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: g.anyBusted ? kioskRed : kioskGold),
-                  ),
-                  child: Text(g.endNote, style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4)),
-                ),
+                _overBanner(g),
                 big('정산', Icons.calculate_outlined, () => push(SettlementScreen(game: g)),
                     key: const ValueKey('table-settle'), primary: true),
               ] else
@@ -1913,7 +2057,32 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// 키오스크 오른쪽 칸의 최근 사건 목록(점수판 기록과 같은 내용, 최신이 위).
   /// 위 줄에 "마지막 취소"·"정정", 기록을 누르면 그 기록부터 되돌리기·점수 정정.
   Widget _kioskEvents(Game g) {
-    final header = Row(
+    final header = _eventsHeader(g);
+    if (g.events.isEmpty) {
+      return Column(children: [
+        header,
+        const Expanded(child: Center(child: Text('기록 없음', style: TextStyle(color: Colors.white38)))),
+      ]);
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        header,
+        Expanded(
+          child: ListView.builder(
+            key: const ValueKey('table-events'),
+            padding: EdgeInsets.zero,
+            itemCount: g.events.length,
+            itemBuilder: (_, i) => _eventTile(g, g.events.length - 1 - i),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 기록 목록 위 줄: "마지막 취소"·"정정".
+  Widget _eventsHeader(Game g) {
+    return Row(
       children: [
         const Text('기록', style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
         const Spacer(),
@@ -1933,48 +2102,30 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         ),
       ],
     );
-    if (g.events.isEmpty) {
-      return Column(children: [
-        header,
-        const Expanded(child: Center(child: Text('기록 없음', style: TextStyle(color: Colors.white38)))),
-      ]);
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        header,
-        Expanded(
-          child: ListView.builder(
-            key: const ValueKey('table-events'),
-            padding: EdgeInsets.zero,
-            itemCount: g.events.length,
-            itemBuilder: (_, i) {
-              final idx = g.events.length - 1 - i;
-              final e = g.events[idx];
-              final moves = List.generate(4, (s) => '${g.names[s]} ${e.delta[s] >= 0 ? '+' : ''}${e.delta[s]}')
-                  .where((t) => !t.endsWith(' +0'))
-                  .join('  ');
-              return InkWell(
-                key: ValueKey('table-event-$idx'),
-                onTap: _busy ? null : () => showEventActions(context, idx),
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 8, top: 2),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('${e.roundLabel}  ${e.description}',
-                          style: const TextStyle(color: Colors.white, fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
-                      if (moves.isNotEmpty)
-                        Text(moves,
-                            style: const TextStyle(color: Colors.white54, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
+  }
+
+  /// 기록 한 줄(누르면 그 기록부터 되돌리기·점수 정정).
+  Widget _eventTile(Game g, int idx) {
+    final e = g.events[idx];
+    final moves = List.generate(4, (s) => '${g.names[s]} ${e.delta[s] >= 0 ? '+' : ''}${e.delta[s]}')
+        .where((t) => !t.endsWith(' +0'))
+        .join('  ');
+    return InkWell(
+      key: ValueKey('table-event-$idx'),
+      onTap: _busy ? null : () => showEventActions(context, idx),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8, top: 2),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${e.roundLabel}  ${e.description}',
+                style: const TextStyle(color: Colors.white, fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
+            if (moves.isNotEmpty)
+              Text(moves,
+                  style: const TextStyle(color: Colors.white54, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -2009,7 +2160,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               child: TableScorePanel(
                 game: g,
                 seats: seats,
-                size: (c.biggest.shortestSide * 0.45).clamp(170.0, 340.0),
+                // 작은 폰은 칸이 좁아 170 아래로도 줄인다(칸의 85% 를 넘지 않게).
+                size: (c.biggest.shortestSide * 0.45).clamp(170.0, 340.0).clamp(0.0, c.biggest.shortestSide * 0.85),
               ),
             ),
           ),
@@ -2060,7 +2212,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     return Container(
       color: Colors.black87,
       alignment: Alignment.center,
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isKioskLayout(context) ? 24 : 8),
       child: Container(
         decoration: BoxDecoration(
           color: kioskFelt,

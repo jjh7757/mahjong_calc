@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 ///
 /// 폭이 넓은 가로 화면이면 키오스크 배치를 쓴다. 대국 중에는 테이블 화면(거치 촬영)이 첫 화면이고,
 /// 점수 계산은 따로 열었다가 "대국에 반영" 하면 테이블 화면으로 돌아온다(작혼의 대국 → 결산 → 대국 흐름).
+/// 폰(이 크기가 아닌 화면)도 같은 흐름이고 배치만 폰용이다(로비 `KioskLobby._phone`, 테이블 `MountScreen._phoneBody`, 2026-10-29).
 bool isKioskSize(Size s) => s.width >= 1000 && s.width > s.height;
 
 bool isKioskLayout(BuildContext context) => isKioskSize(MediaQuery.sizeOf(context));

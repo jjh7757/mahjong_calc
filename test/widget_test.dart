@@ -10,6 +10,10 @@ void main() {
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(const MahjongApp(loadSavedRules: false));
+    // 첫 화면은 로비(폰도 태블릿과 같은 흐름, 2026-10-29) → 점수 계산 타일.
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('lobby-calc')));
+    await tester.pumpAndSettle();
 
     expect(find.text('점수 계산'), findsOneWidget);
     expect(find.text('손패 0/14'), findsOneWidget);

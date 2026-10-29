@@ -85,13 +85,61 @@ void main() {
     expect(find.text('확인'), findsOneWidget);
   });
 
-  testWidgets('폰 세로는 로비 없이 계산기', (tester) async {
-    setSize(tester, const Size(412, 915));
-    await tester.pumpWidget(const MahjongApp(loadSavedRules: false));
-    await tester.pumpAndSettle();
-    expect(find.byKey(const ValueKey('lobby-start')), findsNothing);
-    expect(find.text('마작 점수 계산기'), findsOneWidget);
-  });
+  // 폰도 태블릿과 같은 흐름(로비 → 대국 시작 → 테이블), 배치만 폰용(2026-10-29, 전엔 폰 = 계산기).
+  for (final size in const [Size(412, 915), Size(360, 640), Size(915, 412)]) {
+    testWidgets('폰 ${size.width.toInt()}×${size.height.toInt()}: 로비 → 계산기, 대국 시작 폼', (tester) async {
+      setSize(tester, size);
+      await tester.pumpWidget(const MahjongApp(loadSavedRules: false));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('lobby-start')), findsOneWidget);
+      expect(find.text('아직 기록한 대국이 없습니다'), findsOneWidget);
+      for (final k in ['calc', 'history', 'table', 'quiz', 'settings', 'head']) {
+        await tester.ensureVisible(find.byKey(ValueKey('lobby-$k')));
+        expect(find.byKey(ValueKey('lobby-$k')), findsOneWidget);
+      }
+
+      await tester.tap(find.byKey(const ValueKey('lobby-calc')));
+      await tester.pumpAndSettle();
+      expect(find.text('손패 0/14'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const ValueKey('lobby-start')));
+      await tester.tap(find.byKey(const ValueKey('lobby-start')));
+      await tester.pumpAndSettle();
+      expect(find.text('자리 순서 (동 → 남 → 서 → 북)'), findsOneWidget);
+    });
+
+    testWidgets('폰 ${size.width.toInt()}×${size.height.toInt()}: 대국 중 테이블 화면 버튼, 홈 → 로비 이어 하기 → 테이블', (tester) async {
+      setSize(tester, size);
+      gameStore.start(const ['민수', '지현', '태호', '서연'], const GameSettings());
+      gameStore.mutate((g) => g.declareRiichi(0));
+      await tester.pumpWidget(const MahjongApp(loadSavedRules: false));
+      await tester.pump();
+      for (final k in ['mount-shoot', 'table-calc', 'mount-gallery', 'table-end', 'table-home', 'table-undo', 'table-event-0']) {
+        expect(find.byKey(ValueKey(k)), findsOneWidget, reason: k);
+      }
+      expect(find.text('리치'), findsOneWidget);
+      expect(find.text('유국'), findsOneWidget);
+      for (var s = 0; s < 4; s++) {
+        expect(find.byKey(ValueKey('table-score-$s')), findsOneWidget);
+      }
+
+      await tester.ensureVisible(find.byKey(const ValueKey('table-calc')));
+      await tester.tap(find.byKey(const ValueKey('table-calc')));
+      await tester.pumpAndSettle();
+      expect(find.text('손패 0/14'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('table-home')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('lobby-continue')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('lobby-continue')));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('table-calc')), findsOneWidget);
+    });
+  }
 
   testWidgets('대국 중: 테이블의 홈 → 로비(이어 하기) → 다시 테이블, 홈에서 대국 종료 → 저장하고 종료 → 로비', (tester) async {
     setSize(tester, const Size(1280, 800));

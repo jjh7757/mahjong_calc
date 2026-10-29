@@ -203,6 +203,10 @@ void main() {
     CaptureLog.setPending('Download/mahjong_calc/shot1', CaptureLog.roundKey(g.roundLabel, g.honba));
 
     await tester.pumpWidget(const MahjongApp(loadSavedRules: false));
+    // 대국 중 첫 화면은 테이블(폰도 같음, 2026-10-29) → 직접 계산.
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('table-calc')));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const ValueKey('game-seat-2')));
     await tester.tap(find.byKey(const ValueKey('game-seat-2')));
     await tester.pump();
@@ -218,7 +222,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ChoiceChip, 'A').last);
     await tester.pump();
-    await tester.tap(find.text('기록'));
+    await tester.tap(find.text('기록').last);
     await tester.pumpAndSettle();
 
     final label = saved.where((a) => a['name'] == 'label.json').toList();
@@ -233,7 +237,10 @@ void main() {
     expect((j['closed'] as List).length, 14);
     expect(j['win_tile'], '4m');
     expect((j['closed'] as List).last, '4m');
-    // 손패는 비워졌고 대기도 소진됐다.
+    // 테이블 화면으로 돌아왔고, 손패는 비워졌고 대기도 소진됐다.
+    expect(find.byKey(const ValueKey('table-calc')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('table-calc')));
+    await tester.pumpAndSettle();
     expect(find.text('손패 0/14'), findsOneWidget);
     expect(CaptureLog.takePending(CaptureLog.roundKey('남2국 1본장', 1)), isNull);
   });

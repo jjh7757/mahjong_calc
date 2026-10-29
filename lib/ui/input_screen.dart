@@ -9,7 +9,6 @@ import 'kiosk.dart';
 import 'meld_sheet.dart';
 import 'mount/camera_head_screen.dart';
 import 'mount/capture_label.dart';
-import 'mount/mount_screen.dart';
 import 'photo_input.dart';
 import 'quiz_screen.dart';
 import 'result_screen.dart';
@@ -60,12 +59,8 @@ class InputScreen extends StatelessWidget {
               PopupMenuButton<String>(
                 tooltip: '더보기',
                 onSelected: (v) => _open(context, v),
+                // 거치 촬영은 대국 중 첫 화면(테이블)이라 여기서 따로 열지 않는다(2026-10-29, 열면 카메라 화면이 두 겹).
                 itemBuilder: (_) => [
-                  PopupMenuItem(
-                    value: 'mount',
-                    enabled: gameStore.current != null,
-                    child: Text(gameStore.current != null ? '거치 촬영' : '거치 촬영 (대국 기록 중에만)'),
-                  ),
                   const PopupMenuItem(value: 'head', child: Text('카메라 헤드 (다른 기기에서 조작)')),
                   const PopupMenuItem(value: 'table', child: Text('점수표')),
                   const PopupMenuItem(value: 'quiz', child: Text('점수 계산 연습')),
@@ -122,7 +117,6 @@ class InputScreen extends StatelessWidget {
       'table' => ScoreTableScreen(rules: editor.rules),
       'quiz' => QuizScreen(rules: editor.rules),
       'settings' => SettingsScreen(editor: editor),
-      'mount' => MountScreen(editor: editor),
       _ => const CameraHeadScreen(),
     };
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));

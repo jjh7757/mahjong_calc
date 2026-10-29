@@ -145,8 +145,8 @@ class _SetupFormState extends State<_SetupForm> {
     } else {
       gameStore.start(_nameList, _settings);
     }
-    // 키오스크는 대국 중 첫 화면이 테이블 화면이므로 바로 그리로 간다.
-    if (isKioskLayout(context)) Navigator.of(context).popUntil((r) => r.isFirst);
+    // 대국 중 첫 화면이 테이블 화면이므로 바로 그리로 간다(폰도 같음).
+    Navigator.of(context).popUntil((r) => r.isFirst);
   }
 
   Widget _stepper(String label, int value, void Function(int) onChanged, {int max = 20}) {
@@ -176,7 +176,7 @@ class _SetupFormState extends State<_SetupForm> {
       Row(
         children: [
           const SizedBox(width: 72, child: Text('장풍')),
-          Wrap(
+          Expanded(child: Wrap(
             spacing: 6,
             children: [
               for (var w = 0; w < 4; w++)
@@ -186,14 +186,14 @@ class _SetupFormState extends State<_SetupForm> {
                   onSelected: (_) => setState(() => _roundWind = w),
                 ),
             ],
-          ),
+          )),
         ],
       ),
       const SizedBox(height: 6),
       Row(
         children: [
           const SizedBox(width: 72, child: Text('국')),
-          Wrap(
+          Expanded(child: Wrap(
             spacing: 6,
             children: [
               for (var n = 1; n <= 4; n++)
@@ -204,7 +204,7 @@ class _SetupFormState extends State<_SetupForm> {
                   onSelected: (_) => setState(() => _roundNumber = n),
                 ),
             ],
-          ),
+          )),
         ],
       ),
       Padding(
@@ -271,46 +271,46 @@ class _SetupFormState extends State<_SetupForm> {
         Row(
           children: [
             const SizedBox(width: 72, child: Text('시작점')),
-            Wrap(
+            Expanded(child: Wrap(
               spacing: 6,
               children: [
                 for (final v in [25000, 30000])
                   ChoiceChip(label: Text('$v'), selected: _start == v, onSelected: (_) => _setStart(v)),
               ],
-            ),
+            )),
           ],
         ),
         const SizedBox(height: 6),
         Row(
           children: [
             const SizedBox(width: 72, child: Text('반환점')),
-            Wrap(
+            Expanded(child: Wrap(
               spacing: 6,
               children: [
                 for (final v in [25000, 30000])
                   ChoiceChip(label: Text('$v'), selected: _ret == v, onSelected: (_) => setState(() => _ret = v)),
               ],
-            ),
+            )),
           ],
         ),
         const SizedBox(height: 6),
         Row(
           children: [
             const SizedBox(width: 72, child: Text('우마')),
-            Wrap(
+            Expanded(child: Wrap(
               spacing: 6,
               children: [
                 for (final k in _umaPresets.keys)
                   ChoiceChip(label: Text(k), selected: _uma == k, onSelected: (_) => setState(() => _uma = k)),
               ],
-            ),
+            )),
           ],
         ),
         const SizedBox(height: 6),
         Row(
           children: [
             const SizedBox(width: 72, child: Text('길이')),
-            Wrap(
+            Expanded(child: Wrap(
               spacing: 6,
               children: [
                 ChoiceChip(
@@ -324,14 +324,14 @@ class _SetupFormState extends State<_SetupForm> {
                   onSelected: (_) => setState(() => _eastOnly = true),
                 ),
               ],
-            ),
+            )),
           ],
         ),
         const SizedBox(height: 6),
         Row(
           children: [
             const SizedBox(width: 72, child: Text('반올림')),
-            Wrap(
+            Expanded(child: Wrap(
               spacing: 6,
               children: [
                 ChoiceChip(
@@ -345,7 +345,7 @@ class _SetupFormState extends State<_SetupForm> {
                   onSelected: (_) => setState(() => _rounding = 0),
                 ),
               ],
-            ),
+            )),
           ],
         ),
         const SizedBox(height: 6),
