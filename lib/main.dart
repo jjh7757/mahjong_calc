@@ -21,7 +21,7 @@ class MahjongApp extends StatefulWidget {
   State<MahjongApp> createState() => _MahjongAppState();
 }
 
-class _MahjongAppState extends State<MahjongApp> {
+class _MahjongAppState extends State<MahjongApp> with WidgetsBindingObserver {
   final HandEditor editor = HandEditor();
 
   @override
@@ -30,11 +30,20 @@ class _MahjongAppState extends State<MahjongApp> {
     if (widget.loadSavedRules) {
       RulesStore.load().then(editor.setRules);
       gameStore.load();
+      FullscreenMode.load();
+      WidgetsBinding.instance.addObserver(this);
     }
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // QR 스캔·갤러리 같은 다른 화면에서 돌아오면 시스템 막대가 다시 보일 수 있다.
+    if (state == AppLifecycleState.resumed && FullscreenMode.enabled.value) FullscreenMode.apply();
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     editor.dispose();
     super.dispose();
   }

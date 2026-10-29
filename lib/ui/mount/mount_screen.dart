@@ -1786,6 +1786,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     await _saveGrid();
                   } else if (v == 'wall') {
                     await _locateWall(g, manual: true);
+                  } else if (v == 'fullscreen') {
+                    await FullscreenMode.set(!FullscreenMode.enabled.value);
                   } else if (v == 'autoSetup') {
                     setState(() => _autoSetupOnStart = !_autoSetupOnStart);
                     try {
@@ -1844,6 +1846,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     key: ValueKey('mount-grid-edit-menu'),
                     value: 'gridEdit',
                     child: Text('구역 격자 맞추기…'),
+                  ),
+                  CheckedPopupMenuItem(
+                    key: const ValueKey('mount-fullscreen-menu'),
+                    value: 'fullscreen',
+                    checked: FullscreenMode.enabled.value,
+                    child: const Text('전체 화면 (상태 표시줄·작업 표시줄 숨김)'),
                   ),
                   CheckedPopupMenuItem(
                     key: const ValueKey('mount-auto-setup-menu'),

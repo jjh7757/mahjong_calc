@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// 키오스크(갤럭시탭 가로 고정) 화면 공용 값.
 ///
@@ -6,6 +8,34 @@ import 'package:flutter/material.dart';
 /// 점수 계산은 따로 열었다가 "대국에 반영" 하면 테이블 화면으로 돌아온다(작혼의 대국 → 결산 → 대국 흐름).
 /// 폰(이 크기가 아닌 화면)도 같은 흐름이고 배치만 폰용이다(로비 `KioskLobby._phone`, 테이블 `MountScreen._phoneBody`, 2026-10-29).
 bool isKioskSize(Size s) => s.width >= 1000 && s.width > s.height;
+
+/// 전체 화면(상태 표시줄·작업 표시줄 숨김, 테이블 화면 더보기에서 켜고 끔). 앱 전체에 걸린다. 가장자리를 쓸면 잠깐
+/// 나왔다가 다시 숨는다(immersiveSticky). 다른 앱(QR·갤러리)에서 돌아오면 시스템이 막대를 되살릴 수 있어 앱이
+/// 다시 켜질 때마다 [apply] 한다. 기본 끔(2026-10-29 사용자: 작업 표시줄은 키오스크 설정으로 없애기).
+class FullscreenMode {
+  static const pref = 'kiosk.fullscreen';
+  static final enabled = ValueNotifier<bool>(false);
+
+  static Future<void> load() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      enabled.value = p.getBool(pref) ?? false;
+    } catch (_) {}
+    await apply();
+  }
+
+  static Future<void> set(bool on) async {
+    enabled.value = on;
+    await apply();
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setBool(pref, on);
+    } catch (_) {}
+  }
+
+  static Future<void> apply() =>
+      SystemChrome.setEnabledSystemUIMode(enabled.value ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge);
+}
 
 bool isKioskLayout(BuildContext context) => isKioskSize(MediaQuery.sizeOf(context));
 
