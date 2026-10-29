@@ -558,7 +558,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             await _saveGrid();
             _toast('구역 격자를 저장했습니다');
           },
-          child: const Text('저장'),
+          child: const Text('저장 (편집 끝)'),
         ),
       ],
     );
@@ -1840,6 +1840,18 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                 children: [
                   TextButton(onPressed: () => push(ScoreTableScreen(rules: widget.editor.rules)), child: const Text('점수표')),
                   TextButton(onPressed: () => push(SettingsScreen(editor: widget.editor)), child: const Text('룰 설정')),
+                  // 격자 편집 켬: 선·리치봉 상자를 끌 수 있고, 아래 "저장 (편집 끝)"/"취소" 로 끈다(평소엔 끌리지 않아 잘못 터치해도 안전).
+                  TextButton.icon(
+                    key: const ValueKey('table-grid-edit'),
+                    onPressed: _busy
+                        ? null
+                        : () => setState(() {
+                              _useGrid = true;
+                              _gridBeforeEdit = _grid;
+                            }),
+                    icon: const Icon(Icons.grid_4x4, size: 16),
+                    label: const Text('격자 편집'),
+                  ),
                 ],
               ),
             ],
