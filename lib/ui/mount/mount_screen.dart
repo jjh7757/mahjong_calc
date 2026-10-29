@@ -194,7 +194,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   static String? _autoSetupGameId;
   int _autoSetupTries = 0;
   Timer? _autoSetupTimer;
-  static const int _autoSetupMaxTries = 3;
+  /// 10회 × 20초 ≈ 3분 반: 대국 시작을 누른 뒤 패가 올라오고 배패가 끝날 때까지 기다릴 수 있게(10-29 처음엔 3회 ≈ 1분).
+  static const int _autoSetupMaxTries = 10;
   static const Duration _autoSetupRetryGap = Duration(seconds: 20);
 
   /// 지금 판(국·본장·기록 수). 바뀌면 추적을 비운다.
@@ -609,8 +610,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   }
 
   /// 판이 바뀌면(화료·유국 기록) 추적을 비운다. 처음 보는 판은 비우지 않는다(열자마자 리셋 로그가 남지 않게).
+  /// 판 중간의 리치·점수 정정 기록은 판이 바뀐 게 아니다(2026-10-29 전엔 기록 수를 봐서 리치 버튼에 도라 산·울기 추적이 지워졌다).
   void _syncTrackerRound(Game g) {
-    final key = '${g.id}/${g.roundLabel}/${g.honba}/${g.events.length}';
+    final hands = g.events.where((e) => e.kind == 'win' || e.kind == 'draw').length;
+    final key = '${g.id}/${g.roundLabel}/${g.honba}/$hands';
     if (_trackRoundKey == key) return;
     final first = _trackRoundKey == null;
     _trackRoundKey = key;
@@ -710,6 +713,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     final gallery = _galleryShot;
     setState(() => _setupBusy = true);
     final client = RecognizerClient();
+    final sw = Stopwatch()..start();
     try {
       final src = gallery ?? await _currentPhoto();
       if (src == null) {
@@ -734,13 +738,18 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         }
       });
       if (auto && proposed != null) await _saveGrid();
+      if (gallery == null) {
+        unawaited(_saveSetup(small, setup, wallJ, proposed, wall, auto: auto, ms: sw.elapsedMilliseconds));
+      }
+      final secs = (sw.elapsedMilliseconds / 1000).toStringAsFixed(1);
+      debugPrint('[setup] auto=$auto try=$_autoSetupTries ${sw.elapsedMilliseconds}ms grid=${proposed != null} wall=${wall != null}');
       if (!auto || proposed != null || lastTry) {
         final body = [
           proposed == null ? '네 자리 손패를 다 찾지 못해 격자는 그대로입니다' : '손패+울기 띠와 리치봉 상자를 맞췄습니다',
           wall == null ? '도라 산은 못 찾았습니다' : '도라 산을 찾았습니다',
           auto ? '틀렸으면 더보기 "구역 격자 맞추기" 에서 고치세요' : '틀렸으면 끌어 고치세요',
         ].join('. ');
-        _toast(auto ? '대국 시작 자동 맞추기: $body' : body, long: auto);
+        _toast(auto ? '대국 시작 자동 맞추기 ($secs초): $body' : '$body ($secs초)', long: auto);
       }
       return proposed != null;
     } catch (e) {
@@ -753,6 +762,43 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   }
 
   String get _wallStatus => _wallBusy ? ' · 도라 산 찾는 중' : (_wall != null ? ' · 도라 산 잡음' : '');
+
+  /// 자동 맞추기 입력 사진(줄인 것)과 `/v2/setup`·`/v2/wall` 응답·제안 격자를 촬영 기록 `<시각>_track/setup_###` 에 남긴다
+  /// (매장에서 자동 맞추기가 틀리거나 실패했을 때 뒤에 원인을 보려고, 2026-10-29).
+  Future<void> _saveSetup(
+    Uint8List small,
+    Map<String, dynamic> setup,
+    Map<String, dynamic>? wallRead,
+    GridZones? proposed,
+    WallZone? wall, {
+    required bool auto,
+    required int ms,
+  }) async {
+    if (!_logEnabled) return;
+    final g = gameStore.current;
+    final dir = _trackDir ??= '${CaptureLog.newDir()}_track';
+    final stem = 'setup_${(++_trackSeq).toString().padLeft(3, '0')}';
+    await CaptureLog.saveFile(dir, '$stem.jpg', small, 'image/jpeg');
+    await CaptureLog.saveFile(
+      dir,
+      '$stem.json',
+      CaptureLog.jsonBytes({
+        'auto': auto,
+        'try': auto ? _autoSetupTries : null,
+        'ms': ms,
+        'round': g?.roundLabel,
+        'honba': g?.honba,
+        'dealer': g?.dealer,
+        'grid_before': _gridBeforeEdit?.toJson() ?? (proposed == null ? _grid.toJson() : null),
+        'grid_proposed': proposed?.toJson(),
+        'wall_box': wall?.box.toList(),
+        'wall_side': wall?.side.name,
+        'setup': setup,
+        'wall': wallRead,
+      }),
+      'application/json',
+    );
+  }
 
   Future<void> _saveWall(Game g, Uint8List small, Map<String, dynamic> read) async {
     if (!_logEnabled) return;
@@ -1266,7 +1312,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         ...otherFlags,
       ];
       saveLog(merge: merge, warnings: reading.warnings);
+      debugPrint('[read] merged winner=${merge.winner} hand=${merge.hand != null} → 진행 창 닫기');
       await closeProgress();
+      debugPrint('[read] 진행 창 닫힘 mounted=$mounted');
       if (!mounted) return;
 
       if (merge.hand == null) {
@@ -1299,6 +1347,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       // 테이블 화면이 열린 채 룰 설정에서 바꿨을 수 있어 매번 다시 읽는다.
       _autoRecord = await AutoRecordStore.load();
       if (!mounted) return;
+      debugPrint('[read] 결과 화면 띄움 valid=${result.isValid} autoBlock=$autoBlock');
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (ctx) => ResultScreen(
@@ -2116,6 +2165,7 @@ class _ProgressDialogState extends State<_ProgressDialog> {
       if (mounted) setState(() => _elapsed++);
     });
     widget.done.whenComplete(() {
+      debugPrint('[read] 진행 창 done mounted=$mounted');
       if (mounted) Navigator.of(context).pop();
     });
   }
