@@ -6,8 +6,11 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image/image.dart' as img;
 import 'package:mahjong_calc/services/recognizer_client.dart';
+import 'package:mahjong_calc/table/cropper.dart';
 import 'package:mahjong_calc/table/grid_zones.dart';
 import 'package:mahjong_calc/table/observation.dart';
+import 'package:mahjong_calc/table/rectify.dart' as rect;
+import 'package:mahjong_calc/table/shot_image.dart';
 import 'package:mahjong_calc/table/table_layout.dart';
 import 'package:mahjong_calc/table/table_reader.dart';
 import 'package:mahjong_calc/table/table_reading.dart';
@@ -67,4 +70,41 @@ void main() {
     expect(trace.trackedMode[Side.right], 'handonly');
     expect(reading.warnings, isEmpty, reason: '경고가 있으면 자동 반영이 막힌다');
   });
+
+  test('자리 호출이 나머지를 자르는 중에 먼저 실패해도(취소) 처리되지 않은 오류 없이 readGrid 가 그 오류로 끝난다', () async {
+    final client = RecognizerClient(
+      baseUrl: 'https://x.test',
+      apiKey: 'k',
+      httpClient: MockClient((r) async => throw http.ClientException('Client is already closed')),
+    );
+    await expectLater(
+      // 앱처럼 크롭이 isolate 에서 시간이 걸려야 호출이 그 사이에 먼저 실패한다.
+      TableReader(
+        client,
+        ops: ImageOps(
+          shrink: ImageOps.direct.shrink,
+          cropMany: ImageOps.direct.cropMany,
+          openShot: (o) async => _SlowCropShot(DirectShotImage(o)),
+        ),
+      ).readGrid(table(), grid, winnerSide: Side.bottom),
+      throwsA(isA<http.ClientException>()),
+    );
+  });
+}
+
+class _SlowCropShot implements ShotImage {
+  final ShotImage inner;
+  _SlowCropShot(this.inner);
+  @override
+  Future<Uint8List> shrink() => inner.shrink();
+  @override
+  Future<List<Uint8List>> crop(List<CropSpec> specs) async {
+    await Future<void>.delayed(const Duration(milliseconds: 50));
+    return inner.crop(specs);
+  }
+
+  @override
+  Future<rect.FeltQuad?> rectify() => inner.rectify();
+  @override
+  Future<void> close() => inner.close();
 }

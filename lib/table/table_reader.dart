@@ -241,12 +241,16 @@ class TableReader {
         usage[name] = parseUsage(j['usage']);
         return j;
       });
-      return required
-          ? f
-          : f.catchError((Object e) {
-              warnings.add('$name 을(를) 읽지 못했습니다: $e');
-              return null;
-            });
+      if (required) {
+        // 나머지를 자르는 동안 먼저 실패하면(취소·네트워크) 아직 await 전이라 처리되지 않은 오류가 된다.
+        // ignore 는 그 보고만 막고, 나중의 await 에는 오류가 그대로 온다(2026-10-30 점검).
+        f.ignore();
+        return f;
+      }
+      return f.catchError((Object e) {
+        warnings.add('$name 을(를) 읽지 못했습니다: $e');
+        return null;
+      });
     }
 
     // 자리 전체 크롭이면 손패 칸 폭 비율을 같이 보낸다 — 서버가 손패 틀을 못 잡으면 손패 칸·모서리 칸으로 나눠 한 번 더 잡는다
@@ -711,12 +715,16 @@ class TableReader {
         usage[name] = parseUsage(j['usage']);
         return j;
       });
-      return required
-          ? f
-          : f.catchError((Object e) {
-              warnings.add('$name 을(를) 읽지 못했습니다: $e');
-              return null;
-            });
+      if (required) {
+        // 나머지를 자르는 동안 먼저 실패하면(취소·네트워크) 아직 await 전이라 처리되지 않은 오류가 된다.
+        // ignore 는 그 보고만 막고, 나중의 await 에는 오류가 그대로 온다(2026-10-30 점검).
+        f.ignore();
+        return f;
+      }
+      return f.catchError((Object e) {
+        warnings.add('$name 을(를) 읽지 못했습니다: $e');
+        return null;
+      });
     }
 
     final handF = call('hand', crops[0], 'hand', required: true, filename: 'hand_${side.name}.jpg');

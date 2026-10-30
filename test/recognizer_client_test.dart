@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -25,6 +26,21 @@ http.Response _json(Map<String, dynamic> body, {int status = 200}) =>
 
 void main() {
   group('RecognizerClient', () {
+    test('헤더만 오고 본문이 멈추면 시간 제한으로 끝난다', () async {
+      final stalled = StreamController<List<int>>(); // 닫지 않는 본문
+      addTearDown(stalled.close);
+      final c = RecognizerClient(
+        baseUrl: 'https://example.test',
+        apiKey: 'k123',
+        timeout: const Duration(milliseconds: 100),
+        httpClient: MockClient.streaming((req, body) async {
+          await body.drain<void>();
+          return http.StreamedResponse(stalled.stream, 200);
+        }),
+      );
+      await expectLater(c.observe('seat', _bytes, filename: 'a.jpg'), throwsA(isA<RecognizerException>()));
+    });
+
     test('recognizeBytes: multipart·키 헤더를 보내고 tiles·melds·win_tile 을 파싱한다', () async {
       http.Request? seen;
       final c = _client((req) async {

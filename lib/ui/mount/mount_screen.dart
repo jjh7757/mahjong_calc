@@ -46,6 +46,7 @@ import '../tile_view.dart';
 import 'capture_label.dart';
 import 'grid_editor.dart';
 import 'qr_scan_screen.dart';
+import 'read_progress_dialog.dart';
 import 'score_panel.dart';
 
 Future<Uint8List> _shrinkInIsolate(Uint8List o) => compute(shrinkForLocate, o);
@@ -1450,12 +1451,20 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     final reader = TableReader(client, ops: _isolateOps);
     final stage = ValueNotifier<ReadStage>(ReadStage.decoding);
     final done = Completer<void>();
+    // "취소하고 직접 입력": 서버 호출을 끊고 판독을 기다리지 않는다(판독 쪽은 호출 실패로 곧 끝나고 결과는 버린다).
+    final canceled = Completer<void>();
+    void cancelRead() {
+      if (canceled.isCompleted) return;
+      canceled.complete();
+      client.close();
+    }
+
     // 진행 다이얼로그는 done 이 끝나면 스스로 닫힌다. 다음 화면을 띄우기 전에 반드시 닫힘을 기다려야
     // 한다 — 그러지 않으면 다이얼로그의 pop 이 방금 띄운 화면을 닫아 버린다.
     final dialog = showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _ProgressDialog(stage: stage, done: done.future),
+      builder: (_) => ReadProgressDialog(stage: stage, done: done.future, onCancel: cancelRead),
     );
     Future<void> closeProgress() async {
       if (!done.isCompleted) done.complete();
@@ -1485,8 +1494,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     }
 
     try {
-      final reading = _useGrid
-          ? await reader.readGrid(
+      final readFuture = _useGrid
+          ? reader.readGrid(
               bytes,
               _grid,
               rectify: _rectify,
@@ -1495,6 +1504,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               wall: setup['source'] == 'gallery' ? _galleryWall : _wall,
               onStage: (s) => stage.value = s,
               pickWinners: (cands) async {
+                if (canceled.isCompleted) return null;
                 final r = await _pickWinners(cands, g, seats);
                 if (identical(r, _tripleRonDraw)) {
                   gameStore.mutate((g) => g.abortiveDraw('트리플론'));
@@ -1516,14 +1526,19 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               trackedDiscard: _trackedDiscard(),
               trace: trace,
             )
-          : await reader.read(
+          : reader.read(
               bytes,
               onStage: (s) => stage.value = s,
               // locate 판독은 화료자 한 자리만 읽는다(동시 론은 격자 판독에서만).
-              pickWinner: (cands) async => (await _pickWinners(cands, g, seats, single: true))?.first,
+              pickWinner: (cands) async =>
+                  canceled.isCompleted ? null : (await _pickWinners(cands, g, seats, single: true))?.first,
               trace: trace,
               fixed: _fixed,
             );
+      final reading = await Future.any([
+        readFuture,
+        canceled.future.then<TableReading>((_) => throw const _ReadCanceled()),
+      ]);
       // 새로 locate 했으면 그 구역을 다음 촬영의 기준으로 삼는다.
       final small = trace.small;
       if (!_useGrid && trace.layoutMode != 'fixed' && small != null && FixedTable.usable(reading.layout)) {
@@ -1625,6 +1640,16 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           ),
         ),
       );
+    } on _ReadCanceled {
+      // 사진은 기록에 남는다. 직접 넣고 "대국에 반영" 하면 그 값이 이 사진의 정답(label.json)이 된다.
+      saveLog(error: '사용자가 취소하고 직접 입력');
+      await closeProgress();
+      if (!mounted) return;
+      if (widget.isHome) {
+        _openCalculator();
+      } else {
+        Navigator.of(context).pop();
+      }
     } on TableReadException catch (e) {
       saveLog(error: drawRecorded ? '트리플론 유국' : e.message);
       await closeProgress();
@@ -2637,68 +2662,7 @@ class _LayoutPainter extends CustomPainter {
       old.seats.bottomSeat != seats.bottomSeat;
 }
 
-/// 단계와 경과 초를 보여주는 진행 다이얼로그. [done] 이 끝나면 스스로 닫힌다.
-class _ProgressDialog extends StatefulWidget {
-  final ValueNotifier<ReadStage> stage;
-  final Future<void> done;
-  const _ProgressDialog({required this.stage, required this.done});
-
-  @override
-  State<_ProgressDialog> createState() => _ProgressDialogState();
-}
-
-class _ProgressDialogState extends State<_ProgressDialog> {
-  int _elapsed = 0;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _elapsed++);
-    });
-    widget.done.whenComplete(() {
-      debugPrint('[read] 진행 창 done mounted=$mounted');
-      if (mounted) Navigator.of(context).pop();
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // 키오스크(테이블 화면 위)에서는 멀리서도 보이게 크게.
-    final kiosk = isKioskLayout(context);
-    return kioskWrap(
-      context,
-      AlertDialog(
-        content: SizedBox(
-          width: kiosk ? 520 : null,
-          child: ValueListenableBuilder<ReadStage>(
-            valueListenable: widget.stage,
-            builder: (_, s, _) => Row(
-              children: [
-                SizedBox(
-                  width: kiosk ? 48 : 28,
-                  height: kiosk ? 48 : 28,
-                  child: CircularProgressIndicator(strokeWidth: kiosk ? 4 : 3),
-                ),
-                SizedBox(width: kiosk ? 24 : 16),
-                Expanded(
-                  child: Text(
-                    '${s.label} ($_elapsed초)\n보통 12~20초 걸립니다',
-                    style: kiosk ? const TextStyle(fontSize: 20, height: 1.4) : null,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+/// 사용자가 판독을 취소했다([_MountScreenState._process] 안에서만 쓴다).
+class _ReadCanceled implements Exception {
+  const _ReadCanceled();
 }

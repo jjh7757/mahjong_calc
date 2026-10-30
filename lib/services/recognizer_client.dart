@@ -120,8 +120,13 @@ class RecognizerClient {
       ..files.addAll(files);
 
     final http.StreamedResponse streamed;
+    final String body;
     try {
+      // 본문 읽기에도 시간 제한: 헤더만 오고 멈추면 전엔 영영 기다렸다(2026-10-30 점검).
+      final sw = Stopwatch()..start();
       streamed = await _http.send(req).timeout(timeout);
+      final left = timeout - sw.elapsed;
+      body = await streamed.stream.bytesToString().timeout(left.isNegative ? Duration.zero : left);
     } on SocketException {
       throw const RecognizerException('서버에 연결할 수 없습니다. 네트워크를 확인하세요.');
     } on HttpException catch (e) {
@@ -132,7 +137,6 @@ class RecognizerClient {
       }
       rethrow;
     }
-    final body = await streamed.stream.bytesToString();
 
     switch (streamed.statusCode) {
       case 200:
