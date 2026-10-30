@@ -59,7 +59,7 @@ void main() {
     );
     late _FakeTts tts;
     setUp(() {
-      SharedPreferences.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({'voice.result': true});
       tts = _FakeTts()..install();
     });
 
@@ -93,12 +93,32 @@ void main() {
       expect(tts.spoken, ['쯔모', '리치', '하네만']);
     });
 
-    testWidgets('결과 음성을 끄면 읽지 않고 원래 시간표대로', (tester) async {
-      SharedPreferences.setMockInitialValues({'voice.result': false});
-      await tester.pumpWidget(MaterialApp(home: ResultScreen(result: haneman, isTsumo: true)));
-      await tester.pumpAndSettle();
+    testWidgets('기본은 꺼짐: 읽지 않고 역·점수를 첫 프레임 바로 뒤에 전부 보여 준다', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      expect(await Announcer.enabled(), isFalse);
+      tester.view.physicalSize = const Size(800, 2400); // 점수 이동판까지 한 화면에
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(MaterialApp(home: ResultScreen(result: haneman, isTsumo: true, seatWind: Tiles.south)));
+      await tester.pump();
       expect(tts.spoken, isEmpty);
-      expect(find.byKey(const ValueKey('result-stamp')), findsOneWidget);
+      Opacity opacityOf(String label) =>
+          tester.widget<Opacity>(find.ancestor(of: find.text(label), matching: find.byType(Opacity)).first);
+      expect(opacityOf('이페코').opacity, 1); // 뒤쪽 역도 기다림 없이
+      expect(opacityOf('${haneman.payment.total}점').opacity, 1);
+      await tester.pump(); // 점수 이동판도 올라가는 연출 없이 최종 값
+      expect(find.text('+${haneman.payment.total}'), findsOneWidget);
+    });
+
+    testWidgets('켜면 역이 하나씩: 아직 안 읽은 역은 보이지 않는다', (tester) async {
+      await tester.pumpWidget(MaterialApp(home: ResultScreen(result: haneman, isTsumo: true)));
+      await tester.pump();
+      await tts.finish(tester); // 쯔모 → 리치
+      await tester.pump(const Duration(milliseconds: 400));
+      Opacity opacityOf(String label) =>
+          tester.widget<Opacity>(find.ancestor(of: find.text(label), matching: find.byType(Opacity)).first);
+      expect(opacityOf('리치').opacity, greaterThan(0));
+      expect(opacityOf('이페코').opacity, 0);
     });
   });
 
@@ -116,7 +136,7 @@ void main() {
     });
 
     testWidgets('파일이 있으면 TTS 대신 파일을 차례로 튼다', (tester) async {
-      SharedPreferences.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({'voice.result': true});
       final tts = _FakeTts()..install();
       final played = <String>[];
       Announcer.playClip = (k) async {
@@ -137,7 +157,7 @@ void main() {
     });
 
     testWidgets('룰 설정에서 목소리를 고르면 저장하고 그 목소리로 미리 읽는다, 기기 음성은 TTS', (tester) async {
-      SharedPreferences.setMockInitialValues({});
+      SharedPreferences.setMockInitialValues({'voice.result': true});
       final tts = _FakeTts()..install();
       final played = <String>[];
       Announcer.playClip = (k) async {

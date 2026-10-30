@@ -393,13 +393,18 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   int _playGen = 0;
 
   /// 작혼처럼 "론/쯔모" 를 외치고, 역 한 줄을 띄울 때마다 그 역을 읽고 다 읽으면 다음 줄을 띄운다.
-  /// 마지막에 판·부와 등급 도장이 나올 때 등급을 읽는다. 음성이 꺼졌거나 못 읽으면 원래 시간표대로 띄운다.
+  /// 마지막에 판·부와 등급 도장이 나올 때 등급을 읽는다. 옵션이 꺼져 있으면(기본) 연출 없이 바로 전부 보여 주고,
+  /// 켰는데 못 읽으면 원래 시간표대로 띄운다.
   Future<void> _play() async {
     final gen = _playGen;
     bool stale() => !mounted || _skipped || gen != _playGen;
     _voice = await Announcer.enabled();
     if (stale()) return;
-    if (!_voice || !await Announcer.say(widget.isTsumo ? '쯔모' : '론')) {
+    if (!_voice) {
+      _reveal.value = 1;
+      return;
+    }
+    if (!await Announcer.say(widget.isTsumo ? '쯔모' : '론')) {
       _voice = false;
       if (!stale()) _reveal.forward();
       return;
@@ -813,6 +818,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       return ScoreCross(
         seats: seats,
         revealed: _reveal.isCompleted,
+        countUp: _voice,
         center: [tsumo ? '쯔모' : '론'],
         prompt: !tsumo && _loser == null ? '방총자 자리를 누르세요' : null,
         onTapSide: tsumo
@@ -887,6 +893,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     return ScoreCross(
       seats: seats,
       revealed: _reveal.isCompleted && winner != null,
+      countUp: _voice,
       center: [
         g.roundLabel,
         if (sticks > 0) '공탁 $sticks',

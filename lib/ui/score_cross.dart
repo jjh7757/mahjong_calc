@@ -32,6 +32,9 @@ class ScoreCross extends StatelessWidget {
   final List<CrossSeat> seats;
   final bool revealed;
 
+  /// 변화량을 0 에서 올리는 연출을 할지. false 면 바로 최종 값을 보여 준다.
+  final bool countUp;
+
   /// 가운데 칸 글(국·본장·공탁 등).
   final List<String> center;
 
@@ -45,6 +48,7 @@ class ScoreCross extends StatelessWidget {
     super.key,
     required this.seats,
     this.revealed = true,
+    this.countUp = true,
     this.center = const [],
     this.prompt,
     this.onTapSide,
@@ -61,6 +65,7 @@ class ScoreCross extends StatelessWidget {
           key: ValueKey('cross-seat-$side'),
           seat: seats[side],
           revealed: revealed,
+          countUp: countUp,
           onTap: onTapSide == null ? null : () => onTapSide!(side),
         );
 
@@ -110,8 +115,9 @@ class ScoreCross extends StatelessWidget {
 class _SeatBox extends StatelessWidget {
   final CrossSeat seat;
   final bool revealed;
+  final bool countUp;
   final VoidCallback? onTap;
-  const _SeatBox({super.key, required this.seat, required this.revealed, this.onTap});
+  const _SeatBox({super.key, required this.seat, required this.revealed, required this.countUp, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +153,7 @@ class _SeatBox extends StatelessWidget {
             // 변화량이 바뀌면(방총자를 다시 고르면) 처음부터 다시 올린다.
             key: ValueKey('${s.delta}-$revealed'),
             tween: Tween(begin: 0, end: revealed ? 1 : 0),
-            duration: const Duration(milliseconds: 900),
+            duration: countUp ? const Duration(milliseconds: 900) : Duration.zero,
             curve: Curves.easeOutCubic,
             builder: (context, t, _) {
               final shown = (s.delta * t).round();

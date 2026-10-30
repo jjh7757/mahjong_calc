@@ -173,7 +173,7 @@ class _AutoRecordSwitchState extends State<_AutoRecordSwitch> {
   }
 }
 
-/// 결과 화면에서 역·등급을 소리 내어 읽을지, 어떤 목소리로 읽을지(기기 저장).
+/// 결과 화면에서 역을 하나씩 띄우며 소리 내어 읽을지, 어떤 목소리로 읽을지(기기 저장).
 /// 목소리를 고르면 그 목소리로 예시를 바로 읽어 준다.
 class _VoiceSwitch extends StatefulWidget {
   const _VoiceSwitch();
@@ -219,9 +219,9 @@ class _VoiceSwitchState extends State<_VoiceSwitch> {
       children: [
         SwitchListTile(
           key: const ValueKey('voice-switch'),
-          title: const Text('결과 음성'),
-          subtitle: const Text('결과 화면에서 역·도라·등급을 읽어 줌 (예: 리치, 이페코, 도라 2, 하네만)'),
-          value: _on ?? true,
+          title: const Text('결과 연출·음성'),
+          subtitle: const Text('역을 하나씩 띄우며 읽어 줌 (예: 리치, 이페코, 도라 2, 하네만). 끄면 결과를 바로 보여 줌'),
+          value: _on ?? false,
           onChanged: _on == null
               ? null
               : (v) {

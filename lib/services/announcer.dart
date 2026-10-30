@@ -47,11 +47,11 @@ class Announcer {
     }
   }
 
-  /// 결과 음성 켜짐(기본 켬).
+  /// 결과 연출·음성(역을 하나씩 띄우며 읽기) 켜짐. 기본은 끔: 결과를 바로 보여 준다.
   static Future<bool> enabled() async {
     try {
       final p = await SharedPreferences.getInstance();
-      return p.getBool(_key) ?? true;
+      return p.getBool(_key) ?? false;
     } catch (_) {
       return false;
     }
