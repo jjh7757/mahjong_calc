@@ -566,7 +566,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _saveGrid() async {
-    _tracker = null; // 격자가 바뀌면 패 한 장 비율·기준이 달라진다.
+    // 격자가 바뀌면 패 한 장 비율·기준이 달라져 추적기를 새로 만든다. 사건 기록은 이어받는다 — track.json 을 덮어쓰므로
+    // 버리면 그 판 앞부분 사건이 사라지고, 프레임 기록의 사건 위치(_meldEventsSeen)도 어긋난다.
+    _carryMeldEvents = [...?_tracker?.events];
+    _carryRiverEvents = [...?_riverTracker?.events];
+    _tracker = null;
     _riverTracker = null;
     _shiftGate.reset();
     _gridSource = _cameraId;
@@ -659,8 +663,30 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
   // ---------------- 판 상태 추적 ----------------
 
-  MeldTracker _trackerFor(GridZones grid) => _tracker ??= MeldTracker(tileFrac: tileFracsOf(grid));
-  RiverTracker _riverTrackerFor(GridZones grid) => _riverTracker ??= RiverTracker(tileFrac: riverTileFracsOf(grid));
+  /// 격자를 바꿔 추적기를 새로 만들 때 이어받을 사건([_saveGrid]).
+  List<TrackerEvent> _carryMeldEvents = const [];
+  List<TrackerEvent> _carryRiverEvents = const [];
+
+  MeldTracker _trackerFor(GridZones grid) => _tracker ??= _newTracker(MeldTracker(tileFrac: tileFracsOf(grid)));
+  RiverTracker _riverTrackerFor(GridZones grid) =>
+      _riverTracker ??= RiverTracker(tileFrac: riverTileFracsOf(grid))..events.addAll(_takeCarry(river: true));
+
+  MeldTracker _newTracker(MeldTracker t) {
+    final carried = _takeCarry(river: false);
+    t.events.addAll(carried);
+    if (carried.isNotEmpty) t.events.add(TrackerEvent(DateTime.now(), Side.bottom, 'grid', '격자 바뀜 — 새 기준'));
+    return t;
+  }
+
+  List<TrackerEvent> _takeCarry({required bool river}) {
+    final e = river ? _carryRiverEvents : _carryMeldEvents;
+    if (river) {
+      _carryRiverEvents = const [];
+    } else {
+      _carryMeldEvents = const [];
+    }
+    return e;
+  }
 
   /// 카메라가 움직이거나 조명이 한꺼번에 바뀐 프레임이면 두 추적기가 사건 대신 기준만 다시 잡게 한다.
   final SceneShiftGate _shiftGate = SceneShiftGate();
@@ -1117,22 +1143,32 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   }
 
   /// 추적기 상태 전부(울기·강·리치봉)를 track.json 으로.
-  Future<void> _saveTrackState(Game g, String dir) async {
-    final tracker = _tracker;
-    if (tracker == null) return;
-    await CaptureLog.saveFile(
-      dir,
-      'track.json',
-      CaptureLog.jsonBytes({
-        ...tracker.toJson(),
-        'rivers': _riverTracker?.toJson(),
-        'names': g.names,
-        'bottom_seat': g.settings.bottomSeat,
-        'round': g.roundLabel,
-        'preview_long_side': _previewFrameLongSide,
-      }),
-      'application/json',
-    );
+  /// track.json 쓰기를 한 줄로 세운다 — 모서리·리치봉 읽기가 함께 끝나면 먼저 만든 옛 상태가 나중에 써질 수 있었다.
+  Future<void> _trackStateWrite = Future.value();
+
+  /// 추적 상태 전체를 판 폴더의 track.json 하나에 덮어쓴다(사건은 판 처음부터 쌓여 있어 마지막 것이 전부를 담는다;
+  /// 전엔 저장마다 `track (n).json` 사본이 생겨 29분에 31개, 2026-10-30). 쓸 내용은 차례가 왔을 때 만든다.
+  Future<void> _saveTrackState(Game g, String dir) {
+    final next = _trackStateWrite.then((_) async {
+      final tracker = _tracker;
+      if (tracker == null) return;
+      await CaptureLog.saveFile(
+        dir,
+        'track.json',
+        CaptureLog.jsonBytes({
+          ...tracker.toJson(),
+          'rivers': _riverTracker?.toJson(),
+          'names': g.names,
+          'bottom_seat': g.settings.bottomSeat,
+          'round': g.roundLabel,
+          'preview_long_side': _previewFrameLongSide,
+        }),
+        'application/json',
+        overwrite: true,
+      );
+    });
+    _trackStateWrite = next.catchError((Object _) {});
+    return next;
   }
 
   /// 자리별 울기 칩: 미리 읽은 울기와 상태. 누르면 다시 읽기, 길게 누르면 지우기.

@@ -74,12 +74,13 @@ class MainActivity : FlutterActivity() {
                     val name = call.argument<String>("name")
                     val bytes = call.argument<ByteArray>("bytes")
                     val mime = call.argument<String>("mime") ?: "application/octet-stream"
+                    val overwrite = call.argument<Boolean>("overwrite") ?: false
                     if (dir == null || name == null || bytes == null) {
                         result.error("ARG", "dir/name/bytes 필요", null)
                     } else {
                         Thread {
                             try {
-                                val uri = saveToDownloads(dir, name, bytes, mime)
+                                val uri = saveToDownloads(dir, name, bytes, mime, overwrite)
                                 runOnUiThread { result.success(uri) }
                             } catch (e: Exception) {
                                 runOnUiThread { result.error("SAVE", e.toString(), null) }
@@ -93,14 +94,29 @@ class MainActivity : FlutterActivity() {
     }
 
     /// Download/<dir> 에 파일을 쓴다. 같은 이름이 있으면 MediaStore 가 (1) 을 붙인다.
-    private fun saveToDownloads(dir: String, name: String, bytes: ByteArray, mime: String): String {
+    /// [overwrite] 면 이 앱이 만든 같은 이름 파일을 덮어쓴다(track.json 처럼 저장할 때마다 전체를 다시 쓰는 파일,
+    /// 2026-10-30: 사본이 29분에 31개 쌓였다). 못 찾거나 덮어쓰기가 거부되면(재설치로 소유권이 빠짐) 새 파일로 쓴다.
+    private fun saveToDownloads(dir: String, name: String, bytes: ByteArray, mime: String, overwrite: Boolean): String {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             throw IllegalStateException("Android 10 미만은 지원하지 않음")
+        }
+        val rel = dir.trimEnd('/') + "/"
+        if (overwrite) {
+            val existing = findDownload(rel, name)
+            if (existing != null) {
+                try {
+                    contentResolver.openOutputStream(existing, "wt")?.use { it.write(bytes) }
+                        ?: throw IllegalStateException("openOutputStream 실패")
+                    return existing.toString()
+                } catch (_: SecurityException) {
+                    // 이 앱 소유가 아님(재설치 전 파일) → 아래에서 새로 만든다.
+                }
+            }
         }
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
             put(MediaStore.MediaColumns.MIME_TYPE, mime)
-            put(MediaStore.MediaColumns.RELATIVE_PATH, dir.trimEnd('/') + "/")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, rel)
         }
         val resolver = contentResolver
         val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
@@ -108,6 +124,21 @@ class MainActivity : FlutterActivity() {
         resolver.openOutputStream(uri)?.use { it.write(bytes) }
             ?: throw IllegalStateException("openOutputStream 실패")
         return uri.toString()
+    }
+
+    /// Download/<rel><name> 의 MediaStore 주소(이 앱이 볼 수 있는 것 중 가장 최근), 없으면 null.
+    private fun findDownload(rel: String, name: String): android.net.Uri? {
+        val col = MediaStore.Downloads.EXTERNAL_CONTENT_URI
+        contentResolver.query(
+            col,
+            arrayOf(MediaStore.MediaColumns._ID),
+            "${MediaStore.MediaColumns.RELATIVE_PATH}=? AND ${MediaStore.MediaColumns.DISPLAY_NAME}=?",
+            arrayOf(rel, name),
+            "${MediaStore.MediaColumns.DATE_MODIFIED} DESC",
+        )?.use { c ->
+            if (c.moveToFirst()) return android.content.ContentUris.withAppendedId(col, c.getLong(0))
+        }
+        return null
     }
 
     private fun isVolume(keyCode: Int) =

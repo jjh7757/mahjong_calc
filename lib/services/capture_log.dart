@@ -119,9 +119,11 @@ class CaptureLog {
   }
 
   /// 파일 하나를 [dir] 에 쓴다. Android 채널이 없으면 데스크톱 폴더([desktopBase])에, 그것도 없거나 실패하면 false.
-  static Future<bool> saveFile(String dir, String name, Uint8List bytes, String mime) async {
+  /// Android 는 같은 이름이 있으면 `이름 (1)` 로 새로 만든다. [overwrite] 면 같은 이름 파일을 덮어쓴다(데스크톱은 늘 덮어씀).
+  static Future<bool> saveFile(String dir, String name, Uint8List bytes, String mime, {bool overwrite = false}) async {
     try {
-      await _channel.invokeMethod<String>('save', {'dir': dir, 'name': name, 'bytes': bytes, 'mime': mime});
+      await _channel.invokeMethod<String>(
+          'save', {'dir': dir, 'name': name, 'bytes': bytes, 'mime': mime, 'overwrite': overwrite});
       return true;
     } on MissingPluginException {
       return _saveDesktop(dir, name, bytes);
