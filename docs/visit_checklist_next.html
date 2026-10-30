@@ -1,0 +1,403 @@
+<title>매장 촬영 체크리스트</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap">
+<style>
+/* 레이아웃: 폰 한 줄 세로 목록. 단계마다 접히는 블록, 아래에 화료 시간 바 고정 (10-24 체크리스트와 같은 틀) */
+:root {
+  --bg: #f3f5f2;
+  --surface: #ffffff;
+  --fg: #1d2420;
+  --muted: #5c6a62;
+  --line: #d6ddd8;
+  --accent: #17734f;
+  --accent-soft: #e2f0e8;
+  --warn: #b5481d;
+  --warn-soft: #fbe9df;
+  --font-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Consolas", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121714; --surface: #1b221e; --fg: #e4ebe6; --muted: #98a69e; --line: #2d3832;
+    --accent: #4fc28f; --accent-soft: #1d3329; --warn: #f08a5d; --warn-soft: #3a241a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121714; --surface: #1b221e; --fg: #e4ebe6; --muted: #98a69e; --line: #2d3832;
+  --accent: #4fc28f; --accent-soft: #1d3329; --warn: #f08a5d; --warn-soft: #3a241a; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 640px; margin: 0 auto; padding-block: 16px 170px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 14px; }
+header h1 { font-size: 22px; margin: 0; text-wrap: balance; }
+header p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.sync { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-top: 10px; }
+.progress span { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+summary { list-style: none; cursor: pointer; padding: 12px 14px; display: flex; gap: 10px; align-items: baseline; }
+summary::-webkit-details-marker { display: none; }
+summary .t { font-weight: 700; flex: 1; min-width: 0; }
+summary .when { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+summary .cnt { font-family: var(--font-mono); font-size: 12px; color: var(--accent); font-variant-numeric: tabular-nums; }
+.body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 8px; }
+label.item { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-top: 1px solid var(--line); }
+.items label.item:first-child { border-top: 0; }
+label.item input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--accent); flex: none; }
+label.item span { min-width: 0; }
+label.item input:checked + span { color: var(--muted); text-decoration: line-through; }
+code { font-family: var(--font-mono); font-size: 13px; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; word-break: break-all; }
+.note { background: var(--warn-soft); color: var(--fg); border-radius: 8px; padding: 8px 10px; font-size: 14px; }
+.note b { color: var(--warn); }
+.tip { color: var(--muted); font-size: 13px; margin: 0; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field > span { font-size: 14px; font-weight: 600; }
+.field > small { color: var(--muted); font-size: 13px; }
+textarea, input[type=text] { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; color: var(--fg);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+textarea { min-height: 52px; resize: vertical; }
+.counters { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.counter { border: 1px solid var(--line); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; background: var(--bg); }
+.counter .name { font-size: 13px; color: var(--muted); min-width: 0; }
+.counter .row { display: flex; align-items: center; gap: 8px; }
+.counter .n { font-family: var(--font-mono); font-size: 22px; font-variant-numeric: tabular-nums; flex: 1; }
+.sq { font: inherit; font-weight: 700; width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--fg); cursor: pointer; }
+.sq.plus { border-color: var(--accent); color: var(--accent); }
+.btn { font: inherit; font-weight: 600; font-size: 14px; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--accent); background: var(--surface); color: var(--accent); cursor: pointer; }
+.btn.on { background: var(--accent); color: var(--surface); }
+.btn.bad { border-color: var(--warn); color: var(--warn); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn:focus-visible, .sq:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.log { font-family: var(--font-mono); font-size: 12px; white-space: pre-wrap; color: var(--muted); margin: 0; }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; }
+/* 화료 시간 바 */
+.timer { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line);
+  padding-block: 10px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.timer .row { max-width: 640px; margin: 0 auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.timer .clock { font-family: var(--font-mono); font-size: 24px; font-variant-numeric: tabular-nums; min-width: 4.5ch; }
+.timer .stats { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; flex-basis: 100%; }
+@media (prefers-reduced-motion: reduce) { .progress span { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>매장 촬영 체크리스트</h1>
+    <p>고정 카메라(붐 스탠드 + S25 헤드) · 태블릿(또는 노트북 Windows 앱) = 테이블 화면 · 여러 판 이어 찍기 · 10-30 갱신</p>
+    <p class="sync" id="sync">불러오는 중</p>
+    <div class="progress"><span id="bar"></span></div>
+  </header>
+  <div id="sections"></div>
+
+  <details data-sec open>
+    <summary><span class="t">추적 오류 세기</span><span class="when">게임 중</span></summary>
+    <div class="body">
+      <p class="tip">판 상태 추적이 실제와 다르게 움직일 때마다 누른다. 빈 탁자 3분 측정 때 나온 것은 따로 메모에 적는다.</p>
+      <div class="counters" id="counters"></div>
+    </div>
+  </details>
+
+  <details data-sec>
+    <summary><span class="t">화료 기록</span><span class="when">자동 저장</span></summary>
+    <div class="body">
+      <p class="tip">아래 바에서 화료 선언(손패 눕힘) 때 시작, 점수 확정 때 결과 버튼. 시간과 결과가 여기 쌓인다.</p>
+      <pre class="log" id="log">기록 없음</pre>
+      <div class="tools">
+        <button class="btn" id="copy" type="button">기록 복사</button>
+        <button class="btn bad" id="undo" type="button">마지막 기록 지우기</button>
+      </div>
+    </div>
+  </details>
+</div>
+
+<div class="timer">
+  <div class="row">
+    <span class="clock" id="clock">0.0</span>
+    <button class="btn" id="tStart" type="button">화료 시작</button>
+    <button class="btn" data-res="자동 반영" type="button" disabled>자동 반영</button>
+    <button class="btn" data-res="확인 후 반영" type="button" disabled>확인 후</button>
+    <button class="btn bad" data-res="틀린 반영" type="button" disabled>틀린 반영</button>
+    <button class="btn bad" data-res="실패" type="button" disabled>실패</button>
+    <span class="stats" id="stats">기록 없음</span>
+  </div>
+</div>
+
+<script>
+(function () {
+  // 체크 키는 항목 문구와 상관없이 고정. 문구를 고쳐도 체크가 유지된다.
+  var SECTIONS = [
+    { id: 'prep', t: '출발 전', when: '전날', items: [
+      ['apk', 'GitHub Actions 최신 실행(커밋 7539df8, 10-29 저녁)의 APK 를 받아 폰(헤드)과 태블릿에 설치. 10-29 변경(격자 자동 맞추기는 카메라마다 한 번·재시도 10회, 판 상태 추적 기본 켬, 격자 편집 on/off, 전체 화면 모드) 포함'],
+      ['win', '테이블 화면을 태블릿으로 쓰면 이 줄은 건너뜀. 노트북 Windows 앱으로 쓸 때만 다시 빌드(운영 서버 + <code>.recognizer_key</code>)'],
+      ['homerun', '집에서 흐름 한 번: 폰 헤드 켜기 → 태블릿(또는 Windows 앱)에 헤드 주소 → 대국 시작. 패가 없으니 자동 맞추기가 20초 간격 10회(약 3분 반) 실패하고 멈추는지까지만 본다. 전체 화면 모드 켜기/끄기, "격자 편집" 이 꺼진 상태에서 선이 끌리지 않는지도 같이'],
+      ['stand', '붐 스탠드 AC902 + 모래주머니 + AC-B15 볼헤드 + 폰 홀더'],
+      ['tape', '줄자 (렌즈에서 매트까지 높이)'],
+      ['power', '폰 충전기 + 긴 USB-C 케이블(헤드는 화면을 켜 둠), 노트북 충전기, 멀티탭, 보조배터리'],
+      ['hotspot', '폰 핫스팟 데이터 남았는지 (매장 Wi-Fi 가 기기 간 통신을 막을 때)'],
+      ['book', '예약 + 촬영 허락. 사진을 인식 모델 학습에 써도 되는지도 미리 물어보기'],
+      ['split', '이번 사진의 개발/테스트 나누기를 정함 (아래 메모에 적기)']
+    ], fields: [
+      ['f_visit', '방문 날짜 · 매장 · 탁', '예: 11/1(토) 14:00 ○○ · 자동탁 2번'],
+      ['f_split', '개발/테스트 나누기', '예: 앞 절반 판 = 개발, 뒤 절반 = 테스트(규칙 고치는 데 안 씀)']
+    ] },
+
+    { id: 'look', t: '도착 후 둘러보기', when: '10분', note: '상품 거치(천장 부착 · 압축봉 · 바닥 스탠드)를 정할 재료. 사진 한 장씩이면 된다.', items: [
+      ['ceil', '천장 높이·재질·조명 위치 사진 (천장 부착, 압축봉이 되는지)'],
+      ['edge', '탁자 테두리 두께·모양, 자동탁 모델 사진'],
+      ['outlet', '콘센트 위치, 태블릿 놓을 자리'],
+      ['wifi', 'Wi-Fi 이름·비밀번호 받기'],
+      ['sets', '매장에 다른 패 세트가 있는지 (뒷면 색이 다르거나 앞면이 상아색). 있으면 "남는 시간에" 에서 찍기']
+    ] },
+
+    { id: 'mount', t: '거치 · 연결', when: '20분', note: '<b>기울기 보정은 만들지 않기로 했다.</b> 카메라를 처음부터 위에서 반듯하게 거치하는 게 이번 세팅의 핵심. 10-24 는 탁자가 약 25° 기울어 손패 0/15 였다.', items: [
+      ['pole', '기둥은 테이블 모서리에서 10~15cm, 붐은 위로 15~20°, 렌즈가 테이블 가운데 위 약 80cm. 모래주머니 걸기'],
+      ['level', '미리보기에서 펠트 네 변이 화면 네 변과 나란한지. 볼헤드 조인 뒤 다시 확인'],
+      ['four', '네 자리 손패와 울기 자리(손패 오른쪽 모서리)가 다 화면 안'],
+      ['px', '가장 먼 자리 손패 앞면 폭 100px 이상. 노트북 브라우저로 <code>http://헤드IP:8765/preview?w=4080&amp;t=토큰</code> 받아 확대해 잰다. 모자라면 높이를 낮추거나 줌'],
+      ['net', '폰·노트북을 같은 Wi-Fi 에 붙이고 Windows 앱 원격 카메라 주소에 헤드 화면의 주소 입력 → "연결했습니다"'],
+      ['net2', '연결 실패(기기 간 통신 차단)면 폰 핫스팟 → 노트북을 핫스팟에 → 헤드 화면의 새 주소로 다시'],
+      ['stream', '테이블 화면 배경에 헤드 미리보기가 뜨고, 상태 글에 "스트림 긴 변 4080"'],
+      ['save', '더보기 "촬영 기록 저장" 켬'],
+      ['idle', '빈 탁자 3분: 폰을 건드리지 않고 둔다. 헛 강 버림·모서리 읽기 횟수를 메모에 (흰 천장에선 노출 흔들림만으로 헛 버림이 났었다. 실제 펠트에서 확인)']
+    ], fields: [
+      ['f_height', '높이 · 줌', '예: 렌즈~매트 78cm, 1x, 먼 자리 패 폭 112px'],
+      ['f_idle', '빈 탁자 3분 결과', '예: 헛 강 버림 0, 모서리 읽기 0'],
+      ['f_batt0', '시작 배터리 · 온도', '예: 92% 31°C, 14:10']
+    ] },
+
+    { id: 'start', t: '대국 시작', when: '첫 판', items: [
+      ['game', '대국 시작(이름 4개, 25000점) → 테이블 화면. 화면 아래쪽 자리 지정'],
+      ['auto', '패를 돌린 뒤 격자 자동 맞추기가 되는지 (20초 간격 최대 10회, 카메라마다 한 번). 몇 번째에 됐는지와 토스트에 뜬 시간 메모'],
+      ['grid', '자동 격자 눈으로 확인: 손패+울기 띠 4개, 리치봉 상자, 패산 구역. 틀리면 손으로 고치고 어디가 틀렸는지 메모'],
+      ['track', '더보기 "판 상태 추적" 켜짐 (격자 + 카메라 헤드일 때만 돈다)'],
+      ['wall', '첫 버림 뒤 도라 산(왕패) 상자가 실제 왕패 위에 잡히는지. 왕패는 주사위로 정해지고 7줄 · ㄱ자일 수 있다']
+    ], fields: [
+      ['f_auto', '자동 맞추기 · 격자 메모', '예: 2번째에 성공, 북 자리 띠가 강을 먹음']
+    ] },
+
+    { id: 'hand', t: '화료마다', when: '반복', loop: true, note: '이 칸은 화료마다 다시 쓴다. 다 체크하면 자동으로 비워진다. 아래 바에서 시간 시작을 먼저 누른다.', items: [
+      ['h_shot', '볼륨키 또는 "화료 촬영"'],
+      ['h_dora', '리치 화료면 도라·뒷도라를 손패 옆으로, 리치가 아니면 왕패에 그대로 두고 찍기'],
+      ['h_fix', '틀린 판독은 "판독 수정"에서 고치고 "대국에 반영"까지 (정답 label.json). 반영 전에 다음 촬영 금지'],
+      ['h_track', '울기 칩·론 패가 실제와 맞았는지 보고, 틀리면 "추적 오류 세기"에 누르기'],
+      ['h_res', '아래 바에서 결과 버튼 (자동 반영 / 확인 후 / 틀린 반영 / 실패)']
+    ] },
+
+    { id: 'scene', t: '꼭 찍을 장면', when: '대국 중', note: '같은 카메라 위치로 여러 판을 이어 찍는 것 자체가 목표다(같은 자리 사전 손패 줄 검증). 장면은 나오는 대로 체크하고, 안 나오면 판 끝에 손패를 만들어 찍어도 된다.', items: [
+      ['s_many', '같은 카메라 위치로 8판 이상 연속'],
+      ['s_m2', '울기 2개 손패'],
+      ['s_m34', '울기 3~4개 손패 (실제 가로 패)'],
+      ['s_kan', '깡 화료 (도라 2장, 리치면 뒷도라 2장)'],
+      ['s_ankan', '엎은 안깡'],
+      ['s_haku', '白 들어간 손패'],
+      ['s_aka', '적5 들어간 화료'],
+      ['s_nori', '리치 아닌 화료 (도라를 왕패 상자에서 읽음)'],
+      ['s_ron', '론 화료 (론 패 = 추적한 마지막 버림)'],
+      ['s_tsumo', '쯔모 화료'],
+      ['s_far', '카메라에서 가장 먼 자리 화료'],
+      ['s_pile', '손패를 가지런하지 않게 무더기로 눕힌 화료'],
+      ['s_side', '도라 표시패를 손패 바로 옆에 붙여 놓은 리치 화료'],
+      ['s_double', '동시 론 (나오면)'],
+      ['s_lay', '눕힌 울기 패(6만 같은 것) 가까이 한 장. 가로 패의 윗변이 어느 쪽인지 관례 확인용']
+    ] },
+
+    { id: 'extra', t: '남는 시간에', when: '선택', items: [
+      ['x_ref', '자리별 34종 기준 사진: 통·삭 1~9 등을 네 자리 손패 위치에 늘어놓고 헤드로 한 장씩 (같은 자리 기준이면 분류 100% 였다)'],
+      ['x_set', '다른 패 세트로 화료 2~3번 (뒷면 색 · 상아색 앞면)'],
+      ['x_hfr', '손패 칸 고프레임 녹화: 헤드를 끄고 같은 거치에서 폰 기본 카메라 60fps 영상으로 한 자리 2~3순 (츠모기리·데기리 판별 개발용)'],
+      ['x_50mp', '같은 거치에서 기본 카메라 50MP 사진 2장 (스트림 화질 대 사진 화질 비교)'],
+      ['x_back', '위 둘을 했으면 헤드 다시 켜고 테이블 화면에 미리보기가 돌아오는지']
+    ] },
+
+    { id: 'ask', t: '사장님 · 매장 룰', when: '쉬는 시간', fields: [
+      ['q_double', '동시 론일 때 본장은 전원에게? 가까운 한 명? 더블·트리플론 인정?', '지금 앱은 가까운 한 명'],
+      ['q_rule', '토비(0점 미만) 종료? 도중 유국(구종구패·사풍연타·사깡산료·사가리치) 쓰는지, 적도라 몇 장', ''],
+      ['q_dora', '리치 화료 때 도라·뒷도라를 손패 옆으로 가져오는 게 매장 관행 맞는지', ''],
+      ['q_mount', '천장에 카메라 달기(구멍 · 압축봉), 탁자 옆 태블릿 괜찮은지, Wi-Fi 기기 간 통신 막혀 있는지', ''],
+      ['q_learn', '사진을 인식 모델 학습에 써도 되는지 (손님 얼굴은 안 찍힘)', '']
+    ] },
+
+    { id: 'leave', t: '떠나기 전', when: '마지막', items: [
+      ['l_dir', '노트북 다운로드 폴더 <code>mahjong_calc</code> 에 화료 수만큼 폴더가 쌓였는지'],
+      ['l_batt', '끝 배터리 · 온도 적기'],
+      ['l_gear', '장비 회수 (모래주머니, 볼헤드, 케이블, 충전기)'],
+      ['l_home', '집에서: 사진 옮기고 개발/테스트 나누기 기록 → Claude 에게 "체크리스트 결과 읽어서 metrics.md 에 넣어줘"']
+    ], fields: [
+      ['f_batt1', '끝 배터리 · 온도', '예: 61% 36°C, 17:40'],
+      ['f_memo', '그 밖에 메모', '']
+    ] }
+  ];
+  var COUNTERS = [
+    ['c_fdisc', '헛 강 버림'], ['c_mdisc', '버림 놓침'], ['c_fmeld', '울기 헛 확정'],
+    ['c_mmeld', '울기 놓침'], ['c_ron', '론 패 틀림'], ['c_move', '카메라가 밀림']
+  ];
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  // 그리기
+  var html = '';
+  SECTIONS.forEach(function (s, si) {
+    html += '<details data-sec' + (si < 3 ? ' open' : '') + '><summary><span class="t">' + esc(s.t) + '</span>' +
+      '<span class="when">' + esc(s.when) + '</span><span class="cnt"></span></summary><div class="body">';
+    if (s.note) html += '<p class="note">' + s.note + '</p>';
+    if (s.items) {
+      html += '<div class="items">';
+      s.items.forEach(function (it) {
+        html += '<label class="item"><input type="checkbox" id="' + it[0] + '"' + (s.loop ? ' data-loop' : '') + '><span>' + it[1] + '</span></label>';
+      });
+      html += '</div>';
+    }
+    (s.fields || []).forEach(function (f) {
+      html += '<label class="field"><span>' + esc(f[1]) + '</span>' +
+        '<textarea id="' + f[0] + '" rows="2" placeholder="' + esc(f[2]) + '"></textarea></label>';
+    });
+    html += '</div></details>';
+  });
+  document.getElementById('sections').innerHTML = html;
+  document.getElementById('counters').innerHTML = COUNTERS.map(function (c) {
+    return '<div class="counter"><span class="name">' + esc(c[1]) + '</span><div class="row">' +
+      '<button class="sq" type="button" data-dec="' + c[0] + '" aria-label="' + esc(c[1]) + ' 하나 빼기">−</button>' +
+      '<span class="n" id="' + c[0] + '">0</span>' +
+      '<button class="sq plus" type="button" data-inc="' + c[0] + '" aria-label="' + esc(c[1]) + ' 하나 더하기">+</button></div></div>';
+  }).join('');
+
+  // 상태: 이 기기 브라우저에 먼저, 가능하면 artifact db(visit/next)에도. 다녀온 뒤 Claude 가 db 를 읽는다.
+  var KEY = 'visitNext';
+  var state = { checks: {}, counts: {}, text: {}, hands: [], updatedAt: 0 };
+  function norm(s) {
+    s = s || {};
+    return { checks: s.checks || {}, counts: s.counts || {}, text: s.text || {}, hands: Array.isArray(s.hands) ? s.hands : [], updatedAt: s.updatedAt || 0 };
+  }
+  try { state = norm(JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
+
+  var syncEl = document.getElementById('sync');
+  var docRef = null, writing = false, pending = false, timer = 0;
+  function saveLocal() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function flush() {
+    if (!docRef) return;
+    if (writing) { pending = true; return; }
+    writing = true; pending = false;
+    docRef.set(JSON.parse(JSON.stringify(state))).then(function () {
+      syncEl.textContent = '저장됨 ' + new Date().toTimeString().slice(0, 5);
+    }, function () {
+      syncEl.textContent = '서버 저장 실패, 이 기기에만 저장 중';
+    }).then(function () { writing = false; if (pending) flush(); });
+  }
+  function save() {
+    state.updatedAt = Date.now();
+    saveLocal();
+    clearTimeout(timer); timer = setTimeout(flush, 800);
+  }
+
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('input[type=checkbox]'));
+  var loop = boxes.filter(function (b) { return b.hasAttribute('data-loop'); });
+  var areas = Array.prototype.slice.call(document.querySelectorAll('textarea'));
+
+  function apply() {
+    boxes.forEach(function (b) { b.checked = !!state.checks[b.id]; });
+    areas.forEach(function (t) { if (document.activeElement !== t) t.value = state.text[t.id] || ''; });
+    COUNTERS.forEach(function (c) { document.getElementById(c[0]).textContent = state.counts[c[0]] || 0; });
+    counts(); render();
+  }
+  function counts() {
+    document.querySelectorAll('[data-sec]').forEach(function (sec) {
+      var bs = sec.querySelectorAll('input[type=checkbox]:not([data-loop])');
+      var c = sec.querySelector('.cnt'); if (!c || !bs.length) return;
+      var n = 0; bs.forEach(function (b) { if (b.checked) n++; });
+      c.textContent = n + '/' + bs.length;
+    });
+    var all = boxes.filter(function (b) { return !b.hasAttribute('data-loop'); });
+    var done = all.filter(function (b) { return b.checked; }).length;
+    document.getElementById('bar').style.width = (100 * done / all.length) + '%';
+  }
+
+  boxes.forEach(function (b) {
+    b.addEventListener('change', function () {
+      state.checks[b.id] = b.checked;
+      if (b.hasAttribute('data-loop') && loop.every(function (x) { return x.checked; })) {
+        setTimeout(function () { loop.forEach(function (x) { x.checked = false; state.checks[x.id] = false; }); save(); }, 600);
+      }
+      save(); counts();
+    });
+  });
+  areas.forEach(function (t) {
+    t.addEventListener('input', function () { state.text[t.id] = t.value; save(); });
+  });
+  document.getElementById('counters').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    var k = b.getAttribute('data-inc') || b.getAttribute('data-dec');
+    var v = (state.counts[k] || 0) + (b.hasAttribute('data-inc') ? 1 : -1);
+    state.counts[k] = Math.max(0, v);
+    document.getElementById(k).textContent = state.counts[k];
+    save();
+  });
+
+  // 화료 시간: 선언 → 점수 확정
+  var clock = document.getElementById('clock'), start = document.getElementById('tStart');
+  var resBtns = Array.prototype.slice.call(document.querySelectorAll('[data-res]'));
+  var t0 = 0, raf = 0;
+  function tick() { clock.textContent = ((performance.now() - t0) / 1000).toFixed(1); raf = requestAnimationFrame(tick); }
+  start.addEventListener('click', function () {
+    if (t0) { cancelAnimationFrame(raf); t0 = 0; clock.textContent = '0.0'; start.textContent = '화료 시작'; start.classList.remove('on'); resBtns.forEach(function (b) { b.disabled = true; }); return; }
+    t0 = performance.now(); start.textContent = '취소'; start.classList.add('on');
+    resBtns.forEach(function (b) { b.disabled = false; }); tick();
+  });
+  resBtns.forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (!t0) return;
+      cancelAnimationFrame(raf);
+      var sec = (performance.now() - t0) / 1000;
+      state.hands.push({ sec: Math.round(sec * 10) / 10, result: b.getAttribute('data-res'), at: new Date().toTimeString().slice(0, 5) });
+      t0 = 0; start.textContent = '화료 시작'; start.classList.remove('on');
+      resBtns.forEach(function (x) { x.disabled = true; });
+      save(); render();
+    });
+  });
+  function render() {
+    var log = document.getElementById('log');
+    log.textContent = state.hands.length ? state.hands.map(function (r, i) {
+      return (i + 1) + '. ' + r.at + '  ' + r.sec.toFixed(1) + '초  ' + r.result;
+    }).join('\n') : '기록 없음';
+    var st = document.getElementById('stats');
+    if (!state.hands.length) { st.textContent = '기록 없음'; return; }
+    var xs = state.hands.map(function (r) { return r.sec; }).sort(function (a, b) { return a - b; });
+    var med = xs[Math.floor((xs.length - 1) / 2)];
+    var by = {}; state.hands.forEach(function (r) { by[r.result] = (by[r.result] || 0) + 1; });
+    st.textContent = state.hands.length + '화료 · 중앙 ' + med.toFixed(1) + '초 · 최대 ' + xs[xs.length - 1].toFixed(1) + '초 · ' +
+      Object.keys(by).map(function (k) { return k + ' ' + by[k]; }).join(', ');
+  }
+  document.getElementById('copy').addEventListener('click', function () {
+    var b = this, txt = document.getElementById('log').textContent + '\n' + document.getElementById('stats').textContent;
+    function fallback() { var r = document.createRange(); r.selectNodeContents(document.getElementById('log')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = '선택됨, 길게 눌러 복사'; }
+    try { navigator.clipboard.writeText(txt).then(function () { b.textContent = '복사됨'; }, fallback); } catch (e) { fallback(); }
+  });
+  var undo = document.getElementById('undo'), armed = false;
+  undo.addEventListener('click', function () {
+    if (!state.hands.length) return;
+    if (!armed) { armed = true; undo.textContent = '한 번 더 누르면 지움'; setTimeout(function () { armed = false; undo.textContent = '마지막 기록 지우기'; }, 3000); return; }
+    state.hands.pop(); save(); render(); armed = false; undo.textContent = '마지막 기록 지우기';
+  });
+
+  apply();
+  syncEl.textContent = '이 기기에 저장 중';
+
+  // 서버 저장 붙이기 (안 되면 이 기기 저장만)
+  if (window.claude && window.claude.use) {
+    window.claude.use('db').then(function (db) {
+      if (!db) { syncEl.textContent = '서버 저장 없음, 이 기기에만 저장'; return; }
+      var ref = db.doc('visit/next');
+      ref.get().then(function (snap) {
+        var remote = snap.exists ? norm(snap.data()) : null;
+        if (remote && remote.updatedAt > state.updatedAt) { state = remote; saveLocal(); apply(); }
+        docRef = ref;
+        syncEl.textContent = '서버와 연결됨';
+        if (state.updatedAt > (remote ? remote.updatedAt : 0)) flush();
+      }, function () { syncEl.textContent = '서버 읽기 실패, 이 기기에만 저장'; });
+    });
+  } else {
+    syncEl.textContent = '이 기기에만 저장';
+  }
+})();
+</script>
