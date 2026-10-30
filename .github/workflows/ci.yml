@@ -79,11 +79,27 @@ jobs:
             echo "::error::DEBUG_KEYSTORE_B64 secret 이 없음 (노트북 ~/.android/debug.keystore 의 base64)"
             exit 1
           fi
+          # 러너에선 ~/.android 를 안 읽는다(첫 시도에서 키가 실행마다 새로 생김). 위치를 못 박는다.
+          echo "ANDROID_USER_HOME=$HOME/.android" >> "$GITHUB_ENV"
           mkdir -p ~/.android
           echo "$DEBUG_KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
       - name: APK 빌드 (release, 운영 키)
         if: steps.key.outputs.present == 'true'
         run: flutter build apk --release --dart-define=RECOGNIZER_API_KEY=${{ secrets.RECOGNIZER_API_KEY }}
+      # 노트북 키의 인증서 지문(공개 값). 다르면 덮어 설치가 안 되므로 APK 를 올리지 않는다.
+      - name: 서명 지문 확인
+        if: steps.key.outputs.present == 'true'
+        env:
+          EXPECTED_SHA256: cf9eceef7e295a5c5d2b24a269547cf4f053f04b946f3cb29600adde68433b79
+        run: |
+          find "$HOME" -name debug.keystore -not -path '*/.pub-cache/*' 2>/dev/null
+          APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner"
+          ACTUAL="$("$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/app-release.apk | sed -n 's/.*SHA-256 digest: //p' | head -1)"
+          echo "서명 지문: $ACTUAL"
+          if [ "$ACTUAL" != "$EXPECTED_SHA256" ]; then
+            echo "::error::APK 서명 지문이 노트북 키와 다름 (기대 $EXPECTED_SHA256)"
+            exit 1
+          fi
       - uses: actions/upload-artifact@v4
         if: steps.key.outputs.present == 'true'
         with:
