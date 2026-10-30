@@ -390,6 +390,13 @@ class TableReader {
         );
       }
       if (h == null) continue;
+      if (!h.faceUp && h.tiles.isEmpty) {
+        // 뒷면(화료자가 아닌) 자리: 손패 0장이 맞다. 장수 검사를 하면 늘 "안 맞음" 이 되어 자리 전체를 다시 읽고 경고까지
+        // 남겨 자동 반영이 막혔다(2026-10-30 점검, 화료자를 픽셀로 못 정한 판마다).
+        seats[s] = (faceUp: false, tiles: h.tiles, separate: h.separate, melds: melds, loose: h.loose, agreement: h.agreement);
+        trackedMode[s] = 'handonly';
+        continue;
+      }
       final count = h.tiles.length + (h.separate == null ? 0 : 1);
       // 쯔모·화료패를 손패 옆에 둔 론이면 14 − 3×울기, 론 패가 아직 방총자 강에 있으면 13 − 3×울기(merge 가 강 끝에서 더한다).
       final need = 13 - 3 * melds.length;

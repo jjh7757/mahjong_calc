@@ -11,6 +11,8 @@
 ///   └──────────────────────────────────────────────────────────────┘                       ▼
 /// confirmed ◀──(두 읽기 일치, 또는 픽셀 장수와 맞음)── reading ──(불일치)──▶ changed(다시) ──(3번 다 다름)──▶ unconfirmed
 /// ```
+/// unconfirmed 로 들어갈 때는 그 순간의 모서리를 새 기준으로 삼는다. 그래야 모서리가 또 바뀌어야만 다시 읽는다(기준을 두면
+/// 다음 안정 프레임마다 "새 변화" 가 되어 5초마다 끝없이 읽었다, 2026-10-30 점검).
 /// 확정 규칙(설계 1절): 다른 프레임의 두 읽기가 같아야 확정. 비용을 줄이려고(사용자 지적: 울 때마다 호출이 는다)
 /// 읽은 장수가 픽셀 어림과 맞으면 한 번으로 확정한다([TrackerConfig.pixelShortcut]). 확정된 묶음 수보다 적게 읽히면
 /// 가림으로 보고 받지 않는다(울기는 판 안에서 사라지지 않는다).
@@ -160,7 +162,7 @@ class MeldTracker {
 
       final frac = tileFrac[side] ?? 0;
       final changeTiles = frac <= 0 ? 0.0 : (cur.white - t.baseline!.white).abs() / frac;
-      final pendingChange = t.status == TrackStatus.changed || (t.status == TrackStatus.unconfirmed && t.candidate != null);
+      final pendingChange = t.status == TrackStatus.changed;
       if (changeTiles < config.changeTiles && !pendingChange) {
         // 손이 지나갔을 뿐. 이전 상태로.
         if (t.status == TrackStatus.moving) {
@@ -168,10 +170,9 @@ class MeldTracker {
         }
         continue;
       }
-      if (t.status == TrackStatus.unconfirmed && changeTiles < config.changeTiles) continue;
 
       if (!pendingChange) {
-        // 새 변화.
+        // 새 변화(unconfirmed 는 포기한 순간이 기준이므로, 여기 왔으면 모서리가 그 뒤 또 바뀐 것).
         t.readsForChange = 0;
         t.candidate = null;
         if (t.status == TrackStatus.confirmed || t.melds.isNotEmpty) t.changedSinceConfirm = true;
@@ -180,8 +181,7 @@ class MeldTracker {
       }
       if (t.lastReadAt != null && now.difference(t.lastReadAt!) < config.minReadGap) continue;
       if (t.readsForChange >= config.maxReadsPerChange) {
-        if (t.status != TrackStatus.unconfirmed) _log(now, side, 'unconfirmed', '읽기 ${t.readsForChange}번 불일치');
-        t.status = TrackStatus.unconfirmed;
+        _giveUp(t, side, now);
         continue;
       }
       t.status = TrackStatus.reading;
@@ -225,15 +225,30 @@ class MeldTracker {
     }
     t.candidate = fewer ? null : melds;
     _log(now, side, fewer ? 'fewer' : 'candidate', key);
-    t.status = t.readsForChange >= config.maxReadsPerChange ? TrackStatus.unconfirmed : TrackStatus.changed;
-    if (t.status == TrackStatus.unconfirmed) _log(now, side, 'unconfirmed', '읽기 ${t.readsForChange}번 불일치');
+    if (t.readsForChange >= config.maxReadsPerChange) {
+      _giveUp(t, side, now);
+    } else {
+      t.status = TrackStatus.changed;
+    }
+  }
+
+  /// 한 변화에 읽기를 다 썼다: unconfirmed 로 두고 지금 모서리를 새 기준으로 삼는다(모서리가 또 바뀌어야 다시 읽는다).
+  void _giveUp(TrackedSeat t, Side side, DateTime now) {
+    if (t.status != TrackStatus.unconfirmed) _log(now, side, 'unconfirmed', '읽기 ${t.readsForChange}번 불일치');
+    t.status = TrackStatus.unconfirmed;
+    final stats = t.last ?? t.statsAtRead;
+    if (stats != null) t.baseline = stats;
   }
 
   void onReadFailed(Side side, int frame, DateTime now, [String reason = '']) {
     final t = seat(side);
     if (t.status != TrackStatus.reading || t.pendingFrame != frame) return;
     _log(now, side, 'failed', reason);
-    t.status = t.readsForChange >= config.maxReadsPerChange ? TrackStatus.unconfirmed : TrackStatus.changed;
+    if (t.readsForChange >= config.maxReadsPerChange) {
+      _giveUp(t, side, now);
+    } else {
+      t.status = TrackStatus.changed;
+    }
   }
 
   /// 사용자가 칩을 눌러 다시 읽기를 요청. 다음 안정 프레임에서 읽고, 그동안 예전 확정값은 믿지 않는다.

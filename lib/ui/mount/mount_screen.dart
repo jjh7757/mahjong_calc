@@ -178,7 +178,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   static const String rectifyPref = 'mount.rectify';
 
   /// 이 판의 왕패(도라 산) 상자. 판 상태 추적이 새 판의 첫 버림패(패산이 다 올라오고 도라를 뒤집은 뒤)를 보면 `/v2/wall` 을
-  /// 한 번 부르고(판당 1회, 3초마다 부르지 않는다), 더보기 "도라 산 찾기" 로도 부른다. 주황 상자를 끌어 고칠 수 있고,
+  /// 한 번 부르고(판당 1회, 3초마다 부르지 않는다), 더보기 "도라 산 찾기" 로도 부른다. "격자 편집" 에서 주황 상자를 끌어 고칠 수 있고,
   /// 판이 바뀌면 버린다. 리치 아닌 화료 때 이 상자를 잘라 도라를 읽는다(`readGrid(wall:)`).
   WallZone? _wall;
   bool _wallBusy = false;
@@ -272,11 +272,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _startBg();
     }
     final c = _cam;
-    if (c == null) return;
     if (paused) {
-      c.dispose();
-      _cam = null;
-    } else if (state == AppLifecycleState.resumed) {
+      if (c != null) {
+        c.dispose();
+        _cam = null;
+      }
+    } else if (state == AppLifecycleState.resumed && c == null && _remoteUrl == null && _camError == null) {
+      // 일시정지에서 버린 카메라를 다시 연다(예전엔 _cam == null 이면 먼저 돌아가 복귀 뒤 카메라가 영영 안 열렸다, 2026-10-30 점검).
       _initCamera();
     }
   }
@@ -432,8 +434,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     }
   }
 
+  bool _camOpening = false;
+
   Future<void> _initCamera() async {
-    if (_remoteUrl != null) return;
+    if (_remoteUrl != null || _camOpening) return;
+    _camOpening = true;
     try {
       final cams = await availableCameras();
       if (cams.isEmpty) {
@@ -456,6 +461,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _maybeAutoSetup();
     } catch (e) {
       if (mounted) setState(() => _camError = '카메라를 열 수 없습니다: $e');
+    } finally {
+      _camOpening = false;
     }
   }
 
@@ -478,7 +485,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _autoSetupAttempt() async {
-    if (!mounted || _busy || _setupBusy || _gridBeforeEdit != null) return;
+    if (!mounted) return;
+    if (_busy || _setupBusy || _gridBeforeEdit != null || _galleryShot != null) {
+      // 촬영·편집 중이면 횟수를 세지 않고 미룬다(여기서 끝내면 남은 재시도가 조용히 사라진다, 2026-10-30 점검).
+      _autoSetupTimer?.cancel();
+      _autoSetupTimer = Timer(_autoSetupRetryGap, () => unawaited(_autoSetupAttempt()));
+      return;
+    }
     _autoSetupTries++;
     final last = _autoSetupTries >= _autoSetupMaxTries;
     final ok = await _autoSetup(auto: true, lastTry: last);
@@ -763,6 +776,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   Future<void> _locateWall(Game g, {bool manual = false}) async {
     if (_wallBusy) return;
     setState(() => _wallBusy = true);
+    // 자동 시도 횟수는 호출마다 센다(응답이 온 뒤에만 세면 타임아웃·429 같은 예외 때 재시도가 안 걸렸다, 2026-10-30 점검).
+    if (!manual) _wallAutoTries++;
+    final retry = !manual && _wallAutoTries < _wallMaxAutoTries;
+    var found = false;
     final client = RecognizerClient();
     try {
       final src = await _currentPhoto();
@@ -775,30 +792,34 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       if (!mounted) return;
       final w = parseWallV2(j);
       setState(() => _wall = w);
-      if (!manual) _wallAutoTries++;
-      final retry = w == null && !manual && _wallAutoTries < _wallMaxAutoTries;
-      if (retry) {
-        final key = _trackRoundKey;
-        _wallRetryTimer?.cancel();
-        _wallRetryTimer = Timer(_wallRetryGap, () {
-          if (!mounted || _trackRoundKey != key || _wall != null || _wallBusy) return;
-          unawaited(_locateWall(g));
-        });
-      }
+      found = w != null;
       if (manual || w == null) {
         _toast(w == null
             ? (retry
                 ? '도라 산을 찾지 못했습니다. ${_wallRetryGap.inSeconds}초 뒤 한 번 더 찾습니다.'
                 : '도라 산을 찾지 못했습니다. "도라 산 찾기" 로 다시 해 보세요.')
-            : '도라 산을 찾았습니다. 틀렸으면 주황 상자를 끌어 고치세요.');
+            : '도라 산을 찾았습니다. 틀렸으면 "격자 편집" 에서 주황 상자를 끌어 고치세요.');
       }
       unawaited(_saveWall(g, small, j));
     } catch (e) {
       if (mounted && manual) _toast('도라 산 찾기 실패: $e');
     } finally {
       client.close();
-      if (mounted) setState(() => _wallBusy = false);
+      if (mounted) {
+        setState(() => _wallBusy = false);
+        if (retry && !found) _scheduleWallRetry(g);
+      }
     }
+  }
+
+  /// 같은 판이고 아직 상자가 없으면 [_wallRetryGap] 뒤 한 번 더 찾는다(못 찾음·예외 모두).
+  void _scheduleWallRetry(Game g) {
+    final key = _trackRoundKey;
+    _wallRetryTimer?.cancel();
+    _wallRetryTimer = Timer(_wallRetryGap, () {
+      if (!mounted || _trackRoundKey != key || _wall != null || _wallBusy) return;
+      unawaited(_locateWall(g));
+    });
   }
 
   /// 지금 카메라 사진 한 장: 카메라 헤드면 추적과 같은 출처(고해상 미리보기 또는 촬영), 이 기기 카메라면 촬영.

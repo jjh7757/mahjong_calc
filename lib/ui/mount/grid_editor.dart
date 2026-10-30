@@ -10,8 +10,8 @@ import '../../table/table_layout.dart';
 /// [editing] 이면 경계선 네 개를 끌어 옮길 수 있다. 선은 바람개비 모양이라 각각 한쪽 끝까지만 그어진다.
 /// [dealer](선 자리)를 주면 선 기준 도라 구역([GridZones.doraZone])을 주황 상자로 그린다. 편집 중엔 상자 안을 끌어 옮기고
 /// 오른쪽 아래 모서리를 끌어 크기를 바꾼다(선이 다른 자리로 가면 상자도 그 자리 쪽으로 돌아간다).
-/// [wallBox](그 판의 왕패 상자, 판 시작 때 찾은 것)가 있으면 선 기준 구역 대신 그것을 그리고, 편집 중이 아니어도 끌어 고칠 수
-/// 있다([onWallChanged]).
+/// [wallBox](그 판의 왕패 상자, 판 시작 때 찾은 것)가 있으면 선 기준 구역 대신 그것을 그리고, 편집 중에 끌어 고칠 수
+/// 있다([onWallChanged]). 편집 중이 아니면 어떤 터치도 받지 않는다(잘못 터치 방지, 2026-10-29 "편집 on/off" 결정).
 /// 격자에 리치봉 상자([GridZones.sticks])가 있으면 빨간 상자로 그린다. 편집 중엔 안을 끌어 옮기고, 모서리로 크기를 바꾸고,
 /// 위쪽 동그라미를 끌어 돌린다(기운 탁자의 기기에 맞추기).
 class GridOverlay extends StatefulWidget {
@@ -183,17 +183,14 @@ class _GridOverlayState extends State<GridOverlay> {
         painter: _GridPainter(widget.grid, editing: widget.editing, doraBox: _doraBox, doraLabel: _doraLabel),
         size: size,
       );
-      final wallEditable = widget.wallBox != null && widget.onWallChanged != null;
-      if (!widget.editing && !wallEditable) return IgnorePointer(child: paint);
+      if (!widget.editing) return IgnorePointer(child: paint);
       return GestureDetector(
-        // 편집 중이 아니면 왕패 상자만 잡는다(나머지 터치는 아래로).
-        behavior: widget.editing ? HitTestBehavior.opaque : HitTestBehavior.translucent,
+        behavior: HitTestBehavior.opaque,
         // 잡은 곳은 손가락이 처음 닿은 자리로 판정한다(움직이기 시작한 자리면 선에서 벗어날 수 있다).
         dragStartBehavior: DragStartBehavior.down,
         onPanStart: (d) {
           _stickDrag = _hitSticks(d.localPosition, size);
           _doraDrag = _stickDrag == null ? _hitDora(d.localPosition, size) : null;
-          if (_doraDrag != null && widget.wallBox == null && !widget.editing) _doraDrag = null;
           _drag = _stickDrag == null && _doraDrag == null && widget.editing ? _hit(d.localPosition, size) : null;
           _startBox = _doraBox;
           _start = d.localPosition;

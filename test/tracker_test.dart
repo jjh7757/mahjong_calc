@@ -121,6 +121,41 @@ void main() {
     expect(tr.trackedMelds(Side.bottom), hasLength(2));
   });
 
+  test('적게 읽혀 unconfirmed 가 되면 모서리가 또 바뀌기 전엔 다시 읽지 않고(무한 재읽기 없음), 바뀌면 다시 읽는다', () {
+    final tr = MeldTracker(tileFrac: fracs);
+    tr.onFrame(frameOf(0), at(0));
+    final a1 = settle(tr, 0.03, 3);
+    tr.onRead(Side.bottom, a1.first.frame, [pon('5m')], at(7));
+    expect(tr.trackedMelds(Side.bottom), hasLength(1));
+
+    // 모서리가 또 바뀌었는데 서버는 세 번 다 "울기 없음"(확정보다 적음 = 가림·오독)으로 답한다.
+    var acts = settle(tr, 0.06, 12);
+    var sec = 16;
+    for (var i = 0; i < 3; i++) {
+      expect(acts, hasLength(1), reason: '${i + 1}번째 읽기');
+      tr.onRead(Side.bottom, acts.first.frame, const [], at(sec));
+      acts = tr.onFrame(frameOf(0.06), at(sec + 5));
+      sec += 6;
+    }
+    expect(tr.seat(Side.bottom).status, TrackStatus.unconfirmed);
+    expect(acts, isEmpty);
+
+    // 같은 모서리가 5분 이어져도 더 읽지 않는다(예전엔 안정 프레임마다 "새 변화" 로 보고 5초마다 읽었다).
+    var reads = 0;
+    for (var s = sec; s < sec + 300; s += 3) {
+      reads += tr.onFrame(frameOf(0.06), at(s)).length;
+    }
+    expect(reads, 0);
+    expect(tr.trackedMelds(Side.bottom), isNull);
+
+    // 모서리가 또 바뀌면(울기 하나 더) 새 변화로 읽고 확정한다.
+    final a2 = settle(tr, 0.09, sec + 300);
+    expect(a2, hasLength(1));
+    tr.onRead(Side.bottom, a2.first.frame, [pon('5m'), chi('1s', '2s', '3s'), pon('9p')], at(sec + 304));
+    expect(tr.seat(Side.bottom).status, TrackStatus.confirmed);
+    expect(tr.trackedMelds(Side.bottom), hasLength(3));
+  });
+
   test('후보를 들고 있는 동안 손이 지나가도 후보를 버리지 않고, 다음 안정 프레임의 두 번째 읽기로 확정한다', () {
     final tr = MeldTracker(tileFrac: fracs, config: const TrackerConfig(pixelShortcut: false));
     tr.onFrame(frameOf(0), at(0));
