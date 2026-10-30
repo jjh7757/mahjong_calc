@@ -1,5 +1,6 @@
 # 앱 CI: push·PR 마다 analyze + test. master push 엔 APK 도 빌드해 artifact 로 올린다.
 # APK 의 서버 키는 저장소 Secrets 의 RECOGNIZER_API_KEY (없으면 APK 단계는 건너뜀).
+# 서명 키는 Secrets 의 DEBUG_KEYSTORE_B64 (노트북 debug.keystore, 없으면 APK 빌드 실패).
 name: ci
 
 on:
@@ -67,6 +68,19 @@ jobs:
         if: steps.key.outputs.present == 'true'
         with:
           cache-read-only: false
+      # release 도 debug 키로 서명한다(build.gradle.kts). 노트북 빌드와 같은 키여야 설치된 앱에 덮어 설치된다.
+      # 없으면 러너가 임시 키를 만들어 덮어 설치가 안 되는 APK 가 나오므로 실패시킨다.
+      - name: 서명 키 복원
+        if: steps.key.outputs.present == 'true'
+        env:
+          DEBUG_KEYSTORE_B64: ${{ secrets.DEBUG_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$DEBUG_KEYSTORE_B64" ]; then
+            echo "::error::DEBUG_KEYSTORE_B64 secret 이 없음 (노트북 ~/.android/debug.keystore 의 base64)"
+            exit 1
+          fi
+          mkdir -p ~/.android
+          echo "$DEBUG_KEYSTORE_B64" | base64 -d > ~/.android/debug.keystore
       - name: APK 빌드 (release, 운영 키)
         if: steps.key.outputs.present == 'true'
         run: flutter build apk --release --dart-define=RECOGNIZER_API_KEY=${{ secrets.RECOGNIZER_API_KEY }}
