@@ -317,6 +317,9 @@ class TableReading {
 
   /// 추적이 "리치 뒤 아직 안 버림·울기 없음" 으로 본 자리(일발 후보, `RiverTracker.ippatsuCandidates`). merge 가 확인 플래그와 함께 쓴다.
   final Set<Side> trackedIppatsu;
+
+  /// 유국으로 봉이 남은 자리의 강에 눕힌 패가 있는지(모르면 null). 그 자리만 잰다. merge 가 이번 판 리치를 이걸로 정한다.
+  final Map<Side, bool?> riverSideways;
   const TableReading({
     required this.layout,
     this.winnerSide,
@@ -329,5 +332,6 @@ class TableReading {
     this.trackedRiichi = const {},
     this.trackedDoubleRiichi = const {},
     this.trackedIppatsu = const {},
+    this.riverSideways = const {},
   });
 }

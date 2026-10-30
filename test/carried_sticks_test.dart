@@ -55,8 +55,33 @@ CenterReading _center(Set<Side> sticks, {Map<String, String?> last = const {}}) 
     });
 
 TableMerge _merge(Game g, HandReading hand, Set<Side> sticks,
-        {Side winner = Side.right, Set<Side> tracked = const {}, Map<String, String?> last = const {}}) =>
-    mergeReading(hand: hand, center: _center(sticks, last: last), winnerSide: winner, game: g, seats: _seats, trackedRiichi: tracked);
+        {Side winner = Side.right,
+        Set<Side> tracked = const {},
+        Map<String, String?> last = const {},
+        Map<Side, bool?> sideways = const {}}) =>
+    mergeReading(
+      hand: hand,
+      center: _center(sticks, last: last),
+      winnerSide: winner,
+      game: g,
+      seats: _seats,
+      trackedRiichi: tracked,
+      riverSideways: sideways,
+    );
+
+/// 자동 반영을 막는 이유(화료 형태·표시패 등 다른 조건은 통과시킨다).
+String? _blocker(TableMerge m) => autoRecordBlocker(
+      warnings: const [],
+      issues: [for (final f in m.flags) f.issue],
+      otherWinners: 0,
+      isTsumo: false,
+      loser: 0,
+      resultValid: true,
+      paoBase: 0,
+      gameOver: false,
+      doraIndicators: 2,
+      riichi: m.situation.riichi,
+    );
 
 void main() {
   group('대국: 유국으로 남은 리치봉 주인', () {
@@ -113,21 +138,57 @@ void main() {
       expect(m.hasFlag(MergeIssue.riichiCarried), isTrue);
       expect(m.hasFlag(MergeIssue.riichiMismatch), isFalse);
       expect(m.photoRiichiSeats, isEmpty);
-      expect(
-        autoRecordBlocker(
-          warnings: const [],
-          issues: [for (final f in m.flags) f.issue],
-          otherWinners: 0,
-          isTsumo: false,
-          loser: 0,
-          resultValid: true,
-          paoBase: 0,
-          gameOver: false,
-          doraIndicators: 2,
-          riichi: false,
-        ),
-        contains('riichiCarried'),
+      expect(_blocker(m), contains('riichiCarried'));
+    });
+
+    test('강에 눕힌 패가 없으면 묻지 않고 리치 없이 자동 반영', () {
+      final m = _merge(g, _pinfu(), {Side.right}, sideways: {Side.right: false});
+      expect(m.situation.riichi, isFalse);
+      expect(m.hasFlag(MergeIssue.riichiFromRiver), isTrue);
+      expect(m.hasFlag(MergeIssue.riichiCarried), isFalse);
+      expect(_blocker(m), isNull);
+    });
+
+    test('강에 눕힌 패가 있으면 묻지 않고 리치로 자동 반영', () {
+      final m = _merge(g, _pinfu(), {Side.right}, sideways: {Side.right: true});
+      expect(m.situation.riichi, isTrue);
+      expect(m.hasFlag(MergeIssue.riichiFromRiver), isTrue);
+      expect(m.hasFlag(MergeIssue.riichiCarried), isFalse);
+      expect(_blocker(m), isNull);
+    });
+
+    test('눕힌 패가 없는데 리치 없이는 역이 없으면 앞뒤가 안 맞아 묻는다', () {
+      final m = _merge(g, _noYaku(), {Side.right}, last: const {'top': '2m'}, sideways: {Side.right: false});
+      expect(m.situation.riichi, isTrue);
+      expect(m.hasFlag(MergeIssue.riichiCarried), isTrue);
+    });
+
+    test('봉 주인이 다른 사람 화료 때: 눕힌 패가 있어야 1000점을 걷는다', () {
+      final yes = _merge(g, _pinfu(), {Side.right}, winner: Side.bottom, sideways: {Side.right: true});
+      expect(yes.photoRiichiSeats, {1});
+      expect(_blocker(yes), isNull);
+      final no = _merge(g, _pinfu(), {Side.right}, winner: Side.bottom, sideways: {Side.right: false});
+      expect(no.photoRiichiSeats, isEmpty);
+      expect(_blocker(no), isNull);
+    });
+
+    test('추적이 봉 변화를 봤어도 강에 눕힌 패가 없으면 리치 아님, 묻지 않는다', () {
+      final m = _merge(g, _pinfu(), {Side.right}, tracked: {Side.right}, sideways: {Side.right: false});
+      expect(m.situation.riichi, isFalse);
+      expect(m.photoRiichiSeats, isEmpty);
+      expect(m.hasFlag(MergeIssue.riichiCarried), isFalse);
+    });
+
+    test('울린 손패는 눕힌 패와 상관없이 리치 불가', () {
+      final open = HandReading(
+        tiles: [for (final c in '1m 2m 3m 4m 5m 6m 7m 8m 9m 2z'.split(' ')) ReadTile.fromCode(c, 0.99)!],
+        melds: [ReadMeld(ReadMeldType.chi, [for (final c in ['6m', '7m', '8m']) ReadTile.fromCode(c, 1)!], conf: 0.9)],
+        winTile: ReadTile.fromCode('2z', 0.99),
       );
+      final m = _merge(g, open, {Side.right}, sideways: {Side.right: true});
+      expect(m.situation.riichi, isFalse);
+      expect(m.hasFlag(MergeIssue.riichiImpossible), isTrue);
+      expect(m.hasFlag(MergeIssue.riichiFromRiver), isFalse);
     });
 
     test('봉 주인인데 리치 없이는 역이 없으면 리치로 본다', () {
@@ -249,6 +310,42 @@ void main() {
       expect(tr.riichiExcept(const {}), {Side.bottom, Side.top});
       // 띠가 바뀌어 확정한 자리는 남은 봉 주인이어도 남는다(병합이 확인을 묻는다).
       expect(tr.riichiExcept({Side.bottom, Side.top}), {Side.top});
+    });
+  });
+
+  group('강의 눕힌 패 응답', () {
+    const sent = [Side.right, Side.top, Side.left, Side.bottom];
+    Map<String, dynamic> river(int count, List<int> sideways) => {'tile_count': count, 'rows': [count], 'sideways': sideways};
+
+    test('틀로 읽었으면 있음·없음, 묻지 않은 자리는 빠진다', () {
+      final j = {
+        'method': 'frame',
+        'rivers': [river(16, const []), river(17, const [11]), river(16, const []), river(16, const [6])],
+      };
+      expect(riverSidewaysFrom(j, sent, {Side.right, Side.top}), {Side.right: false, Side.top: true});
+      expect(riverSidewaysFrom(j, sent, {Side.bottom}), {Side.bottom: true});
+    });
+
+    test('통째 읽기·응답 없음·보내지 않은 자리는 모름', () {
+      final whole = {
+        'method': 'whole',
+        'rivers': [river(16, const [3]), river(17, const []), river(16, const []), river(16, const [])],
+      };
+      expect(riverSidewaysFrom(whole, sent, {Side.right}), {Side.right: null});
+      expect(riverSidewaysFrom(null, sent, {Side.right}), {Side.right: null});
+      expect(riverSidewaysFrom({'method': 'frame', 'rivers': []}, sent, {Side.right}), {Side.right: null});
+      expect(riverSidewaysFrom({'method': 'frame', 'rivers': [river(16, const [])]}, const [Side.top], {Side.right}), {Side.right: null});
+    });
+
+    test('다른 자리보다 너무 적게 잡힌 강은 "없음" 으로 믿지 않는다(B 오른쪽: 1장)', () {
+      Map<String, dynamic> j(int right, List<int> sideways) => {
+            'method': 'frame',
+            'rivers': [river(right, sideways), river(18, const []), river(16, const []), river(17, const [])],
+          };
+      expect(riverSidewaysFrom(j(1, const []), sent, {Side.right}), {Side.right: null});
+      expect(riverSidewaysFrom(j(14, const []), sent, {Side.right}), {Side.right: false}); // 4장 차이는 울기로 뺏겼을 수 있다
+      expect(riverSidewaysFrom(j(13, const []), sent, {Side.right}), {Side.right: null});
+      expect(riverSidewaysFrom(j(1, const [0]), sent, {Side.right}), {Side.right: true}); // 찾았으면 적어도 믿는다
     });
   });
 

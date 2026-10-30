@@ -11,12 +11,14 @@ import 'merge.dart';
 /// - riichiImpossible: 울린 손패라 사진 리치를 무시
 /// - riichiMismatch: 사진·기록 리치가 다름(사진에 있으면 리치봉 자동 반영, 기록에 있으면 기록대로)
 /// - meldTracked: 게임 중 두 번 읽어 확정한 울기
+/// - riichiFromRiver: 유국으로 남은 봉 주인의 리치를 강의 눕힌 패로 정함(사용자 결정: 입력을 줄인다, 2026-10-30)
 /// 나머지(방총자 후보 여럿, 화료패·론/쯔모 추정, 장수·울기·확신도 문제, 동시 론)는 사람이 본다.
 const infoOnlyIssues = {
   MergeIssue.winFromDiscard,
   MergeIssue.riichiImpossible,
   MergeIssue.riichiMismatch,
   MergeIssue.meldTracked,
+  MergeIssue.riichiFromRiver,
 };
 
 /// 자동 반영을 막는 이유. 반영해도 되면 null.

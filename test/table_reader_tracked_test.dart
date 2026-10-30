@@ -71,6 +71,61 @@ void main() {
     expect(reading.warnings, isEmpty, reason: '경고가 있으면 자동 반영이 막힌다');
   });
 
+  test('봉이 남은 화료자의 강도 강 끝 호출 하나에 같이 보내고 눕힌 패를 읽는다, 그 밖에는 안 보낸다', () async {
+    Future<(List<String>, TableReading)> run(Set<Side> carried) async {
+      final sentNames = <String>[];
+      final client = RecognizerClient(
+        baseUrl: 'https://x.test',
+        apiKey: 'k',
+        httpClient: MockClient((r) async {
+          final body = latin1.decode(r.bodyBytes);
+          return switch (r.url.path) {
+            '/v2/seat' => json({
+                'face_up': true,
+                'tiles': [for (final c in ['1m', '2m', '3m', '4m', '5m', '6m', '7m', '8m', '9m', '1p', '1p', '2p', '3p']) {'tile': c, 'conf': 0.9}],
+                'separate_tile': null,
+                'melds': [],
+                'loose': [],
+              }),
+            '/v2/last3' => () {
+                final names = [for (final m in RegExp(r'filename="([^"]+)\.jpg"').allMatches(body)) m.group(1)!];
+                sentNames.addAll(names);
+                return json({
+                  'method': 'frame',
+                  'rivers': [
+                    for (final n in names)
+                      {
+                        'last_tile': {'tile': '4p', 'conf': 0.9},
+                        'tile_count': 16,
+                        'rows': [6, 6, 4],
+                        'sideways': n == 'last_bottom' ? [7] : <int>[],
+                      },
+                  ],
+                });
+              }(),
+            '/v2/sticks' => json({'riichi_sticks': {}}),
+            '/v2/dora' => json({'indicators': []}),
+            _ => http.Response('nope', 404),
+          };
+        }),
+      );
+      final reading = await TableReader(client).readGrid(table(), grid, winnerSide: Side.bottom, carriedSticks: carried);
+      return (sentNames, reading);
+    }
+
+    final (plain, plainReading) = await run(const {});
+    expect(plain, isNot(contains('last_bottom')));
+    expect(plain.length, 3);
+    expect(plainReading.riverSideways, isEmpty);
+
+    final (withWinner, reading) = await run({Side.bottom, Side.left});
+    expect(withWinner, contains('last_bottom'));
+    expect(withWinner.length, 4);
+    expect(reading.riverSideways, {Side.bottom: true, Side.left: false});
+    // 화료자 자기 강 끝은 방총자 후보가 아니다.
+    expect(reading.center!.lastDiscardAt(Side.bottom), isNull);
+  });
+
   test('자리 호출이 나머지를 자르는 중에 먼저 실패해도(취소) 처리되지 않은 오류 없이 readGrid 가 그 오류로 끝난다', () async {
     final client = RecognizerClient(
       baseUrl: 'https://x.test',

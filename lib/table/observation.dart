@@ -104,6 +104,29 @@ ObservedMeld? repairMeldSuit(ObservedMeld m) {
   return (melds: melds, stray: stray, notes: notes);
 }
 
+/// 눕힌 패를 못 찾아도 "없음" 으로 믿지 않는 기준: 다른 자리보다 이만큼 넘게 적게 잡힌 강은 틀을 잘못 잡은 것으로 본다
+/// (울기로 패를 뺏겨도 이만큼 차이 나기는 드물다. B·C·D 화료자 강에서 17·18장 강 옆에 1장만 잡은 경우가 있었다).
+const int riverShortBy = 4;
+
+/// `/v2/last3` 응답([sent] 순서)에서 [sides] 자리 강에 눕힌 패(리치 선언패)가 있는지. 모르면 null(통째 읽기·틀 실패·너무 적게 잡힘).
+/// Gemini 가 아니라 YOLO 틀의 모양으로 본 값이다(서버 `app/river.py`). 강 틀을 못 잡으면 응답 전체가 `method: whole` 이다.
+Map<Side, bool?> riverSidewaysFrom(Map<String, dynamic>? j, List<Side> sent, Set<Side> sides) {
+  final rivers = (j?['rivers'] as List<dynamic>?) ?? const [];
+  final frame = j?['method'] == 'frame';
+  Map<String, dynamic>? at(int i) => i < rivers.length ? rivers[i] as Map<String, dynamic>? : null;
+  int? count(int i) => at(i)?['tile_count'] as int?;
+  final most = [for (var i = 0; i < sent.length; i++) count(i) ?? 0].fold(0, (a, b) => a > b ? a : b);
+  return {
+    for (final s in sides)
+      s: switch (sent.indexOf(s)) {
+        final i when i >= 0 && frame && count(i) != null => ((at(i)!['sideways'] as List<dynamic>?) ?? const []).isNotEmpty
+            ? true
+            : (count(i)! < most - riverShortBy ? null : false),
+        _ => null,
+      },
+  };
+}
+
 /// 강의 패 한 장과 가로로 놓였는지.
 class RiverTile {
   final ReadTile tile;

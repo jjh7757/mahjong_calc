@@ -59,6 +59,8 @@ extension ReadStageX on ReadStage {
 
 /// 읽는 동안 생긴 중간 산출물. 촬영 기록 저장(데이터셋)과 디버깅용. 넘기면 채워진다.
 class TableReadTrace {
+  /// 봉이 남은 자리의 강에 눕힌 패가 있는지([TableReading.riverSideways]). 매장에서 맞는지 보려고 기록에 남긴다.
+  Map<Side, bool?> riverSideways = const {};
   Uint8List? small;
   Uint8List? handCrop;
   Uint8List? centerCrop;
@@ -188,6 +190,7 @@ class TableReader {
     Set<Side> trackedRiichi = const {},
     Set<Side> trackedDoubleRiichi = const {},
     Set<Side> trackedIppatsu = const {},
+    Set<Side> carriedSticks = const {},
     Discard? trackedDiscard,
     Side? winnerSide,
     Side? dealer,
@@ -276,9 +279,10 @@ class TableReader {
 
       known = winnerSide ?? (a.faceUp.length == 1 ? a.faceUp.first : null);
       seatSides = known == null ? Side.values : [known];
+      // 유국으로 봉이 남은 자리([carriedSticks])는 화료자여도 강을 같이 보낸다 — 눕힌 패로 이번 판 리치를 정한다. 호출은 그대로 하나.
       lastSides = [
         for (final s in Side.values)
-          if (s != known) s,
+          if (s != known || carriedSticks.contains(s)) s,
       ];
       final useTracked = trackedBox != null && trackSide != null && lastSides.contains(trackSide);
 
@@ -438,7 +442,10 @@ class TableReader {
         agreement: h.agreement,
       );
     }
-    final rivers = ((await lastsF)?['rivers'] as List<dynamic>?) ?? const [];
+    final lastsJ = await lastsF;
+    final rivers = (lastsJ?['rivers'] as List<dynamic>?) ?? const [];
+    final riverSideways = riverSidewaysFrom(lastsJ, lastSent, carriedSticks);
+    trace?.riverSideways = riverSideways;
     final lastJ = <Side, Map<String, dynamic>?>{
       for (final s in lastSides)
         s: switch (lastSent.indexOf(s)) {
@@ -523,6 +530,7 @@ class TableReader {
         trackedRiichi: trackedRiichi,
         trackedDoubleRiichi: trackedDoubleRiichi,
         trackedIppatsu: trackedIppatsu,
+        riverSideways: riverSideways,
       );
     }
 
@@ -578,6 +586,7 @@ class TableReader {
       trackedRiichi: first.trackedRiichi,
       trackedDoubleRiichi: first.trackedDoubleRiichi,
       trackedIppatsu: first.trackedIppatsu,
+      riverSideways: first.riverSideways,
     );
   }
 

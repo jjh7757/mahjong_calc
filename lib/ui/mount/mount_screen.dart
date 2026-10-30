@@ -1503,6 +1503,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             doubleRiichiHint: r.trackedDoubleRiichi.contains(r.winnerSide!),
             ippatsuHint: r.trackedIppatsu.contains(r.winnerSide!),
             trackedRiichi: r.trackedRiichi,
+            riverSideways: r.riverSideways,
           ),
       ];
     }
@@ -1537,6 +1538,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               trackedRiichi: _trackedRiichi(),
               trackedDoubleRiichi: _trackedDoubleRiichi(),
               trackedIppatsu: _trackedIppatsu(),
+              carriedSticks: {for (final s in g.carriedStickSeats) seats.sideOf(s)},
               trackedDiscard: _trackedDiscard(),
               trace: trace,
             )

@@ -194,6 +194,8 @@ class CaptureLog {
       'layout_mode': trace?.layoutMode,
       'tracked_mode': trace == null ? null : {for (final e in trace.trackedMode.entries) e.key.name: e.value},
       'call_ms': trace?.callMs,
+      if (trace != null && trace.riverSideways.isNotEmpty)
+        'river_sideways': {for (final e in trace.riverSideways.entries) e.key.name: e.value},
       if (trace?.autoMultiRon ?? false) 'auto_multi_ron': true,
       if (trace?.feltQuad case final q?) 'felt_quad': q.toJson(),  // 펴서 읽었으면 원본 사진의 펠트 네 모서리
       'fixed_analysis': trace?.analysis?.toJson(),
