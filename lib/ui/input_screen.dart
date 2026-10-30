@@ -161,6 +161,7 @@ class InputScreen extends StatelessWidget {
           winnerRiichi: editor.hasRiichi,
           rules: editor.rules,
           onWinRecorded: (o) => saveCaptureLabel(editor, o),
+          onSituationChanged: editor.applySituation,
           onRecorded: () {
             editor.clear();
             recorded = true;

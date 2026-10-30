@@ -48,6 +48,9 @@ class ResultScreen extends StatefulWidget {
   /// 대국에 기록한 확정 값. [onRecorded] 보다 먼저 부른다(손패를 비우기 전에 정답을 남기는 데 쓴다).
   final void Function(WinOutcome outcome)? onWinRecorded;
 
+  /// 상황 칩으로 고친 뒤 다시 계산할 때마다(화료자 손패). 입력 화면 값(기록·label.json)을 계산과 맞추는 데 쓴다.
+  final ValueChanged<Situation>? onSituationChanged;
+
   /// 거치 촬영에서 추정한 방총자. "대국에 반영" 시트에 미리 채운다.
   final int? loser;
 
@@ -82,6 +85,7 @@ class ResultScreen extends StatefulWidget {
     this.gameSeat,
     this.onRecorded,
     this.onWinRecorded,
+    this.onSituationChanged,
     this.loser,
     this.flags = const [],
     this.onFix,
@@ -108,6 +112,10 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
 
   /// 상황 칩(리치·더블 리치·일발·해저/하저·영상개화/창깡)으로 고친 상황과 그 결과. 처음엔 넘어온 것 그대로.
   late Situation? _sit = widget.situation;
+
+  /// 한 번 기록했으면 다시 기록하지 않는다(카운트다운 끝과 "지금 반영" 터치가 겹치면 두 번 기록되고 홈 화면까지 pop 됐다,
+  /// 2026-10-30 점검).
+  bool _recorded = false;
   late ScoreResult _result = widget.result;
 
   /// 동시 론이면 화료자마다 결과를 차례로 보여 준다(2026-10-29, 사용자: 더블론 결과 화면 연속 2개).
@@ -181,6 +189,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         _otherWins[i] = OtherWin(shown.seat, r, riichi: s.riichi || s.doubleRiichi, hand: hand, situation: s);
       }
     });
+    if (shown == null) widget.onSituationChanged?.call(s);
     _reveal.value = 1;
     ScaffoldMessenger.maybeOf(context)
       ?..hideCurrentSnackBar()
@@ -468,7 +477,8 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   /// 카운트다운이 끝났거나 "지금 반영": 시트 없이 기록하고 닫는다.
   void _recordAuto() {
     _autoTimer?.cancel();
-    if (!mounted || _game == null || _winner == null) return;
+    if (!mounted || _recorded || _game == null || _winner == null) return;
+    _recorded = true;
     final outcome = recordWinDirect(
       basePoints: _result.basePoints,
       isTsumo: widget.isTsumo,
@@ -918,7 +928,8 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
             ExtraWin(winner: o.seat, basePoints: o.result.basePoints, summary: o.result.summary, riichi: o.riichi),
       ],
     );
-    if (outcome == null || !context.mounted) return;
+    if (outcome == null || !context.mounted || _recorded) return;
+    _recorded = true;
     widget.onWinRecorded?.call(outcome);
     widget.onRecorded?.call();
     Navigator.of(context).pop();

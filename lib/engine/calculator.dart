@@ -174,7 +174,8 @@ List<YakuHan> _doraYaku(Hand hand, Situation sit, RuleSet rules) {
   if (rules.redDora && hand.redCount > 0) {
     result.add(YakuHan(Yaku.akaDora, hand.redCount));
   }
-  if (sit.riichi || sit.doubleRiichi) {
+  // 뒷도라는 리치 화료에만. 울었으면 리치일 수 없으니 상황에 리치가 남아 있어도 세지 않는다(2026-10-30 점검).
+  if (hand.isClosed && (sit.riichi || sit.doubleRiichi)) {
     final ura = countDora(sit.uraIndicators);
     if (ura > 0) result.add(YakuHan(Yaku.uraDora, ura));
   }

@@ -176,6 +176,16 @@ void main() {
       expect(find.text('열기'), findsOneWidget);
     });
 
+    testWidgets('"지금 반영" 이 겹쳐 눌려도(카운트다운 끝과 터치) 한 번만 기록한다', (tester) async {
+      await open(tester);
+      final now = find.byKey(const ValueKey('result-auto-now'));
+      await tester.tap(now);
+      await tester.tap(now, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(gameStore.current!.events.map((e) => e.kind), ['riichi', 'win']);
+      expect(find.text('열기'), findsOneWidget, reason: '홈 화면까지 pop 되면 안 된다');
+    });
+
     testWidgets('자동 반영이 꺼져 있으면 카운트다운 없음', (tester) async {
       await open(tester, after: null);
       expect(find.byKey(const ValueKey('result-auto-bar')), findsNothing);

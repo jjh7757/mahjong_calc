@@ -51,6 +51,29 @@ void main() {
     expect(find.textContaining('3900', findRichText: true), findsWidgets);
   });
 
+  testWidgets('칩으로 고치면 onSituationChanged 로 알린다(기록 label.json 이 계산과 같아지게)', (tester) async {
+    Situation? got;
+    SharedPreferences.setMockInitialValues({'voice.result': false});
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(
+      home: ResultScreen(
+        result: calculate(hand, sit),
+        hand: hand,
+        situation: sit,
+        isTsumo: false,
+        seatWind: Tiles.south,
+        onSituationChanged: (s) => got = s,
+      ),
+    ));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey('result-chip-riichi'))); // 리치 끔
+    await tester.pump();
+    expect(got, isNotNull);
+    expect(got!.riichi, isFalse);
+  });
+
   testWidgets('키오스크: 일발 칩은 리치가 없으면 리치도 같이 켠다', (tester) async {
     await pumpResult(tester, kiosk: true);
     await tester.tap(find.byKey(const ValueKey('result-chip-riichi'))); // 리치 끔 → 3판

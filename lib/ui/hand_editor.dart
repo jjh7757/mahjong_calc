@@ -231,6 +231,12 @@ class HandEditor extends ChangeNotifier {
     melds.add(meld);
     meldRed.add(red);
     firstTurnWin = false;
+    if (meld.isOpen && hasRiichi) {
+      // 울면 리치일 수 없다: 리치와 딸린 것(일발·뒷도라)을 끈다(2026-10-30 점검, 리치 입력 뒤 치·펑을 더하는 순서).
+      riichi = false;
+      doubleRiichi = false;
+      _clearRiichiOnly();
+    }
     if (closed.length == maxClosed && target == InputTarget.hand) {
       target = InputTarget.dora;
     }
@@ -389,6 +395,19 @@ class HandEditor extends ChangeNotifier {
         uraIndicators.clear();
       }
     }
+  }
+
+  /// 결과 화면 상황 칩으로 고친 상황을 받아들인다(리치·더블 리치·일발·하저/해저·영상·창깡). 기록 때 label.json 의 리치가
+  /// 계산에 쓴 값과 같아지게(2026-10-30 점검). 울었으면 리치는 켤 수 없다.
+  void applySituation(Situation s) {
+    riichi = s.riichi && isClosed;
+    doubleRiichi = s.doubleRiichi && isClosed;
+    ippatsu = s.ippatsu && hasRiichi;
+    lastTile = s.lastTile;
+    rinshan = s.rinshan;
+    chankan = s.chankan;
+    if (!hasRiichi) _clearRiichiOnly();
+    notifyListeners();
   }
 
   void setRules(RuleSet r) {

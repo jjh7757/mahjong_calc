@@ -210,6 +210,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   static String? _autoSetupDoneFor;
   int _autoSetupTries = 0;
   Timer? _autoSetupTimer;
+
+  /// 볼륨키 핸들러(등록·해제에 같은 것을 넘긴다).
+  late final VoidCallback _volumeShoot = _shoot;
   /// 10회 × 20초 ≈ 3분 반: 대국 시작을 누른 뒤 패가 올라오고 배패가 끝날 때까지 기다릴 수 있게(10-29 처음엔 3회 ≈ 1분).
   static const int _autoSetupMaxTries = 10;
   static const Duration _autoSetupRetryGap = Duration(seconds: 20);
@@ -235,7 +238,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadSource();
-    VolumeKeys.listen(_shoot);
+    VolumeKeys.listen(_volumeShoot);
     CaptureLog.isEnabled().then((v) {
       if (mounted) setState(() => _logEnabled = v);
     });
@@ -255,7 +258,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     _bgTimer?.cancel();
     _autoSetupTimer?.cancel();
     _wallRetryTimer?.cancel();
-    VolumeKeys.stop();
+    VolumeKeys.stop(_volumeShoot);
     WidgetsBinding.instance.removeObserver(this);
     _cam?.dispose();
     super.dispose();
@@ -503,7 +506,14 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   // ---------------- 입력 ----------------
 
   Future<void> _shoot() async {
-    if (_busy) return;
+    if (_busy || !mounted) return;
+    // 볼륨키는 위에 다른 화면(결과·입력·설정)이 떠 있어도 들어온다: 이 화면이 맨 위이고 대국 중일 때만 찍는다
+    // (2026-10-30 점검: 결과 화면 위에 결과 화면이 또 쌓이고 자동 반영 pop 이 엉뚱한 화면을 닫을 수 있었다).
+    if (ModalRoute.of(context)?.isCurrent == false) return;
+    if (widget.isHome) {
+      final g = gameStore.current;
+      if (g == null || g.isOver) return;
+    }
     final remote = _remoteUrl;
     if (remote != null) {
       await _shootRemote(remote);
@@ -1564,6 +1574,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             winnerRiichi: merge.situation.riichi || merge.situation.doubleRiichi,
             rules: widget.editor.rules,
             onWinRecorded: (o) => saveCaptureLabel(widget.editor, o),
+            onSituationChanged: widget.editor.applySituation,
             onRecorded: widget.editor.clear,
             autoRecordAfter: _autoRecord && autoBlock == null ? autoRecordDelay : null,
           ),

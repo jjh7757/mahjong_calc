@@ -150,6 +150,15 @@ void main() {
     });
   });
 
+  group('뒷도라', () {
+    test('울었으면 상황에 리치가 남아 있어도 뒷도라를 세지 않는다', () {
+      final hand = Hand.parse('456p678s23m55s 4m', melds: [Meld.chi(Tiles.parse('2m'))]);
+      final sit = ron().copyWith(riichi: true, uraIndicators: [Tiles.parse('4s')]);
+      final r = calculate(hand, sit);
+      expect(yakuOf(r), [Yaku.tanyao]);
+    });
+  });
+
   group('역만', () {
     test('국사무쌍 13면: 더블 역만 64000 / 옵션 끄면 32000', () {
       final hand = Hand.parse('19m19p19s1234567z 1m');
@@ -160,6 +169,14 @@ void main() {
       final s = calculate(hand, ron(), rules: const RuleSet(doubleYakuman: false));
       expect(yakuOf(s), [Yaku.kokushi]);
       expect(s.payment.ron, 32000);
+    });
+
+    test('대사희+사암각: 더블 역만 끄면 대사희도 1배(1배 짝 enum 이 없는 역만)', () {
+      final hand = Hand.parse('111z222z333z444z5m 5m');
+      expect(calculate(hand, ron()).payment.ron, 128000, reason: '대사희 2배 + 사암각 단기 2배');
+      final s = calculate(hand, ron(), rules: const RuleSet(doubleYakuman: false));
+      expect(yakuOf(s), containsAll([Yaku.daisuushi, Yaku.suuankou]));
+      expect(s.payment.ron, 64000, reason: '둘 다 1배(예전엔 대사희가 2배로 남아 96000)');
     });
 
     test('사암각 단기 쯔모: 16000/32000', () {

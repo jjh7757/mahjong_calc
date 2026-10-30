@@ -152,9 +152,10 @@ List<YakuHan> detectYaku(
   }
 
   if (yakuman.isNotEmpty) {
+    // 더블 역만을 안 쓰면 전부 1배. 대사희처럼 1배 짝 enum 이 없는 역만도(2026-10-30 점검: 옵션을 꺼도 2배로 남았다).
     return yakuman
         .map((y) => rules.doubleYakuman ? y : y.singleYakuman)
-        .map((y) => YakuHan(y, y.yakuman))
+        .map((y) => YakuHan(y, rules.doubleYakuman ? y.yakuman : 1))
         .toList();
   }
 
