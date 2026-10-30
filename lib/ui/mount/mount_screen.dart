@@ -220,7 +220,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// 지금 판(국·본장·기록 수). 바뀌면 추적을 비운다.
   String? _trackRoundKey;
   String? _trackDir;
-  bool _trackBusy = false;
+  /// 진행 중인 추적 읽기(모서리·리치봉) 수. bool 하나였을 땐 둘이 겹치면 먼저 끝난 쪽이 풀어 버렸다(2026-10-30 점검).
+  int _trackCalls = 0;
+  bool get _trackBusy => _trackCalls > 0;
   int _trackSeq = 0;
 
   /// 배경 프레임 중 추적 변화 주변만 모아 판마다 `<시각>_track/frames_##.zip` 으로(촬영 기록이 켜졌을 때, 2026-10-29).
@@ -713,7 +715,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       debugPrint('[track] analyze failed: $e');
       return;
     }
-    if (!mounted) return;
+    // 분석 중에 화료 촬영이 시작됐으면 이 프레임은 버린다 — 모서리·리치봉·도라 산 호출이 화료 판독과 겹치지 않게(2026-10-30 점검).
+    if (!mounted || _busy || _trackBusy) return;
     final now = DateTime.now();
     final shifted = _shiftGate.check(stats);
     if (shifted) {
@@ -1019,7 +1022,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     final url = _remoteUrl;
     final river = _riverTracker;
     if (url == null || river == null) return;
-    _trackBusy = true;
+    _trackCalls++;
     final cam = RemoteCamera(url, token: _remoteToken, timeout: const Duration(seconds: 20));
     final client = RecognizerClient();
     final seq = ++_trackSeq;
@@ -1035,7 +1038,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     } finally {
       cam.close();
       client.close();
-      _trackBusy = false;
+      _trackCalls--;
       if (mounted) setState(() {});
     }
   }
@@ -1062,7 +1065,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     final url = _remoteUrl;
     final tracker = _tracker;
     if (url == null || tracker == null) return;
-    _trackBusy = true;
+    _trackCalls++;
     final cam = RemoteCamera(url, token: _remoteToken, timeout: const Duration(seconds: 20));
     final client = RecognizerClient();
     final seq = ++_trackSeq;
@@ -1078,7 +1081,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     } finally {
       cam.close();
       client.close();
-      _trackBusy = false;
+      _trackCalls--;
       if (mounted) setState(() {});
     }
   }

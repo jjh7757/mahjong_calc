@@ -154,7 +154,7 @@ class HeadCamera(private val activity: FlutterActivity, private val textures: Te
         }
     }
 
-    /// 최신 프레임 → JPEG. [longSide] 가 프레임보다 작으면 건너뛰어 줄인다. [fresh] 면 이 호출 뒤 들어온 프레임을 기다린다(최대 1.5초).
+    /// 최신 프레임 → JPEG. [longSide] 가 프레임보다 작으면 건너뛰어 줄인다. [fresh] 면 이 호출 뒤 들어온 프레임을 기다리고(최대 3초), 안 오면 실패.
     /// 결과: bytes·width·height(JPEG 크기)·frameWidth·frameHeight(스트림 프레임 크기).
     fun jpeg(longSide: Int?, quality: Int, fresh: Boolean, cb: (Result<Map<String, Any?>>) -> Unit) {
         jpegExecutor.execute {
@@ -163,9 +163,15 @@ class HeadCamera(private val activity: FlutterActivity, private val textures: Te
                     val seq0 = frameSeq
                     if (fresh) {
                         wantFresh = true
-                        val deadline = System.currentTimeMillis() + 1500
+                        val deadline = System.currentTimeMillis() + FRESH_WAIT_MS
                         while (frameSeq == seq0 && System.currentTimeMillis() < deadline) {
                             lock.wait(100)
+                        }
+                        // 2026-10-30 점검: 새 프레임이 안 오면(헤드 앱이 뒤로 감·카메라 멈춤) 묵은 프레임을 성공으로 돌려주지 않는다.
+                        // 전엔 손패를 공개하기 전 프레임으로 판독할 수 있었다.
+                        if (frameSeq == seq0) {
+                            wantFresh = false
+                            throw IllegalStateException("새 카메라 프레임이 오지 않습니다. 헤드 화면이 켜져 있는지 확인하세요")
                         }
                     }
                     val src = nv21 ?: throw IllegalStateException("미리보기 프레임이 아직 없습니다")
@@ -254,6 +260,7 @@ class HeadCamera(private val activity: FlutterActivity, private val textures: Te
     companion object {
         const val PERMISSION_REQUEST = 7311
         const val COPY_INTERVAL_MS = 300L
+        const val FRESH_WAIT_MS = 3000L
 
         /// NV21 을 step 마다 한 픽셀씩 뽑아 작은 NV21 로(가로·세로 짝수로 맞춤).
         fun subsample(src: ByteArray, w: Int, h: Int, step: Int): ByteArray {
