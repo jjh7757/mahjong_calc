@@ -64,44 +64,81 @@ extension _KioskResult on _ResultScreenState {
     );
   }
 
-  /// 왼쪽 위: 뒤로, 화료자·국, 확인할 것.
+  /// 맨 위 줄: 뒤로, 화료자·국, 확인할 것. 손패(top 70) 위에 들어가게 높이를 정해 둔다 — 전엔 문구가 손패 뒤로 가렸다.
+  /// 문구는 3줄까지만 보이고, 누르면 전부 본다.
   Widget _topBar(BuildContext context) {
     final g = _game;
     return Positioned(
       left: 12,
-      top: 8,
-      width: 560,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      top: 6,
+      right: 170,
+      height: 62,
+      child: Row(
         children: [
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white70),
-                onPressed: () => Navigator.of(context).maybePop(),
-              ),
-              if (g != null && _shownSeat != null)
-                Flexible(
-                  child: Text(
-                    '${g.names[_shownSeat!]} · ${g.roundLabel}${_pageLabel == null ? '' : ' · $_pageLabel'}',
-                    key: const ValueKey('result-kiosk-who'),
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 18, color: Colors.white70, fontWeight: FontWeight.w600),
-                  ),
-                ),
-            ],
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white70),
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
-          if (widget.flags.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(left: 12),
+          if (g != null && _shownSeat != null)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 240),
               child: Text(
-                '확인할 것: ${widget.flags.join(' / ')}',
-                maxLines: 2,
+                '${g.names[_shownSeat!]} · ${g.roundLabel}${_pageLabel == null ? '' : ' · $_pageLabel'}',
+                key: const ValueKey('result-kiosk-who'),
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14, color: Color(0xFFFFB74D)),
+                style: const TextStyle(fontSize: 18, color: Colors.white70, fontWeight: FontWeight.w600),
+              ),
+            ),
+          const SizedBox(width: 12),
+          if (widget.flags.isNotEmpty)
+            Expanded(
+              child: InkWell(
+                key: const ValueKey('result-kiosk-flags'),
+                borderRadius: BorderRadius.circular(6),
+                onTap: () => _showFlags(context),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '확인할 것: ${widget.flags.join(' / ')}',
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 14, height: 1.25, color: Color(0xFFFFB74D)),
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: Color(0xFFFFB74D)),
+                  ],
+                ),
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  /// 확인할 것 전부. 읽는 사이 자동 반영으로 화면이 닫히지 않게 카운트다운을 멈춘다.
+  void _showFlags(BuildContext context) {
+    _cancelAuto();
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => kioskWrap(
+        ctx,
+        AlertDialog(
+          scrollable: true,
+          title: const Text('확인할 것'),
+          content: SizedBox(
+            width: 620,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final f in widget.flags)
+                  Padding(padding: const EdgeInsets.only(bottom: 8), child: Text('• $f')),
+              ],
+            ),
+          ),
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('닫기'))],
+        ),
       ),
     );
   }
@@ -124,18 +161,20 @@ extension _KioskResult on _ResultScreenState {
     final count = rest.length + 1 + hand.melds.fold<int>(0, (s, m) => s + m.tiles.length);
     final gaps = 28.0 + 22 * hand.melds.length;
     final tw = ((_w - 320 - gaps) / count - 2).clamp(30.0, 58.0);
+    final reds = RedMarks(hand);
     return FittedBox(
       alignment: Alignment.centerLeft,
       fit: BoxFit.scaleDown,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          for (final t in rest) Padding(padding: const EdgeInsets.only(right: 2), child: TileView(t, width: tw)),
+          for (final t in rest)
+            Padding(padding: const EdgeInsets.only(right: 2), child: TileView(t, width: tw, red: reds.take(t))),
           const SizedBox(width: 28),
-          TileView(hand.winTile, width: tw, highlighted: true),
+          TileView(hand.winTile, width: tw, highlighted: true, red: reds.take(hand.winTile)),
           for (final m in hand.melds) ...[
             const SizedBox(width: 22),
-            TileRow(m.tiles, width: tw * 0.9, open: m.isOpen),
+            TileRow(m.tiles, width: tw * 0.9, open: m.isOpen, reds: reds.marks(m.tiles)),
           ],
         ],
       ),

@@ -617,6 +617,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
     final d = result.decomposition;
     final n = result.yaku.length;
     final stamp = result.isYakuman ? _yakumanTotal(result) : result.limit.label;
+    final reds = RedMarks(_hand);
 
     final pageLabel = _pageLabel;
     return Scaffold(
@@ -678,7 +679,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                                       borderRadius: BorderRadius.circular(6),
                                     )
                                   : null,
-                              child: TileRow(s.tiles, width: 26, open: !s.isClosedKan),
+                              child: TileRow(s.tiles, width: 26, open: !s.isClosedKan, reds: reds.marks(s.tiles)),
                             ),
                         ],
                       ),

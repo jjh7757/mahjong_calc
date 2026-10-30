@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../engine/calculator.dart' as engine;
-import '../engine/calculator.dart' show Hand, Meld, RuleSet, ScoreResult, Situation, Tiles;
+import '../engine/calculator.dart' show Hand, Meld, RuleSet, ScoreResult, Situation, Tiles, redTilesOf;
 import '../game/game.dart';
 import '../table/merge.dart';
 
@@ -465,6 +465,7 @@ class HandEditor extends ChangeNotifier {
           melds: List.of(melds),
           winTile: winTile!.tile,
           redCount: redTotal,
+          redTiles: redTilesOf([for (final t in closed) if (t.red) t.tile], melds, meldRed),
         );
 
   ScoreResult calculate() {

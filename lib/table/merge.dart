@@ -17,7 +17,7 @@
 /// 7. 사진에서 리치(횡치·리치봉)가 보인 자리는 [TableMerge.photoRiichiSeats] 로. 화료 기록 때 리치봉 자동 반영에 쓴다.
 library;
 
-import '../engine/calculator.dart' show Hand, Meld, Situation, Tiles, calculate;
+import '../engine/calculator.dart' show Hand, Meld, Situation, Tiles, calculate, redTilesOf;
 import '../engine/decompose.dart' show decompose;
 import '../game/game.dart';
 import 'seat_map.dart';
@@ -464,6 +464,7 @@ TableMerge mergeReading({
         melds: melds,
         winTile: win!.tile,
         redCount: closed.where((t) => t.red).length + meldRed.fold(0, (a, b) => a + b),
+        redTiles: redTilesOf([for (final t in closed) if (t.red) t.tile], melds, meldRed),
       );
     } on ArgumentError catch (e) {
       flags.add(MergeFlag(MergeIssue.invalidHand, e.message.toString()));

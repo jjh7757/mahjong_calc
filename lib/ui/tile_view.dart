@@ -1,6 +1,30 @@
 import 'package:flutter/material.dart';
 
+import '../engine/hand.dart';
 import '../engine/tile.dart';
+
+/// 손패를 그릴 때 어느 패를 적도라 그림으로 할지. [marks]·[take] 는 앞에서부터 한 장씩 쓴다.
+/// [Hand.redTiles] 를 모르는 손패(개수만 있는 경우)는 나오는 5 부터 개수만큼.
+class RedMarks {
+  final List<int> _left;
+  int _any;
+
+  RedMarks(Hand? hand)
+      : _left = List.of(hand?.redTiles ?? const <int>[]),
+        _any = hand != null && hand.redTiles.isEmpty ? hand.redCount : 0;
+
+  bool take(int tile) {
+    if (Tiles.isHonor(tile) || Tiles.number(tile) != 5) return false;
+    if (_left.remove(tile)) return true;
+    if (_any > 0) {
+      _any--;
+      return true;
+    }
+    return false;
+  }
+
+  List<bool> marks(List<int> tiles) => [for (final t in tiles) take(t)];
+}
 
 /// 패 한 장. 그림은 assets/tiles/ (CC0 패 세트).
 class TileView extends StatelessWidget {
@@ -109,17 +133,20 @@ class TileRow extends StatelessWidget {
   final double width;
   final bool open;
 
-  const TileRow(this.tiles, {super.key, this.width = 24, this.open = true});
+  /// 패마다 적도라 그림인지([RedMarks.marks]). 비어 있으면 모두 일반 패.
+  final List<bool> reds;
+
+  const TileRow(this.tiles, {super.key, this.width = 24, this.open = true, this.reds = const []});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        for (final t in tiles)
+        for (final (i, t) in tiles.indexed)
           Padding(
             padding: const EdgeInsets.only(right: 2),
-            child: TileView(t, width: width, dimmed: !open),
+            child: TileView(t, width: width, dimmed: !open, red: i < reds.length && reds[i]),
           ),
       ],
     );

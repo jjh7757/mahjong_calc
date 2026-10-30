@@ -15,11 +15,15 @@ class Hand {
   /// 적도라 개수(손패와 묶음 전체).
   final int redCount;
 
+  /// 적도라인 패의 종류(5만·5통·5삭, 패마다 하나). 점수에는 쓰지 않고 패를 그릴 때만 쓴다. 모르면 비어 있다.
+  final List<int> redTiles;
+
   Hand({
     required List<int> closedTiles,
     this.melds = const [],
     required this.winTile,
     this.redCount = 0,
+    this.redTiles = const [],
   }) : closedTiles = List.unmodifiable([...closedTiles]..sort()) {
     final expected = 14 - 3 * melds.length;
     if (this.closedTiles.length != expected) {
@@ -60,6 +64,13 @@ class Hand {
 
   List<int> get closedCounts => toCounts(closedTiles);
 }
+
+/// [Hand.redTiles] 만들기: 손패의 적도라([closedRed]) + 묶음마다 적도라 수([meldRed])만큼 그 묶음의 5.
+List<int> redTilesOf(Iterable<int> closedRed, List<Meld> melds, List<int> meldRed) => [
+      ...closedRed,
+      for (var i = 0; i < melds.length && i < meldRed.length; i++)
+        ...melds[i].tiles.where((t) => !Tiles.isHonor(t) && Tiles.number(t) == 5).take(meldRed[i]),
+    ];
 
 /// 화료 상황.
 class Situation {
