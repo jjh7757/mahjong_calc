@@ -2,6 +2,7 @@
 
 - 답변·진행 보고는 한국어로.
 - 새 세션은 `HANDOFF.md` 를 먼저 읽는다(현황·경로·결정).
+- 매장에서 "감독 시작" 이라고 하면 `docs/visit_supervision.md` 대로 한다.
 
 ## 속도·정확도 측정을 했으면 `docs/metrics.md` 를 고친다
 

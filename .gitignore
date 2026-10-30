@@ -67,3 +67,6 @@ app.*.map.json
 /experiments/**/.venv/
 # 기기에서 가져온 촬영·추적 기록 폴더(사진 옆 json 까지 통째로)
 /experiments/tracking/home_*/
+/experiments/visit_*/
+/.claude/settings.local.json
+/experiments/visit_head.txt

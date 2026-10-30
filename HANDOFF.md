@@ -82,6 +82,8 @@
 
 ## 바로 다음 세션에서 할 것
 
+**매장 실험 Claude 감독(2026-10-30 밤, 사용자 결정):** 노트북을 매장에 가져가 이 저장소의 세션이 태블릿(USB adb)과 헤드(HTTP)를 보며 감독한다. **폰은 adb 로 붙이지 않고 무선 디버깅도 끈다(사용자 결정, 켜 둔 동안 태블릿 ↔ 폰이 끊겼고 끄니 복구, 한 번 본 것).** 절차 `docs/visit_supervision.md`("감독 시작"), 도구 `experiments/supervise/supervise.py`(status·head-set·preview·shot·pull·report·watch), 헤드 토큰 `experiments/visit_head.txt`(커밋 안 함), 받은 기록 `experiments/visit_<날짜>/`(.gitignore). 태블릿(SM-X236N)으로 status·shot·pull·report·watch 확인, 헤드 호출·QR 해독은 가짜 서버·그린 QR 로만 확인. 감독 명령은 `.claude/settings.local.json` 으로 승인 없이 돈다. 실제 폰 헤드로 `head-qr`·`preview`(4080×3060) 확인. **집 시험(10-30 23:19~)에서 태블릿 ↔ 폰만 끊김:** 서로 ping 실패·ARP 미완료, 공유기·노트북 쪽은 정상, 같은 BSSID. 원인 미확인(앱 문제 아님, 공유기 쪽 의심) → `status`·`watch` 가 태블릿에서 헤드로 가는 길도 본다(`nc`). 같은 때 프레임이 약 1분간 검었던 원인도 미확인(렌즈가 가려졌을 가능성).
+
 **2026-10-30 에 한 것(프로젝트 전체 점검 → 매장 전 앱 6건 고침):** 앱·서버를 네 영역(엔진·게임 / 테이블 판독·추적 / UI·거치 화면 / 인식 서버)으로 나눠 코드 검토. 기본 상태는 analyze 이상 없음·테스트 429 통과·pytest 72 통과·운영 = master(0040afb). 고친 것(테스트 3개 더함, 전부 `2026-10-30 점검` 주석):
 - `lib/table/tracker.dart`: 확정보다 적게 읽혀(또는 읽기 실패로) unconfirmed 가 되면 그 순간 모서리를 새 기준으로 삼는다. 전엔 기준이 그대로라 안정 프레임마다 "새 변화" → 3번 읽기 → unconfirmed 를 5초마다 끝없이 반복(300초에 `/v2/corner` 50회, 429 원인). 모서리가 또 바뀌면 다시 읽고 확정한다(`tracker_test` 추가).
 - `lib/table/table_reader.dart`: 화료자를 픽셀로 못 정한 판에서 뒷면(손패 0장)인 추적 자리는 손패 전용 답을 그대로 쓴다. 전엔 "장수 불일치" 로 `/v2/seat` 재읽기 + 경고 → 경고 때문에 자동 반영이 항상 막혔다(`table_reader_tracked_test` 추가).
