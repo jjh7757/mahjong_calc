@@ -681,7 +681,10 @@ Future<void> showDrawDialog(BuildContext context, Game g, {Set<int> trackedRiich
                 Text(
                   abortive == '사가리치'
                       ? '점수 이동 없음 · 친 유지 · 본장 +1. 점수판에 없는 리치는 1000점씩 공탁에 넣습니다'
-                      : '점수 이동 없음 · 친 유지 · 본장 +1 · 공탁 유지',
+                      : newRiichi.isEmpty
+                          ? '점수 이동 없음 · 친 유지 · 본장 +1 · 공탁 유지'
+                          : '점수 이동 없음 · 친 유지 · 본장 +1 · 공탁 유지. 리치한 ${(newRiichi.toList()..sort()).map((s) => g.names[s]).join('·')} 은(는) 1000점씩 공탁에 넣습니다',
+                  key: const ValueKey('draw-abortive-note'),
                   style: const TextStyle(fontSize: 12),
                 ),
               ] else ...[
@@ -763,6 +766,10 @@ Future<void> showDrawDialog(BuildContext context, Game g, {Set<int> trackedRiich
     if (reason == '사가리치') {
       g.fourRiichiDraw();
     } else if (reason != null) {
+      // 점수판에 없던 리치도 봉은 공탁으로 남는다. 넣어 두어야 다음 판에 봉 주인을 안다.
+      for (final s in (newRiichi.toList()..sort())) {
+        g.declareRiichi(s);
+      }
       g.abortiveDraw(reason);
     } else {
       // 리치봉을 먼저 공탁에 넣고 유국 처리한다(공탁은 다음 국으로 넘어간다).

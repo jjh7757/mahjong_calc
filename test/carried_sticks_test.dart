@@ -274,6 +274,56 @@ void main() {
     });
   });
 
+  group('유국 창: 도중 유국', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({});
+      gameStore.start(const ['A', 'B', 'C', 'D'], const GameSettings());
+    });
+    tearDown(() {
+      if (gameStore.current != null) gameStore.discardCurrent();
+    });
+
+    Future<void> abort(WidgetTester tester, Set<int> tracked) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (c) => TextButton(
+              onPressed: () => showDrawDialog(c, gameStore.current!, trackedRiichi: tracked),
+              child: const Text('유국'),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('유국'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('draw-abortive-구종구패')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('추적이 본 리치도 공탁에 넣고 봉 주인을 남기며, 창에 알린다', (tester) async {
+      await abort(tester, const {2});
+      expect(tester.widget<Text>(find.byKey(const ValueKey('draw-abortive-note'))).data, contains('C'));
+      await tester.tap(find.text('확인'));
+      await tester.pumpAndSettle();
+      final g = gameStore.current!;
+      expect(g.riichiSticks, 1);
+      expect(g.carriedStickSeats, {2});
+      expect(g.scores, [25000, 25000, 24000, 25000]);
+      expect(g.honba, 1);
+    });
+
+    testWidgets('리치가 없으면 점수·공탁 그대로', (tester) async {
+      await abort(tester, const {});
+      expect(tester.widget<Text>(find.byKey(const ValueKey('draw-abortive-note'))).data, isNot(contains('1000')));
+      await tester.tap(find.text('확인'));
+      await tester.pumpAndSettle();
+      final g = gameStore.current!;
+      expect(g.riichiSticks, 0);
+      expect(g.carriedStickSeats, isEmpty);
+      expect(g.scores, [25000, 25000, 25000, 25000]);
+    });
+  });
+
   group('추적기: 전판 봉', () {
     const grid = GridZones.initial;
     const cols = 8, rows = 4;
