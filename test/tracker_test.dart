@@ -184,6 +184,59 @@ void main() {
     expect(tr.trackedMelds(Side.bottom), hasLength(1));
   });
 
+  test('확정한 울기와 같게 읽히면 그 확정을 두 번째 읽기로 쳐 한 번에 확정한다', () {
+    final tr = MeldTracker(tileFrac: fracs, config: const TrackerConfig(pixelShortcut: false));
+    tr.onFrame(frameOf(0), at(0));
+    final a1 = settle(tr, 0.03, 3);
+    tr.onRead(Side.bottom, a1.first.frame, [pon('5m')], at(7));
+    expect(tr.seat(Side.bottom).status, TrackStatus.changed, reason: '처음엔 두 읽기가 필요');
+    final a2 = tr.onFrame(frameOf(0.03), at(12));
+    tr.onRead(Side.bottom, a2.first.frame, [pon('5m')], at(13));
+    expect(tr.seat(Side.bottom).status, TrackStatus.confirmed);
+    // 모서리가 또 바뀌었지만 읽어 보니 같은 퐁 → 한 번에 확정(헛 변화).
+    final a3 = settle(tr, 0.08, 15);
+    expect(a3, hasLength(1));
+    tr.onRead(Side.bottom, a3.first.frame, [pon('5m')], at(19));
+    expect(tr.seat(Side.bottom).status, TrackStatus.confirmed);
+    expect(tr.events.last.detail, contains('확정과 같음'));
+    expect(tr.trackedMelds(Side.bottom), hasLength(1));
+  });
+
+  test('헛 변화(읽어 보니 울기 그대로)가 이어지면 다음 읽기를 두 배씩 미루고, 그동안 확정값은 믿지 않는다', () {
+    // 2026-10-30 집 점검: 흰 천장의 노출 흔들림이 "패 1장 넘게 바뀜" 이 되어 30분에 모서리 읽기 28번.
+    final tr = MeldTracker(tileFrac: fracs, config: const TrackerConfig(confirmReads: 1));
+    expect(const TrackerConfig().idleBackoff(1), const Duration(seconds: 10));
+    expect(const TrackerConfig().idleBackoff(3), const Duration(seconds: 40));
+    expect(const TrackerConfig().idleBackoff(9), const Duration(minutes: 2));
+    tr.onFrame(frameOf(0), at(0));
+    final a1 = settle(tr, 0.04, 3);
+    expect(a1, hasLength(1));
+    tr.onRead(Side.bottom, a1.first.frame, const [], at(7)); // 헛 변화 1 → 10초 미룸(17초까지)
+    expect(tr.seat(Side.bottom).idleStreak, 1);
+
+    expect(settle(tr, 0.08, 9), isEmpty); // 또 바뀜(12초) — 미루는 중
+    expect(tr.seat(Side.bottom).status, TrackStatus.changed);
+    expect(tr.trackedMelds(Side.bottom), isNull, reason: '미루는 동안엔 확정값을 쓰지 않는다');
+    expect(tr.onFrame(frameOf(0.08), at(15)), isEmpty);
+    final a2 = tr.onFrame(frameOf(0.08), at(18));
+    expect(a2, hasLength(1));
+    tr.onRead(Side.bottom, a2.first.frame, const [], at(19)); // 헛 변화 2 → 20초(39초까지)
+    expect(tr.seat(Side.bottom).idleStreak, 2);
+
+    expect(settle(tr, 0.12, 21), isEmpty);
+    for (var sec = 27; sec < 39; sec += 3) {
+      expect(tr.onFrame(frameOf(0.12), at(sec)), isEmpty, reason: '$sec초');
+    }
+    final a3 = tr.onFrame(frameOf(0.12), at(39));
+    expect(a3, hasLength(1));
+    tr.onRead(Side.bottom, a3.first.frame, [pon('5m')], at(40)); // 진짜 울기 → 미루기 끝
+    expect(tr.seat(Side.bottom).idleStreak, 0);
+    expect(tr.seat(Side.bottom).backoffUntil, isNull);
+    expect(tr.trackedMelds(Side.bottom), hasLength(1));
+    // 다음 변화는 평소대로(읽기 간격 5초만) 바로 읽는다.
+    expect(settle(tr, 0.2, 42), hasLength(1));
+  });
+
   test('새 판이면 전부 비우고 다음 프레임을 기준으로 삼는다', () {
     final tr = MeldTracker(tileFrac: fracs);
     tr.onFrame(frameOf(0), at(0));

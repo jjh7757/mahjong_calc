@@ -16,6 +16,8 @@
 /// 확정 규칙(설계 1절): 다른 프레임의 두 읽기가 같아야 확정. 비용을 줄이려고(사용자 지적: 울 때마다 호출이 는다)
 /// 읽은 장수가 픽셀 어림과 맞으면 한 번으로 확정한다([TrackerConfig.pixelShortcut]). 확정된 묶음 수보다 적게 읽히면
 /// 가림으로 보고 받지 않는다(울기는 판 안에서 사라지지 않는다).
+/// 헛 변화(읽어 보니 확정 울기가 그대로)가 이어지면 그 자리 다음 읽기를 [TrackerConfig.idleBackoffMax] 까지 두 배씩 미룬다.
+/// 미루는 동안에도 변화는 기록해 [trackedMelds] 는 null(화료 땐 자리 전체를 읽는다) — 늦어질 뿐 틀린 울기를 쓰지는 않는다.
 /// 설계: docs/state_tracking_design.md.
 library;
 
@@ -50,6 +52,10 @@ class TrackerConfig {
 
   final int maxMelds;
 
+  /// 헛 변화가 k 번 이어지면 다음 읽기까지 [minReadGap] × 2^k 를 기다린다(이 값까지). 노출 흔들림 같은 헛 변화가
+  /// 끝없이 호출을 부르지 않게(2026-10-30 집 점검: 흰 천장 30분에 모서리 읽기 28번).
+  final Duration idleBackoffMax;
+
   const TrackerConfig({
     this.moveThreshold = 0.03,
     this.changeTiles = 1.0,
@@ -60,7 +66,15 @@ class TrackerConfig {
     this.pixelShortcut = true,
     this.shortcutTolerance = 0.75,
     this.maxMelds = 4,
+    this.idleBackoffMax = const Duration(minutes: 2),
   });
+
+  /// 헛 변화 [streak] 번 뒤 기다릴 시간.
+  Duration idleBackoff(int streak) {
+    if (streak <= 0) return Duration.zero;
+    final ms = minReadGap.inMilliseconds * (1 << streak.clamp(0, 16));
+    return Duration(milliseconds: ms.clamp(0, idleBackoffMax.inMilliseconds));
+  }
 }
 
 /// "이 자리 모서리를 지금 프레임 기준으로 읽어라". [frame] 은 [MeldTracker.onRead] 에 그대로 돌려준다.
@@ -108,6 +122,10 @@ class TrackedSeat {
   DateTime? lastReadAt;
   int? pendingFrame;
   CornerStats? statsAtRead;
+
+  /// 연속 헛 변화(읽어 보니 확정 울기가 그대로) 수와, 그래서 다음 읽기를 미룰 시각.
+  int idleStreak = 0;
+  DateTime? backoffUntil;
 
   int get readTileCount => melds.fold(0, (a, m) => a + m.tiles.length);
 }
@@ -180,6 +198,7 @@ class MeldTracker {
         _log(now, side, 'changed', '${changeTiles.toStringAsFixed(1)}장 분량');
       }
       if (t.lastReadAt != null && now.difference(t.lastReadAt!) < config.minReadGap) continue;
+      if (t.backoffUntil != null && now.isBefore(t.backoffUntil!)) continue;
       if (t.readsForChange >= config.maxReadsPerChange) {
         _giveUp(t, side, now);
         continue;
@@ -205,7 +224,9 @@ class MeldTracker {
 
     // 울기는 판 안에서 사라지지 않는다: 확정된 것보다 적게 읽혔으면 가림·오독으로 보고 다시 읽는다.
     final fewer = t.changedSinceConfirm && melds.length < t.melds.length;
-    final agree = t.candidate != null && _key(t.candidate!) == key;
+    // 이미 확정한 울기와 같게 읽혔으면 그 확정(다른 프레임의 읽기)을 두 번째 읽기로 친다 — 헛 변화가 한 번에 끝난다.
+    final sameAsConfirmed = t.confirmedAt != null && key == _key(t.melds);
+    final agree = (t.candidate != null && _key(t.candidate!) == key) || sameAsConfirmed;
     final readTiles = melds.fold(0, (a, m) => a + m.tiles.length);
     final pixelTiles = frac <= 0 ? -1.0 : stats.tiles(frac);
     final shortcut = config.pixelShortcut && pixelTiles >= 0 && (readTiles - pixelTiles).abs() <= config.shortcutTolerance;
@@ -213,6 +234,13 @@ class MeldTracker {
 
     if (!fewer && enough) {
       if (readTiles > t.readTileCount) t.grewAt = now;
+      if (key == _key(t.melds)) {
+        t.idleStreak++;
+        t.backoffUntil = now.add(config.idleBackoff(t.idleStreak));
+      } else {
+        t.idleStreak = 0;
+        t.backoffUntil = null;
+      }
       t.melds = melds;
       t.confirmedAt = now;
       t.status = TrackStatus.confirmed;
@@ -220,7 +248,7 @@ class MeldTracker {
       t.baseline = stats;
       t.candidate = null;
       t.readsForChange = 0;
-      _log(now, side, 'confirmed', '$key (${agree ? '두 읽기 일치' : shortcut ? '픽셀 장수 일치 ${pixelTiles.toStringAsFixed(1)}' : '한 번'})');
+      _log(now, side, 'confirmed', '$key (${sameAsConfirmed ? '확정과 같음' : agree ? '두 읽기 일치' : shortcut ? '픽셀 장수 일치 ${pixelTiles.toStringAsFixed(1)}' : '한 번'})');
       return;
     }
     t.candidate = fewer ? null : melds;
@@ -259,6 +287,7 @@ class MeldTracker {
     t.candidate = null;
     t.readsForChange = 0;
     t.lastReadAt = null;
+    t.backoffUntil = null;
     if (t.melds.isNotEmpty) t.changedSinceConfirm = true;
     _log(now, side, 'reread', '사용자 요청');
   }
@@ -304,6 +333,8 @@ class MeldTracker {
               'confirmed_at': e.value.confirmedAt?.toIso8601String(),
               'changed_since_confirm': e.value.changedSinceConfirm,
               'reads_for_change': e.value.readsForChange,
+              'idle_streak': e.value.idleStreak,
+              'backoff_until': e.value.backoffUntil?.toIso8601String(),
             },
         },
         'events': [for (final e in events) e.toJson()],

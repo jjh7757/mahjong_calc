@@ -475,6 +475,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// 지금 카메라의 정체(격자를 어느 카메라로 잡았는지 적어 둘 값).
   String get _cameraId => _remoteUrl ?? 'local';
 
+  /// 지금 카메라로 격자를 잡았다(자동 맞추기 성공 또는 사용자가 저장) = 탁자를 본 카메라. 판 상태 추적의 조건.
+  bool get _tableConfirmed => _gridSource == _cameraId;
+
   void _maybeAutoSetup() {
     final g = gameStore.current;
     if (!mounted || !widget.isHome || !_autoSetupOnStart || !_useGrid) return;
@@ -706,6 +709,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   Future<void> _trackFrame(Uint8List preview) async {
     final g = gameStore.current;
     if (!_trackingEnabled || !_useGrid || g == null || _trackBusy || _remoteUrl == null || _gridBeforeEdit != null) return;
+    // 이 카메라로 탁자를 확인한 뒤(자동 맞추기 성공 또는 격자 저장)에만 돈다. 패가 없는 장면(천장·책상)에선 흰 면이
+    // 노출 흔들림만으로 "패 1장 넘게 바뀜" 이 되어 모서리 읽기를 30분에 28번 보냈다(2026-10-30 집 점검).
+    if (!_tableConfirmed) return;
     final tracker = _trackerFor(_grid);
     final river = _riverTrackerFor(_grid);
     final TableFrameStats stats;
@@ -1900,7 +1906,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     value: 'tracking',
                     checked: _trackingEnabled,
                     enabled: _useGrid && _remoteUrl != null,
-                    child: const Text('판 상태 추적 (울기 미리 읽기, 격자 + 카메라 헤드)'),
+                    child: Text(_trackingEnabled && _remoteUrl != null && !_tableConfirmed
+                        ? '판 상태 추적 (격자를 맞추면 시작)'
+                        : '판 상태 추적 (울기 미리 읽기, 격자 + 카메라 헤드)'),
                   ),
                   CheckedPopupMenuItem(
                     key: const ValueKey('mount-shadow-menu'),

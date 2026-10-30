@@ -27,6 +27,7 @@ void main() {
     CaptureLog.desktopRootOverride = out;
     SharedPreferences.setMockInitialValues({
       'mount.remoteUrl': headUrl,
+      'mount.gridSource': headUrl, // 이 카메라로 격자를 잡았다 → 판 상태 추적이 돈다
       'mount.remoteToken': 'local',
       'mount.tracking': true,
       'mount.autoSetupOnStart': false, // 대국 시작 자동 맞추기는 이 흐름에 안 섞는다(격자 고정)
