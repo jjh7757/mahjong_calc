@@ -469,17 +469,8 @@ class TableReader {
       final h = seats[side]!;
       final ws = [...warnings];
       final who = sides.length > 1 ? '${side.label}: ' : '';
-      final melds = [
-        for (final m in h.melds)
-          if (m.consistent) m,
-      ];
-      final stray = [
-        for (final m in h.melds)
-          if (!m.consistent) ...m.tiles,
-      ];
-      if (stray.isNotEmpty) {
-        ws.add('$who퐁·치·깡 모양이 아닌 묶음(${stray.map((t) => t.code).join(' ')})을 울기에서 뺐습니다');
-      }
+      final (:melds, :stray, :notes) = sortMelds(h.melds, h.tiles.length + (h.separate == null ? 0 : 1));
+      ws.addAll(notes.map((n) => '$who$n'));
       // 서버가 여러 번 읽은 답이 모두 같지 않으면 자동으로 믿지 않는다. 엇갈린 패는 서버가 확신도 0 으로 보내 노란 테두리가 된다.
       if (h.agreement case (unanimous: false, :final reads, :final agree, :final alternatives)) {
         ws.add(
@@ -754,18 +745,9 @@ class TableReader {
         if (!boxedKeys.contains(key(m))) m,
     ];
     // 퐁·치·깡 모양이 아닌 묶음(갤러리 사진의 4통4통7만 = 모서리에 둔 도라 표시패)은 울기로 쓰지 않고
-    // 다른 데서 도라 표시패를 못 읽었을 때 그 후보로 쓴다.
-    final melds = [
-      for (final m in readMelds)
-        if (m.consistent) m,
-    ];
-    final stray = [
-      for (final m in readMelds)
-        if (!m.consistent) ...m.tiles,
-    ];
-    if (stray.isNotEmpty) {
-      warnings.add('퐁·치·깡 모양이 아닌 묶음(${stray.map((t) => t.code).join(' ')})을 울기에서 뺐습니다');
-    }
+    // 다른 데서 도라 표시패를 못 읽었을 때 그 후보로 쓴다. 장수로 보아 울기인 묶음은 표시패로 쓰지 않는다([sortMelds]).
+    final (:melds, :stray, :notes) = sortMelds(readMelds, h.tiles.length + (h.separate == null ? 0 : 1));
+    warnings.addAll(notes);
     // 고정 구역으로 읽은 장수가 안 맞으면(울기를 놓쳤거나 옆 패가 섞임) locate 로 다시.
     final count = h.tiles.length + (h.separate == null ? 0 : 1) + 3 * melds.length;
     if (usingFixed && count != 13 && count != 14) return null;

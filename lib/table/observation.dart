@@ -56,6 +56,54 @@ class ObservedMeld {
       };
 }
 
+/// 패 한 장의 종류만 바꿔 퐁·치가 되면 고친 묶음을, 아니면 null. 고친 패와 묶음은 확신도 0(병합이 확인 플래그를 단다).
+/// 가로로 놓인 패를 숫자는 맞게 읽고 종류만 틀리는 일이 있다(2026-10-30 갤러리 실험: 가로 6m → 6s·6z).
+ObservedMeld? repairMeldSuit(ObservedMeld m) {
+  if (m.tiles.length != 3 || m.consistent) return null;
+  for (var i = 0; i < 3; i++) {
+    final others = [for (var j = 0; j < 3; j++) if (j != i) m.tiles[j].tile];
+    final suit = Tiles.suit(others[0]);
+    if (suit >= 3 || suit != Tiles.suit(others[1])) continue;
+    final t = m.tiles[i].tile;
+    final digit = t < 27 ? Tiles.number(t) : t - 26; // 자패는 코드의 숫자(6z → 6)
+    if (digit > 9) continue;
+    final fixed = ObservedMeld(
+      [for (var j = 0; j < 3; j++) j == i ? ReadTile(suit * 9 + digit - 1) : m.tiles[j]],
+      sideways: m.sideways,
+      faceDown: m.faceDown,
+    );
+    if (fixed.consistent) return fixed;
+  }
+  return null;
+}
+
+/// 읽은 묶음을 울기와 그 밖으로 나눈다. [handCount] 는 울기 뺀 손패 장수(화료패 포함).
+/// 모양이 안 맞는 묶음은 보통 모서리에 둔 도라 표시패지만([stray], 4통 4통 7만 등), 그 묶음을 울기로 쳐야 장수가 맞으면
+/// (손패 10장 + 3장) 표시패일 수 없다 — 종류만 고쳐 울기가 되면 고쳐 쓰고, 안 되면 어디에도 쓰지 않고 경고만 남긴다.
+({List<ObservedMeld> melds, List<ReadTile> stray, List<String> notes}) sortMelds(List<ObservedMeld> read, int handCount) {
+  final melds = [for (final m in read) if (m.consistent) m];
+  final stray = <ReadTile>[];
+  final notes = <String>[];
+  for (final m in read) {
+    if (m.consistent) continue;
+    final codes = m.tiles.map((t) => t.code).join(' ');
+    final need = 13 - 3 * (melds.length + 1);
+    if (handCount != need && handCount != need + 1) {
+      stray.addAll(m.tiles);
+      notes.add('퐁·치·깡 모양이 아닌 묶음($codes)을 울기에서 뺐습니다');
+      continue;
+    }
+    final fixed = repairMeldSuit(m);
+    if (fixed == null) {
+      notes.add('장수로 보면 울기인 묶음($codes)의 모양이 맞지 않습니다. 판독을 고쳐 주세요');
+    } else {
+      melds.add(fixed);
+      notes.add('묶음 $codes 을(를) ${fixed.tiles.map((t) => t.code).join(' ')} 울기로 고쳐 읽었습니다. 확인하세요');
+    }
+  }
+  return (melds: melds, stray: stray, notes: notes);
+}
+
 /// 강의 패 한 장과 가로로 놓였는지.
 class RiverTile {
   final ReadTile tile;

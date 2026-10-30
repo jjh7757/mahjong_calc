@@ -349,6 +349,13 @@ class RiverTracker {
     st.status = st.reads >= config.stickMaxReads ? StickStatus.unconfirmed : StickStatus.changed;
   }
 
+  /// [riichi] 에서 전판 유국으로 남은 봉([carried], 대국 기록이 아는 주인)을 뺀 것. 그 자리는 이번 판에 띠가 바뀐 것을
+  /// 봤을 때([riichiAt])만 남긴다. 기록에 없는데 처음부터 꽂혀 있던 봉은 추적 전에 한 리치로 보고 그대로 둔다.
+  Set<Side> riichiExcept(Set<Side> carried) => {
+        for (final s in riichi)
+          if (!carried.contains(s) || riichiAt.containsKey(s)) s,
+      };
+
   /// 새 판(화료·유국 기록 뒤). 버림·리치봉을 비우고 다음 프레임을 새 기준으로.
   void reset(DateTime now, [String reason = '새 판']) {
     for (final s in Side.values) {

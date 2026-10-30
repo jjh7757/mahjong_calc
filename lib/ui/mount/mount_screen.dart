@@ -693,8 +693,20 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   final SceneShiftGate _shiftGate = SceneShiftGate();
 
   /// 화료 판독에 넘길 힌트: 게임 중 확정한 리치봉 자리, 가장 최근 버림(방총자 후보·론 패 위치).
-  Set<Side> _trackedRiichi() =>
-      _trackingEnabled && _useGrid ? (_riverTracker?.riichi ?? const {}) : const {};
+  /// 전판 유국으로 남은 봉은 이번 판 리치가 아니다([RiverTracker.riichiExcept]).
+  Set<Side> _trackedRiichi() {
+    final g = gameStore.current;
+    if (!_trackingEnabled || !_useGrid || g == null) return const {};
+    final seats = SeatMap(g.settings.bottomSeat);
+    return _riverTracker?.riichiExcept({for (final s in g.carriedStickSeats) seats.sideOf(s)}) ?? const {};
+  }
+
+  /// 유국 창: 추적이 본 리치를 켜 둔다(점수판을 안 눌러도 남은 봉의 주인이 기록에 남게).
+  Future<void> _showDraw(Game g) {
+    final seats = SeatMap(g.settings.bottomSeat);
+    return showDrawDialog(context, g, trackedRiichi: {for (final s in _trackedRiichi()) seats.seatOf(s)});
+  }
+
   Set<Side> _trackedDoubleRiichi() =>
       _trackingEnabled && _useGrid ? (_riverTracker?.doubleRiichiCandidates ?? const {}) : const {};
   Set<Side> _trackedIppatsu() => _trackingEnabled && _useGrid
@@ -1214,11 +1226,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     if (rv != null) {
       final counts = rv.discardCounts;
       final last = rv.lastDiscard;
-      if (counts.values.any((n) => n > 0) || rv.riichi.isNotEmpty) {
+      final tracked = _trackedRiichi();
+      if (counts.values.any((n) => n > 0) || tracked.isNotEmpty) {
         final parts = [
           '강 ${[for (final s in Side.values) if (counts[s]! > 0) '${g.names[seats.seatOf(s)]} ${counts[s]}'].join(' · ')}',
           if (last != null) '마지막 ${g.names[seats.seatOf(last.side)]}',
-          if (rv.riichi.isNotEmpty) '리치 ${rv.riichi.map((s) => g.names[seats.seatOf(s)]).join('·')}',
+          if (tracked.isNotEmpty) '리치 ${tracked.map((s) => g.names[seats.seatOf(s)]).join('·')}',
         ];
         rows.add(Padding(
           padding: const EdgeInsets.symmetric(vertical: 3),
@@ -1489,6 +1502,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             loserHint: r.trackedDiscardSide,
             doubleRiichiHint: r.trackedDoubleRiichi.contains(r.winnerSide!),
             ippatsuHint: r.trackedIppatsu.contains(r.winnerSide!),
+            trackedRiichi: r.trackedRiichi,
           ),
       ];
     }
@@ -2170,7 +2184,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             gap,
             Expanded(child: big('리치', Icons.flag_outlined, _busy ? null : () => showRiichiPicker(context, g))),
             gap,
-            Expanded(child: big('유국', Icons.block, _busy ? null : () => showDrawDialog(context, g))),
+            Expanded(child: big('유국', Icons.block, _busy ? null : () => _showDraw(g))),
           ],
         ),
         gap,
@@ -2352,7 +2366,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                 children: [
                   Expanded(child: big('리치', Icons.flag_outlined, _busy ? null : () => showRiichiPicker(context, g))),
                   const SizedBox(width: 12),
-                  Expanded(child: big('유국', Icons.block, _busy ? null : () => showDrawDialog(context, g))),
+                  Expanded(child: big('유국', Icons.block, _busy ? null : () => _showDraw(g))),
                 ],
               ),
               const SizedBox(height: 12),

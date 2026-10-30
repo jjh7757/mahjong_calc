@@ -4,6 +4,7 @@
 /// 1. 화료자는 호출 쪽이 정해 [winnerSide] 로 넘긴다(눕힌 자리 하나면 자동, 둘 이상이면 물음).
 /// 2. 자풍·장풍·본장은 기록에서. 리치는 사진·기록 중 하나라도 true 면 true, 어긋나면 플래그.
 ///    단, 울린 손패(안깡 제외)는 리치가 불가능하므로 사진·기록의 리치를 버리고 플래그만 남긴다.
+///    유국으로 남은 리치봉([Game.carriedStickSeats])은 이번 판 리치의 증거가 아니다 — 기록·추적이 없으면 리치로 치지 않고 확인을 묻는다.
 /// 3. 도라 표시패는 사진에서. 뒷도라 표시패도 구분하지 않고 도라 표시패로 센다(리치 화료면 점수가 같다).
 /// 4. 화료패가 어떤 강의 마지막 버림패와 같으면 론(그 자리가 방총자), 없으면 쯔모, 둘 이상이면 론 + 방총자 플래그.
 ///    화료패가 없고 손패가 한 장 모자라면, 다른 자리 강 끝 패 중 화료가 되는 패를 화료패로 넣고 론(그 자리가 방총자).
@@ -15,7 +16,7 @@
 /// 7. 사진에서 리치(횡치·리치봉)가 보인 자리는 [TableMerge.photoRiichiSeats] 로. 화료 기록 때 리치봉 자동 반영에 쓴다.
 library;
 
-import '../engine/calculator.dart' show Hand, Meld, Situation, Tiles;
+import '../engine/calculator.dart' show Hand, Meld, Situation, Tiles, calculate;
 import '../engine/decompose.dart' show decompose;
 import '../game/game.dart';
 import 'seat_map.dart';
@@ -50,6 +51,10 @@ enum MergeIssue {
   /// 게임 중 추적이 화료자가 리치 뒤 아직 버리지 않았고 아무도 울지 않았다고 봤다 → 일발로 계산.
   /// 버림을 놓쳤을 수 있는 추정이라 자동 반영하지 않고 확인을 받는다(결과 화면 "일발" 칩으로 고침). 2026-10-29.
   ippatsuTracked,
+
+  /// 전판 유국으로 남은 리치봉 때문에 이번 판 리치를 사진만으로 정할 수 없다(주인을 모르는 공탁 포함).
+  /// 자동 반영하지 않고 확인을 받는다(결과 화면 "리치" 칩, "대국에 반영" 시트의 리치봉 칩). 2026-10-30 사용자 지적.
+  riichiCarried,
 }
 
 class MergeFlag {
@@ -201,6 +206,8 @@ TableMerge mergeReading({
   bool doubleRiichiHint = false,
   /// 추적이 화료자를 일발 후보로 봤다([TableReading.trackedIppatsu] 에 화료자 자리가 있음).
   bool ippatsuHint = false,
+  /// 추적이 이번 판에 리치봉이 새로 놓인 것을 본 자리([TableReading.trackedRiichi]).
+  Set<Side> trackedRiichi = const {},
 }) {
   final flags = <MergeFlag>[];
   final winner = seats.seatOf(winnerSide);
@@ -296,8 +303,14 @@ TableMerge mergeReading({
   }
 
   // 리치: 사진 ∪ 기록. 울린 손패면 불가능하니 버린다(사진이 옆 자리 횡치를 잘못 본 경우가 흔하다).
-  final photoRiichi = center?.riichiAt(winnerSide);
+  // 유국으로 남은 봉은 그 자리 홈에 그대로 있어, 사진에 보여도 이번 판 리치라는 증거가 아니다.
+  final carried = game.carriedStickSeats;
   final recordRiichi = game.riichiSeats.contains(winner);
+  final staleStick = center?.riichiAt(winnerSide) == true &&
+      carried.contains(winner) &&
+      !recordRiichi &&
+      !trackedRiichi.contains(winnerSide);
+  final photoRiichi = staleStick ? false : center?.riichiAt(winnerSide);
   final openHand = melds.any((m) => m.isOpen);
   var riichi = (photoRiichi ?? false) || recordRiichi;
   if (openHand && riichi) {
@@ -361,6 +374,40 @@ TableMerge mergeReading({
     }
   }
 
+  // 봉 주인의 화료: 리치 없이 역이 없으면 리치였을 수밖에 없고, 역이 있으면 리치 아닌 것으로 계산해 확인을 묻는다.
+  if (staleStick && !openHand) {
+    riichi = !_winsWithoutRiichi(closed, melds, win, isTsumo, game.seatWindOf(winner), game.roundWindTile);
+    flags.add(MergeFlag(
+      MergeIssue.riichiCarried,
+      riichi
+          ? '남은 리치봉이 전판 것일 수 있지만 리치 없이는 역이 없어 리치로 계산했습니다'
+          : '화료자의 리치봉이 전판 유국에서 남은 것일 수 있어 리치 없이 계산했습니다. 이번 판에 리치했으면 "리치" 칩을 누르세요',
+    ));
+  }
+  // 봉이 있던 자리에서 추적이 변화를 봤다: 새 봉일 수도, 봉을 건드린 것일 수도 있다.
+  final carriedTracked = [
+    for (final s in trackedRiichi)
+      if (carried.contains(seats.seatOf(s)) && !game.riichiSeats.contains(seats.seatOf(s))) game.names[seats.seatOf(s)],
+  ];
+  if (carriedTracked.isNotEmpty) {
+    flags.add(MergeFlag(MergeIssue.riichiCarried,
+        '${carriedTracked.join('·')}: 전판 리치봉이 남아 있던 자리에서 변화를 봐서 이번 판 리치로 봤습니다. 아니면 고쳐 주세요'));
+  }
+  // 공탁인데 주인을 모르는 봉(중간부터 기록 등): 사진에 보인 봉이 그것일 수 있다.
+  final photoUnrecorded = [
+    if (center != null)
+      for (final side in Side.values)
+        if (center.riichiAt(side) &&
+            !game.riichiSeats.contains(seats.seatOf(side)) &&
+            !carried.contains(seats.seatOf(side)) &&
+            !trackedRiichi.contains(side))
+          game.names[seats.seatOf(side)],
+  ];
+  if (game.unknownSticks > 0 && photoUnrecorded.isNotEmpty) {
+    flags.add(MergeFlag(MergeIssue.riichiCarried,
+        '공탁 ${game.unknownSticks}개는 누구 봉인지 기록에 없어 ${photoUnrecorded.join('·')}의 리치봉이 전판 것일 수 있습니다. 확인하세요'));
+  }
+
   // 도라·뒷도라: 사진에서 어느 쪽이 뒷도라인지 가르기 어렵고(왕패 짝의 위아래), 리치 화료면 둘 다 1판씩이라
   // 점수가 같다. 보인 앞면 표시패를 모두 도라 표시패로 센다.
   // 어디서 읽을지: 매장에서는 리치 화료면 화료자가 도라·뒷도라 표시패를 자기 손패 옆으로 가져가고, 리치가 아니면
@@ -421,10 +468,26 @@ TableMerge mergeReading({
     photoRiichiSeats: {
       if (center != null)
         for (final side in Side.values)
-          if (center.riichi[side] == true && (center.riichiConf[side] ?? 1) >= autoRiichiMinConf)
+          if (center.riichi[side] == true &&
+              (center.riichiConf[side] ?? 1) >= autoRiichiMinConf &&
+              // 유국으로 남은 봉에 1000점을 또 걷지 않는다. 그 자리의 새 리치는 기록·추적으로만 안다.
+              (!carried.contains(seats.seatOf(side)) || trackedRiichi.contains(side)))
             seats.seatOf(side),
     },
   );
+}
+
+/// 리치 없이도 이 손패가 역이 있는 화료인가. 장수가 안 맞아 모르면 true(리치를 지어내지 않는다).
+bool _winsWithoutRiichi(List<MergedTile> closed, List<Meld> melds, ReadTile? win, bool isTsumo, int seatWind, int roundWind) {
+  if (win == null) return true;
+  try {
+    return calculate(
+      Hand(closedTiles: [for (final t in closed) t.tile], melds: melds, winTile: win.tile),
+      Situation(isTsumo: isTsumo, seatWind: seatWind, roundWind: roundWind),
+    ).isValid;
+  } on ArgumentError {
+    return true;
+  }
 }
 
 /// 론패 후보 자리가 둘 이상일 때의 방총자. 동순 후리텐 때문에 먼저 버린 패에는 론할 수 없고, 먼저 버린 사람은

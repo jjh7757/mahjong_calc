@@ -145,6 +145,7 @@ class GameCheckpoint {
   final int riichiSticks;
   final int dealer;
   final Set<int> riichiSeats;
+  final Set<int> carriedStickSeats;
   final String? endedBy;
 
   const GameCheckpoint({
@@ -156,6 +157,7 @@ class GameCheckpoint {
     required this.riichiSticks,
     required this.dealer,
     required this.riichiSeats,
+    this.carriedStickSeats = const {},
     required this.endedBy,
   });
 
@@ -168,6 +170,7 @@ class GameCheckpoint {
         'riichiSticks': riichiSticks,
         'dealer': dealer,
         'riichiSeats': riichiSeats.toList()..sort(),
+        'carriedStickSeats': carriedStickSeats.toList()..sort(),
         'endedBy': endedBy,
       };
 
@@ -180,6 +183,7 @@ class GameCheckpoint {
         riichiSticks: j['riichiSticks'] as int,
         dealer: j['dealer'] as int,
         riichiSeats: (j['riichiSeats'] as List).cast<int>().toSet(),
+        carriedStickSeats: ((j['carriedStickSeats'] as List?) ?? const []).cast<int>().toSet(),
         endedBy: j['endedBy'] as String?,
       );
 }
@@ -219,6 +223,13 @@ class Game {
 
   /// 이번 국에 리치를 선언한 자리. 국이 끝나면 비운다.
   final Set<int> riichiSeats;
+
+  /// 유국으로 공탁에 남은 리치봉의 주인. 봉은 그 자리 홈에 그대로 있어 사진으로는 이번 판 리치와 구분되지 않는다
+  /// (2026-10-30 사용자 지적). 다음 화료로 공탁이 넘어가면 비운다.
+  final Set<int> carriedStickSeats;
+
+  /// 공탁인데 주인을 모르는 리치봉 수(중간부터 기록·공탁 정정 등).
+  int get unknownSticks => (riichiSticks - riichiSeats.length - carriedStickSeats.length).clamp(0, riichiSticks);
   final List<GameEvent> events;
 
   /// 되돌리기 지점(기록마다 하나, 오래된 것부터). [GameStore.mutate] 가 사건이 늘어난 변경마다 넣는다.
@@ -241,12 +252,14 @@ class Game {
     this.riichiSticks = 0,
     this.dealer = 0,
     Set<int>? riichiSeats,
+    Set<int>? carriedStickSeats,
     List<GameEvent>? events,
     List<GameCheckpoint>? checkpoints,
     this.finished = false,
     this.endedBy,
   })  : scores = scores ?? List.filled(4, settings.startPoints),
         riichiSeats = riichiSeats ?? {},
+        carriedStickSeats = carriedStickSeats ?? {},
         events = events ?? [],
         checkpoints = checkpoints ?? [] {
     if (names.length != 4) throw ArgumentError('4명이어야 합니다');
@@ -364,6 +377,7 @@ class Game {
       _apply(delta);
       events.add(GameEvent('adjust', '남은 공탁 $riichiSticks → 1위 ${names[top]}', delta, roundLabel));
       riichiSticks = 0;
+      carriedStickSeats.clear();
     }
   }
 
@@ -504,6 +518,7 @@ class Game {
       sticks: sticks,
     );
     riichiSticks = 0;
+    carriedStickSeats.clear();
     _apply(delta);
     final order = ronOrder(loser, payments.keys);
     final kind = switch (order.length) { 2 => '더블론', 3 => '트리플론', _ => '론' };
@@ -522,6 +537,7 @@ class Game {
 
   /// 도중 유국(트리플론을 유국으로 하는 규칙 등): 점수 이동 없음, 친 유지, 본장 +1, 공탁은 다음 국으로.
   void abortiveDraw(String reason) {
+    carriedStickSeats.addAll(riichiSeats);
     events.add(GameEvent('draw', '도중 유국 ($reason)', List.filled(4, 0), roundLabel));
     _endHand(dealerKeeps: true, incrementHonba: true);
   }
@@ -558,6 +574,7 @@ class Game {
         pao: pao);
     final sticks = riichiSticks;
     riichiSticks = 0;
+    carriedStickSeats.clear();
     _apply(delta);
     final how = isTsumo ? '쯔모' : '론(${names[loser!]})';
     final paoNote = paoSeat != null && pao != null && paoSeat != winner && paoSeat != loser ? ' 파오(${names[paoSeat]})' : '';
@@ -593,6 +610,7 @@ class Game {
       }
     }
     _apply(delta);
+    carriedStickSeats.addAll(riichiSeats);
     final who = tenpai.isEmpty ? '전원 노텐' : tenpai.map((s) => names[s]).join('·');
     final label = nagashi.isEmpty
         ? '유국'
@@ -617,6 +635,7 @@ class Game {
     _apply(delta);
     if (honba != null) this.honba = honba;
     if (riichiSticks != null) this.riichiSticks = riichiSticks;
+    if (this.riichiSticks == 0) carriedStickSeats.clear();
     events.add(GameEvent('adjust', notes.isEmpty ? reason : '$reason (${notes.join(', ')})', List.of(delta), roundLabel));
   }
 
@@ -631,6 +650,7 @@ class Game {
         riichiSticks: riichiSticks,
         dealer: dealer,
         riichiSeats: Set.of(riichiSeats),
+        carriedStickSeats: Set.of(carriedStickSeats),
         endedBy: endedBy,
       );
 
@@ -659,6 +679,9 @@ class Game {
     riichiSeats
       ..clear()
       ..addAll(c.riichiSeats);
+    carriedStickSeats
+      ..clear()
+      ..addAll(c.carriedStickSeats);
     endedBy = c.endedBy;
     events.removeRange(c.eventCount, events.length);
     checkpoints.removeWhere((x) => x.eventCount >= c.eventCount);
@@ -675,6 +698,9 @@ class Game {
     riichiSeats
       ..clear()
       ..addAll(o.riichiSeats);
+    carriedStickSeats
+      ..clear()
+      ..addAll(o.carriedStickSeats);
     endedBy = o.endedBy;
     events
       ..clear()
@@ -748,6 +774,7 @@ class Game {
         'riichiSticks': riichiSticks,
         'dealer': dealer,
         'riichiSeats': riichiSeats.toList()..sort(),
+        'carriedStickSeats': carriedStickSeats.toList()..sort(),
         'events': events.map((e) => e.toJson()).toList(),
         'checkpoints': checkpoints.map((c) => c.toJson()).toList(),
         'finished': finished,
@@ -766,6 +793,7 @@ class Game {
         riichiSticks: j['riichiSticks'] as int,
         dealer: j['dealer'] as int,
         riichiSeats: ((j['riichiSeats'] as List?) ?? const []).cast<int>().toSet(),
+        carriedStickSeats: ((j['carriedStickSeats'] as List?) ?? const []).cast<int>().toSet(),
         events: (j['events'] as List)
             .map((e) => GameEvent.fromJson(e as Map<String, dynamic>))
             .toList(),

@@ -632,9 +632,14 @@ Future<void> _pickSeat(BuildContext context, Game g, String title, void Function
 /// 유국: 텐파이한 자리를 고르고, 텐파이한 자리는 리치 여부도 고른다. 유국만관도 여기서 고른다.
 /// 점수판에서 이미 리치한 자리는 텐파이·리치를 켜 둔다. 점수판에 없던 리치는 1000점씩 공탁에 넣는다.
 /// 도중 유국(구종구패·사풍연타·사깡산료·사가리치)을 고르면 텐파이와 관계없이 점수 이동 없이 친 유지·본장 +1.
-Future<void> showDrawDialog(BuildContext context, Game g) async {
-  final tenpai = <int>{...g.riichiSeats};
-  final newRiichi = <int>{};
+/// [trackedRiichi] 는 판 상태 추적이 본 리치 자리. 점수판에 없으면 리치로 켜 둔다 — 남은 봉의 주인을 기록해야
+/// 다음 판에서 그 봉을 새 리치로 착각하지 않는다.
+Future<void> showDrawDialog(BuildContext context, Game g, {Set<int> trackedRiichi = const {}}) async {
+  final newRiichi = <int>{
+    for (final s in trackedRiichi)
+      if (!g.riichiSeats.contains(s) && g.scores[s] >= 1000) s,
+  };
+  final tenpai = <int>{...g.riichiSeats, ...newRiichi};
   final nagashi = <int>{};
   String? abortive;
   final kiosk = isKioskLayout(context);
@@ -642,6 +647,7 @@ Future<void> showDrawDialog(BuildContext context, Game g) async {
     context: context,
     builder: (ctx) => kioskWrap(ctx, StatefulBuilder(
       builder: (ctx, setState) => AlertDialog(
+        scrollable: true, // 리치 칩이 보이면 줄이 높아져 낮은 화면에서 넘친다
         title: Text(abortive == null ? '유국 — 텐파이한 사람' : '도중 유국 — $abortive'),
         content: SizedBox(
           width: kiosk ? 620 : 340,
