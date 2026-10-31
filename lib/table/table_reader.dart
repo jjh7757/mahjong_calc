@@ -296,9 +296,9 @@ class TableReader {
       ];
       // 장면 시간은 자리 판독(3번 동시, 가장 느림)이 정하므로 자리 크롭을 먼저 잘라 먼저 보낸다.
       final seatList = await shot.crop([
-        for (final s in seatSides) CropSpec(splitSeat ? grid.handCell(s) : grid.seat(s), side: s),
+        for (final s in seatSides) CropSpec(splitSeat ? grid.handCell(s) : grid.seatForRead(s), side: s),
         for (final s in cornerSides) CropSpec(grid.cornerCell(s), side: s),
-        for (final s in trackedSides) CropSpec(grid.handCell(s), side: s),
+        for (final s in trackedSides) CropSpec(grid.handCellForRead(s), side: s),
       ]);
       seatCrops = {for (final (i, s) in seatSides.indexed) s: seatList[i]};
       cornerCrops = {for (final (i, s) in cornerSides.indexed) s: seatList[seatSides.length + i]};

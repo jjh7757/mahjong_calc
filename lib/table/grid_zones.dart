@@ -53,6 +53,10 @@ const double riverStart = 0.0;
 const double stickStart = 0.0;
 const double stickEnd = 0.25;
 
+/// 화료자 손패를 읽을 때 자리 크롭을 격자 선에서 가운데 쪽으로 더 넓히는 폭(0~1000). 공개할 때 앞으로 내민 손패가 선에 걸려
+/// 잘리던 것(10-31 매장 오후 8/15). B·C·D 12/12 그대로, 매장 오전 정답 6/7 → 7/7, 80 은 강이 섞여 6/7(metrics 표 1-2).
+const int seatReadGrow = 40;
+
 /// 가운데 칸 기준 상대 상자. 1000 = 가운데 칸 폭(u)·높이(v), 0~1000 밖이면 자리 구역으로 나간 것.
 typedef RelBox = ({int u0, int v0, int u1, int v1});
 
@@ -108,6 +112,17 @@ class GridZones {
         Side.right => NormBox(y1, x2, y2, 1000),
         Side.top => NormBox(0, x1, y1, x2),
         Side.left => NormBox(y1, 0, y2, x1),
+      };
+
+  /// 손패 판독에 보낼 [seat]·[handCell]: 가운데 쪽 변만 [seatReadGrow] 만큼 넓힌다. 구역을 나누는 선은 그대로라 강·리치봉 크롭은 안 바뀐다.
+  NormBox seatForRead(Side side) => _growInward(seat(side), side);
+  NormBox handCellForRead(Side side) => _growInward(handCell(side), side);
+
+  NormBox _growInward(NormBox b, Side side) => switch (side) {
+        Side.bottom => NormBox(b.ymin - seatReadGrow, b.xmin, b.ymax, b.xmax),
+        Side.right => NormBox(b.ymin, b.xmin - seatReadGrow, b.ymax, b.xmax),
+        Side.top => NormBox(b.ymin, b.xmin, b.ymax + seatReadGrow, b.xmax),
+        Side.left => NormBox(b.ymin, b.xmin, b.ymax, b.xmax + seatReadGrow),
       };
 
   /// [seat] 크롭을 그 사람 방향으로 세웠을 때 왼쪽부터 [handCell] 이 차지하는 폭 비율(나머지가 오른쪽 모서리).

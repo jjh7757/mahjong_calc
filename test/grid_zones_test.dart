@@ -57,6 +57,17 @@ void main() {
       expect(grid.center, const NormBox(200, 250, 800, 750));
     });
 
+    test('손패 판독 크롭은 가운데 쪽 변만 넓힌다(앞으로 내민 손패가 선에 안 잘리게)', () {
+      expect(grid.seatForRead(Side.bottom), const NormBox(760, 250, 1000, 1000));
+      expect(grid.seatForRead(Side.right), const NormBox(0, 710, 800, 1000));
+      expect(grid.seatForRead(Side.top), const NormBox(0, 0, 240, 750));
+      expect(grid.seatForRead(Side.left), const NormBox(200, 0, 1000, 290));
+      expect(grid.handCellForRead(Side.bottom), const NormBox(760, 250, 1000, 750));
+      expect(grid.handCellForRead(Side.right), const NormBox(200, 710, 800, 1000));
+      expect(grid.handCellForRead(Side.top), const NormBox(0, 250, 240, 750));
+      expect(grid.handCellForRead(Side.left), const NormBox(200, 0, 800, 290));
+    });
+
     test('손패 칸 폭 비율 = 세운 자리 크롭에서 왼쪽부터 손패 칸이 차지하는 몫', () {
       expect(grid.handFrac(Side.bottom), closeTo(500 / 750, 1e-9));
       expect(grid.handFrac(Side.right), closeTo(600 / 800, 1e-9));
@@ -433,9 +444,9 @@ void main() {
       expect(urls.singleWhere((u) => u.path == '/v2/seat').queryParameters, {'hand_frac': '0.667'});
       // 장면 시간을 정하는 자리 판독을 먼저 보낸다(나머지 구역은 그 뒤에 잘라 보냄).
       expect(names.first, 'seat_bottom');
-      // 아래 자리 = 750×200 그대로, 오른쪽 강 끝은 오른쪽 자리 방향으로 세워 가로·세로가 바뀐다.
+      // 아래 자리 = 750×200 + 가운데 쪽 40, 오른쪽 강 끝은 오른쪽 자리 방향으로 세워 가로·세로가 바뀐다.
       expect(images['seat_bottom']!.width, 750);
-      expect(images['seat_bottom']!.height, 200);
+      expect(images['seat_bottom']!.height, 240);
       expect(images['last_right']!.width, 360);
       expect(images['last_right']!.height, 250);
       // 도라는 가운데 칸을 화료자(아래) 아닌 쪽으로 넓혀서: 폭 500 + 왼쪽·오른쪽 40, 높이 600 + 위 40(아래는 그대로).
@@ -466,9 +477,9 @@ void main() {
       expect(trace.feltQuad, isNotNull);
       expect(trace.timingsMs, contains('rectify'));
       expect(reading.winnerSide, Side.bottom);
-      // 표준 격자(200/800)의 아래 자리 = 편 사진(3200) 아래 20% 전체 폭.
+      // 표준 격자(200/800)의 아래 자리 = 편 사진(3200) 아래 20% + 가운데 쪽 4%, 전체 폭.
       expect(images['seat_bottom']!.width, 2560);
-      expect(images['seat_bottom']!.height, 640);
+      expect(images['seat_bottom']!.height, 768);
       expect(urls.singleWhere((u) => u.path == '/v2/seat').queryParameters, {'hand_frac': '0.750'});
     });
 
@@ -581,9 +592,9 @@ void main() {
       // 확정한 울기 수를 같이 보낸다(서버 손패 틀의 장수 검사용).
       expect(urls.singleWhere((u) => u.path == '/v2/handonly').queryParameters, {'melds': '1'});
       expect(names, isNot(contains('seat_bottom')));
-      // 손패 칸(선 사이)만: 500×200. 자리 전체(750×200)가 아니다.
+      // 손패 칸(선 사이)만: 500×200 + 가운데 쪽 40. 자리 전체(폭 750)가 아니다.
       expect(images['handonly_bottom']!.width, 500);
-      expect(images['handonly_bottom']!.height, 200);
+      expect(images['handonly_bottom']!.height, 240);
       expect(reading.hand!.tiles, hasLength(10));
       expect(reading.hand!.winTile!.code, '4p');
       expect(reading.hand!.melds, hasLength(1));
