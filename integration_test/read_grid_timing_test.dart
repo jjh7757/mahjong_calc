@@ -66,8 +66,10 @@ const _gridB1 = _useInitial ? _initialGrid : {'x1': 315, 'x2': 760, 'y1': 200, '
 const _gridB2 = _useInitial ? _initialGrid : {'x1': 355, 'x2': 760, 'y1': 200, 'y2': 740}; // 14:34
 // FIELD_GRIDS="사진=x1,x2,y1,y2;…" 면 사진마다 그 격자(YOLO 자동 격자 비교용, experiments/yolo/auto_grid.py --set field).
 const _fieldGrids = String.fromEnvironment('FIELD_GRIDS');
-Map<String, Object>? _gridOverride(String photo) {
-  for (final e in _fieldGrids.split(';')) {
+// BASE_GRIDS: 같은 형식. PAIR_GRID 의 "plain" 쪽 격자를 사진마다 정한다(매장 저장 격자 vs 사진에 맞춘 격자).
+const _baseGrids = String.fromEnvironment('BASE_GRIDS');
+Map<String, Object>? _gridOverride(String photo, [String grids = _fieldGrids]) {
+  for (final e in grids.split(';')) {
     final [p, v] = e.split('=').length == 2 ? e.split('=') : ['', ''];
     if (p != photo) continue;
     final n = [for (final x in v.split(',')) int.parse(x)];
@@ -94,9 +96,24 @@ const _bcdTilt = {
   'D': (['tilted/k12_a', 'tilted/k12_b', 'tilted/k12_c', 'tilted/k16_a', 'tilted/k16_b', 'tilted/k16_c'], _initialGrid),
 };
 
+// SET=visit: [평가 밖·매장 개발 세트] 10/31 매장 25회(PHOTO_URL 은 visit_20261031/captures). 격자는 FIELD_GRIDS 로(사진마다 다르다,
+// experiments/speed/flow_visit.py 가 만든다). 정답은 visit_20261031/truth.json·label.json.
+const _visit = {
+  'V': (
+    [
+      '123140', '124654', '125839', '130743', '131411', '132239', '132954', '133030', '133826', '134815',
+      '142535', '143104', '164501', '165043', '165614', '170105', '171025', '171245', '171505', '172424',
+      '174020', '175951', '181209', '183022', '183627',
+    ],
+    _initialGrid,
+  ),
+};
+
 const _set = String.fromEnvironment('SET', defaultValue: 'bcd');
-const _scenes = _set == 'field' ? _field : (_set == 'bcdtilt' ? _bcdTilt : _bcd);
-String _photoPath(String p) => _set == 'field' ? '20261024_$p/original.jpg' : '$p.jpg';
+const _scenes = _set == 'field' ? _field : (_set == 'bcdtilt' ? _bcdTilt : (_set == 'visit' ? _visit : _bcd));
+String _photoPath(String p) => _set == 'field'
+    ? '20261024_$p/original.jpg'
+    : (_set == 'visit' ? '20261031_$p/original.jpg' : '$p.jpg');
 
 // DUMP_DIR: 판독에 보낸 화료자 자리 크롭(seat.jpg)·리치봉 크롭(sticks.jpg)을 <DUMP_DIR>/<사진>/ 에 저장(추가 판독 실험용).
 const _dumpDir = String.fromEnvironment('DUMP_DIR');
@@ -117,6 +134,9 @@ const _pairDealer = bool.fromEnvironment('PAIR_DEALER');
 // 예: experiments/speed/setup_frames.py 가 Gemini 틀로 제안한 격자). FIELD_GRIDS 에 없는 사진은 auto 도 장면 격자(grid_fallback).
 const _pairGrid = bool.fromEnvironment('PAIR_GRID');
 const _dealerSide = String.fromEnvironment('DEALER_SIDE');
+
+// PAIR_WIDE=true: 같은 사진을 같은 순간 두 번 — 넓은 구역 판독 없이("plain")와 있이("wide", 앱 기본).
+const _pairWide = bool.fromEnvironment('PAIR_WIDE');
 
 /// 펴기(isolate): 원본 → (편 JPEG, 모서리) 또는 펠트를 못 찾으면 (null, null).
 (Uint8List?, Map<String, Object>?) _rectifyJob(Uint8List original) {
@@ -166,7 +186,8 @@ void main() {
     for (final photo in photos) {
       final override = _gridOverride(photo);
       final autoGrid = override == null ? sceneGrid : GridZones.fromJson(override)!;
-      final grid = _pairGrid ? sceneGrid : autoGrid;
+      final base = _gridOverride(photo, _baseGrids);
+      final grid = _pairGrid ? (base == null ? sceneGrid : GridZones.fromJson(base)!) : autoGrid;
       // FIELD_GRIDS 를 줬는데 그 사진 격자가 없으면(자동 격자 실패) 재지 않는다.
       // PAIR_GRID 면 FIELD_GRIDS 에 없는 사진도 잰다(auto 도 장면 격자, grid_fallback — 자동 맞추기 실패 → 사람이 맞춘 격자).
       final skip = !_pairGrid && _fieldGrids.isNotEmpty && override == null;
@@ -176,7 +197,7 @@ void main() {
             if (_sleepS > 0) await Future<void>.delayed(const Duration(seconds: _sleepS));
             final bytes = (await http.get(Uri.parse('$_photoUrl/${_photoPath(photo)}'))).bodyBytes;
             Future<void> measure(RecognizerClient client, String server,
-                {bool rect = false, bool dealerBox = false, GridZones? useGridFor}) async {
+                {bool rect = false, bool dealerBox = false, GridZones? useGridFor, bool wide = true}) async {
               final trace = TableReadTrace();
               final (dealer, honba) = _fieldGame[scene] ?? (0, 0);
               final game = Game(
@@ -215,7 +236,8 @@ void main() {
                     : (SideX.parse(_dealerSide) ?? SeatMap(game.settings.bottomSeat).sideOf(game.dealer));
                 if (dealer != null) out['dealer_side'] = dealer.name;
                 final reading = await TableReader(client, ops: _isolateOps)
-                    .readGrid(shot, useGrid, rectify: rect, dealer: dealer, trace: trace);
+                    .readGrid(shot, useGrid, rectify: rect, dealer: dealer, trace: trace, useWide: wide);
+                out['wide_called'] = trace.wide != null;
                 if (rect) out['quad'] = trace.feltQuad?.toJson();
                 if (_dumpDir.isNotEmpty) {
                   final d = Directory('$_dumpDir/${photo.replaceAll('/', '_')}')..createSync(recursive: true);
@@ -270,7 +292,8 @@ void main() {
             }
 
             await Future.wait([
-              measure(RecognizerClient(), _pairRectify || _pairDealer || _pairGrid ? 'plain' : 'main'),
+              measure(RecognizerClient(), _pairRectify || _pairDealer || _pairGrid || _pairWide ? 'plain' : 'main', wide: !_pairWide),
+              if (_pairWide) measure(RecognizerClient(), 'wide'),
               if (_pairGrid) measure(RecognizerClient(), 'auto', useGridFor: autoGrid),
               if (_pairRectify) measure(RecognizerClient(), 'rect', rect: true),
               if (_pairDealer) measure(RecognizerClient(), 'dealer', dealerBox: true),

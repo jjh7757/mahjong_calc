@@ -139,6 +139,20 @@
         "experiments/field_20261024/captures"
       ],
       "port": 8041
+    },
+    {
+      "name": "visit-captures",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8042",
+        "--bind",
+        "127.0.0.1",
+        "-d",
+        "experiments/visit_20261031/captures"
+      ],
+      "port": 8042
     }
   ]
 }

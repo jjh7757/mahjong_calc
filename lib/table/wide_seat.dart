@@ -115,6 +115,20 @@ bool seatNeedsWide(SeatV2 seat, Iterable<ReadTile?> riverEnds) {
   return true;
 }
 
+/// [row] 가 [closed] 에 정확히 한 장을 더한 것이면 그 한 장, 아니면 null.
+ReadTile? _rowExtra(List<ReadTile>? row, List<int> closed) {
+  if (row == null || row.length != closed.length + 1) return null;
+  final left = [...closed];
+  ReadTile? extra;
+  for (final t in row) {
+    if (!left.remove(t.tile)) {
+      if (extra != null) return null;
+      extra = t;
+    }
+  }
+  return extra;
+}
+
 /// 넓은 구역 판독을 자리 판독에 합친다. 바꾸지 않으면 [note] 가 null. [meldsKnown] 이면 울기는 자리 판독(추적) 것을 쓴다.
 ({SeatV2 seat, String? note}) applyWide(SeatV2 seat, WideRead wide, {bool meldsKnown = false}) {
   // 낱장을 더해 14장이면 마지막 낱장이 떼어 둔 패. [keepLast] 는 13장이라(론 패는 강에) 떼어 둔 패가 없다.
@@ -140,8 +154,16 @@ bool seatNeedsWide(SeatV2 seat, Iterable<ReadTile?> riverEnds) {
   final closed = _closed(seat);
   final total = closed.length + 3 * _meldCount(seat.melds);
   if (total == 13 && closedTenpai(closed)) {
-    if (wide.lone.length != 1 || !closedWins([...closed, wide.lone.single.tile])) return (seat: seat, note: null);
-    final lone = wide.lone.single;
+    // 떼어 둔 패가 줄 가까이 있으면 넓은 구역은 줄에 붙여 읽는다(171505 3m). 넓은 줄이 자리 판독 + 정확히 한 장이면 그 패가 후보다.
+    final extra = _rowExtra(wide.row, closed);
+    final candidates = [...wide.lone, ?extra];
+    final seen = <int>{};
+    final winners = [
+      for (final t in candidates)
+        if (seen.add(t.tile) && closedWins([...closed, t.tile])) t,
+    ];
+    if (winners.length != 1) return (seat: seat, note: null);
+    final lone = winners.single;
     return (
       seat: replaced([...seat.tiles, ?seat.separate, lone], seat.melds, [lone], sameAgreement: true),
       note: '손패 줄 밖 낱장 ${lone.code} 를 떼어 둔 화료패로 봤습니다. 확인하세요',

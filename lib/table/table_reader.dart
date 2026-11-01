@@ -189,6 +189,7 @@ class TableReader {
     GridZones grid, {
     bool rectify = false,
     bool splitSeat = false,
+    bool useWide = true,
     Map<Side, List<ObservedMeld>> tracked = const {},
     bool shadow = false,
     Set<Side> trackedRiichi = const {},
@@ -304,9 +305,9 @@ class TableReader {
         for (final s in cornerSides) CropSpec(grid.cornerCell(s), side: s),
         for (final s in trackedSides) CropSpec(grid.handCellForRead(s), side: s),
         // 화료자를 알면 테이블 절반도 잘라 둔다. 자리 판독으로 답을 못 정한 장면에서만 보낸다(사진은 곧 닫는다).
-        if (known != null && !splitSeat) CropSpec(grid.seatHalf(known), side: known),
+        if (known != null && !splitSeat && useWide) CropSpec(grid.seatHalf(known), side: known),
       ]);
-      wideCrop = known != null && !splitSeat ? seatList.last : null;
+      wideCrop = known != null && !splitSeat && useWide ? seatList.last : null;
       seatCrops = {for (final (i, s) in seatSides.indexed) s: seatList[i]};
       cornerCrops = {for (final (i, s) in cornerSides.indexed) s: seatList[seatSides.length + i]};
       handCrops = {

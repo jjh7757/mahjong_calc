@@ -81,6 +81,22 @@ void main() {
       expect(applyWide(_seat(h143104), _wide(h143104, lone: '7s 4s')).note, isNull);
     });
 
+    test('넓은 줄에 붙어 읽힌 떼어 둔 패도 받는다(171505 3m)', () {
+      const row = '6s 7s 8s 2p 2p 4m 5m 5p 6p 7p';
+      final r = applyWide(_seat(row, melds: ['7z 7z 7z']), _wide('$row 3m', melds: ['7z 7z 7z']));
+      expect(r.seat.separate!.code, '3m');
+      expect(r.seat.tiles.length, 10);
+      // 줄이 두 장 이상 다르면(오독) 받지 않는다.
+      final w = applyWide(_seat(row, melds: ['7z 7z 7z']), _wide('6s 7s 8s 2p 2p 4m 5m 5p 6p 8p 3m'));
+      expect(w.note, isNull);
+    });
+
+    test('외톨이와 줄 한 장이 다른 화료패를 가리키면 고르지 않는다', () {
+      const row = '6s 7s 8s 2p 2p 4m 5m 5p 6p 7p';
+      final r = applyWide(_seat(row, melds: ['7z 7z 7z']), _wide('$row 3m', lone: '6m'));
+      expect(r.note, isNull);
+    });
+
     test('붙어 있는 두 장(표시패)은 13장에 더하지 않는다(133826)', () {
       final r = applyWide(_seat(h133826), _wide(h133826, grouped: '8m 8p'));
       expect(r.note, isNull);
