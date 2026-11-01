@@ -146,6 +146,14 @@ const _pairEarly = bool.fromEnvironment('PAIR_EARLY');
 // 리치 화료의 표시패를 넓은 판독의 표시패 짝에서 `wideIndicators`, 미덥지 않은 울기를 넓은 줄과 대조, 강 끝 헤지 `lastHedge`).
 const _pairInd = bool.fromEnvironment('PAIR_IND');
 
+// RIICHI_SIDES="123140=bottom;143104=left": 판 상태 추적이 그 자리의 리치를 확정해 둔 것으로 치고 `readGrid(trackedRiichi:)` 로 넘긴다
+// (매장 사진 재생엔 추적이 없고 화료자는 봉을 이미 가져가 리치를 모른다, 2026-11-01). `flow_visit.py riichi` 가 truth.json 에서 만든다.
+const _riichiSides = String.fromEnvironment('RIICHI_SIDES');
+Set<Side> _trackedRiichi(String photo) => {
+      for (final e in _riichiSides.split(';'))
+        if (e.startsWith('$photo=')) ?SideX.parse(e.substring(photo.length + 1)),
+    };
+
 /// 펴기(isolate): 원본 → (편 JPEG, 모서리) 또는 펠트를 못 찾으면 (null, null).
 (Uint8List?, Map<String, Object>?) _rectifyJob(Uint8List original) {
   final im = img.decodeJpg(original)!;
@@ -245,7 +253,8 @@ void main() {
                 if (dealer != null) out['dealer_side'] = dealer.name;
                 final reading = await TableReader(client, ops: _isolateOps)
                     .readGrid(shot, useGrid, rectify: rect, dealer: dealer, trace: trace, useWide: wide, wideEarly: early,
-                        wideIndicators: ind, lastHedge: ind ? const Duration(seconds: 12) : null);
+                        wideIndicators: ind, lastHedge: ind ? const Duration(seconds: 12) : null, trackedRiichi: _trackedRiichi(photo));
+                if (_trackedRiichi(photo).isNotEmpty) out['tracked_riichi'] = [for (final s in _trackedRiichi(photo)) s.name];
                 out['wide_called'] = trace.wide != null;
                 out['wide_early'] = trace.wideEarly;
                 out['wide_for_dora'] = trace.wideForDora;

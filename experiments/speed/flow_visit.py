@@ -2,6 +2,7 @@
 미리 보내기("early"), 같은 순간(2026-11-01). "넓은 판독" = 그 답을 쓴 수, "미리 보냄" = 자리 판독과 같이 보낸 수(안 쓴 것 포함), seatwide 초는 그 호출만.
 
   python -I -X utf8 experiments/speed/flow_visit.py grids        FIELD_GRIDS 값(매장 25장, 저장된 격자)을 찍는다
+  python -I -X utf8 experiments/speed/flow_visit.py riichi       RIICHI_SIDES 값(truth.json 에서 리치 화료 장면의 화료자 자리) — 판 상태 추적 흉내
   python -I -X utf8 experiments/speed/flow_visit.py score <로그>...
 """
 from __future__ import annotations
@@ -27,6 +28,16 @@ def grids() -> None:
             continue
         g = s["grid"]
         out.append(f"{s['name'][-6:]}=" + ",".join(str(v) for v in [g["x1"], g["x2"], g["y1"], g["y2"], *g.get("sticks", [])]))
+    print(";".join(out))
+
+
+def riichi() -> None:
+    """판 상태 추적이 화료자 리치를 확정해 둔 것으로 치는 장면(RIICHI_SIDES 형식, 화료자 자리는 meta.json)."""
+    out = []
+    for name, t in sorted(TRUTH.items()):
+        if t.get("riichi"):
+            m = json.loads((VISIT / name / "meta.json").read_text(encoding="utf-8"))
+            out.append(f"{name[-6:]}={m['winner_side']}")
     print(";".join(out))
 
 
@@ -104,6 +115,7 @@ def score(paths: list[str]) -> None:
         d["미리 보냄"] += bool(r.get("wide_early"))
         d["표시패용 대기"] += bool(r.get("wide_for_dora"))
         d["강 끝 헤지"] += bool(r.get("last_hedged"))
+        d["추적 리치"] += bool(r.get("tracked_riichi"))
         for name, ms in (r.get("call_ms") or {}).items():
             if name.startswith("seatwide_"):
                 tally.setdefault((*k, "w"), []).append(ms / 1000)
@@ -118,7 +130,7 @@ def score(paths: list[str]) -> None:
         d = tally[k]
         ts = sorted(tally[(*k, "t")])
         ws = sorted(tally.get((*k, "w"), []))
-        print(k, {x: d[x] for x in ("n", "맞음", "론쯔모까지", "고르면 맞음", "계산했는데 틀림", "자동 반영", "틀린 자동 반영", "표시패", "넓은 판독", "미리 보냄", "표시패용 대기", "강 끝 헤지", "오류")},
+        print(k, {x: d[x] for x in ("n", "맞음", "론쯔모까지", "고르면 맞음", "계산했는데 틀림", "자동 반영", "틀린 자동 반영", "표시패", "넓은 판독", "미리 보냄", "표시패용 대기", "강 끝 헤지", "추적 리치", "오류")},
               f"시간 {statistics.median(ts):.1f} / {ts[min(len(ts) - 1, int(.9 * len(ts)))]:.1f} / {ts[-1]:.1f}",
               f"seatwide {len(ws)}회 {statistics.median(ws):.1f} / {ws[min(len(ws) - 1, int(.9 * len(ws)))]:.1f} / {ws[-1]:.1f}" if ws else "")
     # 같은 순간 짝 차이(두 번째 서버 − 첫 서버, 사진마다): 시각 편차를 빼고 본다
@@ -134,4 +146,4 @@ def score(paths: list[str]) -> None:
 
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")
-    grids() if sys.argv[1] == "grids" else fitted() if sys.argv[1] == "fitted" else score(sys.argv[2:])
+    {"grids": grids, "fitted": fitted, "riichi": riichi}.get(sys.argv[1], lambda: score(sys.argv[2:]))()
