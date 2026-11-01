@@ -1,4 +1,5 @@
-"""앱 흐름(integration_test/read_grid_timing_test.dart PAIR_WIDE) 결과 채점: 넓은 구역 판독 없이("plain") / 있이("wide"), 같은 순간(2026-11-01).
+"""앱 흐름(integration_test/read_grid_timing_test.dart PAIR_WIDE·PAIR_EARLY) 결과 채점: 넓은 구역 판독 없이("plain") / 있이("wide") /
+미리 보내기("early"), 같은 순간(2026-11-01). "넓은 판독" = 그 답을 쓴 수, "미리 보냄" = 자리 판독과 같이 보낸 수(안 쓴 것 포함), seatwide 초는 그 호출만.
 
   python -I -X utf8 experiments/speed/flow_visit.py grids        FIELD_GRIDS 값(매장 25장, 저장된 격자)을 찍는다
   python -I -X utf8 experiments/speed/flow_visit.py score <로그>...
@@ -64,6 +65,7 @@ def score(paths: list[str]) -> None:
             if i >= 0:
                 rows.append(json.loads(line[i + 7:]))
     tally: dict = {}
+    pairs: dict = {}  # 같은 순간 짝: (세트, 사진, 회차) → 서버 → 전체 초
     for r in rows:
         t = truth_of(r["photo"], scenes)
         if r["scene"] == "V" and t["win"] is None:
@@ -99,8 +101,13 @@ def score(paths: list[str]) -> None:
         d["자동 반영"] += r.get("auto_block") is None and "error" not in r
         d["틀린 자동 반영"] += r.get("auto_block") is None and "error" not in r and not full
         d["넓은 판독"] += bool(r.get("wide_called"))
+        d["미리 보냄"] += bool(r.get("wide_early"))
+        for name, ms in (r.get("call_ms") or {}).items():
+            if name.startswith("seatwide_"):
+                tally.setdefault((*k, "w"), []).append(ms / 1000)
         d["오류"] += "error" in r
         tally.setdefault((*k, "t"), []).append(r["total_ms"] / 1000)
+        pairs.setdefault((part, r["photo"], r["run"]), {})[r["server"]] = r["total_ms"] / 1000
         if part != "BCD" or not full:
             print(r["photo"], r["server"], "맞음" if full else "고르면 맞음" if pick else "틀림" if wrong else "입력 화면", "넓은" if r.get("wide_called") else "", f"{r['total_ms'] / 1000:.1f}초",
                   "손패", " ".join(m.get("closed") or []), "울기", m.get("melds"), "화료", m.get("win_tile"), "쯔모" if m.get("is_tsumo") else "론", m.get("loser"), "후보", cands, "| 정답", t["win"], t["tsumo"], t["loser"], "자동" if r.get("auto_block") is None else "", r.get("error", ""))
@@ -108,8 +115,18 @@ def score(paths: list[str]) -> None:
     for k in sorted(k for k in tally if len(k) == 2):
         d = tally[k]
         ts = sorted(tally[(*k, "t")])
-        print(k, {x: d[x] for x in ("n", "맞음", "론쯔모까지", "고르면 맞음", "계산했는데 틀림", "자동 반영", "틀린 자동 반영", "표시패", "넓은 판독", "오류")},
-              f"시간 {statistics.median(ts):.1f} / {ts[min(len(ts) - 1, int(.9 * len(ts)))]:.1f} / {ts[-1]:.1f}")
+        ws = sorted(tally.get((*k, "w"), []))
+        print(k, {x: d[x] for x in ("n", "맞음", "론쯔모까지", "고르면 맞음", "계산했는데 틀림", "자동 반영", "틀린 자동 반영", "표시패", "넓은 판독", "미리 보냄", "오류")},
+              f"시간 {statistics.median(ts):.1f} / {ts[min(len(ts) - 1, int(.9 * len(ts)))]:.1f} / {ts[-1]:.1f}",
+              f"seatwide {len(ws)}회 {statistics.median(ws):.1f} / {ws[min(len(ws) - 1, int(.9 * len(ws)))]:.1f} / {ws[-1]:.1f}" if ws else "")
+    # 같은 순간 짝 차이(두 번째 서버 − 첫 서버, 사진마다): 시각 편차를 빼고 본다
+    servers = sorted({sv for v in pairs.values() for sv in v})
+    if len(servers) == 2:
+        s0, s1 = servers if servers[0] == "plain" or servers[1] == "early" else servers[::-1]
+        for part in sorted({k[0] for k in pairs}):
+            ds = sorted(v[s1] - v[s0] for k, v in pairs.items() if k[0] == part and s0 in v and s1 in v)
+            if ds:
+                print(part, f"짝 차이 {s1} − {s0}: 중앙 {statistics.median(ds):+.1f}초, {s1} 이 빠름 {sum(d < 0 for d in ds)}/{len(ds)}")
 
 
 if __name__ == "__main__":

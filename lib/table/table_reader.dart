@@ -63,8 +63,11 @@ class TableReadTrace {
   /// 봉이 남은 자리의 강에 눕힌 패가 있는지([TableReading.riverSideways]). 매장에서 맞는지 보려고 기록에 남긴다.
   Map<Side, bool?> riverSideways = const {};
 
-  /// 넓은 구역 판독 응답(`/v2/seatwide`, 불렀을 때만).
+  /// 넓은 구역 판독 응답(`/v2/seatwide`, 그 답을 썼을 때만). 미리 보냈는데 안 쓴 호출은 [callMs] 의 seatwide_* 에만 남는다.
   Map<String, dynamic>? wide;
+
+  /// 넓은 구역 판독을 자리 판독과 같은 순간에 미리 보냈나(`readGrid(wideEarly:)`).
+  bool wideEarly = false;
   Uint8List? small;
   Uint8List? handCrop;
   Uint8List? centerCrop;
@@ -184,12 +187,18 @@ class TableReader {
   /// [rectify] 면 먼저 펠트 네 모서리로 사진을 펴서 작탁(+ 둘레 흰 테두리)만 남기고 [standardGrid] 로 나눈다(사용자 제안
   /// 2026-10-28 "처음 자를 때 작탁만"; 기운 탁자도 축에 맞는 격자로). 펠트를 못 찾으면 [grid] 그대로. 편 사진에서는 원본 좌표인
   /// [trackedDiscard] 의 위치를 쓰지 않는다(자리만 방총자 힌트로).
+  ///
+  /// [useWide] 면 화료자를 알 때 테이블 절반도 잘라 두고, 자리 판독이 장수·패 모양으로 안 맞을 때 `/v2/seatwide` 로 떼어 둔 패·
+  /// 모서리 울기를 찾는다(`wide_seat.dart`). [wideEarly] 면 그 호출을 자리 판독과 **같은 순간에 미리** 보내고 필요할 때만 답을 쓴다
+  /// — 필요한 장면에서 넓은 판독 시간(운영 중앙 10초)이 자리·강 판독에 가려지는 대신, 안 필요한 장면은 호출 하나(입력 약 19k 토큰)를
+  /// 버린다. 기본 켬(2026-11-01 같은 순간 비교, metrics 표 1-11: 매장 오후 중앙 16.2 → 10.3초·짝 차이 −5.6초, 정답은 같은 범위).
   Future<TableReading> readGrid(
     Uint8List original,
     GridZones grid, {
     bool rectify = false,
     bool splitSeat = false,
     bool useWide = true,
+    bool wideEarly = true,
     Map<Side, List<ObservedMeld>> tracked = const {},
     bool shadow = false,
     Set<Side> trackedRiichi = const {},
@@ -270,6 +279,7 @@ class TableReader {
     final Map<Side, Uint8List> handCrops;
     var layout = grid.toLayout(faceUp: const []);
     final Map<Side, Future<Map<String, dynamic>?>> seatF, cornerF, shadowF;
+    Future<({Map<String, dynamic>? j, Object? error})>? wideF;
     final trackedMode = <Side, String>{};
     final started = <Future<Object?>>[];
     try {
@@ -329,7 +339,13 @@ class TableReader {
           if (shadow) s: call('seat', seatCrops[s], 'seat_${s.name}', query: seatQuery(s)),
       };
       cornerF = {for (final s in cornerSides) s: call('corner', cornerCrops[s], 'corner_${s.name}')};
-      started.addAll([...seatF.values, ...shadowF.values, ...cornerF.values]);
+      // 넓은 구역 판독을 미리 보낸다. 실패는 그 답이 필요할 때만 경고로(안 쓰는 장면에서 자동 반영을 막지 않게).
+      if (wideEarly && wideCrop != null && known != null) {
+        trace?.wideEarly = true;
+        wideF = call('seatwide', wideCrop, 'seatwide_${known.name}', required: true)
+            .then<({Map<String, dynamic>? j, Object? error})>((j) => (j: j, error: null), onError: (Object e) => (j: null, error: e));
+      }
+      started.addAll([...seatF.values, ...shadowF.values, ...cornerF.values, ?wideF]);
 
       // 게임 중 추적이 본 마지막 버림패 위치가 있으면 그 패만 따로 잘라 한 번 더 읽는다(강 끝 틀을 못 잡을 때의 대안).
       final rest = await shot.crop([
@@ -474,7 +490,14 @@ class TableReader {
         if (trackSide != side) trackedTile,
       ];
       if (seatNeedsWide(seats[side]!, ends)) {
-        final j = await call('seatwide', wideCrop, 'seatwide_${side.name}');
+        final Map<String, dynamic>? j;
+        if (wideF != null) {
+          final r = await wideF;
+          if (r.error case final e?) warnings.add('seatwide_${side.name} 을(를) 읽지 못했습니다: $e');
+          j = r.j;
+        } else {
+          j = await call('seatwide', wideCrop, 'seatwide_${side.name}');
+        }
         if (j != null) {
           trace?.wide = j;
           final r = applyWide(seats[side]!, WideRead.fromJson(j), meldsKnown: trackedMode[side] == 'handonly');
