@@ -2,6 +2,7 @@
 /// 순수 Dart. 무거운 이미지 처리는 [ImageOps] 로 바꿔 끼워 isolate 에서 돌릴 수 있다.
 library;
 
+import 'dart:async';
 import 'dart:typed_data';
 
 import '../services/recognizer_client.dart';
@@ -51,6 +52,45 @@ class ImageOps {
   static const ImageOps direct = ImageOps(shrink: _shrinkSync, cropMany: _cropSync);
 }
 
+/// 같은 요청을 헤지로 한 번 더: [first] 가 [after] 안에 답하지 않거나 먼저 실패하면 [second] 를 보내고, 먼저 성공한 답을 쓴다.
+/// 둘 다 실패하면 나중 오류. [after] 가 null 이면 [first] 만. 진 쪽의 결과·오류는 버린다(처리되지 않은 오류 없음).
+Future<T> hedged<T>(Future<T> Function() first, Future<T> Function() second, Duration? after, {void Function()? onHedge}) {
+  final f1 = first();
+  if (after == null) return f1;
+  final done = Completer<T>();
+  Future<T>? f2;
+  var failed = 0;
+  void fail(Object e, StackTrace st) {
+    failed++;
+    if (failed == 2 && !done.isCompleted) done.completeError(e, st);
+  }
+
+  void start2() {
+    if (f2 != null || done.isCompleted) return;
+    onHedge?.call();
+    f2 = second()
+      ..then((v) {
+        if (!done.isCompleted) done.complete(v);
+      }, onError: fail);
+  }
+
+  final timer = Timer(after, start2);
+  f1.then((v) {
+    timer.cancel();
+    if (!done.isCompleted) done.complete(v);
+  }, onError: (Object e, StackTrace st) {
+    timer.cancel();
+    if (f2 == null) {
+      // 먼저 실패했으면 바로 한 번 더. 그것도 실패하면 그 오류.
+      failed++;
+      start2();
+      return;
+    }
+    fail(e, st);
+  });
+  return done.future;
+}
+
 /// 읽기 단계. 진행 표시용.
 enum ReadStage { decoding, locating, cropping, reading }
 
@@ -68,6 +108,12 @@ class TableReadTrace {
 
   /// 넓은 구역 판독을 자리 판독과 같은 순간에 미리 보냈나(`readGrid(wideEarly:)`).
   bool wideEarly = false;
+
+  /// 미리 보낸 넓은 판독 답을 손패엔 안 쓰고 리치 화료의 표시패를 위해 기다렸나(`readGrid(wideIndicators:)`).
+  bool wideForDora = false;
+
+  /// 강 끝 판독을 헤지로 한 번 더 보냈나(`readGrid(lastHedge:)`). 시간은 [callMs] 의 last3·last3_hedge.
+  bool lastHedged = false;
   Uint8List? small;
   Uint8List? handCrop;
   Uint8List? centerCrop;
@@ -192,6 +238,10 @@ class TableReader {
   /// 모서리 울기를 찾는다(`wide_seat.dart`). [wideEarly] 면 그 호출을 자리 판독과 **같은 순간에 미리** 보내고 필요할 때만 답을 쓴다
   /// — 필요한 장면에서 넓은 판독 시간(운영 중앙 10초)이 자리·강 판독에 가려지는 대신, 안 필요한 장면은 호출 하나(입력 약 19k 토큰)를
   /// 버린다. 기본 켬(2026-11-01 같은 순간 비교, metrics 표 1-11: 매장 오후 중앙 16.2 → 10.3초·짝 차이 −5.6초, 정답은 같은 범위).
+  /// [wideIndicators] 면 리치 화료자의 손패 옆에 따로 놓인 패가 없을 때 미리 보낸 넓은 판독의 표시패 짝(서버 `pair`, 2~4장)을 탁자에
+  /// 내놓은 도라·뒷도라 표시패로 넘긴다([CenterReading.handSideIndicators], merge 가 리치면 먼저 쓴다).
+  /// [lastHedge] 는 강 끝(`/v2/last3`) 헤지: 그 시간 안에 답이 없거나 먼저 실패하면 같은 요청을 한 번 더 보내 먼저 온 답을 쓴다
+  /// (null 이면 안 함). 자리 판독에는 쓰지 않는다(경주는 손패 정확도를 깎았다, metrics 표 2-2).
   Future<TableReading> readGrid(
     Uint8List original,
     GridZones grid, {
@@ -199,6 +249,8 @@ class TableReader {
     bool splitSeat = false,
     bool useWide = true,
     bool wideEarly = true,
+    bool wideIndicators = true,
+    Duration? lastHedge = const Duration(seconds: 12),
     Map<Side, List<ObservedMeld>> tracked = const {},
     bool shadow = false,
     Set<Side> trackedRiichi = const {},
@@ -280,6 +332,7 @@ class TableReader {
     var layout = grid.toLayout(faceUp: const []);
     final Map<Side, Future<Map<String, dynamic>?>> seatF, cornerF, shadowF;
     Future<({Map<String, dynamic>? j, Object? error})>? wideF;
+    ({Map<String, dynamic>? j, Object? error})? wideReady; // 미리 보낸 답이 이미 와 있으면(기다리지 않고 쓸 수 있게)
     final trackedMode = <Side, String>{};
     final started = <Future<Object?>>[];
     try {
@@ -343,7 +396,8 @@ class TableReader {
       if (wideEarly && wideCrop != null && known != null) {
         trace?.wideEarly = true;
         wideF = call('seatwide', wideCrop, 'seatwide_${known.name}', required: true)
-            .then<({Map<String, dynamic>? j, Object? error})>((j) => (j: j, error: null), onError: (Object e) => (j: null, error: e));
+            .then<({Map<String, dynamic>? j, Object? error})>((j) => (j: j, error: null), onError: (Object e) => (j: null, error: e))
+            .then((r) => wideReady = r);
       }
       started.addAll([...seatF.values, ...shadowF.values, ...cornerF.values, ?wideF]);
 
@@ -384,10 +438,19 @@ class TableReader {
       for (final s in lastSides)
         if (lastCrops[s] != null) s,
     ];
+    // 헤지: [lastHedge] 안에 답이 없거나 먼저 실패하면(503 등) 같은 요청을 한 번 더 보내 먼저 온 답을 쓴다. 강 끝은 한 호출에
+    // 60/60 이라 정확도 손해 없이 Gemini 꼬리(같은 사진 5~60초)와 일시 오류를 자른다(10-25 시뮬 헤지 p90 34.6 → 17.6초, 표 2-2).
+    Future<Map<String, dynamic>> lastOnce(String name) {
+      final t = Stopwatch()..start();
+      return client.observeLasts([for (final s in lastSent) (lastCrops[s]!, 'last_${s.name}.jpg')]).then((j) {
+        trace?.callMs[name] = t.elapsedMilliseconds;
+        return j;
+      });
+    }
+
     final lastsF = lastSent.isEmpty
         ? Future<Map<String, dynamic>?>.value(null)
-        : client
-              .observeLasts([for (final s in lastSent) (lastCrops[s]!, 'last_${s.name}.jpg')])
+        : hedged(() => lastOnce('last3'), () => lastOnce('last3_hedge'), lastHedge, onHedge: () => trace?.lastHedged = true)
               .then<Map<String, dynamic>?>((j) {
                 usage['last3'] = parseUsage(j['usage']);
                 return j;
@@ -482,6 +545,8 @@ class TableReader {
     final dealerDoraJ = await dealerDoraF;
     final trackedJ = await trackedF;
     final trackedTile = trackedJ == null ? null : parseLastV2(trackedJ);
+    final sticks = sticksJ == null ? const <Side, bool>{} : parseCenterV2(sticksJ).sticks;
+    var wideDora = const <ReadTile>[];
     // 화료자 손패가 장수·패 모양으로 안 맞거나 화료패를 못 찾았으면 테이블 절반에서 다시 찾는다(`wide_seat.dart`). 그만큼 느려지지만 이 장면만.
     if (known case final side? when wideCrop != null && seats[side] != null) {
       final ends = [
@@ -489,27 +554,54 @@ class TableReader {
           if (e.key != side) e.value == null ? null : parseLastV2(e.value!),
         if (trackSide != side) trackedTile,
       ];
-      if (seatNeedsWide(seats[side]!, ends)) {
+      WideRead? wideRead;
+      final needs = seatNeedsWide(seats[side]!, ends);
+      // 울기가 미덥지 않은 자리(엇갈림·확신도 0)는 미리 보낸 답이 있을 때만 대조한다(흩어진 손패를 울기로 묶은 틀린 계산 막기).
+      final doubtful = trackedMode[side] != 'handonly' && meldsDoubtful(seats[side]!) && wideF != null;
+      if (needs || doubtful) {
         final Map<String, dynamic>? j;
         if (wideF != null) {
           final r = await wideF;
-          if (r.error case final e?) warnings.add('seatwide_${side.name} 을(를) 읽지 못했습니다: $e');
+          if (r.error case final e? when needs) warnings.add('seatwide_${side.name} 을(를) 읽지 못했습니다: $e');
           j = r.j;
         } else {
           j = await call('seatwide', wideCrop, 'seatwide_${side.name}');
         }
         if (j != null) {
           trace?.wide = j;
-          final r = applyWide(seats[side]!, WideRead.fromJson(j), meldsKnown: trackedMode[side] == 'handonly');
-          seats[side] = r.seat;
-          if (r.note case final note?) warnings.add(note);
+          wideRead = WideRead.fromJson(j);
+          final scattered = doubtful ? applyScattered(seats[side]!, wideRead) : null;
+          if (scattered != null) {
+            seats[side] = scattered.seat;
+            warnings.add(scattered.note);
+          } else if (needs) {
+            final r = applyWide(seats[side]!, wideRead, meldsKnown: trackedMode[side] == 'handonly');
+            seats[side] = r.seat;
+            if (r.note case final note?) warnings.add(note);
+          }
+        }
+      }
+      // 리치 화료의 표시패: 매장에선 도라·뒷도라 두 장을 탁자 위 빈 곳(손패 줄보다 위, 강 옆)에 내놓는다(리치 아니면 왕패에 그대로).
+      // 자리 크롭 밖이라 손패 옆(loose)에 안 잡히면 미리 보낸 넓은 판독의 표시패 짝(서버 `pair`, 2~4장)을 쓴다. 리치봉이 보이거나
+      // 추적이 확정한 화료자만 그 답을 기다린다(안 쓰는 장면은 기다리지 않음). 사용자 규칙 "탁자 위 표시패는 2장 이상" (2026-11-01).
+      // 리치를 모르는 자리(추적 없음·봉을 이미 가져감)도 답이 이미 와 있으면 기다리지 않고 쓴다(merge 가 리치면 먼저 쓴다).
+      final riichiSide = (sticks[side] ?? false) || trackedRiichi.contains(side);
+      if (wideIndicators && seats[side]!.loose.isEmpty && (riichiSide || wideReady != null)) {
+        if (wideRead == null && wideF != null) {
+          final r = riichiSide ? await wideF : wideReady!;
+          if (r.j case final j?) {
+            wideRead = WideRead.fromJson(j);
+            trace?.wideForDora = riichiSide;
+          }
+        }
+        if (wideRead case final w? when w.pairs.length >= 2 && w.pairs.length <= 4) {
+          wideDora = w.pairs;
         }
       }
     }
     lap('read');
 
     var sides = [?known];
-    final sticks = sticksJ == null ? const <Side, bool>{} : parseCenterV2(sticksJ).sticks;
     // 도라 표시패: 그 판의 왕패 상자([wall], 판 시작 때 찾아 둔 것) 또는 선 기준 도라 구역에서 읽었으면 그것,
     // 없으면 가운데 칸. 둘을 나란히 불러 시간은 늘지 않는다. 리치 화료면 merge 가 화료자 손패 옆을 먼저 쓴다.
     final dealerDora = dealerDoraJ == null ? const <ReadTile>[] : parseCenterV2(dealerDoraJ).indicators;
@@ -563,7 +655,7 @@ class TableReader {
         // 가운데(왕패)와 화료자 손패 옆을 따로 넘기고, 어느 쪽을 쓸지는 merge 가 리치 여부로 정한다.
         doraIndicators: dora,
         doraFrom: doraFrom,
-        handSideIndicators: h.loose.isNotEmpty ? h.loose : stray,
+        handSideIndicators: h.loose.isNotEmpty ? h.loose : (stray.isNotEmpty ? stray : (side == known ? wideDora : const [])),
         usage: usage,
       );
       if (side == sides.first) trace?.observation = observation;

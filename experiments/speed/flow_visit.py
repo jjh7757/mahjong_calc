@@ -102,6 +102,8 @@ def score(paths: list[str]) -> None:
         d["틀린 자동 반영"] += r.get("auto_block") is None and "error" not in r and not full
         d["넓은 판독"] += bool(r.get("wide_called"))
         d["미리 보냄"] += bool(r.get("wide_early"))
+        d["표시패용 대기"] += bool(r.get("wide_for_dora"))
+        d["강 끝 헤지"] += bool(r.get("last_hedged"))
         for name, ms in (r.get("call_ms") or {}).items():
             if name.startswith("seatwide_"):
                 tally.setdefault((*k, "w"), []).append(ms / 1000)
@@ -116,13 +118,14 @@ def score(paths: list[str]) -> None:
         d = tally[k]
         ts = sorted(tally[(*k, "t")])
         ws = sorted(tally.get((*k, "w"), []))
-        print(k, {x: d[x] for x in ("n", "맞음", "론쯔모까지", "고르면 맞음", "계산했는데 틀림", "자동 반영", "틀린 자동 반영", "표시패", "넓은 판독", "미리 보냄", "오류")},
+        print(k, {x: d[x] for x in ("n", "맞음", "론쯔모까지", "고르면 맞음", "계산했는데 틀림", "자동 반영", "틀린 자동 반영", "표시패", "넓은 판독", "미리 보냄", "표시패용 대기", "강 끝 헤지", "오류")},
               f"시간 {statistics.median(ts):.1f} / {ts[min(len(ts) - 1, int(.9 * len(ts)))]:.1f} / {ts[-1]:.1f}",
               f"seatwide {len(ws)}회 {statistics.median(ws):.1f} / {ws[min(len(ws) - 1, int(.9 * len(ws)))]:.1f} / {ws[-1]:.1f}" if ws else "")
     # 같은 순간 짝 차이(두 번째 서버 − 첫 서버, 사진마다): 시각 편차를 빼고 본다
     servers = sorted({sv for v in pairs.values() for sv in v})
     if len(servers) == 2:
-        s0, s1 = servers if servers[0] == "plain" or servers[1] == "early" else servers[::-1]
+        order = ["plain", "wide", "early", "ind"]
+        s0, s1 = sorted(servers, key=lambda x: order.index(x) if x in order else 9)
         for part in sorted({k[0] for k in pairs}):
             ds = sorted(v[s1] - v[s0] for k, v in pairs.items() if k[0] == part and s0 in v and s1 in v)
             if ds:

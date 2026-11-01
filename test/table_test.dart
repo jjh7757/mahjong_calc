@@ -415,6 +415,21 @@ void main() {
         expect(m.hasFlag(MergeIssue.winTileAssumed), isFalse);
       });
 
+      test('표시패까지 4장 다 보이는 대기패는 빼서 후보가 하나면 그 패로(2m 2장 + 표시패 2m 2장)', () {
+        final m = mergeReading(
+          hand: HandReading.fromJson({'tiles': _tiles('2m 2m 3m 4m 4p 5p 6p 7s 8s 9s 1z 1z 1z')}),
+          center: CenterReading.fromJson(_center(last: allRead, dora: '2m 2m')),
+          winnerSide: Side.bottom,
+          game: _game(),
+          seats: seats,
+        );
+        expect(m.winCandidates, isEmpty);
+        expect(m.hand!.winTile, Tiles.parse('5m'));
+        expect(m.hasFlag(MergeIssue.winFromWait), isTrue);
+        final both = merge('2m 2m 3m 4m 4p 5p 6p 7s 8s 9s 1z 1z 1z', allRead);
+        expect(both.winCandidates, [Tiles.parse('2m'), Tiles.parse('5m')]);
+      });
+
       test('대기패가 여럿이면 마지막 장으로 가정하지 않고 후보를 낸다', () {
         final m = merge('1m 2m 3m 4p 5p 6p 7s 8s 9s 1z 1z 2m 3m', allRead);
         expect(m.hand, isNull);

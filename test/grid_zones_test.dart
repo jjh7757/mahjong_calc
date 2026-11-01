@@ -439,7 +439,8 @@ void main() {
       final trace = TableReadTrace();
       final reading = await TableReader(client).readGrid(table(), grid, trace: trace);
 
-      expect(names.toSet(), {'seat_bottom', 'last_right', 'last_top', 'last_left', 'sticks', 'dora'});
+      // seatwide 는 화료자를 알면 자리 판독과 같은 순간에 미리 보낸다(2026-11-01, 답은 필요할 때만 씀).
+      expect(names.toSet(), {'seat_bottom', 'seatwide_bottom', 'last_right', 'last_top', 'last_left', 'sticks', 'dora'});
       // 자리 판독에는 손패 칸 폭 비율을 같이 보낸다(서버가 틀을 못 잡으면 손패 칸·모서리 칸으로 나눠 다시 잡음).
       expect(urls.singleWhere((u) => u.path == '/v2/seat').queryParameters, {'hand_frac': '0.667'});
       // 장면 시간을 정하는 자리 판독을 먼저 보낸다(나머지 구역은 그 뒤에 잘라 보냄).

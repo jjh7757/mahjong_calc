@@ -176,9 +176,10 @@ bool _completes(List<MergedTile> closed, List<Meld> melds, ReadTile? tile) {
 }
 
 /// [closed](한 장 모자란 멘젠 부분)의 대기패. 이미 4장 다 보인 패는 뺀다.
-List<int> _waitTiles(List<MergedTile> closed, List<Meld> melds) {
+/// 손패로 화료할 수 있는 패. 손패·울기·[alsoSeen](사진에 보인 표시패)에 4장 다 보이는 패는 뺀다(사용자 제안 2026-11-01, metrics 표 1-7).
+List<int> _waitTiles(List<MergedTile> closed, List<Meld> melds, {Iterable<int> alsoSeen = const []}) {
   final seen = <int, int>{};
-  for (final t in [for (final c in closed) c.tile, for (final m in melds) ...m.tiles]) {
+  for (final t in [for (final c in closed) c.tile, for (final m in melds) ...m.tiles, ...alsoSeen]) {
     seen[t] = (seen[t] ?? 0) + 1;
   }
   return [
@@ -281,7 +282,9 @@ TableMerge mergeReading({
         for (final s in Side.values)
           if (canDealIn(s) && center?.lastDiscardAt(s) == null) s,
       ];
-      final waits = _waitTiles(closed, melds);
+      final waits = _waitTiles(closed, melds, alsoSeen: [
+        if (center != null) ...[...center.doraIndicators, ...center.uraIndicators, ...center.handSideIndicators].map((t) => t.tile),
+      ]);
       if (waits.length == 1) {
         final t = waits.single;
         // 수패 5 는 적도라인지 사진으로 못 봤으니 확인을 묻는다(확신도를 낮춰 노란 테두리).

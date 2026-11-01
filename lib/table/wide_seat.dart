@@ -17,23 +17,29 @@ class WideRead {
   final List<ReadTile>? row;
   final List<ReadTile> lone;
   final List<ReadTile> grouped;
+
+  /// 줄보다 위(강 높이)에 둘만 붙어 놓인 패 — 리치 화료자가 탁자에 내놓은 도라·뒷도라 표시패 짝(서버 `pair`). [grouped] 에도 들어 있다.
+  final List<ReadTile> pairs;
   final List<ObservedMeld> melds;
   final bool unanimous;
-  const WideRead({this.row, this.lone = const [], this.grouped = const [], this.melds = const [], this.unanimous = false});
+  const WideRead({this.row, this.lone = const [], this.grouped = const [], this.pairs = const [], this.melds = const [], this.unanimous = false});
 
   factory WideRead.fromJson(Map<String, dynamic> j) {
     final rawRow = (j['row'] as List<dynamic>?) ?? const [];
     final row = [for (final t in rawRow) if (t is Map<String, dynamic>) ?ReadTile.fromJson(t)];
-    final lone = <ReadTile>[], grouped = <ReadTile>[];
+    final lone = <ReadTile>[], grouped = <ReadTile>[], pairs = <ReadTile>[];
     for (final s in (j['singles'] as List<dynamic>?) ?? const []) {
       if (s is! Map<String, dynamic>) continue;
       final t = ReadTile.fromJson(s);
-      if (t != null) (s['lone'] == true ? lone : grouped).add(t);
+      if (t == null) continue;
+      (s['lone'] == true ? lone : grouped).add(t);
+      if (s['pair'] == true) pairs.add(t);
     }
     return WideRead(
       row: rawRow.isNotEmpty && row.length == rawRow.length ? row : null,
       lone: lone,
       grouped: grouped,
+      pairs: pairs,
       melds: [
         for (final m in (j['melds'] as List<dynamic>?) ?? const [])
           if (m is Map<String, dynamic>) ?ObservedMeld.fromJson(m),
@@ -103,6 +109,38 @@ bool closedTenpai(List<int> closed) {
 int _meldCount(List<ObservedMeld> melds) => melds.where((m) => m.consistent).length;
 
 List<int> _closed(SeatV2 s) => [for (final t in s.tiles) t.tile, if (s.separate case final t?) t.tile];
+
+/// 자리 판독의 울기가 미덥지 않나: 울기가 있는데 여러 번 읽은 답이 엇갈렸거나 확신도가 낮다. 흩어진 손패를 울기로 묶으면 모양 검사를
+/// 통과해 틀린 계산이 되므로(10-31 매장 175951, 세 번 읽어 한 번만 같음·울기 확신도 0) 넓은 판독의 줄과 대조한다([applyScattered]).
+bool meldsDoubtful(SeatV2 seat) =>
+    seat.melds.isNotEmpty && (!(seat.agreement?.unanimous ?? true) || seat.melds.any((m) => !m.consistent || m.conf < 0.7));
+
+/// 흩어진 손패를 울기로 묶은 자리 판독을 넓은 판독의 손패 줄로 바로잡는다. 넓은 줄이 울기 없이 자리 판독의 손패·울기 패를 모두 담은
+/// 한 줄이고 그 줄이 화료형(14)·텐파이(13)이면 그 줄을 손패로(울기 없음). 아니면 null(그대로).
+({SeatV2 seat, String note})? applyScattered(SeatV2 seat, WideRead wide) {
+  final row = wide.row;
+  if (row == null || wide.melds.isNotEmpty || seat.melds.isEmpty) return null;
+  final closed = _closed(seat);
+  final total = closed.length + 3 * seat.melds.length;
+  if (row.length != total || total != 13 && total != 14) return null;
+  final left = [for (final t in row) t.tile];
+  for (final t in [...closed, for (final m in seat.melds) for (final x in m.tiles) x.tile]) {
+    if (!left.remove(t)) return null;
+  }
+  final ids = [for (final t in row) t.tile];
+  if (!(total == 14 ? closedWins(ids) : closedTenpai(ids))) return null;
+  return (
+    seat: (
+      faceUp: true,
+      tiles: row,
+      separate: null,
+      melds: const <ObservedMeld>[],
+      loose: seat.loose,
+      agreement: (reads: 3, agree: wide.unanimous ? 3 : 0, unanimous: wide.unanimous, alternatives: const <String>[]),
+    ),
+    note: '울기로 읽힌 ${seat.melds.length}묶음이 넓은 구역에선 손패 한 줄이라 손패 ${row.length}장으로 봤습니다. 확인하세요',
+  );
+}
 
 /// 자리 판독만으로 부족해 넓은 구역을 읽어야 하나. [riverEnds] 는 다른 자리 강 끝(못 읽었으면 null).
 bool seatNeedsWide(SeatV2 seat, Iterable<ReadTile?> riverEnds) {

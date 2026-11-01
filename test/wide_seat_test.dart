@@ -66,6 +66,39 @@ void main() {
     });
   });
 
+  group('흩어진 손패를 울기로 묶은 답 바로잡기(175951)', () {
+    const row = '4m 4m 6m 7m 9s 6s 3z 5s 3z 4s 7s 3z 8s'; // 넓은 줄 13장(론 패 8m 은 강에)
+    SeatV2 doubtful() => (
+          faceUp: true,
+          tiles: _t('4m 4m 6m 7m'),
+          separate: null,
+          melds: [for (final m in ['2s 3s 4s', '6s 7s 8s', '4z 4z 4z']) ObservedMeld(_t(m), conf: 0)],
+          loose: const <ReadTile>[],
+          agreement: (reads: 3, agree: 1, unanimous: false, alternatives: const <String>[]),
+        );
+
+    test('엇갈리고 확신도 0 인 울기는 미덥지 않다, 만장일치·확신도 높으면 아니다', () {
+      expect(meldsDoubtful(doubtful()), isTrue);
+      expect(meldsDoubtful(_seat('4m 4m 6m 7m', melds: ['2s 3s 4s'])), isFalse);
+      expect(meldsDoubtful(_seat(h143104)), isFalse);
+    });
+
+    test('넓은 줄이 울기 없이 손패·울기 패를 다 담은 텐파이 한 줄이면 그 줄을 손패로', () {
+      final r = applyScattered(doubtful(), _wide('4m 4m 6m 7m 2s 3s 4s 6s 7s 8s 4z 4z 4z'));
+      expect(r, isNotNull);
+      expect(r!.seat.melds, isEmpty);
+      expect(r.seat.tiles.length, 13);
+      expect(r.note, contains('3묶음'));
+    });
+
+    test('줄 장수가 안 맞거나 패가 빠지거나 모양이 아니거나 넓은 판독에도 울기가 있으면 그대로', () {
+      expect(applyScattered(doubtful(), _wide(row)), isNull, reason: '패 구성이 다르다(9s·5s…)');
+      expect(applyScattered(doubtful(), _wide('4m 4m 6m 7m 2s 3s 4s 6s 7s 8s 4z 4z')), isNull, reason: '12장');
+      expect(applyScattered(doubtful(), _wide('4m 4m 6m 7m 2s 3s 4s 6s 7s 8s', melds: ['4z 4z 4z'])), isNull, reason: '넓은 판독도 울기');
+      expect(applyScattered(doubtful(), _wide('4m 4m 6m 7m 2s 3s 4s 6s 7s 9s 4z 4z 4z')), isNull, reason: '구성 다름');
+    });
+  });
+
   group('합치기', () {
     test('13장 + 외톨이로 화료형이면 떼어 둔 패(143104)', () {
       final r = applyWide(_seat(h143104), _wide(h143104, lone: '7s'));

@@ -142,6 +142,10 @@ const _pairWide = bool.fromEnvironment('PAIR_WIDE');
 // 같은 순간에 미리 보내기("early", `readGrid(wideEarly: true)`, 앱 기본). 둘 다 넓은 판독 있이. 그 밖의 측정은 앱 기본(미리 보내기).
 const _pairEarly = bool.fromEnvironment('PAIR_EARLY');
 
+// PAIR_IND=true: 같은 사진을 같은 순간 두 번 — 11-01 17시 앱(미리 보내기만, "early")과 그 뒤 규칙 셋을 더한 앱("ind", 앱 기본:
+// 리치 화료의 표시패를 넓은 판독의 표시패 짝에서 `wideIndicators`, 미덥지 않은 울기를 넓은 줄과 대조, 강 끝 헤지 `lastHedge`).
+const _pairInd = bool.fromEnvironment('PAIR_IND');
+
 /// 펴기(isolate): 원본 → (편 JPEG, 모서리) 또는 펠트를 못 찾으면 (null, null).
 (Uint8List?, Map<String, Object>?) _rectifyJob(Uint8List original) {
   final im = img.decodeJpg(original)!;
@@ -201,7 +205,7 @@ void main() {
             if (_sleepS > 0) await Future<void>.delayed(const Duration(seconds: _sleepS));
             final bytes = (await http.get(Uri.parse('$_photoUrl/${_photoPath(photo)}'))).bodyBytes;
             Future<void> measure(RecognizerClient client, String server,
-                {bool rect = false, bool dealerBox = false, GridZones? useGridFor, bool wide = true, bool early = !_pairEarly}) async {
+                {bool rect = false, bool dealerBox = false, GridZones? useGridFor, bool wide = true, bool early = !_pairEarly, bool ind = !_pairInd}) async {
               final trace = TableReadTrace();
               final (dealer, honba) = _fieldGame[scene] ?? (0, 0);
               final game = Game(
@@ -240,9 +244,12 @@ void main() {
                     : (SideX.parse(_dealerSide) ?? SeatMap(game.settings.bottomSeat).sideOf(game.dealer));
                 if (dealer != null) out['dealer_side'] = dealer.name;
                 final reading = await TableReader(client, ops: _isolateOps)
-                    .readGrid(shot, useGrid, rectify: rect, dealer: dealer, trace: trace, useWide: wide, wideEarly: early);
+                    .readGrid(shot, useGrid, rectify: rect, dealer: dealer, trace: trace, useWide: wide, wideEarly: early,
+                        wideIndicators: ind, lastHedge: ind ? const Duration(seconds: 12) : null);
                 out['wide_called'] = trace.wide != null;
                 out['wide_early'] = trace.wideEarly;
+                out['wide_for_dora'] = trace.wideForDora;
+                out['last_hedged'] = trace.lastHedged;
                 if (rect) out['quad'] = trace.feltQuad?.toJson();
                 if (_dumpDir.isNotEmpty) {
                   final d = Directory('$_dumpDir/${photo.replaceAll('/', '_')}')..createSync(recursive: true);
@@ -297,9 +304,10 @@ void main() {
             }
 
             await Future.wait([
-              measure(RecognizerClient(), _pairRectify || _pairDealer || _pairGrid || _pairWide ? 'plain' : (_pairEarly ? 'wide' : 'main'), wide: !_pairWide),
+              measure(RecognizerClient(), _pairRectify || _pairDealer || _pairGrid || _pairWide ? 'plain' : (_pairEarly ? 'wide' : (_pairInd ? 'early' : 'main')), wide: !_pairWide),
               if (_pairWide) measure(RecognizerClient(), 'wide'),
               if (_pairEarly) measure(RecognizerClient(), 'early', early: true),
+              if (_pairInd) measure(RecognizerClient(), 'ind', ind: true),
               if (_pairGrid) measure(RecognizerClient(), 'auto', useGridFor: autoGrid),
               if (_pairRectify) measure(RecognizerClient(), 'rect', rect: true),
               if (_pairDealer) measure(RecognizerClient(), 'dealer', dealerBox: true),

@@ -26,7 +26,7 @@ void main() {
 
   /// 가짜 서버. [separate] 가 있으면 자리 판독이 14장 화료형(넓은 판독 불필요), 없으면 13장 노텐(필요).
   /// [wideStatus] 가 200 이 아니면 넓은 판독은 그 상태로 실패.
-  (RecognizerClient, List<String>) server({String? separate, int wideStatus = 200}) {
+  (RecognizerClient, List<String>) server({String? separate, int wideStatus = 200, bool riichi = false, String grouped = ''}) {
     final names = <String>[];
     final client = RecognizerClient(
       baseUrl: 'https://x.test',
@@ -47,12 +47,15 @@ void main() {
               : json({
                   'method': 'frame',
                   'row': [for (final c in hand13) {'tile': c, 'conf': 0.9}],
-                  'singles': [{'tile': '7s', 'conf': 0.9, 'lone': true}],
+                  'singles': [
+                    {'tile': '7s', 'conf': 0.9, 'lone': true},
+                    for (final c in grouped.split(' ')) if (c.isNotEmpty) {'tile': c, 'conf': 0.9, 'lone': false, 'pair': true},
+                  ],
                   'melds': [],
                   'agreement': {'reads': 3, 'agree': 3, 'unanimous': true},
                 }),
           '/v2/last3' => json({'rivers': []}),
-          '/v2/sticks' => json({'riichi_sticks': {}}),
+          '/v2/sticks' => json({'riichi_sticks': riichi ? {'bottom': true} : {}}),
           '/v2/dora' => json({'indicators': []}),
           _ => http.Response('nope', 404),
         };
@@ -106,6 +109,28 @@ void main() {
     final reading = await TableReader(client).readGrid(table(), grid, winnerSide: Side.bottom, wideEarly: true, trace: trace);
     expect(trace.wide, isNull);
     expect(reading.warnings.join(), contains('seatwide_bottom'));
+  });
+
+  test('리치 화료자의 손패 옆이 비면 미리 보낸 넓은 판독의 표시패 짝 2~4장을 표시패로 넘긴다', () async {
+    final (client, _) = server(separate: '7s', riichi: true, grouped: '6p 3s');
+    final trace = TableReadTrace();
+    final reading = await TableReader(client).readGrid(table(), grid, winnerSide: Side.bottom, trace: trace);
+    expect(trace.wide, isNull, reason: '손패는 자리 판독 그대로');
+    expect(trace.wideForDora, isTrue);
+    expect([for (final t in reading.center!.handSideIndicators) t.code], ['6p', '3s']);
+    expect(reading.warnings, isEmpty);
+  });
+
+  test('리치를 모르면 기다리지 않는다(가짜 서버는 즉시 답해 이미 와 있으므로 짝은 넘긴다), 짝이 1장이거나 5장 넘어도 안 쓴다', () async {
+    final (c1, _) = server(separate: '7s', grouped: '6p 3s');
+    final t1 = TableReadTrace();
+    final r1 = await TableReader(c1).readGrid(table(), grid, winnerSide: Side.bottom, trace: t1);
+    expect(t1.wideForDora, isFalse, reason: '기다리지 않음');
+    expect([for (final t in r1.center!.handSideIndicators) t.code], ['6p', '3s'], reason: '와 있는 답은 쓴다');
+    final (c2, _) = server(separate: '7s', riichi: true, grouped: '6p');
+    expect((await TableReader(c2).readGrid(table(), grid, winnerSide: Side.bottom)).center!.handSideIndicators, isEmpty);
+    final (c3, _) = server(separate: '7s', riichi: true, grouped: '6p 3s 1m 2m 3m');
+    expect((await TableReader(c3).readGrid(table(), grid, winnerSide: Side.bottom)).center!.handSideIndicators, isEmpty);
   });
 
   test('useWide 가 꺼져 있으면 미리 보내지 않는다', () async {
