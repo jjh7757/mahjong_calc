@@ -6,7 +6,7 @@
   python experiments/speed/seat_grow.py [--runs-bcd 2] [--runs-visit 1] [--grows 0,40,80]
   python experiments/speed/seat_grow.py --show        결과 experiments/speed/results/seat_grow.json
 
-채점: B·C·D = bench.TRUTH, 매장 = label.json(바로잡을 수 없는 123140·132954·134815 와 오후는 장수만).
+채점: B·C·D = bench.TRUTH, 매장 = visit_20261031/truth.json 이 있으면 그것, 없으면 label.json.
 """
 from __future__ import annotations
 
@@ -38,9 +38,8 @@ BCD = {
     "k12": ("bottom", dict(x1=280, x2=745, y1=173, y2=713), "1m 2m 3m 4m 0m 6m 7m 8m 9m 2z", ["6m 7m 8m"]),
     "k16": ("bottom", dict(x1=280, x2=745, y1=173, y2=713), "1m 2m 3m 4m 0m 6m 7m 8m 9m 2z", ["6m 7m 8m"]),
 }
-# label_fixes.md: 123140 은 정답 파일이 틀림, 130743 은 131411 과 같은 손패
-NO_EXACT = {"20261031_123140", "20261031_132954"}
-SAME_AS = {"20261031_130743": "20261031_131411"}
+# label.json 이 없거나 틀린 장면의 정답(2026-11-01, 사진 눈 판독 + 사용자 답 + visit_truth_check.py)
+TRUTH = json.loads((VISIT.parent / "truth.json").read_text(encoding="utf-8"))["scenes"]
 
 
 def seat_box(g: dict, side: str, grow: int) -> tuple[int, int, int, int]:
@@ -118,8 +117,10 @@ def scenes() -> list[dict]:
             print("격자 못 찾음", d.name, side)
             continue
         r = dict(name=d.name, set="visit", path=d / "original.jpg", side=side, grid=g, hand=None, melds=None)
-        src = VISIT / SAME_AS.get(d.name, d.name) / "label.json"
-        if d.name not in NO_EXACT and src.exists():
+        src = d / "label.json"
+        if d.name in TRUTH:
+            r["hand"], r["melds"] = TRUTH[d.name]["hand"].split(), TRUTH[d.name]["melds"]
+        elif src.exists():
             lab = json.loads(src.read_text(encoding="utf-8"))
             closed = list(lab["closed"])
             if not lab["is_tsumo"]:

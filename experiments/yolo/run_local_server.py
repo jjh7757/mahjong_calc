@@ -26,6 +26,7 @@ os.environ["SEAT_FRAME"] = a.seat_frame
 os.environ["SEAT_SPLIT"] = a.seat_split
 os.environ["SEAT_TABLE"] = a.seat_table
 os.environ["RECOGNIZER_API_KEY"] = ""  # 로컬 측정은 인증 없음
+os.environ["ALLOW_NO_AUTH"] = "1"  # 키 없으면 서버가 기동을 거부한다(d9cc340)
 REPO = a.repo
 os.chdir(REPO)
 sys.path.insert(0, REPO)
