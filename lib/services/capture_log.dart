@@ -104,6 +104,7 @@ class CaptureLog {
       if (trace?.layout != null) ('locate.json', jsonBytes(trace!.layout!.toJson()), 'application/json'),
       if (trace?.hand != null) ('hand.json', jsonBytes(trace!.hand!.toJson()), 'application/json'),
       if (trace?.center != null) ('center.json', jsonBytes(trace!.center!.toJson()), 'application/json'),
+      if (trace?.wide != null) ('seatwide.json', jsonBytes(trace!.wide!), 'application/json'),
       if (trace != null && trace.shadow.isNotEmpty)
         ('shadow.json', jsonBytes({for (final e in trace.shadow.entries) e.key.name: e.value.toJson()}), 'application/json'),
       (
@@ -215,6 +216,7 @@ class CaptureLog {
     'melds': [for (final m in merge.melds) m.toString()],
     'red_count': merge.redCount,
     'hand_valid': merge.hand != null,
+    if (merge.winCandidates.isNotEmpty) 'win_candidates': [for (final t in merge.winCandidates) tileCode(t)],
     'uncertain': merge.uncertain.toList()..sort(),
     'flags': [for (final f in merge.flags) f.toString()],
     'riichi': merge.situation.riichi,

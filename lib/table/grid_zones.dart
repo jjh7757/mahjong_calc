@@ -118,6 +118,17 @@ class GridZones {
   NormBox seatForRead(Side side) => _growInward(seat(side), side);
   NormBox handCellForRead(Side side) => _growInward(handCell(side), side);
 
+  /// 화료자 쪽 테이블 절반: 가운데 칸의 가운데 선부터 그 자리 쪽 사진 끝까지, 폭 전체. 자리 크롭 밖의 떼어 둔 패·모서리 울기까지 담는다(`/v2/seatwide`).
+  NormBox seatHalf(Side side) {
+    final my = (y1 + y2) ~/ 2, mx = (x1 + x2) ~/ 2;
+    return switch (side) {
+      Side.bottom => NormBox(my, 0, 1000, 1000),
+      Side.right => NormBox(0, mx, 1000, 1000),
+      Side.top => NormBox(0, 0, my, 1000),
+      Side.left => NormBox(0, 0, 1000, mx),
+    };
+  }
+
   NormBox _growInward(NormBox b, Side side) => switch (side) {
         Side.bottom => NormBox(b.ymin - seatReadGrow, b.xmin, b.ymax, b.xmax),
         Side.right => NormBox(b.ymin, b.xmin - seatReadGrow, b.ymax, b.xmax),

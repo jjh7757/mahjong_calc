@@ -1487,12 +1487,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     // 트리플론을 유국으로 하는 규칙에서 선택 창이 바로 도중 유국을 기록했으면 판독을 멈춘다.
     var drawRecorded = false;
     // 화료자마다 병합한다. 동시 론이면 서로를 방총자 후보에서 뺀다.
-    List<TableMerge> mergeAll(List<TableReading> readings) {
+    // [winPick] 은 사용자가 후보에서 고른 화료패(화료자 자리별).
+    List<TableMerge> mergeAll(List<TableReading> readings, {Map<Side, int> winPick = const {}}) {
       final winnerSides = {for (final r in readings) r.winnerSide!};
       return [
         for (final r in readings)
           mergeReading(
-            hand: r.hand!,
+            hand: winPick[r.winnerSide!] == null ? r.hand! : r.hand!.withWinTile(ReadTile(winPick[r.winnerSide!]!, conf: 0.9)),
             center: r.center,
             winnerSide: r.winnerSide!,
             game: g,
@@ -1564,8 +1565,19 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       setState(() => _lastLayout = reading.layout);
       // 규칙(머리치기·인원)에 맞춰 화료자를 고른다.
       final readings = [reading, ...reading.others];
-      final picked = pickRonWinners(mergeAll(readings), g.settings, g.names);
-      final merge = picked.kept.first;
+      var picked = pickRonWinners(mergeAll(readings), g.settings, g.names);
+      var merge = picked.kept.first;
+      // 손패가 13장이고 화료패가 여럿 가능하면 고르게 한다. 취소하면 아래에서 입력 화면으로 간다(동시 론은 그쪽에서 고친다).
+      if (merge.winCandidates.isNotEmpty && picked.kept.length == 1) {
+        await closeProgress();
+        if (!mounted) return;
+        final win = await _pickWinTile(merge, g);
+        if (!mounted) return;
+        if (win != null) {
+          picked = pickRonWinners(mergeAll(readings, winPick: {merge.winnerSide: win}), g.settings, g.names);
+          merge = picked.kept.first;
+        }
+      }
       final others = <OtherWin>[];
       final otherFlags = <String>[];
       for (final m in picked.kept.skip(1)) {
@@ -1764,6 +1776,38 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             ),
           SimpleDialogOption(padding: optionPad, onPressed: () => Navigator.pop(ctx), child: Text('취소', style: optionStyle)),
         ],
+      )),
+    );
+  }
+
+  /// 손패로 가능한 화료패 중 하나를 고른다. 취소면 null(입력 화면에서 직접 고친다).
+  Future<int?> _pickWinTile(TableMerge merge, Game g) {
+    return showDialog<int>(
+      context: context,
+      builder: (ctx) => kioskWrap(ctx, AlertDialog(
+        title: Text('${g.names[merge.winner]}: 무엇으로 났나요?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('손패로 가능한 화료패 ${merge.winCandidates.length}개'),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                for (final t in merge.winCandidates)
+                  TileView(
+                    t,
+                    key: ValueKey('win-candidate-$t'),
+                    width: isKioskLayout(ctx) ? 72 : 56,
+                    onTap: () => Navigator.pop(ctx, t),
+                  ),
+              ],
+            ),
+          ],
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('직접 고치기'))],
       )),
     );
   }

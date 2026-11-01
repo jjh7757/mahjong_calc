@@ -15,6 +15,7 @@ import 'river_tracker.dart' show Discard;
 import 'shot_image.dart';
 import 'table_layout.dart';
 import 'table_reading.dart';
+import 'wide_seat.dart';
 
 typedef ShrinkFn = Future<Uint8List> Function(Uint8List original);
 typedef CropManyFn = Future<List<Uint8List>> Function(Uint8List original, List<CropSpec> specs);
@@ -61,6 +62,9 @@ extension ReadStageX on ReadStage {
 class TableReadTrace {
   /// 봉이 남은 자리의 강에 눕힌 패가 있는지([TableReading.riverSideways]). 매장에서 맞는지 보려고 기록에 남긴다.
   Map<Side, bool?> riverSideways = const {};
+
+  /// 넓은 구역 판독 응답(`/v2/seatwide`, 불렀을 때만).
+  Map<String, dynamic>? wide;
   Uint8List? small;
   Uint8List? handCrop;
   Uint8List? centerCrop;
@@ -230,7 +234,7 @@ class TableReader {
     final ShotAnalysis a;
     final Map<Side, Uint8List> seatCrops, cornerCrops, lastCrops;
     final Uint8List sticksCrop, doraCrop;
-    Uint8List? trackedCrop, dealerDoraCrop;
+    Uint8List? trackedCrop, dealerDoraCrop, wideCrop;
     final trackedBox = rectified ? null : trackedDiscard?.box;
     final trackSide = trackedDiscard?.side;
     final warnings = <String>[];
@@ -299,7 +303,10 @@ class TableReader {
         for (final s in seatSides) CropSpec(splitSeat ? grid.handCell(s) : grid.seatForRead(s), side: s),
         for (final s in cornerSides) CropSpec(grid.cornerCell(s), side: s),
         for (final s in trackedSides) CropSpec(grid.handCellForRead(s), side: s),
+        // 화료자를 알면 테이블 절반도 잘라 둔다. 자리 판독으로 답을 못 정한 장면에서만 보낸다(사진은 곧 닫는다).
+        if (known != null && !splitSeat) CropSpec(grid.seatHalf(known), side: known),
       ]);
+      wideCrop = known != null && !splitSeat ? seatList.last : null;
       seatCrops = {for (final (i, s) in seatSides.indexed) s: seatList[i]};
       cornerCrops = {for (final (i, s) in cornerSides.indexed) s: seatList[seatSides.length + i]};
       handCrops = {
@@ -458,6 +465,23 @@ class TableReader {
     final dealerDoraJ = await dealerDoraF;
     final trackedJ = await trackedF;
     final trackedTile = trackedJ == null ? null : parseLastV2(trackedJ);
+    // 화료자 손패가 장수·패 모양으로 안 맞거나 화료패를 못 찾았으면 테이블 절반에서 다시 찾는다(`wide_seat.dart`). 그만큼 느려지지만 이 장면만.
+    if (known case final side? when wideCrop != null && seats[side] != null) {
+      final ends = [
+        for (final e in lastJ.entries)
+          if (e.key != side) e.value == null ? null : parseLastV2(e.value!),
+        if (trackSide != side) trackedTile,
+      ];
+      if (seatNeedsWide(seats[side]!, ends)) {
+        final j = await call('seatwide', wideCrop, 'seatwide_${side.name}');
+        if (j != null) {
+          trace?.wide = j;
+          final r = applyWide(seats[side]!, WideRead.fromJson(j), meldsKnown: trackedMode[side] == 'handonly');
+          seats[side] = r.seat;
+          if (r.note case final note?) warnings.add(note);
+        }
+      }
+    }
     lap('read');
 
     var sides = [?known];

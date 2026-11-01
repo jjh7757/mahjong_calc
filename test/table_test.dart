@@ -386,11 +386,79 @@ void main() {
       expect(five.hand!.winTile, Tiles.parse('5m'));
       expect(five.uncertain, {13});
 
-      // 못 읽은 자리가 둘이면 누가 쏘였는지 모른다 → 묻는다.
+      // 못 읽은 자리가 둘이면 화료패는 대기패로 정하되 누가 쏘였는지 모른다 → 쯔모로 단정하지 않고 묻는다.
       final two = merge('1m 2m 3m 4p 5p 6p 7s 8s 9s 1z 1z 1z 2z', {'right': null, 'top': null, 'left': '3z'});
-      expect(two.hand, isNull);
-      expect(two.hasFlag(MergeIssue.winTileUnknown), isTrue);
-      expect(two.hasFlag(MergeIssue.winFromWait), isFalse);
+      expect(two.hand!.winTile, Tiles.parse('2z'));
+      expect(two.isTsumo, isFalse);
+      expect(two.loser, isNull);
+      expect(two.hasFlag(MergeIssue.winFromWait), isTrue);
+      expect(two.hasFlag(MergeIssue.ronTsumoUnknown), isTrue);
+    });
+
+    group('화료패 후보(2026-11-01)', () {
+      TableMerge merge(String tiles, Map<String, String?> last, {bool centerRead = true}) => mergeReading(
+            hand: HandReading.fromJson({'tiles': _tiles(tiles)}),
+            center: centerRead ? CenterReading.fromJson(_center(last: last)) : null,
+            winnerSide: Side.bottom,
+            game: _game(),
+            seats: seats,
+          );
+      const allRead = {'right': '9p', 'top': '9p', 'left': '3z'};
+
+      test('대기패가 하나이고 강을 다 읽었는데 강 끝에 없으면 그 패로 쯔모', () {
+        final m = merge('1m 2m 3m 4p 5p 6p 7s 8s 9s 1z 1z 1z 2z', allRead);
+        expect(m.hand!.winTile, Tiles.parse('2z'));
+        expect(m.isTsumo, isTrue);
+        expect(m.loser, isNull);
+        expect(m.winCandidates, isEmpty);
+        expect(m.hasFlag(MergeIssue.winFromWait), isTrue);
+        expect(m.hasFlag(MergeIssue.winTileAssumed), isFalse);
+      });
+
+      test('대기패가 여럿이면 마지막 장으로 가정하지 않고 후보를 낸다', () {
+        final m = merge('1m 2m 3m 4p 5p 6p 7s 8s 9s 1z 1z 2m 3m', allRead);
+        expect(m.hand, isNull);
+        expect(m.winCandidates, [Tiles.parse('1m'), Tiles.parse('4m')]);
+        expect(m.hasFlag(MergeIssue.winTileAssumed), isFalse);
+        expect(m.hasFlag(MergeIssue.winTileUnknown), isTrue);
+      });
+
+      test('후보에서 고르면 그 패로 계산하고 강 끝에 없으면 쯔모, 있으면 론', () {
+        final reading = HandReading.fromJson({'tiles': _tiles('1m 2m 3m 4p 5p 6p 7s 8s 9s 1z 1z 2m 3m')});
+        TableMerge picked(Map<String, String?> last) => mergeReading(
+              hand: reading.withWinTile(ReadTile(Tiles.parse('4m'), conf: 0.9)),
+              center: CenterReading.fromJson(_center(last: last)),
+              winnerSide: Side.bottom,
+              game: _game(),
+              seats: seats,
+            );
+        final tsumo = picked(allRead);
+        expect(tsumo.hand!.winTile, Tiles.parse('4m'));
+        expect(tsumo.isTsumo, isTrue);
+        expect(tsumo.winCandidates, isEmpty);
+        final ron = picked(const {'right': '9p', 'top': '4m', 'left': '3z'});
+        expect(ron.isTsumo, isFalse);
+        expect(ron.loser, 2);
+      });
+
+      test('대기패가 없으면 후보 없이 판독 수정으로', () {
+        final m = merge('1m 1m 1m 2p 4p 6p 7s 9s 1z 2z 3z 4z 5z', allRead);
+        expect(m.hand, isNull);
+        expect(m.winCandidates, isEmpty);
+        expect(m.hasFlag(MergeIssue.winTileUnknown), isTrue);
+      });
+
+      test('가운데를 못 읽어도 대기패가 하나면 화료패는 정하고 론/쯔모를 묻는다', () {
+        final m = merge('1m 2m 3m 4p 5p 6p 7s 8s 9s 1z 1z 1z 2z', const {}, centerRead: false);
+        expect(m.hand!.winTile, Tiles.parse('2z'));
+        expect(m.hasFlag(MergeIssue.ronTsumoUnknown), isTrue);
+      });
+
+      test('14장은 지금처럼 마지막 장을 화료패로 본다', () {
+        final m = merge('1m 2m 3m 4p 5p 6p 7s 8s 9s 1z 1z 2m 3m 4m', allRead);
+        expect(m.hand!.winTile, Tiles.parse('4m'));
+        expect(m.hasFlag(MergeIssue.winTileAssumed), isTrue);
+      });
     });
 
     test('화료패 없이 13장이면 강 끝 패 중 화료되는 패로 론, 그 자리가 방총자', () {

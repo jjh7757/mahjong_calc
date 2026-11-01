@@ -9,9 +9,10 @@
 /// 3. 도라 표시패는 사진에서. 뒷도라 표시패도 구분하지 않고 도라 표시패로 센다(리치 화료면 점수가 같다).
 /// 4. 화료패가 어떤 강의 마지막 버림패와 같으면 론(그 자리가 방총자), 없으면 쯔모, 둘 이상이면 론 + 방총자 플래그.
 ///    화료패가 없고 손패가 한 장 모자라면, 다른 자리 강 끝 패 중 화료가 되는 패를 화료패로 넣고 론(그 자리가 방총자).
-///    강 끝을 못 읽은 자리가 있으면 대기패로 정한다: 못 읽은 자리가 하나이고 대기패도 하나면 그 자리가 그 패로 론,
-///    아니면 후보를 적어 묻는다(화료패를 다시 읽지 않는다).
-///    그래도 없으면 손패 마지막 장을 화료패로 보고 플래그.
+///    화료되는 강 끝이 없으면 대기패로 정한다(2026-11-01 사용자 제안): 하나면 그 패가 화료패(강을 다 읽었으면 쯔모,
+///    못 읽은 자리가 하나면 그 자리가 론, 둘 이상이면 론/쯔모를 묻는다), 여럿이면 [TableMerge.winCandidates] 로 고르게 하고,
+///    없으면 손패를 잘못 읽은 것이니 판독 수정으로.
+///    14장을 읽었는데 화료패 표시가 없으면 손패 마지막 장을 화료패로 보고 플래그.
 /// 5. 장수가 안 맞으면 [TableMerge.hand] 는 null — 바로 판독 수정으로.
 /// 6. 확신도 낮은 패는 [TableMerge.uncertain] 로.
 /// 7. 사진에서 리치(횡치·리치봉)가 보인 자리는 [TableMerge.photoRiichiSeats] 로. 화료 기록 때 리치봉 자동 반영에 쓴다.
@@ -106,6 +107,9 @@ class TableMerge {
   /// 사진 중앙 판독에서 리치가 보인 자리(화료자 포함, 확신도 [autoRiichiMinConf] 이상).
   final Set<int> photoRiichiSeats;
 
+  /// 손패가 한 장 모자라고 화료패를 정하지 못했을 때 가능한 화료패(둘 이상). 하나를 골라 [HandReading.withWinTile] 로 다시 병합한다.
+  final List<int> winCandidates;
+
   const TableMerge({
     required this.winner,
     required this.winnerSide,
@@ -119,6 +123,7 @@ class TableMerge {
     required this.uncertain,
     required this.flags,
     this.photoRiichiSeats = const {},
+    this.winCandidates = const [],
   });
 
   int get redCount => closed.where((t) => t.red).length + meldRed.fold(0, (a, b) => a + b);
@@ -241,13 +246,18 @@ TableMerge mergeReading({
   ];
   ReadTile? win = hand.winTile;
   Side? ronFrom;
-  if (win == null && center != null && closed.length == expected - 1) {
+  var ronTsumoOpen = false; // 대기패로 화료패를 정했는데 못 읽은 강이 둘 이상이라 론/쯔모를 모름
+  var winCandidates = const <int>[];
+  final oneShort = win == null && closed.length == expected - 1;
+  if (oneShort) {
     // 론한 패는 버린 사람 강 끝에 그대로 있다. 손패에 더해 화료가 되는 강 끝 패를 찾는다.
     final found = <Side>[
-      for (final s in Side.values)
-        if (canDealIn(s) && _completes(closed, melds, center.lastDiscardAt(s))) s,
+      if (center != null)
+        for (final s in Side.values)
+          if (canDealIn(s) && _completes(closed, melds, center.lastDiscardAt(s))) s,
     ];
     if (found.isNotEmpty) {
+      center!;
       final hint = loserHint;
       final hinted = found.length > 1 && hint != null && found.contains(hint);
       ronFrom = found.length == 1
@@ -265,36 +275,51 @@ TableMerge mergeReading({
                 '${hinted ? _trackedNote(ronFrom, game.names[loserSeat]) : _furitenNote(ronFrom, game.names[loserSeat])}',
       ));
     } else {
-      // 화료되는 강 끝이 없다. 강 끝을 못 읽은 자리가 쏘였을 수 있다(판독이 가끔 "강 없음" 으로 답한다).
-      // 대기패가 하나이고 못 읽은 자리가 하나면 그 자리가 그 패로 론. 화료패를 다시 읽지 않고 손패로 정한다.
+      // 화료되는 강 끝이 없다. 쯔모였거나, 강 끝을 못 읽은 자리가 쏘였을 수 있다(판독이 가끔 "강 없음" 으로 답한다).
+      // 화료패를 다시 읽지 않고 손패의 대기패로 정한다. 추정이라 자동 반영은 막는다(infoOnlyIssues 에 없음).
       final unread = [
         for (final s in Side.values)
-          if (canDealIn(s) && center.lastDiscardAt(s) == null) s,
+          if (canDealIn(s) && center?.lastDiscardAt(s) == null) s,
       ];
       final waits = _waitTiles(closed, melds);
-      if (unread.length == 1 && waits.length == 1) {
-        ronFrom = unread.single;
+      if (waits.length == 1) {
         final t = waits.single;
         // 수패 5 는 적도라인지 사진으로 못 봤으니 확인을 묻는다(확신도를 낮춰 노란 테두리).
         final maybeRed = Tiles.suit(t) < 3 && Tiles.number(t) == 5;
         win = ReadTile(t, conf: maybeRed ? 0.5 : 0.9);
-        flags.add(MergeFlag(
-          MergeIssue.winFromWait,
-          '${ronFrom.label}(${game.names[seats.seatOf(ronFrom)]}) 강 끝을 읽지 못했지만 대기패가 ${Tiles.name(t)} 하나라 '
-          '그 자리가 ${Tiles.name(t)} 로 쏘였다고 봤습니다',
-        ));
-      } else if (unread.isNotEmpty && waits.isNotEmpty) {
+        if (center != null && unread.length == 1) {
+          ronFrom = unread.single;
+          flags.add(MergeFlag(
+            MergeIssue.winFromWait,
+            '${ronFrom.label}(${game.names[seats.seatOf(ronFrom)]}) 강 끝을 읽지 못했지만 대기패가 ${Tiles.name(t)} 하나라 '
+            '그 자리가 ${Tiles.name(t)} 로 쏘였다고 봤습니다',
+          ));
+        } else if (center != null && unread.isEmpty) {
+          flags.add(MergeFlag(
+            MergeIssue.winFromWait,
+            '대기패가 ${Tiles.name(t)} 하나이고 강 끝에 없어 ${Tiles.name(t)} 쯔모로 봤습니다',
+          ));
+        } else {
+          ronTsumoOpen = center != null;
+          flags.add(MergeFlag(
+            MergeIssue.winFromWait,
+            '대기패가 ${Tiles.name(t)} 하나라 화료패로 봤습니다. 론이면 방총자를 골라 주세요',
+          ));
+        }
+      } else if (waits.isNotEmpty) {
+        winCandidates = waits;
         flags.add(MergeFlag(
           MergeIssue.winTileUnknown,
-          '${unread.map((s) => s.label).join('·')} 강 끝을 읽지 못했습니다. '
-          '${waits.map(Tiles.name).join('·')} 중 무엇으로 누가 쏘였는지 골라 주세요',
+          '화료패를 찾지 못했습니다. 손패로 가능한 패는 ${waits.map(Tiles.name).join('·')} ${waits.length}개입니다',
         ));
+      } else {
+        flags.add(const MergeFlag(MergeIssue.winTileUnknown, '이 손패로 화료할 수 있는 패가 없습니다. 손패를 잘못 읽었는지 확인하세요'));
       }
     }
   }
   if (win != null) {
     closed.add(MergedTile(win.tile, red: win.red, conf: win.conf));
-  } else if (closed.isNotEmpty) {
+  } else if (closed.isNotEmpty && !oneShort) {
     win = hand.tiles.last;
     flags.add(const MergeFlag(MergeIssue.winTileAssumed, '화료패를 따로 찾지 못해 손패 마지막 장으로 봤습니다'));
   }
@@ -359,6 +384,8 @@ TableMerge mergeReading({
     loser = seats.seatOf(ronFrom);
   } else if (center == null) {
     flags.add(const MergeFlag(MergeIssue.ronTsumoUnknown, '중앙을 읽지 못해 론/쯔모를 정하지 못했습니다'));
+  } else if (ronTsumoOpen) {
+    flags.add(const MergeFlag(MergeIssue.ronTsumoUnknown, '강 끝을 둘 이상 읽지 못해 론/쯔모를 정하지 못했습니다'));
   } else if (win != null) {
     final matches = <Side>[
       for (final s in Side.values)
@@ -483,6 +510,7 @@ TableMerge mergeReading({
     hand: engineHand,
     uncertain: uncertain,
     flags: flags,
+    winCandidates: winCandidates,
     photoRiichiSeats: {
       if (center != null)
         for (final side in Side.values)

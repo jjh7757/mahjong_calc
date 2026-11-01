@@ -126,6 +126,17 @@ class HandReading {
     );
   }
 
+  /// 화료패를 사용자가 후보에서 골랐을 때의 손패(다시 병합할 때 쓴다).
+  HandReading withWinTile(ReadTile win) => HandReading(
+    tiles: tiles,
+    melds: melds,
+    winTile: win,
+    notes: notes,
+    model: model,
+    latencyMs: latencyMs,
+    usage: usage,
+  );
+
   /// 서버 응답과 같은 모양. 촬영 기록 저장용.
   Map<String, dynamic> toJson() => {
     'tiles': [for (final t in tiles) t.toJson()],
