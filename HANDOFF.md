@@ -251,6 +251,8 @@
 ```
 C:\Users\jjh7757\flutter\bin\flutter test
 C:\Users\jjh7757\flutter\bin\flutter analyze
+C:\Users\jjh7757\flutter\bin\dart run tool/engine_diff_corpus.dart 100000 1   (점수 엔진 교차 검증, 다음 줄과 한 쌍. 엔진을 고치면 돌림. problem_log 32)
+python tool/engine_diff.py   (pip install mahjong==2.1.0 필요, 점수·화료 여부 차이면 종료 코드 1)
 C:\Users\jjh7757\dev\android-sdk\emulator\emulator.exe -avd pixel_api36
 C:\Users\jjh7757\flutter\bin\flutter build windows --debug --dart-define=RECOGNIZER_URL=http://127.0.0.1:8030 --dart-define=RECOGNIZER_API_KEY=local   (노트북 키오스크 화면 시험, 로컬 서버 "recognizer" 를 먼저 띄움 → build\windows\x64\runner\Debug\mahjong_calc.exe)
 C:\Users\jjh7757\flutter\bin\flutter build apk --release --dart-define=RECOGNIZER_API_KEY=<.recognizer_key 내용>   (--debug 도 가능)
