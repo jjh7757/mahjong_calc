@@ -19,11 +19,13 @@ import '../../services/volume_keys.dart';
 import '../../table/auto_record.dart';
 import '../../table/corner_change.dart';
 import '../../table/cropper.dart';
+import '../../table/felt_grid.dart';
 import '../../table/fixed_layout.dart';
 import '../../table/frame_recorder.dart';
 import '../../table/grid_zones.dart';
 import '../../table/merge.dart';
 import '../../table/observation.dart';
+import '../../table/rectify.dart' show FeltQuad;
 import '../../table/seat_map.dart';
 import '../../table/shot_image.dart';
 import '../../table/table_layout.dart';
@@ -182,7 +184,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// 카메라가 준비됐을 때 저장된 격자의 카메라와 지금 카메라가 다르면(처음 설치, 새 헤드 QR, 헤드 ↔ 이 기기 카메라) 자동 맞추기를
   /// 돈다. 같은 카메라면 저장된 격자(사용자가 고친 것 포함)를 그대로 쓴다. 네 자리 손패를 못 찾으면(패를 아직 안 돌렸을 때)
   /// [_autoSetupRetryGap] 뒤 다시, 최대 [_autoSetupMaxTries]회. 맞으면 격자를 저장한다. 같은 카메라엔 앱이 켜져 있는 동안 한 번만.
-  /// 같은 주소의 폰을 다른 자리에 다시 거치한 경우는 못 알아보므로 "격자 편집" 의 "자동 맞추기" 를 누른다.
+  /// 같은 주소의 폰을 다른 자리에 다시 거치한 경우는 [_watchFelt] 가 펠트 위치로 알아본다.
   bool _autoSetupOnStart = true;
   static const String autoSetupPref = 'mount.autoSetupOnStart';
   static const String gridSourcePref = 'mount.gridSource';
@@ -190,6 +192,18 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   static String? _autoSetupDoneFor;
   int _autoSetupTries = 0;
   Timer? _autoSetupTimer;
+
+  /// 지금 격자를 잡은 펠트 위치(없으면 손으로 맞춘 격자라 다음 안정된 위치를 기준으로만 삼는다).
+  static const String gridFeltPref = 'mount.gridFelt';
+  final FeltWatch _feltWatch = FeltWatch();
+  int _feltTick = 0;
+
+  /// 배경 프레임 이만큼마다 펠트를 읽는다(3초 간격이라 6초). 매장 프레임을 순서대로 넣으면 판정 8회가 실제 설치 8곳과 같고,
+  /// 프레임마다 읽으면 손이 변을 가린 몇 장이 잇따라 헛 판정이 늘었다(metrics 표 1-41).
+  static const int _feltEvery = 2;
+
+  /// 자동 맞추기 때 카메라 헤드에서 읽는 장수(팔이 가린 한 장에 끌리지 않게 중앙값).
+  static const int _feltPhotos = 3;
 
   /// 볼륨키 핸들러(등록·해제에 같은 것을 넘긴다).
   late final VoidCallback _volumeShoot = _shoot;
@@ -296,6 +310,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       });
       await _measureCapture(p.bytes, capture: false);
       _maybeAutoSetup();
+      await _watchFelt(p.bytes);
       await _trackFrame(p.bytes);
     } on RemoteCameraException catch (e) {
       // 예전 헤드 앱(404)이나 토큰 거절이면 그만 묻는다. 연결 오류는 다음 차례에 다시.
@@ -324,6 +339,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _rectify = p.getBool(rectifyPref) ?? false;
       final g = p.getString(gridPref);
       if (g != null) _grid = GridZones.fromJson(jsonDecode(g) as Map<String, dynamic>) ?? GridZones.initial;
+      final felt = p.getString(gridFeltPref);
+      if (felt != null) _feltWatch.reset(feltQuadFromJson(jsonDecode(felt) as Map<String, dynamic>));
     } catch (_) {}
     if (!mounted) return;
     if (url != null && url.isNotEmpty) {
@@ -543,7 +560,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     if (read) await _process(shot.bytes, setup: _setup('remote', zoom: shot.zoom));
   }
 
-  Future<void> _saveGrid() async {
+  /// [felt] = 이 격자를 계산한 펠트 위치. 손으로 맞춘 격자면 null 이고, 다음에 안정된 위치를 기준으로만 삼아 격자를 덮어쓰지 않는다.
+  Future<void> _saveGrid({FeltQuad? felt}) async {
     // 격자가 바뀌면 패 한 장 비율·기준이 달라져 추적기를 새로 만든다. 사건 기록은 이어받는다 — track.json 을 덮어쓰므로
     // 버리면 그 판 앞부분 사건이 사라지고, 프레임 기록의 사건 위치(_meldEventsSeen)도 어긋난다.
     _carryMeldEvents = [...?_tracker?.events];
@@ -552,12 +570,62 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     _riverTracker = null;
     _shiftGate.reset();
     _gridSource = _cameraId;
+    _feltWatch.reset(felt);
     try {
       final p = await SharedPreferences.getInstance();
       await p.setString(gridPref, jsonEncode(_grid.toJson()));
       await p.setBool(useGridPref, _useGrid);
       await p.setString(gridSourcePref, _gridSource!);
+      if (felt == null) {
+        await p.remove(gridFeltPref);
+      } else {
+        await p.setString(gridFeltPref, jsonEncode(felt.toJson()));
+      }
     } catch (_) {}
+  }
+
+  /// 배경 프레임의 펠트 위치를 지켜보다 카메라가 옮겨져 새 자리에 멈추면 격자를 다시 맞춘다(같은 주소의 헤드를 건드리거나 다시 거치했을 때).
+  /// 10-31 매장: 카메라가 밀린 뒤 격자를 안 고쳐 손패가 잘리고 41.2초·5장 틀림, 다시 저장하니 12.5초·전부 맞음(metrics 표 1-2).
+  Future<void> _watchFelt(Uint8List preview) async {
+    if (!widget.isHome || !_autoSetupOnStart || !_useGrid || !_tableConfirmed) return;
+    if (_setupBusy || _gridBeforeEdit != null || _galleryShot != null) return;
+    if (++_feltTick % _feltEvery != 0) return;
+    final FeltQuad? felt;
+    try {
+      felt = await compute(feltQuadOfJpeg, preview);
+    } catch (e) {
+      debugPrint('[felt] 읽기 실패: $e');
+      return;
+    }
+    if (!mounted || _busy || _setupBusy || _gridBeforeEdit != null || _galleryShot != null) return;
+    final moved = _feltWatch.add(felt);
+    if (moved == null) return;
+    final grid = gridFromFelt(moved, keep: _grid);
+    if (grid == null) return;
+    setState(() => _grid = grid);
+    await _saveGrid(felt: moved);
+    debugPrint('[felt] 카메라 이동, 격자 ${grid.toJson()}');
+    if (mounted) _toast('카메라가 움직여 격자를 다시 맞췄습니다. 틀렸으면 더보기 "구역 격자 맞추기" 에서 고치세요', long: true);
+  }
+
+  /// 사진에서 펠트 위치를 읽는다. 카메라 헤드면 몇 장 더 받아 중앙값을 내고, 절반 이상이 그 값과 맞을 때만 믿는다.
+  /// 이 기기 카메라·갤러리는 셔터·사진 한 장뿐이라 그 한 장으로.
+  Future<FeltQuad?> _readFeltOf(Uint8List first, {required bool more}) async {
+    final quads = <FeltQuad>[];
+    final one = await compute(feltQuadOfJpeg, first);
+    if (one != null) quads.add(one);
+    if (!more || _remoteUrl == null) return one;
+    for (var i = 1; i < _feltPhotos; i++) {
+      await Future<void>.delayed(const Duration(seconds: 1));
+      if (!mounted) return null;
+      final src = await _currentPhoto();
+      if (src == null) continue;
+      final q = await compute(feltQuadOfJpeg, src);
+      if (q != null) quads.add(q);
+    }
+    if (quads.isEmpty) return null;
+    final mid = medianFelt(quads);
+    return quads.where((q) => sameFelt(q, mid)).length * 2 > _feltPhotos ? mid : null;
   }
 
   /// 격자 맞추기 중 아래 버튼 줄: 원격이면 사진 받기, 초기값, 취소, 저장.
@@ -801,9 +869,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     return _lastShot;
   }
 
-  /// 격자 맞추기 "자동 맞추기": 사진 한 장(갤러리 사진이면 그것)을 줄여 처음 설정 틀(`/v2/setup`)을 부르고,
+  /// 격자 맞추기 "자동 맞추기": 먼저 펠트 네 모서리로 계산한다([gridFromFelt], 서버 없이 패가 올라오기 전에도 된다).
+  /// 못 찾으면(다른 펠트 색·탁자 일부만 보임) 사진을 줄여 처음 설정 틀(`/v2/setup`)을 부르고,
   /// 손패+울기 바깥 띠 선·리치봉 상자([proposeGrid])를 채운다. 사용자가 끌어 고친 뒤 저장/읽기.
-  /// 네 자리 손패를 찾아 격자를 바꿨으면 true. [auto](대국 시작 직후)면 격자를 저장하고, 실패 안내는 [lastTry] 일 때만.
+  /// 격자를 바꿨으면 true. [auto](대국 시작 직후)면 격자를 저장하고, 실패 안내는 [lastTry] 일 때만.
   Future<bool> _autoSetup({bool auto = false, bool lastTry = true}) async {
     if (_setupBusy) return false;
     final gallery = _galleryShot;
@@ -815,6 +884,22 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       if (src == null) {
         if (!auto) _toast('사진이 없습니다. 카메라가 준비되면 다시 누르세요.');
         return false;
+      }
+      final felt = await _readFeltOf(src, more: gallery == null);
+      if (!mounted) return false;
+      final fromFelt = felt == null ? null : gridFromFelt(felt, keep: _grid);
+      if (fromFelt != null) {
+        setState(() => _grid = fromFelt);
+        if (auto) await _saveGrid(felt: felt);
+        if (gallery == null) {
+          final shrunk = await _shrinkInIsolate(src);
+          unawaited(_saveSetup(shrunk, {'method': 'felt', 'felt': felt!.toJson()}, fromFelt, auto: auto, ms: sw.elapsedMilliseconds));
+        }
+        final secs = (sw.elapsedMilliseconds / 1000).toStringAsFixed(1);
+        debugPrint('[setup] felt auto=$auto ${sw.elapsedMilliseconds}ms');
+        final hint = auto ? '틀렸으면 더보기 "구역 격자 맞추기" 에서 고치세요' : '틀렸으면 끌어 고치세요';
+        _toast(auto ? '격자 자동 맞추기 ($secs초, 이 카메라로 처음): 펠트로 맞췄습니다. $hint' : '펠트로 맞췄습니다. $hint ($secs초)', long: auto);
+        return true;
       }
       final small = await _shrinkInIsolate(src);
       final setup = await client.observe('setup', small, filename: 'setup.jpg');
@@ -1752,7 +1837,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     value: 'autoSetup',
                     checked: _autoSetupOnStart,
                     enabled: _useGrid,
-                    child: const Text('카메라가 바뀌면 격자 자동 맞추기 (카메라마다 한 번)'),
+                    child: const Text('카메라가 바뀌거나 움직이면 격자 자동 맞추기'),
                   ),
                   CheckedPopupMenuItem(
                     key: const ValueKey('mount-tracking-menu'),
