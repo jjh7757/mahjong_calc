@@ -24,6 +24,7 @@ from rules_core import ANGLES, ok2, rv, split2, st, strays  # noqa: E402
 
 O = {"이웃", "두단", "옅음", "백", "떼어둠", "줄"}
 IMG = 1280
+SINGLE = False  # --single: 운영 st.frame(모자이크·나눠 잡기) 없이 통째 검출 1번 + 규칙만
 
 
 def session(path: Path, threads: int) -> ort.InferenceSession:
@@ -133,7 +134,7 @@ def one(jpeg: bytes, det: Det, cls: Cls, frac: float) -> dict:
     t_decode = time.perf_counter() - t
     t = time.perf_counter()
     split = int(rgb.shape[1] * frac)
-    fr = st.frame(rgb, det, hand_frac=frac)
+    fr = None if SINGLE else st.frame(rgb, det, hand_frac=frac)
     faces = rv.dedupe(rv.keep_faces(det.detect(rgb), rv.white_mask(rgb)))
     if fr is None and faces:
         b = split2(rgb, faces, split, O)
@@ -169,11 +170,15 @@ def q(a: list) -> str:
 
 
 def main() -> None:
+    global SINGLE, IMG
     ap = argparse.ArgumentParser()
     ap.add_argument("--threads", type=int, default=2)
     ap.add_argument("--repeat", type=int, default=3)
     ap.add_argument("--one", action="store_true")
+    ap.add_argument("--single", action="store_true")
+    ap.add_argument("--img", type=int, default=IMG, help="검출 입력 긴 변(학습은 1280)")
     a = ap.parse_args()
+    SINGLE, IMG = a.single, a.img
     sys.stdout.reconfigure(encoding="utf-8")
     meta = json.loads((HERE / "meta.json").read_text(encoding="utf-8"))
     t0 = time.perf_counter()
