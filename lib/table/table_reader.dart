@@ -157,9 +157,13 @@ class TableReadTrace {
   /// 서버 응답의 단계별 시간(`timing`: handler_ms·decode_ms·queue_ms·prep_ms·gate_ms·gemini_ms). 이름은 [callMs] 와 같다.
   final Map<String, Map<String, dynamic>> serverTiming = {};
 
+  /// 서버 자체 모델 그림자 답(`local`, 판독에는 안 쓰고 다음 매장에서 Gemini 와 비교한다). 이름은 [callMs] 와 같다.
+  final Map<String, Map<String, dynamic>> localShadow = {};
+
   void _recordCall(String name, int ms, Map<String, dynamic> response) {
     callMs[name] = ms;
     if (response['timing'] case final Map<String, dynamic> t) serverTiming[name] = t;
+    if (response['local'] case final Map<String, dynamic> l) localShadow[name] = l;
   }
 
   /// 그림자 모드로 두 방식을 같이 읽은 자리의 두 답(기록용).

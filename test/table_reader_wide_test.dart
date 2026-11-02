@@ -76,6 +76,7 @@ void main() {
                 'melds': [],
                 'loose': [],
                 'timing': {'handler_ms': 900, 'gemini_ms': [500, 600, 700]},
+                'local': {'framed': true, 'hand': ['1m']},
               }),
             '/v2/seatwide' => json({'method': 'none', 'row': [], 'singles': [], 'melds': []}),
             '/v2/last3' => json({'rivers': [], 'timing': {'handler_ms': 300}}),
@@ -87,6 +88,8 @@ void main() {
     final trace = TableReadTrace();
     await TableReader(client).readGrid(table(), grid, winnerSide: Side.bottom, trace: trace);
     expect(trace.serverTiming['seat_bottom']?['gemini_ms'], [500, 600, 700]);
+    expect(trace.localShadow['seat_bottom']?['framed'], true);
+    expect(trace.localShadow, isNot(contains('last3')));
     expect(trace.serverTiming['last3']?['handler_ms'], 300);
     expect(trace.serverTiming, isNot(contains('sticks')), reason: '옛 서버 응답엔 timing 이 없다');
     expect(trace.callMs, contains('sticks'));
