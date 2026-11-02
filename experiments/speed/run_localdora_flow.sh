@@ -14,9 +14,16 @@ RIICHI=$(python -I -X utf8 experiments/speed/flow_visit.py riichi)
 COMMON=(drive --profile -d windows --driver=test_driver/integration_test.dart --target=integration_test/read_grid_timing_test.dart
   --dart-define=RECOGNIZER_API_KEY=local --dart-define=SLEEP_S=20 "--dart-define=LOCAL_DORA=$L" "${EXTRA[@]}")
 VISIT=(--dart-define=PHOTO_URL=http://127.0.0.1:8042 --dart-define=SET=visit --dart-define=REPEAT=1 "--dart-define=FIELD_GRIDS=$GRIDS" "--dart-define=RIICHI_SIDES=$RIICHI")
-"$F" "${COMMON[@]}" --dart-define=RECOGNIZER_URL=http://127.0.0.1:8033 --dart-define=PHOTO_URL=http://127.0.0.1:8040 --dart-define=SET=bcd --dart-define=REPEAT=2 > "$R/log_flow_ld_$1_bcd.txt" 2>&1
-echo "bcd 끝 $?"
-"$F" "${COMMON[@]}" --dart-define=RECOGNIZER_URL=http://127.0.0.1:8034 "${VISIT[@]}" --dart-define=PHOTO_MAX=14 > "$R/log_flow_ld_$1_am.txt" 2>&1
-echo "am 끝 $?"
-"$F" "${COMMON[@]}" --dart-define=RECOGNIZER_URL=http://127.0.0.1:8035 "${VISIT[@]}" --dart-define=PHOTO_MIN=14 > "$R/log_flow_ld_$1_pm.txt" 2>&1
-echo "pm 끝 $?"
+PARTS=${2:-bcd am pm}  # 둘째 인자로 세트만 고른다(예: only pm)
+if [[ " $PARTS " == *" bcd "* ]]; then
+  "$F" "${COMMON[@]}" --dart-define=RECOGNIZER_URL=http://127.0.0.1:8033 --dart-define=PHOTO_URL=http://127.0.0.1:8040 --dart-define=SET=bcd --dart-define=REPEAT=2 > "$R/log_flow_ld_$1_bcd.txt" 2>&1
+  echo "bcd 끝 $?"
+fi
+if [[ " $PARTS " == *" am "* ]]; then
+  "$F" "${COMMON[@]}" --dart-define=RECOGNIZER_URL=http://127.0.0.1:8034 "${VISIT[@]}" --dart-define=PHOTO_MAX=14 > "$R/log_flow_ld_$1_am.txt" 2>&1
+  echo "am 끝 $?"
+fi
+if [[ " $PARTS " == *" pm "* ]]; then
+  "$F" "${COMMON[@]}" --dart-define=RECOGNIZER_URL=http://127.0.0.1:8035 "${VISIT[@]}" --dart-define=PHOTO_MIN=14 > "$R/log_flow_ld_$1_pm.txt" 2>&1
+  echo "pm 끝 $?"
+fi

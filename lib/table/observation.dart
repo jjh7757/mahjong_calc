@@ -323,6 +323,15 @@ List<List<ReadTile>> parseLocalPairs(Map<String, dynamic>? j) => [
       for (final p in (j?['pairs'] as List<dynamic>?) ?? const []) _tiles(p),
     ];
 
+/// 자체 모델 표시패 짝을 믿을 최소 확신도. 돌아가 겹친 패를 틀리게 읽은 답이 0.33·0.58, 맞은 답은 0.81 이상(metrics 표 1-35).
+const double localPairMinConf = 0.7;
+
+/// 리치 화료의 탁자 위 표시패: 딱 2장 묶음이 하나이고 둘 다 확신이 높을 때만 그 둘. 아니면 고르지 않는다(확인으로).
+List<ReadTile> localPairIndicators(Map<String, dynamic>? j) {
+  final pairs = parseLocalPairs(j);
+  return pairs.length == 1 && pairs.single.every((t) => t.conf >= localPairMinConf) ? pairs.single : const [];
+}
+
 /// `/v2/locallast3` 응답 → 자리별 눕힌 패가 있는지. 보낸 순서대로.
 Map<Side, bool> localSticksFrom(Map<String, dynamic>? j, List<Side> sent) {
   final rivers = (j?['rivers'] as List<dynamic>?) ?? const [];

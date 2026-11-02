@@ -637,11 +637,8 @@ class TableReader {
         }
       }
     }
-    // 자체 모델만 쓰는 리치 화료: 딱 2장 묶음이 하나면 그 둘을 탁자 위 표시패로. 여럿이면 고르지 않는다(확인으로).
-    if (localOnly && known != null && riichiSeen) {
-      final pairs = parseLocalPairs(localDoraJ);
-      if (pairs.length == 1) wideDora = pairs.single;
-    }
+    // 자체 모델만 쓰는 리치 화료: 딱 2장 묶음이 하나면 그 둘을 탁자 위 표시패로. 여럿이거나 확신이 낮으면 고르지 않는다(확인으로).
+    if (localOnly && known != null && riichiSeen) wideDora = localPairIndicators(localDoraJ);
     lap('read');
 
     var sides = [?known];
