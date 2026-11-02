@@ -17,6 +17,7 @@ ap.add_argument("--seat-frame", default="1", help="자리 판독 YOLO 틀 + 조�
 ap.add_argument("--repo", default="C:/Users/jjh7757/dev/mahjong-recognizer", help="띄울 서버 코드 폴더")
 ap.add_argument("--seat-split", default="1", help="?hand_frac= 로 손패 칸·모서리 칸 나눠 잡기. 0 이면 지금 규칙만")
 ap.add_argument("--seat-table", default="0", help="탁자 끝 밖 지우고 검출(서버 기본 끔). 1 이면 지움")
+ap.add_argument("--wide-reads", default="1", help="/v2/seatwide 조각·모서리를 각각 몇 번 읽나(운영 기본 1). 0 이면 자리 판독과 같은 수")
 a = ap.parse_args()
 
 load_dotenv("C:/Users/jjh7757/Downloads/부트캠프/.env")
@@ -25,6 +26,7 @@ os.environ.setdefault("RATE_PER_MIN", "1000")
 os.environ["SEAT_FRAME"] = a.seat_frame
 os.environ["SEAT_SPLIT"] = a.seat_split
 os.environ["SEAT_TABLE"] = a.seat_table
+os.environ["WIDE_READS"] = a.wide_reads
 os.environ["RECOGNIZER_API_KEY"] = ""  # 로컬 측정은 인증 없음
 os.environ["ALLOW_NO_AUTH"] = "1"  # 키 없으면 서버가 기동을 거부한다(d9cc340)
 REPO = a.repo

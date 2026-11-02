@@ -70,3 +70,4 @@ app.*.map.json
 /experiments/visit_*/
 /.claude/settings.local.json
 /experiments/visit_head.txt
+/experiments/tile_classifier/data/

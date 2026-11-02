@@ -281,6 +281,7 @@ void main() {
                 out['warnings'] = reading.warnings;
                 out['dora'] = [for (final t in merge.situation.doraIndicators) engine.Tiles.name(t)];
                 out['call_ms'] = trace.callMs;
+                out['server_timing'] = trace.serverTiming;
                 out['merge'] = CaptureLog.mergeJson(merge);
                 // 확신도 분포를 보려고 판독 원본도(손패 패별 conf, 리치봉 자리별 conf, 도라 표시패 conf).
                 out['hand_read'] = reading.hand?.toJson();

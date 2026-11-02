@@ -113,6 +113,19 @@
       "autoPort": false
     },
     {
+      "name": "recognizer-wide1",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8031",
+        "--wide-reads",
+        "1"
+      ],
+      "port": 8031,
+      "autoPort": false
+    },
+    {
       "name": "photos",
       "runtimeExecutable": "python",
       "runtimeArgs": [

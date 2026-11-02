@@ -64,6 +64,34 @@ void main() {
     return (client, names);
   }
 
+  test('서버 응답의 단계별 시간을 호출 이름으로 남긴다', () async {
+    final client = RecognizerClient(
+      baseUrl: 'https://x.test',
+      apiKey: 'k',
+      httpClient: MockClient((r) async => switch (r.url.path) {
+            '/v2/seat' => json({
+                'face_up': true,
+                'tiles': [for (final c in hand13) {'tile': c, 'conf': 0.9}],
+                'separate_tile': {'tile': '7s', 'conf': 0.9},
+                'melds': [],
+                'loose': [],
+                'timing': {'handler_ms': 900, 'gemini_ms': [500, 600, 700]},
+              }),
+            '/v2/seatwide' => json({'method': 'none', 'row': [], 'singles': [], 'melds': []}),
+            '/v2/last3' => json({'rivers': [], 'timing': {'handler_ms': 300}}),
+            '/v2/sticks' => json({'riichi_sticks': {}}),
+            '/v2/dora' => json({'indicators': []}),
+            _ => http.Response('nope', 404),
+          }),
+    );
+    final trace = TableReadTrace();
+    await TableReader(client).readGrid(table(), grid, winnerSide: Side.bottom, trace: trace);
+    expect(trace.serverTiming['seat_bottom']?['gemini_ms'], [500, 600, 700]);
+    expect(trace.serverTiming['last3']?['handler_ms'], 300);
+    expect(trace.serverTiming, isNot(contains('sticks')), reason: '옛 서버 응답엔 timing 이 없다');
+    expect(trace.callMs, contains('sticks'));
+  });
+
   test('미리 보내기(기본)는 넓은 판독이 강 끝보다 먼저 나가고, 필요한 장면에서는 그 답을 쓴다', () async {
     final (client, names) = server();
     final trace = TableReadTrace();

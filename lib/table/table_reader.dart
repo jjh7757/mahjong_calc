@@ -154,6 +154,14 @@ class TableReadTrace {
   /// 서버 호출별 걸린 시간(ms). 이름은 보낸 파일 이름(seat_bottom, handonly_bottom, last3 …).
   final Map<String, int> callMs = {};
 
+  /// 서버 응답의 단계별 시간(`timing`: handler_ms·decode_ms·queue_ms·prep_ms·gate_ms·gemini_ms). 이름은 [callMs] 와 같다.
+  final Map<String, Map<String, dynamic>> serverTiming = {};
+
+  void _recordCall(String name, int ms, Map<String, dynamic> response) {
+    callMs[name] = ms;
+    if (response['timing'] case final Map<String, dynamic> t) serverTiming[name] = t;
+  }
+
   /// 그림자 모드로 두 방식을 같이 읽은 자리의 두 답(기록용).
   final Map<Side, ShadowRead> shadow = {};
 
@@ -306,7 +314,7 @@ class TableReader {
       if (bytes == null) return Future.value(null);
       final t = Stopwatch()..start();
       final f = client.observe(kind, bytes, filename: '$name.jpg', query: query).then<Map<String, dynamic>?>((j) {
-        trace?.callMs[name] = t.elapsedMilliseconds;
+        trace?._recordCall(name, t.elapsedMilliseconds, j);
         usage[name] = parseUsage(j['usage']);
         return j;
       });
@@ -443,7 +451,7 @@ class TableReader {
     Future<Map<String, dynamic>> lastOnce(String name) {
       final t = Stopwatch()..start();
       return client.observeLasts([for (final s in lastSent) (lastCrops[s]!, 'last_${s.name}.jpg')]).then((j) {
-        trace?.callMs[name] = t.elapsedMilliseconds;
+        trace?._recordCall(name, t.elapsedMilliseconds, j);
         return j;
       });
     }

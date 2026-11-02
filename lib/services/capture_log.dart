@@ -195,6 +195,7 @@ class CaptureLog {
       'layout_mode': trace?.layoutMode,
       'tracked_mode': trace == null ? null : {for (final e in trace.trackedMode.entries) e.key.name: e.value},
       'call_ms': trace?.callMs,
+      'server_timing': trace?.serverTiming,
       if (trace != null && trace.riverSideways.isNotEmpty)
         'river_sideways': {for (final e in trace.riverSideways.entries) e.key.name: e.value},
       if (trace?.autoMultiRon ?? false) 'auto_multi_ron': true,
