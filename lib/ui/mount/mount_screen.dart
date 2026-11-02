@@ -158,8 +158,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// 헤드 미리보기 스트림의 원 프레임 긴 변(px). 해상도 게이트(울기 모서리를 미리보기로 읽을 수 있나) 판단용. 모르면 null.
   int? _previewFrameLongSide;
 
-  /// 판 상태 추적(울기 미리 읽기, docs/state_tracking_design.md). 격자 + 카메라 헤드일 때만 돈다.
-  /// 배경 미리보기 프레임마다 모서리 통계를 내고, 변화가 확정되면 모서리만 잘라 /v2/corner 로 읽어 둔다.
+  /// 판 상태 추적(docs/state_tracking_design.md). 격자 + 카메라 헤드일 때만 돈다. 모서리는 픽셀 변화만 본다
+  /// (울기가 늘면 일발이 깨진다). 울기를 게임 중에 읽지 않는다: 화료 사진에서 읽는다(2026-11-02 사용자 결정).
   MeldTracker? _tracker;
 
   /// 2단계: 강(마지막 버림패 위치 → 방총자·론 패 힌트)·리치봉(띠 변화 → /v2/sticks 두 번 일치) 추적. 같은 프레임을 쓴다.
@@ -168,37 +168,16 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   bool _trackingEnabled = true;
   static const String trackingPref = 'mount.tracking';
 
-  /// 그림자 모드(실험): 추적 자리의 화료 때 손패 전용과 자리 전체를 같은 사진으로 동시에 읽어 둘 다 기록한다.
-  bool _shadow = false;
-  static const String shadowPref = 'mount.shadow';
-
   /// 격자 판독 전에 펠트 네 모서리로 사진을 펴서 작탁만 남기고 표준 격자로 나눈다(더보기에서 켬, 기본 끔).
   /// 펠트를 못 찾으면 맞춘 격자 그대로. 사용자 제안(2026-10-28 "처음 자를 때 작탁만"), `lib/table/rectify.dart`.
   /// 기본 끔: B·C·D 앱 흐름 같은 순간 24쌍에서 점수 정답 23 → 12·자동 반영 23 → 8·중앙 +3초(펴기 2.8초)였다(metrics 표 1).
   bool _rectify = false;
   static const String rectifyPref = 'mount.rectify';
 
-  /// 이 판의 왕패(도라 산) 상자. 판 상태 추적이 새 판의 첫 버림패(패산이 다 올라오고 도라를 뒤집은 뒤)를 보면 `/v2/wall` 을
-  /// 한 번 부르고(판당 1회, 3초마다 부르지 않는다), 더보기 "도라 산 찾기" 로도 부른다. "격자 편집" 에서 주황 상자를 끌어 고칠 수 있고,
-  /// 판이 바뀌면 버린다. 리치 아닌 화료 때 이 상자를 잘라 도라를 읽는다(`readGrid(wall:)`).
-  WallZone? _wall;
-  bool _wallBusy = false;
-  bool _wallTried = false;
-
-  /// 판 시작 자동 찾기가 실패하면 [_wallRetryGap] 뒤 한 번 더(같은 판일 때만). 매장에서 손 가림·조명으로 한 번 놓친 판을
-  /// 건지려고(2026-10-29). 수동 "도라 산 찾기" 는 세지 않는다.
-  int _wallAutoTries = 0;
-  Timer? _wallRetryTimer;
-  static const int _wallMaxAutoTries = 2;
-  static const Duration _wallRetryGap = Duration(seconds: 30);
-
-  /// 갤러리 사진에서 "자동 맞추기" 로 찾은 도라 산(그 사진 한 장에만 쓴다).
-  WallZone? _galleryWall;
-
-  /// "자동 맞추기"(처음 설정 틀 `/v2/setup` + 도라 산 `/v2/wall`)를 부르는 중.
+  /// "자동 맞추기"(처음 설정 틀 `/v2/setup`)를 부르는 중.
   bool _setupBusy = false;
 
-  /// 격자 자동 맞추기는 **카메라를 놓을 때 한 번**(2026-10-29 사용자: "대국마다 할 필요가 있나" — 판마다 잡는 것은 도라 산만).
+  /// 격자 자동 맞추기는 **카메라를 놓을 때 한 번**(2026-10-29 사용자: "대국마다 할 필요가 있나").
   /// 격자를 저장할 때 어느 카메라로 잡았는지([gridSourcePref] = 헤드 주소 또는 'local')를 같이 적고, 테이블 화면에서
   /// 카메라가 준비됐을 때 저장된 격자의 카메라와 지금 카메라가 다르면(처음 설치, 새 헤드 QR, 헤드 ↔ 이 기기 카메라) 자동 맞추기를
   /// 돈다. 같은 카메라면 저장된 격자(사용자가 고친 것 포함)를 그대로 쓴다. 네 자리 손패를 못 찾으면(패를 아직 안 돌렸을 때)
@@ -253,14 +232,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
   /// 판독이 확실하면 결과 화면에서 [autoRecordDelay] 뒤 대국에 자동 반영(기본 켬, 룰 설정·더보기에서 끔).
   static const autoRecordDelay = Duration(seconds: 10);
-  bool _autoRecord = true;
+  bool _autoRecord = false;
 
   @override
   void dispose() {
     _flushFrames('dispose');
     _bgTimer?.cancel();
     _autoSetupTimer?.cancel();
-    _wallRetryTimer?.cancel();
     VolumeKeys.stop(_volumeShoot);
     WidgetsBinding.instance.removeObserver(this);
     _cam?.dispose();
@@ -343,7 +321,6 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _trackingEnabled = p.getBool(trackingPref) ?? true;
       _autoSetupOnStart = p.getBool(autoSetupPref) ?? true;
       _gridSource = p.getString(gridSourcePref);
-      _shadow = p.getBool(shadowPref) ?? false;
       _rectify = p.getBool(rectifyPref) ?? false;
       final g = p.getString(gridPref);
       if (g != null) _grid = GridZones.fromJson(jsonDecode(g) as Map<String, dynamic>) ?? GridZones.initial;
@@ -652,9 +629,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     'zoom': zoom,
     'height_cm': _heightCm,
     'tracking': _trackingEnabled,
-    'shadow': _shadow,
     'rectify': _rectify,
-    'tracked_sides': [for (final s in _trackedNow().keys) s.name],
     'tracked_riichi': [for (final s in _trackedRiichi()) s.name],
     'tracked_double_riichi': [for (final s in _trackedDoubleRiichi()) s.name],
     'tracked_ippatsu': [for (final s in _trackedIppatsu()) s.name],
@@ -668,7 +643,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   List<TrackerEvent> _carryMeldEvents = const [];
   List<TrackerEvent> _carryRiverEvents = const [];
 
-  MeldTracker _trackerFor(GridZones grid) => _tracker ??= _newTracker(MeldTracker(tileFrac: tileFracsOf(grid)));
+  MeldTracker _trackerFor(GridZones grid) => _tracker ??= _newTracker(MeldTracker(tileFrac: tileFracsOf(grid), config: const TrackerConfig(pixelOnly: true)));
   RiverTracker _riverTrackerFor(GridZones grid) =>
       _riverTracker ??= RiverTracker(tileFrac: riverTileFracsOf(grid))..events.addAll(_takeCarry(river: true));
 
@@ -714,15 +689,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       : const {};
   Discard? _trackedDiscard() => _trackingEnabled && _useGrid ? _riverTracker?.lastDiscard : null;
 
-  /// 화료 때 손패 전용 읽기를 써도 되는 자리와 그 울기(확정 + 그 뒤 변화 없음).
-  Map<Side, List<ObservedMeld>> _trackedNow() {
-    final t = _tracker;
-    if (t == null || !_trackingEnabled || !_useGrid) return const {};
-    return {for (final s in Side.values) s: ?t.trackedMelds(s)};
-  }
-
   /// 판이 바뀌면(화료·유국 기록) 추적을 비운다. 처음 보는 판은 비우지 않는다(열자마자 리셋 로그가 남지 않게).
-  /// 판 중간의 리치·점수 정정 기록은 판이 바뀐 게 아니다(2026-10-29 전엔 기록 수를 봐서 리치 버튼에 도라 산·울기 추적이 지워졌다).
+  /// 판 중간의 리치·점수 정정 기록은 판이 바뀐 게 아니다(2026-10-29 전엔 기록 수를 봐서 리치 버튼에 추적이 지워졌다).
   void _syncTrackerRound(Game g) {
     final hands = g.events.where((e) => e.kind == 'win' || e.kind == 'draw').length;
     final key = '${g.id}/${g.roundLabel}/${g.honba}/$hands';
@@ -736,20 +704,15 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     if (!first) {
       _tracker?.reset(DateTime.now());
       _riverTracker?.reset(DateTime.now());
-      _wall = null;
-      _wallTried = false;
-      _wallAutoTries = 0;
-      _wallRetryTimer?.cancel();
-      _wallRetryTimer = null;
     }
   }
 
-  /// 배경 미리보기 한 장 → 모서리 통계 → 추적기. 읽을 자리가 나오면 모서리를 읽는다.
+  /// 배경 미리보기 한 장 → 통계 → 추적기.
   Future<void> _trackFrame(Uint8List preview) async {
     final g = gameStore.current;
     if (!_trackingEnabled || !_useGrid || g == null || _trackBusy || _remoteUrl == null || _gridBeforeEdit != null) return;
     // 이 카메라로 탁자를 확인한 뒤(자동 맞추기 성공 또는 격자 저장)에만 돈다. 패가 없는 장면(천장·책상)에선 흰 면이
-    // 노출 흔들림만으로 "패 1장 넘게 바뀜" 이 되어 모서리 읽기를 30분에 28번 보냈다(2026-10-30 집 점검).
+    // 노출 흔들림만으로 "패 1장 넘게 바뀜" 이 되어 읽기를 30분에 28번 보냈다(2026-10-30 집 점검).
     if (!_tableConfirmed) return;
     final tracker = _trackerFor(_grid);
     final river = _riverTrackerFor(_grid);
@@ -760,7 +723,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       debugPrint('[track] analyze failed: $e');
       return;
     }
-    // 분석 중에 화료 촬영이 시작됐으면 이 프레임은 버린다 — 모서리·리치봉·도라 산 호출이 화료 판독과 겹치지 않게(2026-10-30 점검).
+    // 분석 중에 화료 촬영이 시작됐으면 이 프레임은 버린다 — 리치봉 호출이 화료 판독과 겹치지 않게(2026-10-30 점검).
     if (!mounted || _busy || _trackBusy) return;
     final now = DateTime.now();
     final shifted = _shiftGate.check(stats);
@@ -768,20 +731,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       tracker.cameraMoved(now);
       river.cameraMoved(now);
     }
-    final actions = tracker.onFrame(stats.corners, now);
+    tracker.onFrame(stats.corners, now);
     final riverActions = river.onFrame(stats.rivers, stats.strips, now);
     _recordFrame(preview, now, tracker, river, shifted);
     setState(() {});
-    for (final a in actions) {
-      unawaited(_readCorner(a, g));
-    }
     for (final a in riverActions) {
       unawaited(_readSticks(a, g));
-    }
-    // 새 판의 첫 버림패 = 패산이 다 올라오고 도라를 뒤집은 뒤. 이때 한 번만 왕패를 찾는다.
-    if (!_wallTried && _wall == null && river.lastDiscard != null) {
-      _wallTried = true;
-      unawaited(_locateWall(g));
     }
   }
 
@@ -830,56 +785,6 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     }());
   }
 
-  /// 지금 카메라 사진 한 장(줄여서)으로 왕패 상자를 찾는다. [manual] 이면 결과를 알린다.
-  Future<void> _locateWall(Game g, {bool manual = false}) async {
-    if (_wallBusy) return;
-    setState(() => _wallBusy = true);
-    // 자동 시도 횟수는 호출마다 센다(응답이 온 뒤에만 세면 타임아웃·429 같은 예외 때 재시도가 안 걸렸다, 2026-10-30 점검).
-    if (!manual) _wallAutoTries++;
-    final retry = !manual && _wallAutoTries < _wallMaxAutoTries;
-    var found = false;
-    final client = RecognizerClient();
-    try {
-      final src = await _currentPhoto();
-      if (src == null) {
-        if (manual) _toast('카메라가 준비되지 않았습니다');
-        return;
-      }
-      final small = await _shrinkInIsolate(src);
-      final j = await client.observe('wall', small, filename: 'wall.jpg');
-      if (!mounted) return;
-      final w = parseWallV2(j);
-      setState(() => _wall = w);
-      found = w != null;
-      if (manual || w == null) {
-        _toast(w == null
-            ? (retry
-                ? '도라 산을 찾지 못했습니다. ${_wallRetryGap.inSeconds}초 뒤 한 번 더 찾습니다.'
-                : '도라 산을 찾지 못했습니다. "도라 산 찾기" 로 다시 해 보세요.')
-            : '도라 산을 찾았습니다. 틀렸으면 "격자 편집" 에서 주황 상자를 끌어 고치세요.');
-      }
-      unawaited(_saveWall(g, small, j));
-    } catch (e) {
-      if (mounted && manual) _toast('도라 산 찾기 실패: $e');
-    } finally {
-      client.close();
-      if (mounted) {
-        setState(() => _wallBusy = false);
-        if (retry && !found) _scheduleWallRetry(g);
-      }
-    }
-  }
-
-  /// 같은 판이고 아직 상자가 없으면 [_wallRetryGap] 뒤 한 번 더 찾는다(못 찾음·예외 모두).
-  void _scheduleWallRetry(Game g) {
-    final key = _trackRoundKey;
-    _wallRetryTimer?.cancel();
-    _wallRetryTimer = Timer(_wallRetryGap, () {
-      if (!mounted || _trackRoundKey != key || _wall != null || _wallBusy) return;
-      unawaited(_locateWall(g));
-    });
-  }
-
   /// 지금 카메라 사진 한 장: 카메라 헤드면 추적과 같은 출처(고해상 미리보기 또는 촬영), 이 기기 카메라면 촬영.
   Future<Uint8List?> _currentPhoto() async {
     final url = _remoteUrl;
@@ -896,8 +801,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     return _lastShot;
   }
 
-  /// 격자 맞추기 "자동 맞추기": 사진 한 장(갤러리 사진이면 그것)을 줄여 처음 설정 틀(`/v2/setup`)과 도라 산(`/v2/wall`)을
-  /// 나란히 부르고, 손패+울기 바깥 띠 선·리치봉 상자([proposeGrid])와 도라 산 상자를 채운다. 사용자가 끌어 고친 뒤 저장/읽기.
+  /// 격자 맞추기 "자동 맞추기": 사진 한 장(갤러리 사진이면 그것)을 줄여 처음 설정 틀(`/v2/setup`)을 부르고,
+  /// 손패+울기 바깥 띠 선·리치봉 상자([proposeGrid])를 채운다. 사용자가 끌어 고친 뒤 저장/읽기.
   /// 네 자리 손패를 찾아 격자를 바꿨으면 true. [auto](대국 시작 직후)면 격자를 저장하고, 실패 안내는 [lastTry] 일 때만.
   Future<bool> _autoSetup({bool auto = false, bool lastTry = true}) async {
     if (_setupBusy) return false;
@@ -912,32 +817,21 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         return false;
       }
       final small = await _shrinkInIsolate(src);
-      final setupF = client.observe('setup', small, filename: 'setup.jpg');
-      final wallF = client.observe('wall', small, filename: 'wall.jpg').then<Map<String, dynamic>?>((j) => j,
-          onError: (Object _) => null);
-      final setup = await setupF;
-      final wallJ = await wallF;
+      final setup = await client.observe('setup', small, filename: 'setup.jpg');
       if (!mounted) return false;
       final proposed = proposeGrid(setup, keep: _grid);
-      final wall = wallJ == null ? null : parseWallV2(wallJ);
       setState(() {
         if (proposed != null) _grid = proposed;
-        if (gallery != null) {
-          _galleryWall = wall;
-        } else if (wall != null) {
-          _wall = wall;
-        }
       });
       if (auto && proposed != null) await _saveGrid();
       if (gallery == null) {
-        unawaited(_saveSetup(small, setup, wallJ, proposed, wall, auto: auto, ms: sw.elapsedMilliseconds));
+        unawaited(_saveSetup(small, setup, proposed, auto: auto, ms: sw.elapsedMilliseconds));
       }
       final secs = (sw.elapsedMilliseconds / 1000).toStringAsFixed(1);
-      debugPrint('[setup] auto=$auto try=$_autoSetupTries ${sw.elapsedMilliseconds}ms grid=${proposed != null} wall=${wall != null}');
+      debugPrint('[setup] auto=$auto try=$_autoSetupTries ${sw.elapsedMilliseconds}ms grid=${proposed != null}');
       if (!auto || proposed != null || lastTry) {
         final body = [
           proposed == null ? '네 자리 손패를 다 찾지 못해 격자는 그대로입니다' : '손패+울기 띠와 리치봉 상자를 맞췄습니다',
-          wall == null ? '도라 산은 못 찾았습니다' : '도라 산을 찾았습니다',
           auto ? '틀렸으면 더보기 "구역 격자 맞추기" 에서 고치세요' : '틀렸으면 끌어 고치세요',
         ].join('. ');
         _toast(auto ? '격자 자동 맞추기 ($secs초, 이 카메라로 처음): $body' : '$body ($secs초)', long: auto);
@@ -951,18 +845,6 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       if (mounted) setState(() => _setupBusy = false);
     }
   }
-
-  String get _wallStatus => _wallBusy ? ' · 도라 산 찾는 중' : (_wall != null ? ' · 도라 산 잡음' : '');
-
-  /// 테이블 화면 "도라 산 찾기" 버튼(더보기에도 있음; 매장에서 판 시작에 못 잡았을 때 바로 누르려고, 2026-10-29).
-  Widget _wallButton(Game g) => TextButton.icon(
-        key: const ValueKey('table-wall'),
-        onPressed: _wallBusy || _busy || (_cam == null && _remoteUrl == null) ? null : () => _locateWall(g, manual: true),
-        icon: _wallBusy
-            ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-            : const Icon(Icons.view_week_outlined, size: 16),
-        label: Text(_wallBusy ? '도라 산 찾는 중…' : (_wall == null ? '도라 산 찾기' : '도라 산 다시 찾기')),
-      );
 
   /// 테이블 화면 "헤드" 버튼: 연결됨(초록)/끊김(빨강)/헤드 없음. 끊겼으면 누르면 다시 붙어 보고, 안 되면 QR 스캔을 권한다.
   Widget _headButton() {
@@ -1012,14 +894,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     );
   }
 
-  /// 자동 맞추기 입력 사진(줄인 것)과 `/v2/setup`·`/v2/wall` 응답·제안 격자를 촬영 기록 `<시각>_track/setup_###` 에 남긴다
+  /// 자동 맞추기 입력 사진(줄인 것)과 `/v2/setup` 응답·제안 격자를 촬영 기록 `<시각>_track/setup_###` 에 남긴다
   /// (매장에서 자동 맞추기가 틀리거나 실패했을 때 뒤에 원인을 보려고, 2026-10-29).
   Future<void> _saveSetup(
     Uint8List small,
     Map<String, dynamic> setup,
-    Map<String, dynamic>? wallRead,
-    GridZones? proposed,
-    WallZone? wall, {
+    GridZones? proposed, {
     required bool auto,
     required int ms,
   }) async {
@@ -1040,24 +920,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         'dealer': g?.dealer,
         'grid_before': _gridBeforeEdit?.toJson() ?? (proposed == null ? _grid.toJson() : null),
         'grid_proposed': proposed?.toJson(),
-        'wall_box': wall?.box.toList(),
-        'wall_side': wall?.side.name,
         'setup': setup,
-        'wall': wallRead,
       }),
-      'application/json',
-    );
-  }
-
-  Future<void> _saveWall(Game g, Uint8List small, Map<String, dynamic> read) async {
-    if (!_logEnabled) return;
-    final dir = _trackDir ??= '${CaptureLog.newDir()}_track';
-    final stem = 'wall_${(++_trackSeq).toString().padLeft(3, '0')}';
-    await CaptureLog.saveFile(dir, '$stem.jpg', small, 'image/jpeg');
-    await CaptureLog.saveFile(
-      dir,
-      '$stem.json',
-      CaptureLog.jsonBytes({'round': g.roundLabel, 'honba': g.honba, 'dealer': g.dealer, 'read': read}),
       'application/json',
     );
   }
@@ -1097,62 +961,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     await _saveTrackState(g, dir);
   }
 
-  /// 모서리 읽기용 사진: 헤드 스트림이 충분히 크면 고해상 미리보기(셔터 없음), 아니면 촬영(셔터음).
+  /// 리치봉 읽기용 사진: 헤드 스트림이 충분히 크면 고해상 미리보기(셔터 없음), 아니면 촬영(셔터음).
   /// 미리보기는 프레임 긴 변 그대로 받는다 — 네이티브 헤드(HeadCamera)는 스트림이 12MP 라 2000 으로 줄이면 패가 50px 대로
   /// 떨어진다(NOTES 32·33). 0.3초·0.7MB 라 전체를 받아도 부담이 작다.
   Future<Uint8List> _trackSource(RemoteCamera cam) async {
     final long = _previewFrameLongSide;
     if (long != null && long >= _trackPreviewMinLongSide) return (await cam.preview(longSide: long)).bytes;
     return (await cam.capture()).bytes;
-  }
-
-  Future<void> _readCorner(TrackerAction a, Game g) async {
-    final url = _remoteUrl;
-    final tracker = _tracker;
-    if (url == null || tracker == null) return;
-    _trackCalls++;
-    final cam = RemoteCamera(url, token: _remoteToken, timeout: const Duration(seconds: 20));
-    final client = RecognizerClient();
-    final seq = ++_trackSeq;
-    try {
-      final src = await _trackSource(cam);
-      final crop = (await _cropInIsolate(src, [CropSpec(_grid.cornerCell(a.side), side: a.side)])).first;
-      final j = await client.observe('corner', crop, filename: 'corner_${a.side.name}.jpg');
-      if (!mounted) return;
-      tracker.onRead(a.side, a.frame, parseCornerV2(j).melds, DateTime.now());
-      unawaited(_saveTrack(g, a.side, seq, crop, j));
-    } catch (e) {
-      if (mounted) tracker.onReadFailed(a.side, a.frame, DateTime.now(), '$e');
-    } finally {
-      cam.close();
-      client.close();
-      _trackCalls--;
-      if (mounted) setState(() {});
-    }
-  }
-
-  /// 추적 기록: 모서리 크롭 + 읽기 + 누구 것(사진 자리·대국 자리·이름) + 추적기 상태. 판마다 폴더 하나.
-  Future<void> _saveTrack(Game g, Side side, int seq, Uint8List crop, Map<String, dynamic> read) async {
-    final tracker = _tracker;
-    if (!_logEnabled || tracker == null) return;
-    final dir = _trackDir ??= '${CaptureLog.newDir()}_track';
-    final seat = SeatMap(g.settings.bottomSeat).seatOf(side);
-    final stem = 'corner_${seq.toString().padLeft(3, '0')}_${side.name}';
-    await CaptureLog.saveFile(dir, '$stem.jpg', crop, 'image/jpeg');
-    await CaptureLog.saveFile(
-      dir,
-      '$stem.json',
-      CaptureLog.jsonBytes({
-        'side': side.name,
-        'seat': seat,
-        'name': g.names[seat],
-        'round': g.roundLabel,
-        'honba': g.honba,
-        'read': read,
-      }),
-      'application/json',
-    );
-    await _saveTrackState(g, dir);
   }
 
   /// 추적기 상태 전부(울기·강·리치봉)를 track.json 으로.
@@ -1182,69 +997,6 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     });
     _trackStateWrite = next.catchError((Object _) {});
     return next;
-  }
-
-  /// 자리별 울기 칩: 미리 읽은 울기와 상태. 누르면 다시 읽기, 길게 누르면 지우기.
-  Widget _meldChips(Game g, SeatMap seats) {
-    final t = _tracker;
-    if (!_trackingEnabled || t == null) return const SizedBox.shrink();
-    final rows = <Widget>[];
-    for (final side in Side.values) {
-      final ts = t.seat(side);
-      if (ts.status == TrackStatus.idle && ts.melds.isEmpty) continue;
-      final seat = seats.seatOf(side);
-      final (label, color) = switch (ts.status) {
-        TrackStatus.confirmed when !ts.changedSinceConfirm => ('미리 읽음', kioskGold),
-        TrackStatus.reading => ('읽는 중', Colors.grey),
-        TrackStatus.unconfirmed => ('미확정', Colors.orange),
-        _ => ('바뀜', Colors.grey),
-      };
-      rows.add(
-        InkWell(
-          key: ValueKey('track-chip-${side.name}'),
-          onTap: () => setState(() => t.requestReread(side, DateTime.now())),
-          onLongPress: () => setState(() => t.clear(side, DateTime.now())),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 3),
-            child: Row(
-              children: [
-                Text('${g.names[seat]} · $label', style: TextStyle(fontSize: 12, color: color)),
-                const SizedBox(width: 8),
-                for (final m in ts.melds)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: TileRow([for (final x in m.tiles) x.tile], width: 18, open: m.faceDown.isEmpty),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-    // 강·리치봉 추적 요약: 자리별 감지한 버림 수, 마지막 버림 자리, 확정한 리치.
-    final rv = _riverTracker;
-    if (rv != null) {
-      final counts = rv.discardCounts;
-      final last = rv.lastDiscard;
-      final tracked = _trackedRiichi();
-      if (counts.values.any((n) => n > 0) || tracked.isNotEmpty) {
-        final parts = [
-          '강 ${[for (final s in Side.values) if (counts[s]! > 0) '${g.names[seats.seatOf(s)]} ${counts[s]}'].join(' · ')}',
-          if (last != null) '마지막 ${g.names[seats.seatOf(last.side)]}',
-          if (tracked.isNotEmpty) '리치 ${tracked.map((s) => g.names[seats.seatOf(s)]).join('·')}',
-        ];
-        rows.add(Padding(
-          padding: const EdgeInsets.symmetric(vertical: 3),
-          child: Text(parts.join('  |  '), key: const ValueKey('track-river-line'),
-              style: const TextStyle(fontSize: 12, color: Colors.white70)),
-        ));
-      }
-    }
-    if (rows.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 6),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: rows),
-    );
   }
 
   Future<void> _askHeight() async {
@@ -1431,7 +1183,6 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           _useGrid = savedUseGrid;
           _galleryShot = null;
           _galleryAspect = null;
-          _galleryWall = null;
         });
       }
     }
@@ -1442,7 +1193,6 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         _gridBeforeEdit = null;
         _galleryShot = null;
         _galleryAspect = null;
-        _galleryWall = null;
       });
 
   // ---------------- 판독 ----------------
@@ -1514,10 +1264,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           ? reader.readGrid(
               bytes,
               _grid,
+              // 화료 판독은 자체 모델만(Gemini 없음, 2026-11-02 사용자 결정, metrics 표 1-37). 못 읽으면 입력 화면으로.
+              localOnly: true,
               rectify: _rectify,
               dealer: seats.sideOf(g.dealer),
-              // 그 판의 왕패 상자는 이 카메라의 좌표다. 갤러리 사진(다른 사진)에는 쓰지 않는다.
-              wall: setup['source'] == 'gallery' ? _galleryWall : _wall,
               onStage: (s) => stage.value = s,
               pickWinners: (cands) async {
                 if (canceled.isCompleted) return null;
@@ -1534,8 +1284,6 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                 mergeAll(rs),
                 (m) => engine.calculate(m.hand!, m.situation, rules: widget.editor.rules).isValid,
               ),
-              tracked: _trackedNow(),
-              shadow: _shadow,
               trackedRiichi: _trackedRiichi(),
               trackedDoubleRiichi: _trackedDoubleRiichi(),
               trackedIppatsu: _trackedIppatsu(),
@@ -1946,8 +1694,6 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                   } else if (v == 'grid') {
                     setState(() => _useGrid = !_useGrid);
                     await _saveGrid();
-                  } else if (v == 'wall') {
-                    await _locateWall(g, manual: true);
                   } else if (v == 'fullscreen') {
                     await FullscreenMode.set(!FullscreenMode.enabled.value);
                   } else if (v == 'autoSetup') {
@@ -1968,19 +1714,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                       final p = await SharedPreferences.getInstance();
                       await p.setBool(rectifyPref, _rectify);
                     } catch (_) {}
-                  } else if (v == 'tracking' || v == 'shadow') {
-                    setState(() {
-                      if (v == 'tracking') {
-                        _trackingEnabled = !_trackingEnabled;
-                        if (!_trackingEnabled) _shadow = false;
-                      } else {
-                        _shadow = !_shadow;
-                      }
-                    });
+                  } else if (v == 'tracking') {
+                    setState(() => _trackingEnabled = !_trackingEnabled);
                     try {
                       final p = await SharedPreferences.getInstance();
                       await p.setBool(trackingPref, _trackingEnabled);
-                      await p.setBool(shadowPref, _shadow);
                     } catch (_) {}
                   }
                 },
@@ -1997,12 +1735,6 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     checked: _rectify,
                     enabled: _useGrid,
                     child: const Text('작탁만 남기고 펴서 읽기 (펠트를 못 찾으면 격자 그대로)'),
-                  ),
-                  PopupMenuItem(
-                    key: const ValueKey('mount-wall-menu'),
-                    value: 'wall',
-                    enabled: !_wallBusy && (_cam != null || _remoteUrl != null),
-                    child: Text(_wallBusy ? '도라 산 찾는 중…' : (_wall == null ? '도라 산 찾기 (이번 판)' : '도라 산 다시 찾기 (이번 판)')),
                   ),
                   const PopupMenuItem(
                     key: ValueKey('mount-grid-edit-menu'),
@@ -2029,14 +1761,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     enabled: _useGrid && _remoteUrl != null,
                     child: Text(_trackingEnabled && _remoteUrl != null && !_tableConfirmed
                         ? '판 상태 추적 (격자를 맞추면 시작)'
-                        : '판 상태 추적 (울기 미리 읽기, 격자 + 카메라 헤드)'),
-                  ),
-                  CheckedPopupMenuItem(
-                    key: const ValueKey('mount-shadow-menu'),
-                    value: 'shadow',
-                    checked: _shadow,
-                    enabled: _trackingEnabled,
-                    child: const Text('그림자 모드 (두 방식 동시 기록, 실험용)'),
+                        : '판 상태 추적 (버림패·리치봉, 격자 + 카메라 헤드)'),
                   ),
                   CheckedPopupMenuItem(
                     key: const ValueKey('mount-auto-menu'),
@@ -2099,7 +1824,6 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                       ],
                     ),
                   ),
-                  _meldChips(g, seats),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
                     child: Text(
@@ -2107,7 +1831,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                       '위 ${g.names[seats.seatOf(Side.top)]} · 왼쪽 ${g.names[seats.seatOf(Side.left)]}\n'
                       '${_remoteUrl == null ? '볼륨키(리모컨)로도 찍힙니다. ' : '사진은 원격 카메라에서 받습니다. '}'
                       '${_heightCm == null ? '' : ' (높이 ${_heightCm}cm)'}'
-                      '${_logEnabled ? '' : ' (기록 저장 꺼짐)'}$_wallStatus',
+                      '${_logEnabled ? '' : ' (기록 저장 꺼짐)'}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
@@ -2252,7 +1976,6 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             Expanded(child: big('기록', Icons.scoreboard_outlined, () => push(const GameScreen()))),
           ],
         ),
-        _meldChips(g, seats),
         const SizedBox(height: 4),
         _eventsHeader(g),
         if (g.events.isEmpty)
@@ -2266,7 +1989,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           '아래 ${g.names[seats.seatOf(Side.bottom)]} · 오른쪽 ${g.names[seats.seatOf(Side.right)]} · '
           '위 ${g.names[seats.seatOf(Side.top)]} · 왼쪽 ${g.names[seats.seatOf(Side.left)]}\n'
           '${_remoteUrl == null ? '이 기기 카메라 · 볼륨키로도 찍힙니다' : '카메라 헤드 $_remoteUrl'}'
-          '${_logEnabled ? '' : ' · 기록 저장 꺼짐'}$_wallStatus',
+          '${_logEnabled ? '' : ' · 기록 저장 꺼짐'}',
           maxLines: 3,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 11, color: Colors.white60),
@@ -2286,7 +2009,6 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               icon: const Icon(Icons.grid_4x4, size: 16),
               label: const Text('격자 편집'),
             ),
-            _wallButton(g),
             _headButton(),
           ],
         ),
@@ -2444,12 +2166,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               const SizedBox(height: 12),
               // 최근 사건(점수판의 기록 줄). 최신이 위.
               Expanded(child: _kioskEvents(g)),
-              _meldChips(g, seats),
               Text(
                 '아래 ${g.names[seats.seatOf(Side.bottom)]} · 오른쪽 ${g.names[seats.seatOf(Side.right)]}\n'
                 '위 ${g.names[seats.seatOf(Side.top)]} · 왼쪽 ${g.names[seats.seatOf(Side.left)]}\n'
                 '${_remoteUrl == null ? '이 기기 카메라' : '카메라 헤드 $_remoteUrl${_bgTimer != null && !_bgStopped ? ' (배경은 헤드 미리보기${_previewFrameLongSide == null ? '' : ', 스트림 긴 변 $_previewFrameLongSide'})' : ''}'}'
-                '${_logEnabled ? '' : ' · 기록 저장 꺼짐'}$_wallStatus',
+                '${_logEnabled ? '' : ' · 기록 저장 꺼짐'}',
                 style: const TextStyle(fontSize: 12, color: Colors.white60),
               ),
               const SizedBox(height: 8),
@@ -2469,8 +2190,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     icon: const Icon(Icons.grid_4x4, size: 16),
                     label: const Text('격자 편집'),
                   ),
-                  _wallButton(g),
-                  _headButton(),
+                        _headButton(),
                 ],
               ),
             ],
@@ -2570,15 +2290,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             grid: _grid,
             editing: editing,
             dealer: seats.sideOf(g.dealer),
-            wallBox: _galleryShot == null ? _wall?.box : _galleryWall?.box,
             onChanged: (v) => setState(() => _grid = v),
-            onWallChanged: (b) => setState(() {
-              if (_galleryShot != null) {
-                _galleryWall = (box: b, side: _galleryWall?.side ?? Side.bottom);
-              } else {
-                _wall = (box: b, side: _wall?.side ?? Side.bottom);
-              }
-            }),
           ),
         if (!editing)
           LayoutBuilder(

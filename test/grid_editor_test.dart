@@ -48,33 +48,6 @@ void main() {
     expect(g2, g0);
   });
 
-  testWidgets('편집이 아니면 왕패(도라 산) 상자도 끌리지 않고, 편집 중엔 끌린다', (t) async {
-    const wall = NormBox(400, 400, 600, 600);
-    Future<int> dragWall(bool editing) async {
-      var calls = 0;
-      await t.pumpWidget(MaterialApp(
-        home: SizedBox(
-          width: 1000,
-          height: 1000,
-          child: GridOverlay(
-            grid: GridZones.initial,
-            editing: editing,
-            wallBox: wall,
-            onChanged: (_) {},
-            onWallChanged: (_) => calls++,
-          ),
-        ),
-      ));
-      final origin = t.getTopLeft(find.byType(GridOverlay));
-      await t.dragFrom(origin + const Offset(500, 500), const Offset(80, 0));
-      await t.pump();
-      return calls;
-    }
-
-    expect(await dragWall(false), 0, reason: '편집 밖에서 사진을 스쳐도 상자가 옮겨지면 안 된다(10-29 편집 on/off 결정)');
-    expect(await dragWall(true), greaterThan(0));
-  });
-
   testWidgets('편집이 아니면 끌어도 그대로', (t) async {
     var changed = false;
     await t.pumpWidget(MaterialApp(

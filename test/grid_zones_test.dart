@@ -275,7 +275,6 @@ void main() {
       Set<String> faceUp = const {'bottom'},
       List<String> dora = const ['5s'],
       List<String>? dealerDora,
-      List<String> wallDora = const ['3m'],
       List<String>? localDora,
       List<String> loose = const [],
       Map<String, Object>? agreement,
@@ -354,11 +353,6 @@ void main() {
         '/v2/sticks' => _json({
           'riichi_sticks': {'bottom': false, 'right': false, 'top': true, 'left': false},
         }),
-        '/v2/walldora' => _json({
-          'indicators': [
-            for (final c in wallDora) {'tile': c, 'conf': 0.9},
-          ],
-        }),
         '/v2/localdora' when localDora != null => _json({
           'indicators': [
             for (final c in localDora) {'tile': c, 'conf': 0.9},
@@ -422,19 +416,17 @@ void main() {
     });
 
     group('자체 모델 표시패(/v2/localdora)', () {
-      Future<TableReading> read(List<String>? local, {Set<Side> trackedRiichi = const {}, bool on = true, WallZone? wall}) {
+      Future<TableReading> read(List<String>? local, {Set<Side> trackedRiichi = const {}, bool on = true, Side? dealer}) {
         final client = RecognizerClient(
           baseUrl: 'https://x.test',
           apiKey: 'k',
           httpClient: server(<String>[], <String, img.Image>{}, localDora: local),
         );
-        return TableReader(client).readGrid(table(), grid, trackedRiichi: trackedRiichi, localDora: on, wall: wall);
+        return TableReader(client).readGrid(table(), grid, trackedRiichi: trackedRiichi, localDora: on, dealer: dealer);
       }
 
-      const WallZone wall = (box: NormBox(100, 100, 200, 400), side: Side.top);
-
-      test('답이 있으면 왕패 상자·가운데 칸보다 먼저 쓰고 출처를 local 로 남긴다', () async {
-        final r = await read(['7z'], wall: wall);
+      test('답이 있으면 선 기준 구역·가운데 칸보다 먼저 쓰고 출처를 local 로 남긴다', () async {
+        final r = await read(['7z'], dealer: Side.top);
         expect(r.center!.doraIndicators.map((t) => t.code), ['7z']);
         expect(r.center!.doraFrom, DoraFrom.local);
         expect(r.warnings, isEmpty);
@@ -447,9 +439,9 @@ void main() {
       });
 
       test('서버에 없으면(404) 경고 없이 Gemini 답으로 돌아간다', () async {
-        final r = await read(null, wall: wall);
-        expect(r.center!.doraIndicators.map((t) => t.code), ['3m']);
-        expect(r.center!.doraFrom, DoraFrom.wall);
+        final r = await read(null);
+        expect(r.center!.doraIndicators.map((t) => t.code), ['5s']);
+        expect(r.center!.doraFrom, DoraFrom.center);
         expect(r.warnings, isEmpty);
       });
 
@@ -462,6 +454,79 @@ void main() {
       test('끄면 부르지 않는다', () async {
         final r = await read(['7z'], on: false);
         expect(r.center!.doraIndicators.map((t) => t.code), ['5s']);
+      });
+    });
+
+    group('자체 모델만(readGrid(localOnly:))', () {
+      MockClient localServer(List<Uri> urls, {List<int> bottomSideways = const [], List<List<String>> pairs = const [], List<String> wallTile = const ['7z']}) =>
+          MockClient((r) async {
+            urls.add(r.url);
+            final files = RegExp(r'filename="([^"]+)\.jpg"').allMatches(latin1.decode(r.bodyBytes)).map((m) => m.group(1)!).toList();
+            final name = files.isEmpty ? '' : files.first;
+            return switch (r.url.path) {
+              '/v2/localseat' => _json({
+                'face_up': name == 'seat_bottom',
+                'tiles': name == 'seat_bottom' ? [for (final c in hand13) {'tile': c, 'conf': 0.9}] : [],
+                'separate_tile': null,
+                'melds': [],
+                'loose': [],
+              }),
+              '/v2/locallast3' => _json({
+                'method': 'frame',
+                'rivers': [
+                  for (final f in files)
+                    {
+                      'last_tile': f == 'last_right' ? {'tile': '4p', 'conf': 0.9} : {'tile': '9s', 'conf': 0.9},
+                      'tile_count': 8,
+                      'sideways': f == 'last_bottom' ? bottomSideways : <int>[],
+                    },
+                ],
+              }),
+              '/v2/localdora' => _json({
+                'indicators': [for (final c in wallTile) {'tile': c, 'conf': 0.9}],
+                'pairs': [
+                  for (final p in pairs) [for (final c in p) {'tile': c, 'conf': 0.9}],
+                ],
+              }),
+              _ => http.Response('Gemini 를 부르면 안 됨: ${r.url.path}', 500),
+            };
+          });
+
+      Future<TableReading> read(List<Uri> urls, {List<int> bottomSideways = const [], List<List<String>> pairs = const [], List<String> wallTile = const ['7z']}) {
+        final client = RecognizerClient(
+          baseUrl: 'https://x.test',
+          apiKey: 'k',
+          httpClient: localServer(urls, bottomSideways: bottomSideways, pairs: pairs, wallTile: wallTile),
+        );
+        return TableReader(client).readGrid(table(), grid, localOnly: true);
+      }
+
+      test('자체 모델 API 세 개만 부르고 경고가 없다', () async {
+        final urls = <Uri>[];
+        final r = await read(urls);
+        expect(urls.map((u) => u.path).toSet(), {'/v2/localseat', '/v2/locallast3', '/v2/localdora'});
+        expect(r.warnings, isEmpty);
+        expect(r.hand!.tiles.length, 13);
+        expect(r.center!.doraIndicators.map((t) => t.code), ['7z']);
+        expect(r.center!.doraFrom, DoraFrom.local);
+        expect(r.center!.lastDiscardAt(Side.right)?.code, '4p');
+      });
+
+      test('화료자 강의 눕힌 패로 리치를 보고, 2장 묶음이 하나면 표시패로 쓴다', () async {
+        final r = await read(<Uri>[], bottomSideways: [3], pairs: [['1p', '8m']]);
+        expect(r.center!.riichiAt(Side.bottom), isTrue);
+        expect([for (final t in r.center!.handSideIndicators) t.code], ['1p', '8m']);
+      });
+
+      test('2장 묶음이 둘이면 고르지 않는다', () async {
+        final r = await read(<Uri>[], bottomSideways: [3], pairs: [['1p', '8m'], ['0s', '5s']]);
+        expect(r.center!.handSideIndicators, isEmpty);
+      });
+
+      test('눕힌 패가 없으면 2장 묶음을 쓰지 않는다', () async {
+        final r = await read(<Uri>[], pairs: [['1p', '8m']]);
+        expect(r.center!.riichiAt(Side.bottom), isFalse);
+        expect(r.center!.handSideIndicators, isEmpty);
       });
     });
 
@@ -751,36 +816,6 @@ void main() {
       await TableReader(RecognizerClient(baseUrl: 'https://x.test', apiKey: 'k', httpClient: server(names, {})))
           .readGrid(table(), grid);
       expect(names, isNot(contains('dora_dealer')));
-    });
-
-    test('그 판의 왕패 상자가 있으면 그 상자를 패산 자리 쪽으로 세워 /v2/walldora 로 읽고(선 기준 구역은 안 부름), 찾으면 그것', () async {
-      final names = <String>[];
-      final images = <String, img.Image>{};
-      final client = RecognizerClient(
-        baseUrl: 'https://x.test',
-        apiKey: 'k',
-        httpClient: server(names, images, dora: ['5s'], dealerDora: ['9p'], wallDora: ['3m', '4s']),
-      );
-      const wall = (box: NormBox(300, 100, 700, 200), side: Side.left);
-      final reading = await TableReader(client).readGrid(table(), grid, dealer: Side.bottom, wall: wall);
-      expect(names, containsAll(['dora', 'dora_wall']));
-      expect(names, isNot(contains('dora_dealer')));
-      expect([for (final t in reading.center!.doraIndicators) t.code], ['3m', '4s']);
-      expect(reading.center!.doraFrom, DoraFrom.wall);
-      // 세로로 긴 왼쪽 패산 상자를 왼쪽 자리 쪽으로 세우면 가로가 길다.
-      expect(images['dora_wall']!.width, greaterThan(images['dora_wall']!.height));
-    });
-
-    test('왕패 상자에서 못 읽으면 가운데 칸 도라를 쓴다', () async {
-      final client = RecognizerClient(
-        baseUrl: 'https://x.test',
-        apiKey: 'k',
-        httpClient: server([], {}, dora: ['5s'], wallDora: []),
-      );
-      const wall = (box: NormBox(300, 100, 700, 200), side: Side.left);
-      final reading = await TableReader(client).readGrid(table(), grid, wall: wall);
-      expect([for (final t in reading.center!.doraIndicators) t.code], ['5s']);
-      expect(reading.center!.doraFrom, DoraFrom.center);
     });
 
     test('서버가 여러 번 읽은 답이 엇갈렸으면 경고를 남긴다(만장일치면 없음)', () async {

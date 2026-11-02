@@ -24,11 +24,6 @@ typedef AnalyzeFn = Future<ShotAnalysis> Function(Uint8List small, FixedTable fi
 typedef AnalyzeGridFn = Future<ShotAnalysis> Function(Uint8List small, GridZones grid);
 typedef OpenShotFn = Future<ShotImage> Function(Uint8List original);
 
-/// 이미지 처리 함수 묶음. 기본값은 같은 isolate 에서 바로 돌린다.
-/// 왕패 상자 크롭 여백(상자 크기 비율). 사용자가 옮긴 상자나 Gemini 상자가 조금 어긋나도 표시패가 들어오게.
-/// `experiments/speed/dora_locate.py` 의 왕패 도라 읽기(B·C·D 16/18, C 6/6)와 같은 값.
-const double wallZonePad = 0.1;
-
 /// 자체 모델 표시패 찾기를 이 시간까지만 기다린다. 넘으면 Gemini 답을 쓴다.
 const _localDoraTimeout = Duration(seconds: 10);
 
@@ -124,8 +119,7 @@ class TableReadTrace {
   /// 왕패(도라 표시패) 구역만 잘라 낸 것. locate 가 dead_wall 을 찾았을 때만.
   Uint8List? wallCrop;
 
-  /// 도라 구역 크롭: 그 판의 왕패 상자(`readGrid(wall:)`, 패산 자리 쪽으로 세운 것) 또는 선 기준 도라 구역
-  /// ([GridZones.doraZone], 선 쪽으로 세운 것). 둘 다 없으면 null.
+  /// 선 기준 도라 구역 크롭([GridZones.doraZone], 선 쪽으로 세운 것). 없으면 null.
   Uint8List? dealerDoraCrop;
 
   /// 자체 모델 표시패 찾기 응답(`readGrid(localDora:)`). 부르지 않았거나 실패하면 null.
@@ -278,8 +272,8 @@ class TableReader {
     Discard? trackedDiscard,
     Side? winnerSide,
     Side? dealer,
-    WallZone? wall,
     bool localDora = true,
+    bool localOnly = false,
     Future<List<Side>?> Function(List<Side> candidates)? pickWinners,
     bool Function(List<TableReading> readings)? acceptAll,
     void Function(ReadStage stage)? onStage,
@@ -309,14 +303,12 @@ class TableReader {
       }
       lap('rectify');
     }
-    // 편 사진은 좌표가 달라 원본 좌표인 왕패 상자를 쓰지 않는다(선 기준 구역으로).
-    final useWall = wall != null && !rectified;
     final Uint8List small;
     final ShotAnalysis a;
     final Map<Side, Uint8List> seatCrops, cornerCrops, lastCrops;
     final Uint8List sticksCrop, doraCrop;
     Uint8List? trackedCrop, dealerDoraCrop, wideCrop;
-    final trackedBox = rectified ? null : trackedDiscard?.box;
+    final trackedBox = rectified || localOnly ? null : trackedDiscard?.box;
     final trackSide = trackedDiscard?.side;
     final warnings = <String>[];
     final usage = <String, Map<String, int>>{};
@@ -342,12 +334,14 @@ class TableReader {
     }
 
     // 자체 모델 표시패 찾기(사진 전체, Gemini 없음). 실패하면(예전 서버 404, 시간 초과) 조용히 Gemini 답을 쓴다.
+    Map<String, dynamic>? localDoraJ;
     Future<List<ReadTile>> readLocalDora() async {
       final t = Stopwatch()..start();
       try {
         final j = await client.observe('localdora', original, filename: 'local_dora.jpg').timeout(_localDoraTimeout);
         trace?._recordCall('local_dora', t.elapsedMilliseconds, j);
         trace?.localDora = j;
+        localDoraJ = j;
         return parseCenterV2(j).indicators;
       } catch (_) {
         return const [];
@@ -384,7 +378,7 @@ class TableReader {
       // 유국으로 봉이 남은 자리([carriedSticks])는 화료자여도 강을 같이 보낸다 — 눕힌 패로 이번 판 리치를 정한다. 호출은 그대로 하나.
       lastSides = [
         for (final s in Side.values)
-          if (s != known || carriedSticks.contains(s)) s,
+          if (localOnly || s != known || carriedSticks.contains(s)) s,
       ];
       final useTracked = trackedBox != null && trackSide != null && lastSides.contains(trackSide);
 
@@ -394,7 +388,7 @@ class TableReader {
       // 장수가 안 맞으면 그걸로 /v2/seat 를 다시 부르고, 그림자 모드면 처음부터 둘 다 보낸다.
       trackedSides = [
         for (final s in seatSides)
-          if (!splitSeat && tracked.containsKey(s)) s,
+          if (!localOnly && !splitSeat && tracked.containsKey(s)) s,
       ];
       // 장면 시간은 자리 판독(3번 동시, 가장 느림)이 정하므로 자리 크롭을 먼저 잘라 먼저 보낸다.
       final seatList = await shot.crop([
@@ -402,9 +396,9 @@ class TableReader {
         for (final s in cornerSides) CropSpec(grid.cornerCell(s), side: s),
         for (final s in trackedSides) CropSpec(grid.handCellForRead(s), side: s),
         // 화료자를 알면 테이블 절반도 잘라 둔다. 자리 판독으로 답을 못 정한 장면에서만 보낸다(사진은 곧 닫는다).
-        if (known != null && !splitSeat && useWide) CropSpec(grid.seatHalf(known), side: known),
+        if (known != null && !splitSeat && useWide && !localOnly) CropSpec(grid.seatHalf(known), side: known),
       ]);
-      wideCrop = known != null && !splitSeat && useWide ? seatList.last : null;
+      wideCrop = known != null && !splitSeat && useWide && !localOnly ? seatList.last : null;
       seatCrops = {for (final (i, s) in seatSides.indexed) s: seatList[i]};
       cornerCrops = {for (final (i, s) in cornerSides.indexed) s: seatList[seatSides.length + i]};
       handCrops = {
@@ -419,7 +413,7 @@ class TableReader {
           s: trackedSides.contains(s)
               ? call('handonly', handCrops[s], 'handonly_${s.name}',
                   required: known != null, query: {'melds': '${tracked[s]!.length}'})
-              : call('seat', seatCrops[s], 'seat_${s.name}', required: known != null, query: seatQuery(s)),
+              : call(localOnly ? 'localseat' : 'seat', seatCrops[s], 'seat_${s.name}', required: known != null, query: seatQuery(s)),
       };
       shadowF = {
         for (final s in trackedSides)
@@ -434,7 +428,7 @@ class TableReader {
             .then((r) => wideReady = r);
       }
       started.addAll([...seatF.values, ...shadowF.values, ...cornerF.values, ?wideF]);
-      if (localDora) localDoraF = readLocalDora();
+      if (localDora || localOnly) localDoraF = readLocalDora();
 
       // 게임 중 추적이 본 마지막 버림패 위치가 있으면 그 패만 따로 잘라 한 번 더 읽는다(강 끝 틀을 못 잡을 때의 대안).
       final rest = await shot.crop([
@@ -442,8 +436,7 @@ class TableReader {
         CropSpec(grid.sticksZone),
         // 도라 크롭은 가운데 칸을 화료자 아닌 쪽으로 조금 넓혀 선에 걸친 표시패까지(화료자를 모르면 넓히지 않음).
         CropSpec(grid.doraSearchZone(except: seatSides.toSet())),
-        if (useWall) CropSpec(wall.box, side: wall.side, pad: wallZonePad)
-        else if (dealer != null) CropSpec(grid.doraZone(dealer), side: dealer),
+        if (dealer != null && !localOnly) CropSpec(grid.doraZone(dealer), side: dealer),
         if (trackedBox != null && trackSide != null && lastSides.contains(trackSide))
           CropSpec(trackedBox, side: trackSide, pad: 0.6),
       ]);
@@ -453,7 +446,7 @@ class TableReader {
       trace?.centerCrop = sticksCrop;
       doraCrop = rest[lastSides.length + 1];
       trace?.wallCrop = doraCrop;
-      dealerDoraCrop = useWall || dealer != null ? rest[lastSides.length + 2] : null;
+      dealerDoraCrop = dealer != null && !localOnly ? rest[lastSides.length + 2] : null;
       trace?.dealerDoraCrop = dealerDoraCrop;
       trackedCrop = useTracked ? rest.last : null;
       lap('crop');
@@ -477,7 +470,9 @@ class TableReader {
     // 60/60 이라 정확도 손해 없이 Gemini 꼬리(같은 사진 5~60초)와 일시 오류를 자른다(10-25 시뮬 헤지 p90 34.6 → 17.6초, 표 2-2).
     Future<Map<String, dynamic>> lastOnce(String name) {
       final t = Stopwatch()..start();
-      return client.observeLasts([for (final s in lastSent) (lastCrops[s]!, 'last_${s.name}.jpg')]).then((j) {
+      return client
+          .observeLasts([for (final s in lastSent) (lastCrops[s]!, 'last_${s.name}.jpg')], path: localOnly ? '/v2/locallast3' : '/v2/last3')
+          .then((j) {
         trace?._recordCall(name, t.elapsedMilliseconds, j);
         return j;
       });
@@ -485,7 +480,7 @@ class TableReader {
 
     final lastsF = lastSent.isEmpty
         ? Future<Map<String, dynamic>?>.value(null)
-        : hedged(() => lastOnce('last3'), () => lastOnce('last3_hedge'), lastHedge, onHedge: () => trace?.lastHedged = true)
+        : hedged(() => lastOnce('last3'), () => lastOnce('last3_hedge'), localOnly ? null : lastHedge, onHedge: () => trace?.lastHedged = true)
               .then<Map<String, dynamic>?>((j) {
                 usage['last3'] = parseUsage(j['usage']);
                 return j;
@@ -494,11 +489,9 @@ class TableReader {
                 warnings.add('강 끝을 읽지 못했습니다: $e');
                 return null;
               });
-    final sticksF = call('sticks', sticksCrop, 'sticks');
-    final doraF = call('dora', doraCrop, 'dora');
-    final dealerDoraF = useWall
-        ? call('walldora', dealerDoraCrop, 'dora_wall')
-        : call('dora', dealerDoraCrop, 'dora_dealer');
+    final sticksF = call('sticks', localOnly ? null : sticksCrop, 'sticks');
+    final doraF = call('dora', localOnly ? null : doraCrop, 'dora');
+    final dealerDoraF = call('dora', dealerDoraCrop, 'dora_dealer');
     final trackedF = call('last', trackedCrop, 'last_tracked');
 
     final seats = <Side, SeatV2>{
@@ -578,14 +571,17 @@ class TableReader {
     final sticksJ = await sticksF;
     final trackedJ = await trackedF;
     final trackedTile = trackedJ == null ? null : parseLastV2(trackedJ);
-    final sticks = sticksJ == null ? const <Side, bool>{} : parseCenterV2(sticksJ).sticks;
+    // 자체 모델만 쓰면 리치봉을 읽지 않고 강의 눕힌 패로 리치를 본다.
+    final sticks = localOnly
+        ? localSticksFrom(lastsJ, lastSent)
+        : (sticksJ == null ? const <Side, bool>{} : parseCenterV2(sticksJ).sticks);
     // 리치 표시패 짝은 자체 모델이 다루지 않는다. 화료자에게 리치 증거가 없을 때만(화료자를 모르면 탁자 어디에도 없을 때만)
     // 자체 답을 쓰고, 그때는 Gemini 도라 답을 기다리지 않는다(요청은 이미 보냈고 실패는 call 이 처리한다).
     final localTiles = await localDoraF;
     final riichiSeen = known != null
         ? sticks[known] == true || trackedRiichi.contains(known)
         : sticks.values.any((v) => v) || trackedRiichi.isNotEmpty;
-    final useLocal = localTiles.isNotEmpty && !riichiSeen;
+    final useLocal = localTiles.isNotEmpty && (localOnly || !riichiSeen);
     final doraJ = useLocal ? null : await doraF;
     final dealerDoraJ = useLocal ? null : await dealerDoraF;
     var wideDora = const <ReadTile>[];
@@ -641,18 +637,23 @@ class TableReader {
         }
       }
     }
+    // 자체 모델만 쓰는 리치 화료: 딱 2장 묶음이 하나면 그 둘을 탁자 위 표시패로. 여럿이면 고르지 않는다(확인으로).
+    if (localOnly && known != null && riichiSeen) {
+      final pairs = parseLocalPairs(localDoraJ);
+      if (pairs.length == 1) wideDora = pairs.single;
+    }
     lap('read');
 
     var sides = [?known];
-    // 도라 표시패: 그 판의 왕패 상자([wall], 판 시작 때 찾아 둔 것) 또는 선 기준 도라 구역에서 읽었으면 그것,
-    // 없으면 가운데 칸. 둘을 나란히 불러 시간은 늘지 않는다. 리치 화료면 merge 가 화료자 손패 옆을 먼저 쓴다.
+    // 도라 표시패: 자체 모델이 사진 전체에서 찾은 것, 없으면 선 기준 도라 구역,
+    // 그것도 없으면 가운데 칸. 둘을 나란히 불러 시간은 늘지 않는다. 리치 화료면 merge 가 화료자 손패 옆을 먼저 쓴다.
     final dealerDora = dealerDoraJ == null ? const <ReadTile>[] : parseCenterV2(dealerDoraJ).indicators;
     final centerDora = doraJ == null ? const <ReadTile>[] : parseCenterV2(doraJ).indicators;
     final dora = useLocal ? localTiles : (dealerDora.isNotEmpty ? dealerDora : centerDora);
     final doraFrom = useLocal
         ? DoraFrom.local
         : dealerDora.isNotEmpty
-        ? (useWall ? DoraFrom.wall : DoraFrom.dealerZone)
+        ? DoraFrom.dealerZone
         : (centerDora.isNotEmpty ? DoraFrom.center : null);
 
     /// 화료자 [side] 하나의 판독. 강 끝·리치봉·도라는 같은 사진 것을 나눠 쓴다.

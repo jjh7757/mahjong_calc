@@ -123,7 +123,7 @@ void main() {
                       fit: StackFit.expand,
                       children: [
                         Image.memory(bytes, fit: BoxFit.fill, cacheWidth: 1200),
-                        GridOverlay(grid: grid, dealer: seats.sideOf(game.dealer), wallBox: wall?.box),
+                        GridOverlay(grid: grid, dealer: seats.sideOf(game.dealer)),
                         LayoutBuilder(
                           builder: (context, c) => Center(
                             child: TableScorePanel(

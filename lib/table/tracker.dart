@@ -52,11 +52,15 @@ class TrackerConfig {
 
   final int maxMelds;
 
+  /// 모서리를 읽지 않고 픽셀 변화만 본다. 흰 면이 늘면 울기가 늘었다고 쳐 일발 판단([MeldTracker.grewSince])에 쓴다.
+  final bool pixelOnly;
+
   /// 헛 변화가 k 번 이어지면 다음 읽기까지 [minReadGap] × 2^k 를 기다린다(이 값까지). 노출 흔들림 같은 헛 변화가
   /// 끝없이 호출을 부르지 않게(2026-10-30 집 점검: 흰 천장 30분에 모서리 읽기 28번).
   final Duration idleBackoffMax;
 
   const TrackerConfig({
+    this.pixelOnly = false,
     this.moveThreshold = 0.03,
     this.changeTiles = 1.0,
     this.stableFrames = 2,
@@ -186,6 +190,14 @@ class MeldTracker {
         if (t.status == TrackStatus.moving) {
           t.status = t.melds.isNotEmpty && !t.changedSinceConfirm ? TrackStatus.confirmed : TrackStatus.idle;
         }
+        continue;
+      }
+
+      if (config.pixelOnly) {
+        if (cur.white > t.baseline!.white) t.grewAt = now;
+        t.baseline = cur;
+        t.status = TrackStatus.idle;
+        _log(now, side, 'changed', '${changeTiles.toStringAsFixed(1)}장 분량');
         continue;
       }
 

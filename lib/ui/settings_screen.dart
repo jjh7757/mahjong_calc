@@ -47,9 +47,10 @@ class AutoRecordStore {
   static Future<bool> load() async {
     try {
       final p = await SharedPreferences.getInstance();
-      return p.getBool(key) ?? true;
+      // 기본 끔: 자체 모델만 쓰는 판독을 실제 대국에서 확인할 때까지(2026-11-02). 켠 사람의 값은 그대로.
+      return p.getBool(key) ?? false;
     } catch (_) {
-      return true;
+      return false;
     }
   }
 

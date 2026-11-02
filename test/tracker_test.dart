@@ -251,4 +251,22 @@ void main() {
     expect(tr.events.where((e) => e.kind == 'reset'), hasLength(1));
     expect(tr.toJson()['seats'], isA<Map<String, dynamic>>());
   });
+
+  test('pixelOnly: 읽기를 요청하지 않고 흰 면이 늘면 울기가 늘었다고 친다', () {
+    final t = MeldTracker(tileFrac: {for (final s in Side.values) s: 0.1}, config: const TrackerConfig(pixelOnly: true));
+    final t0 = DateTime(2026, 11, 2, 12);
+    CornerStats st(double white) => CornerStats(white: white, pattern: 0, cx: 0.5, cy: 0.5);
+    final actions = <TrackerAction>[];
+    for (var i = 0; i < 4; i++) {
+      actions.addAll(t.onFrame({Side.bottom: st(0.0)}, t0.add(Duration(seconds: 3 * i))));
+    }
+    final before = t0.add(const Duration(seconds: 10));
+    for (var i = 4; i < 10; i++) {
+      actions.addAll(t.onFrame({Side.bottom: st(0.3)}, t0.add(Duration(seconds: 3 * i))));
+    }
+    expect(actions, isEmpty);
+    expect(t.grewSince(before), isTrue);
+    expect(t.seat(Side.bottom).status, TrackStatus.idle);
+    expect(t.trackedMelds(Side.bottom), isNull);
+  });
 }

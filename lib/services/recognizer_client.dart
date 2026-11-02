@@ -107,7 +107,7 @@ class RecognizerClient {
           filename ?? '$kind.jpg');
 
   /// 강 끝 여러 자리를 한 번에 `/v2/last3`(multipart `images` 여러 개, 1~4장). 응답 `rivers` 는 보낸 순서.
-  Future<Map<String, dynamic>> observeLasts(List<(Uint8List, String)> images) => _postFiles('/v2/last3', [
+  Future<Map<String, dynamic>> observeLasts(List<(Uint8List, String)> images, {String path = '/v2/last3'}) => _postFiles(path, [
     for (final (bytes, filename) in images) http.MultipartFile.fromBytes('images', bytes, filename: filename),
   ]);
 

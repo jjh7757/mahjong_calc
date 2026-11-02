@@ -7,10 +7,12 @@ F=/c/Users/jjh7757/flutter/bin/flutter
 export PATH="$PATH:$LOCALAPPDATA/Microsoft/WinGet/Links"
 R=experiments/speed/results
 L=$([ "$1" = on ] && echo true || echo false)
+EXTRA=()
+[ "$1" = only ] && EXTRA=(--dart-define=LOCAL_ONLY=true)  # only = 자체 모델만, Gemini 없음(표 1-37)
 GRIDS=$(python -I -X utf8 experiments/speed/flow_visit.py grids)
 RIICHI=$(python -I -X utf8 experiments/speed/flow_visit.py riichi)
 COMMON=(drive --profile -d windows --driver=test_driver/integration_test.dart --target=integration_test/read_grid_timing_test.dart
-  --dart-define=RECOGNIZER_API_KEY=local --dart-define=SLEEP_S=20 "--dart-define=LOCAL_DORA=$L")
+  --dart-define=RECOGNIZER_API_KEY=local --dart-define=SLEEP_S=20 "--dart-define=LOCAL_DORA=$L" "${EXTRA[@]}")
 VISIT=(--dart-define=PHOTO_URL=http://127.0.0.1:8042 --dart-define=SET=visit --dart-define=REPEAT=1 "--dart-define=FIELD_GRIDS=$GRIDS" "--dart-define=RIICHI_SIDES=$RIICHI")
 "$F" "${COMMON[@]}" --dart-define=RECOGNIZER_URL=http://127.0.0.1:8033 --dart-define=PHOTO_URL=http://127.0.0.1:8040 --dart-define=SET=bcd --dart-define=REPEAT=2 > "$R/log_flow_ld_$1_bcd.txt" 2>&1
 echo "bcd 끝 $?"

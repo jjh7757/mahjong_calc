@@ -318,6 +318,20 @@ WallZone? parseWallV2(Map<String, dynamic> j) {
 /// `/v2/last` 응답 또는 `/v2/last3` 의 `rivers` 한 칸: 그 자리 강의 마지막 패. 강이 없으면 null.
 ReadTile? parseLastV2(Map<String, dynamic> j) => ReadTile.fromJson(j['last_tile'] as Map<String, dynamic>?);
 
+/// `/v2/localdora` 응답의 `pairs`: 딱 2장 붙은 앞면 패 묶음(리치 화료의 탁자 위 표시패 후보).
+List<List<ReadTile>> parseLocalPairs(Map<String, dynamic>? j) => [
+      for (final p in (j?['pairs'] as List<dynamic>?) ?? const []) _tiles(p),
+    ];
+
+/// `/v2/locallast3` 응답 → 자리별 눕힌 패가 있는지. 보낸 순서대로.
+Map<Side, bool> localSticksFrom(Map<String, dynamic>? j, List<Side> sent) {
+  final rivers = (j?['rivers'] as List<dynamic>?) ?? const [];
+  return {
+    for (final (i, s) in sent.indexed)
+      s: i < rivers.length && (((rivers[i] as Map<String, dynamic>?)?['sideways'] as List<dynamic>?) ?? const []).isNotEmpty,
+  };
+}
+
 /// `/v2/center`·`/v2/sticks`·`/v2/dora` 응답(sticks 는 indicators 가, dora 는 riichi_sticks 가 없다).
 ({List<ReadTile> indicators, Map<Side, bool> sticks}) parseCenterV2(Map<String, dynamic> j) {
   final sticksJ = (j['riichi_sticks'] as Map<String, dynamic>?) ?? const {};

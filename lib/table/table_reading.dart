@@ -157,7 +157,7 @@ class HandReading {
 }
 
 /// 도라 표시패를 어디서 읽었나(격자 판독). 리치 화료면 merge 가 화료자 손패 옆([CenterReading.handSideIndicators])을 먼저 쓴다.
-/// - wall: 그 판의 왕패 상자(판 시작 때 찾은 도라 산)
+/// - wall: 왕패 상자(지금은 쓰지 않음, 예전 촬영 기록을 읽으려고 남김)
 /// - dealerZone: 왕패 상자가 없어 선 기준 도라 구역에서
 /// - center: 왕패 상자가 없어 가운데 칸 전체에서(예비)
 /// - local: 화료 사진 전체에서 자체 모델이 패산 위 표시패를 찾아 읽음(`/v2/localdora`)

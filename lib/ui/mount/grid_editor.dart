@@ -10,25 +10,20 @@ import '../../table/table_layout.dart';
 /// [editing] 이면 경계선 네 개를 끌어 옮길 수 있다. 선은 바람개비 모양이라 각각 한쪽 끝까지만 그어진다.
 /// [dealer](선 자리)를 주면 선 기준 도라 구역([GridZones.doraZone])을 주황 상자로 그린다. 편집 중엔 상자 안을 끌어 옮기고
 /// 오른쪽 아래 모서리를 끌어 크기를 바꾼다(선이 다른 자리로 가면 상자도 그 자리 쪽으로 돌아간다).
-/// [wallBox](그 판의 왕패 상자, 판 시작 때 찾은 것)가 있으면 선 기준 구역 대신 그것을 그리고, 편집 중에 끌어 고칠 수
-/// 있다([onWallChanged]). 편집 중이 아니면 어떤 터치도 받지 않는다(잘못 터치 방지, 2026-10-29 "편집 on/off" 결정).
+/// 편집 중이 아니면 어떤 터치도 받지 않는다(잘못 터치 방지, 2026-10-29 "편집 on/off" 결정).
 /// 격자에 리치봉 상자([GridZones.sticks])가 있으면 빨간 상자로 그린다. 편집 중엔 안을 끌어 옮기고, 모서리로 크기를 바꾸고,
 /// 위쪽 동그라미를 끌어 돌린다(기운 탁자의 기기에 맞추기).
 class GridOverlay extends StatefulWidget {
   final GridZones grid;
   final bool editing;
   final Side? dealer;
-  final NormBox? wallBox;
   final ValueChanged<GridZones>? onChanged;
-  final ValueChanged<NormBox>? onWallChanged;
   const GridOverlay({
     super.key,
     required this.grid,
     this.editing = false,
     this.dealer,
-    this.wallBox,
     this.onChanged,
-    this.onWallChanged,
   });
 
   @override
@@ -105,12 +100,12 @@ class _GridOverlayState extends State<GridOverlay> {
   }
 
   /// 도라 상자: 오른쪽 아래 모서리 가까이면 크기, 상자 안이면 옮기기. 선을 먼저 잡는다(상자가 선에 걸쳐 있어서).
-  String get _doraLabel => widget.wallBox != null ? '도라 산' : '도라 (선 ${widget.dealer?.label ?? ''})';
+  String get _doraLabel => '도라 (선 ${widget.dealer?.label ?? ''})';
 
-  /// 지금 그리는 도라 상자: 그 판의 왕패 상자, 없으면 선 기준 구역.
+  /// 지금 그리는 도라 상자: 선 기준 구역.
   NormBox? get _doraBox {
     final dealer = widget.dealer;
-    return widget.wallBox ?? (dealer == null ? null : widget.grid.doraZone(dealer));
+    return dealer == null ? null : widget.grid.doraZone(dealer);
   }
 
   _DoraDrag? _hitDora(Offset p, Size size) {
@@ -209,11 +204,7 @@ class _GridOverlayState extends State<GridOverlay> {
           final dy = ((d.localPosition.dy - start.dy) * 1000 / size.height).round();
           if (dd != null) {
             final moved = _moveBox(_startBox!, dd, dx, dy);
-            if (widget.wallBox != null) {
-              widget.onWallChanged?.call(moved);
-            } else {
-              widget.onChanged?.call(g.withDoraZone(widget.dealer!, moved));
-            }
+            widget.onChanged?.call(g.withDoraZone(widget.dealer!, moved));
           } else {
             widget.onChanged?.call(_move(g, h!, dx, dy));
           }
@@ -278,7 +269,7 @@ class _GridPainter extends CustomPainter {
           ..color = Colors.orangeAccent.withValues(alpha: editing ? 0.95 : 0.6)
           ..strokeWidth = editing ? 3 : 1.5,
       );
-      if (editing || doraLabel == '도라 산') {
+      if (editing) {
         canvas.drawRect(Rect.fromCenter(center: r.bottomRight, width: 16, height: 16), Paint()..color = Colors.orangeAccent);
       }
     }
@@ -294,11 +285,7 @@ class _GridPainter extends CustomPainter {
     }
 
     Offset mid(NormBox n) => Offset(sx((n.xmin + n.xmax) ~/ 2), sy((n.ymin + n.ymax) ~/ 2));
-    // 그 판의 왕패 상자는 편집 중이 아니어도 이름을 단다(끌어 고칠 수 있는 상자라서).
-    if (!editing) {
-      if (dora != null && doraLabel == '도라 산') label(doraLabel, mid(dora));
-      return;
-    }
+    if (!editing) return;
     for (final s in Side.values) {
       label('${s.label} 자리 (손패+울기)', mid(grid.seat(s)));
     }

@@ -113,6 +113,8 @@ const _visit = {
 const _set = String.fromEnvironment('SET', defaultValue: 'bcd');
 // LOCAL_DORA=false: 자체 모델 표시패 찾기(/v2/localdora)를 부르지 않는다.
 const _localDora = bool.fromEnvironment('LOCAL_DORA', defaultValue: true);
+// LOCAL_ONLY=true: 자체 모델만(Gemini 없음). readGrid(localOnly:).
+const _localOnly = bool.fromEnvironment('LOCAL_ONLY');
 // PHOTO_MIN·PHOTO_MAX: 사진 이름 범위 [min, max) 만 잰다(매장 오전·오후에 다른 나눔 모델을 쓰려고).
 const _photoMin = String.fromEnvironment('PHOTO_MIN');
 const _photoMax = String.fromEnvironment('PHOTO_MAX');
@@ -261,7 +263,7 @@ void main() {
                 if (dealer != null) out['dealer_side'] = dealer.name;
                 final reading = await TableReader(client, ops: _isolateOps)
                     .readGrid(shot, useGrid, rectify: rect, dealer: dealer, trace: trace, useWide: wide, wideEarly: early,
-                        wideIndicators: ind, lastHedge: ind ? const Duration(seconds: 12) : null, trackedRiichi: _trackedRiichi(photo), localDora: _localDora);
+                        wideIndicators: ind, lastHedge: ind ? const Duration(seconds: 12) : null, trackedRiichi: _localOnly ? const {} : _trackedRiichi(photo), localDora: _localDora, localOnly: _localOnly);
                 out['local_dora'] = trace.localDora;
                 if (_trackedRiichi(photo).isNotEmpty) out['tracked_riichi'] = [for (final s in _trackedRiichi(photo)) s.name];
                 out['wide_called'] = trace.wide != null;
