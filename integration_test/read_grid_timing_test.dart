@@ -96,20 +96,26 @@ const _bcdTilt = {
   'D': (['tilted/k12_a', 'tilted/k12_b', 'tilted/k12_c', 'tilted/k16_a', 'tilted/k16_b', 'tilted/k16_c'], _initialGrid),
 };
 
-// SET=visit: [평가 밖·매장 개발 세트] 10/31 매장 25회(PHOTO_URL 은 visit_20261031/captures). 격자는 FIELD_GRIDS 로(사진마다 다르다,
+// SET=visit: [평가 밖·매장 개발 세트] 10/31 매장 23회(PHOTO_URL 은 visit_20261031/captures). 격자는 FIELD_GRIDS 로(사진마다 다르다,
 // experiments/speed/flow_visit.py 가 만든다). 정답은 visit_20261031/truth.json·label.json.
+// 손·팔이 패를 가린 172424·174020 은 뺀다(사용자 결정 2026-11-02, seat_grow.py OCCLUDED).
 const _visit = {
   'V': (
     [
       '123140', '124654', '125839', '130743', '131411', '132239', '132954', '133030', '133826', '134815',
-      '142535', '143104', '164501', '165043', '165614', '170105', '171025', '171245', '171505', '172424',
-      '174020', '175951', '181209', '183022', '183627',
+      '142535', '143104', '164501', '165043', '165614', '170105', '171025', '171245', '171505', '175951',
+      '181209', '183022', '183627',
     ],
     _initialGrid,
   ),
 };
 
 const _set = String.fromEnvironment('SET', defaultValue: 'bcd');
+// LOCAL_DORA=false: 자체 모델 표시패 찾기(/v2/localdora)를 부르지 않는다.
+const _localDora = bool.fromEnvironment('LOCAL_DORA', defaultValue: true);
+// PHOTO_MIN·PHOTO_MAX: 사진 이름 범위 [min, max) 만 잰다(매장 오전·오후에 다른 나눔 모델을 쓰려고).
+const _photoMin = String.fromEnvironment('PHOTO_MIN');
+const _photoMax = String.fromEnvironment('PHOTO_MAX');
 const _scenes = _set == 'field' ? _field : (_set == 'bcdtilt' ? _bcdTilt : (_set == 'visit' ? _visit : _bcd));
 String _photoPath(String p) => _set == 'field'
     ? '20261024_$p/original.jpg'
@@ -206,7 +212,9 @@ void main() {
       final grid = _pairGrid ? (base == null ? sceneGrid : GridZones.fromJson(base)!) : autoGrid;
       // FIELD_GRIDS 를 줬는데 그 사진 격자가 없으면(자동 격자 실패) 재지 않는다.
       // PAIR_GRID 면 FIELD_GRIDS 에 없는 사진도 잰다(auto 도 장면 격자, grid_fallback — 자동 맞추기 실패 → 사람이 맞춘 격자).
-      final skip = !_pairGrid && _fieldGrids.isNotEmpty && override == null;
+      final skip = (!_pairGrid && _fieldGrids.isNotEmpty && override == null) ||
+          (_photoMin.isNotEmpty && photo.compareTo(_photoMin) < 0) ||
+          (_photoMax.isNotEmpty && photo.compareTo(_photoMax) >= 0);
       for (var run = 1; run <= _repeat; run++) {
         testWidgets(skip: skip, '$scene $photo #$run', (tester) async {
           await tester.runAsync(() async {
@@ -253,7 +261,8 @@ void main() {
                 if (dealer != null) out['dealer_side'] = dealer.name;
                 final reading = await TableReader(client, ops: _isolateOps)
                     .readGrid(shot, useGrid, rectify: rect, dealer: dealer, trace: trace, useWide: wide, wideEarly: early,
-                        wideIndicators: ind, lastHedge: ind ? const Duration(seconds: 12) : null, trackedRiichi: _trackedRiichi(photo));
+                        wideIndicators: ind, lastHedge: ind ? const Duration(seconds: 12) : null, trackedRiichi: _trackedRiichi(photo), localDora: _localDora);
+                out['local_dora'] = trace.localDora;
                 if (_trackedRiichi(photo).isNotEmpty) out['tracked_riichi'] = [for (final s in _trackedRiichi(photo)) s.name];
                 out['wide_called'] = trace.wide != null;
                 out['wide_early'] = trace.wideEarly;

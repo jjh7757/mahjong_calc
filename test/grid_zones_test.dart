@@ -276,6 +276,7 @@ void main() {
       List<String> dora = const ['5s'],
       List<String>? dealerDora,
       List<String> wallDora = const ['3m'],
+      List<String>? localDora,
       List<String> loose = const [],
       Map<String, Object>? agreement,
       List<String>? handonlyTiles,
@@ -358,6 +359,11 @@ void main() {
             for (final c in wallDora) {'tile': c, 'conf': 0.9},
           ],
         }),
+        '/v2/localdora' when localDora != null => _json({
+          'indicators': [
+            for (final c in localDora) {'tile': c, 'conf': 0.9},
+          ],
+        }),
         '/v2/dora' => _json({
           'indicators': [
             for (final c in (name == 'dora_dealer' ? dealerDora ?? dora : dora)) {'tile': c, 'conf': 0.9},
@@ -415,6 +421,50 @@ void main() {
       expect(reading.warnings.join(), contains('다릅니다'));
     });
 
+    group('자체 모델 표시패(/v2/localdora)', () {
+      Future<TableReading> read(List<String>? local, {Set<Side> trackedRiichi = const {}, bool on = true, WallZone? wall}) {
+        final client = RecognizerClient(
+          baseUrl: 'https://x.test',
+          apiKey: 'k',
+          httpClient: server(<String>[], <String, img.Image>{}, localDora: local),
+        );
+        return TableReader(client).readGrid(table(), grid, trackedRiichi: trackedRiichi, localDora: on, wall: wall);
+      }
+
+      const WallZone wall = (box: NormBox(100, 100, 200, 400), side: Side.top);
+
+      test('답이 있으면 왕패 상자·가운데 칸보다 먼저 쓰고 출처를 local 로 남긴다', () async {
+        final r = await read(['7z'], wall: wall);
+        expect(r.center!.doraIndicators.map((t) => t.code), ['7z']);
+        expect(r.center!.doraFrom, DoraFrom.local);
+        expect(r.warnings, isEmpty);
+      });
+
+      test('답이 비면 Gemini 답으로 돌아간다', () async {
+        final r = await read([]);
+        expect(r.center!.doraIndicators.map((t) => t.code), ['5s']);
+        expect(r.center!.doraFrom, DoraFrom.center);
+      });
+
+      test('서버에 없으면(404) 경고 없이 Gemini 답으로 돌아간다', () async {
+        final r = await read(null, wall: wall);
+        expect(r.center!.doraIndicators.map((t) => t.code), ['3m']);
+        expect(r.center!.doraFrom, DoraFrom.wall);
+        expect(r.warnings, isEmpty);
+      });
+
+      test('화료자에 리치 증거가 있으면 표시패 짝을 못 다루므로 쓰지 않는다', () async {
+        final r = await read(['7z'], trackedRiichi: {Side.bottom});
+        expect(r.center!.doraIndicators.map((t) => t.code), ['5s']);
+        expect(r.center!.doraFrom, DoraFrom.center);
+      });
+
+      test('끄면 부르지 않는다', () async {
+        final r = await read(['7z'], on: false);
+        expect(r.center!.doraIndicators.map((t) => t.code), ['5s']);
+      });
+    });
+
     test('추적한 버림이 화료자 자리면 따로 읽지 않는다', () async {
       final names = <String>[];
       final images = <String, img.Image>{};
@@ -440,7 +490,7 @@ void main() {
       final reading = await TableReader(client).readGrid(table(), grid, trace: trace);
 
       // seatwide 는 화료자를 알면 자리 판독과 같은 순간에 미리 보낸다(2026-11-01, 답은 필요할 때만 씀).
-      expect(names.toSet(), {'seat_bottom', 'seatwide_bottom', 'last_right', 'last_top', 'last_left', 'sticks', 'dora'});
+      expect(names.toSet(), {'seat_bottom', 'seatwide_bottom', 'last_right', 'last_top', 'last_left', 'sticks', 'dora', 'local_dora'});
       // 자리 판독에는 손패 칸 폭 비율을 같이 보낸다(서버가 틀을 못 잡으면 손패 칸·모서리 칸으로 나눠 다시 잡음).
       expect(urls.singleWhere((u) => u.path == '/v2/seat').queryParameters, {'hand_frac': '0.667'});
       // 장면 시간을 정하는 자리 판독을 먼저 보낸다(나머지 구역은 그 뒤에 잘라 보냄).
@@ -764,7 +814,7 @@ void main() {
         httpClient: server(names, images, dora: [], loose: ['7m'], urls: urls),
       );
       final reading = await TableReader(client).readGrid(table(), grid, splitSeat: true);
-      expect(names.toSet(), {'seat_bottom', 'corner_bottom', 'last_right', 'last_top', 'last_left', 'sticks', 'dora'});
+      expect(names.toSet(), {'seat_bottom', 'corner_bottom', 'last_right', 'last_top', 'last_left', 'sticks', 'dora', 'local_dora'});
       expect(urls.singleWhere((u) => u.path == '/v2/seat').queryParameters, isEmpty, reason: '손패 칸만 보내면 비율 없음');
       // 아래 손패 칸 500×200, 오른쪽 아래 모서리 칸 250×200.
       expect(images['seat_bottom']!.width, 500);

@@ -18,8 +18,14 @@ ap.add_argument("--repo", default="C:/Users/jjh7757/dev/mahjong-recognizer", hel
 ap.add_argument("--seat-split", default="1", help="?hand_frac= 로 손패 칸·모서리 칸 나눠 잡기. 0 이면 지금 규칙만")
 ap.add_argument("--seat-table", default="0", help="탁자 끝 밖 지우고 검출(서버 기본 끔). 1 이면 지움")
 ap.add_argument("--wide-reads", default="1", help="/v2/seatwide 조각·모서리를 각각 몇 번 읽나(운영 기본 1). 0 이면 자리 판독과 같은 수")
+ap.add_argument("--local-fold", default="", help="자체 모델 나눔(예: a,pm = det_fold_a + cls_pm). 그 사진을 학습하지 않은 모델로 재려고. 비우면 배포 모델")
 a = ap.parse_args()
 
+if a.local_fold:
+    _det, _cls = a.local_fold.split(",")
+    _models = "C:/Users/jjh7757/dev/mahjong_calc/experiments/tile_classifier/server_bench/models"
+    os.environ["LOCAL_DET_MODEL"] = f"{_models}/det_fold_{_det}.onnx"
+    os.environ["LOCAL_CLS_MODEL"] = f"{_models}/cls_{_cls}.onnx"
 load_dotenv("C:/Users/jjh7757/Downloads/부트캠프/.env")
 os.environ.setdefault("GEMINI_THINKING", "low")
 os.environ.setdefault("RATE_PER_MIN", "1000")

@@ -160,7 +160,8 @@ class HandReading {
 /// - wall: 그 판의 왕패 상자(판 시작 때 찾은 도라 산)
 /// - dealerZone: 왕패 상자가 없어 선 기준 도라 구역에서
 /// - center: 왕패 상자가 없어 가운데 칸 전체에서(예비)
-enum DoraFrom { wall, dealerZone, center }
+/// - local: 화료 사진 전체에서 자체 모델이 패산 위 표시패를 찾아 읽음(`/v2/localdora`)
+enum DoraFrom { wall, dealerZone, center, local }
 
 /// `/v1/table` 응답.
 class CenterReading {

@@ -29,6 +29,9 @@ typedef OpenShotFn = Future<ShotImage> Function(Uint8List original);
 /// `experiments/speed/dora_locate.py` 의 왕패 도라 읽기(B·C·D 16/18, C 6/6)와 같은 값.
 const double wallZonePad = 0.1;
 
+/// 자체 모델 표시패 찾기를 이 시간까지만 기다린다. 넘으면 Gemini 답을 쓴다.
+const _localDoraTimeout = Duration(seconds: 10);
+
 /// [openShot] 은 격자 판독([TableReader.readGrid])이 원본을 한 번만 디코딩해 축소본·크롭을 만들 때 쓴다.
 class ImageOps {
   final ShrinkFn shrink;
@@ -124,6 +127,9 @@ class TableReadTrace {
   /// 도라 구역 크롭: 그 판의 왕패 상자(`readGrid(wall:)`, 패산 자리 쪽으로 세운 것) 또는 선 기준 도라 구역
   /// ([GridZones.doraZone], 선 쪽으로 세운 것). 둘 다 없으면 null.
   Uint8List? dealerDoraCrop;
+
+  /// 자체 모델 표시패 찾기 응답(`readGrid(localDora:)`). 부르지 않았거나 실패하면 null.
+  Map<String, dynamic>? localDora;
   TableLayout? layout;
   Side? winnerSide;
   HandReading? hand;
@@ -273,6 +279,7 @@ class TableReader {
     Side? winnerSide,
     Side? dealer,
     WallZone? wall,
+    bool localDora = true,
     Future<List<Side>?> Function(List<Side> candidates)? pickWinners,
     bool Function(List<TableReading> readings)? acceptAll,
     void Function(ReadStage stage)? onStage,
@@ -333,6 +340,21 @@ class TableReader {
         return null;
       });
     }
+
+    // 자체 모델 표시패 찾기(사진 전체, Gemini 없음). 실패하면(예전 서버 404, 시간 초과) 조용히 Gemini 답을 쓴다.
+    Future<List<ReadTile>> readLocalDora() async {
+      final t = Stopwatch()..start();
+      try {
+        final j = await client.observe('localdora', original, filename: 'local_dora.jpg').timeout(_localDoraTimeout);
+        trace?._recordCall('local_dora', t.elapsedMilliseconds, j);
+        trace?.localDora = j;
+        return parseCenterV2(j).indicators;
+      } catch (_) {
+        return const [];
+      }
+    }
+
+    Future<List<ReadTile>> localDoraF = Future.value(const []);
 
     // 자리 전체 크롭이면 손패 칸 폭 비율을 같이 보낸다 — 서버가 손패 틀을 못 잡으면 손패 칸·모서리 칸으로 나눠 한 번 더 잡는다
     // (먼 자리 B 틀 0/2 → 2/2, 검사 통과한 틀린 틀 0, metrics 표 2-3). 예전 서버는 모르는 쿼리를 무시한다.
@@ -412,6 +434,7 @@ class TableReader {
             .then((r) => wideReady = r);
       }
       started.addAll([...seatF.values, ...shadowF.values, ...cornerF.values, ?wideF]);
+      if (localDora) localDoraF = readLocalDora();
 
       // 게임 중 추적이 본 마지막 버림패 위치가 있으면 그 패만 따로 잘라 한 번 더 읽는다(강 끝 틀을 못 잡을 때의 대안).
       final rest = await shot.crop([
@@ -553,11 +576,18 @@ class TableReader {
         },
     };
     final sticksJ = await sticksF;
-    final doraJ = await doraF;
-    final dealerDoraJ = await dealerDoraF;
     final trackedJ = await trackedF;
     final trackedTile = trackedJ == null ? null : parseLastV2(trackedJ);
     final sticks = sticksJ == null ? const <Side, bool>{} : parseCenterV2(sticksJ).sticks;
+    // 리치 표시패 짝은 자체 모델이 다루지 않는다. 화료자에게 리치 증거가 없을 때만(화료자를 모르면 탁자 어디에도 없을 때만)
+    // 자체 답을 쓰고, 그때는 Gemini 도라 답을 기다리지 않는다(요청은 이미 보냈고 실패는 call 이 처리한다).
+    final localTiles = await localDoraF;
+    final riichiSeen = known != null
+        ? sticks[known] == true || trackedRiichi.contains(known)
+        : sticks.values.any((v) => v) || trackedRiichi.isNotEmpty;
+    final useLocal = localTiles.isNotEmpty && !riichiSeen;
+    final doraJ = useLocal ? null : await doraF;
+    final dealerDoraJ = useLocal ? null : await dealerDoraF;
     var wideDora = const <ReadTile>[];
     // 화료자 손패가 장수·패 모양으로 안 맞거나 화료패를 못 찾았으면 테이블 절반에서 다시 찾는다(`wide_seat.dart`). 그만큼 느려지지만 이 장면만.
     if (known case final side? when wideCrop != null && seats[side] != null) {
@@ -618,8 +648,10 @@ class TableReader {
     // 없으면 가운데 칸. 둘을 나란히 불러 시간은 늘지 않는다. 리치 화료면 merge 가 화료자 손패 옆을 먼저 쓴다.
     final dealerDora = dealerDoraJ == null ? const <ReadTile>[] : parseCenterV2(dealerDoraJ).indicators;
     final centerDora = doraJ == null ? const <ReadTile>[] : parseCenterV2(doraJ).indicators;
-    final dora = dealerDora.isNotEmpty ? dealerDora : centerDora;
-    final doraFrom = dealerDora.isNotEmpty
+    final dora = useLocal ? localTiles : (dealerDora.isNotEmpty ? dealerDora : centerDora);
+    final doraFrom = useLocal
+        ? DoraFrom.local
+        : dealerDora.isNotEmpty
         ? (useWall ? DoraFrom.wall : DoraFrom.dealerZone)
         : (centerDora.isNotEmpty ? DoraFrom.center : null);
 

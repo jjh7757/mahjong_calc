@@ -98,6 +98,27 @@
       "port": 8030
     },
     {
+      "name": "recognizer-local-bcd",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["experiments/yolo/run_local_server.py", "--port", "8033", "--local-fold", "a,bcd"],
+      "port": 8033,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-local-am",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["experiments/yolo/run_local_server.py", "--port", "8034", "--local-fold", "b,am"],
+      "port": 8034,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-local-pm",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["experiments/yolo/run_local_server.py", "--port", "8035", "--local-fold", "a,pm"],
+      "port": 8035,
+      "autoPort": false
+    },
+    {
       "name": "recognizer-base",
       "runtimeExecutable": "python",
       "runtimeArgs": [
