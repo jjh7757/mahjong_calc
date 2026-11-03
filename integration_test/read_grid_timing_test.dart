@@ -30,6 +30,7 @@ import 'package:mahjong_calc/table/shot_image.dart';
 import 'package:mahjong_calc/table/rectify.dart';
 import 'package:mahjong_calc/table/table_layout.dart';
 import 'package:mahjong_calc/table/table_reader.dart';
+import 'package:mahjong_calc/table/table_reading.dart';
 import 'package:image/image.dart' as img;
 
 const _photoUrl = String.fromEnvironment('PHOTO_URL', defaultValue: 'http://10.0.2.2:8040');
@@ -159,6 +160,16 @@ const _pairInd = bool.fromEnvironment('PAIR_IND');
 // RIICHI_SIDES="123140=bottom;143104=left": 판 상태 추적이 그 자리의 리치를 확정해 둔 것으로 치고 `readGrid(trackedRiichi:)` 로 넘긴다
 // (매장 사진 재생엔 추적이 없고 화료자는 봉을 이미 가져가 리치를 모른다, 2026-11-01). `flow_visit.py riichi` 가 truth.json 에서 만든다.
 const _riichiSides = String.fromEnvironment('RIICHI_SIDES');
+
+// TRACKED_DORA="165614=1z;181209=7m": 판 중 프레임 투표가 확정해 둔 도라 표시패로 치고 `readGrid(trackedDora:)` 로 넘긴다
+// (매장 사진 재생엔 프레임이 없다, 2026-11-03). `flow_visit.py dora` 가 dora_rounds.py 결과(online.json)에서 만든다. metrics 표 1-53.
+const _trackedDoraEnv = String.fromEnvironment('TRACKED_DORA');
+ReadTile? _trackedDora(String photo) {
+  for (final e in _trackedDoraEnv.split(';')) {
+    if (e.startsWith('$photo=')) return ReadTile.fromCode(e.substring(photo.length + 1), 0.9);
+  }
+  return null;
+}
 Set<Side> _trackedRiichi(String photo) => {
       for (final e in _riichiSides.split(';'))
         if (e.startsWith('$photo=')) ?SideX.parse(e.substring(photo.length + 1)),
@@ -265,7 +276,8 @@ void main() {
                 if (dealer != null) out['dealer_side'] = dealer.name;
                 final reading = await TableReader(client, ops: _isolateOps)
                     .readGrid(shot, useGrid, rectify: rect, dealer: dealer, trace: trace, useWide: wide, wideEarly: early,
-                        wideIndicators: ind, lastHedge: ind ? const Duration(seconds: 12) : null, trackedRiichi: _localOnly ? const {} : _trackedRiichi(photo), localDora: _localDora, localOnly: _localOnly, geminiSticks: _geminiSticks);
+                        wideIndicators: ind, lastHedge: ind ? const Duration(seconds: 12) : null, trackedRiichi: _localOnly ? const {} : _trackedRiichi(photo), localDora: _localDora, localOnly: _localOnly, geminiSticks: _geminiSticks, trackedDora: _trackedDora(photo));
+                if (_trackedDora(photo) case final td?) out['tracked_dora'] = td.code;
                 out['local_dora'] = trace.localDora;
                 if (_trackedRiichi(photo).isNotEmpty) out['tracked_riichi'] = [for (final s in _trackedRiichi(photo)) s.name];
                 out['wide_called'] = trace.wide != null;
@@ -285,6 +297,7 @@ void main() {
                   winnerSide: reading.winnerSide!,
                   game: game,
                   seats: SeatMap(game.settings.bottomSeat),
+                  trackedDora: reading.trackedDora,
                 );
                 final score = merge.hand == null ? null : engine.calculate(merge.hand!, merge.situation);
                 out['merge_score_ms'] = sw.elapsedMilliseconds - t0;

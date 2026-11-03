@@ -272,6 +272,8 @@ class TableReader {
     Discard? trackedDiscard,
     Side? winnerSide,
     Side? dealer,
+    // 판 중 프레임 투표로 확정한 도라 표시패(`DoraTracker.confirmed`). merge 로 넘겨 화료 사진 답을 검증·보충한다.
+    ReadTile? trackedDora,
     bool localDora = true,
     bool localOnly = false,
     bool geminiSticks = false,
@@ -644,7 +646,7 @@ class TableReader {
       }
     }
     // 자체 모델만 쓰는 리치 화료: 딱 2장 묶음이 하나면 그 둘을 탁자 위 표시패로. 여럿이거나 확신이 낮으면 고르지 않는다(확인으로).
-    if (localOnly && known != null && riichiSeen) wideDora = localPairIndicators(localDoraJ);
+    if (localOnly && known != null && riichiSeen) wideDora = localPairIndicators(localDoraJ, grid: grid, winner: known, trackedDora: trackedDora);
     lap('read');
 
     var sides = [?known];
@@ -719,6 +721,7 @@ class TableReader {
         trackedDoubleRiichi: trackedDoubleRiichi,
         trackedIppatsu: trackedIppatsu,
         riverSideways: riverSideways,
+        trackedDora: trackedDora,
       );
     }
 
@@ -775,6 +778,7 @@ class TableReader {
       trackedDoubleRiichi: first.trackedDoubleRiichi,
       trackedIppatsu: first.trackedIppatsu,
       riverSideways: first.riverSideways,
+      trackedDora: first.trackedDora,
     );
   }
 

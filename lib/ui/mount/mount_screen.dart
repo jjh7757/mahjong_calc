@@ -35,6 +35,7 @@ import '../../table/river_change.dart';
 import '../../table/river_tracker.dart';
 import '../../table/scene_shift.dart';
 import '../../table/tracker.dart';
+import '../../table/dora_tracker.dart';
 import '../game/game_screen.dart';
 import '../game/record_edit.dart';
 import '../game/settlement_screen.dart';
@@ -218,6 +219,16 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   int _trackCalls = 0;
   bool get _trackBusy => _trackCalls > 0;
   int _trackSeq = 0;
+
+  /// 판 중 도라 표시패 확정(프레임 투표, `lib/table/dora_tracker.dart`).
+  DoraTracker? _doraTracker;
+  DateTime? _doraReadAt;
+  bool _doraBusy = false;
+  int _doraSeq = 0;
+  Map<Side, CornerStats>? _lastFrameCorners;
+  static const Duration _doraReadGap = Duration(seconds: 15);
+  static const Duration _doraRecheckGap = Duration(seconds: 60);
+  static const double _doraStillDiff = 0.03;
 
   /// 배경 프레임 중 추적 변화 주변만 모아 판마다 `<시각>_track/frames_##.zip` 으로(촬영 기록이 켜졌을 때, 2026-10-29).
   final FrameRecorder _frames = FrameRecorder();
@@ -705,6 +716,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     'tracked_double_riichi': [for (final s in _trackedDoubleRiichi()) s.name],
     'tracked_ippatsu': [for (final s in _trackedIppatsu()) s.name],
     'tracked_discard': _trackedDiscard()?.toJson(),
+    'tracked_dora': _doraTracker?.confirmed?.toJson(),
     'preview_long_side': _previewFrameLongSide,
   };
 
@@ -760,6 +772,50 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       : const {};
   Discard? _trackedDiscard() => _trackingEnabled && _useGrid ? _riverTracker?.lastDiscard : null;
 
+  /// 판 중 프레임 투표로 확정한 도라 표시패(없으면 null). 화료 판독의 표시패 답을 검증·보충한다(merge, metrics 표 1-53).
+  ReadTile? _trackedDora() => _trackingEnabled && _useGrid ? _doraTracker?.confirmed?.tile : null;
+
+  /// 판 중 표시패 읽기: 배경 프레임이 안정될 때 [_doraReadGap] 마다 고해상 프레임([_trackSource], 리치봉 읽기와 같은 것)을
+  /// `/v2/localdora` 로 읽어 [DoraTracker] 에 넣는다. 작은 미리보기(긴 변 1020)로는 패가 25px 라 읽기가 4/8 이고 12MP 면 8/8
+  /// (metrics 표 1-53). 확정된 뒤에는 [_doraRecheckGap] 마다만(패산이 다른 자리로 바뀐 새 판을 알아차리게).
+  /// 화료 촬영 중·다른 추적 호출 중이면 쉰다.
+  Future<void> _readDoraFrame(DateTime now, Game g) async {
+    final url = _remoteUrl;
+    if (url == null) return;
+    final tr = _doraTracker ??= DoraTracker();
+    final gap = tr.confirmed == null ? _doraReadGap : _doraRecheckGap;
+    if (_doraReadAt != null && now.difference(_doraReadAt!) < gap) return;
+    if (_doraBusy || _busy || _trackBusy) return;
+    _doraBusy = true;
+    _doraReadAt = now;
+    _trackCalls++;
+    final cam = RemoteCamera(url, token: _remoteToken, timeout: const Duration(seconds: 20));
+    final client = RecognizerClient();
+    try {
+      final src = await _trackSource(cam);
+      final j = await client.observe('localdora', src, filename: 'dora_frame.jpg').timeout(const Duration(seconds: 15));
+      if (!mounted) return;
+      final o = DoraObservation.fromJson(j, now);
+      if (o != null) tr.observe(o);
+      unawaited(_saveTrackDora(g, j, o != null));
+    } catch (e) {
+      debugPrint('[dora] 프레임 읽기 실패: $e');
+    } finally {
+      cam.close();
+      client.close();
+      _trackCalls--;
+      _doraBusy = false;
+    }
+  }
+
+  Future<void> _saveTrackDora(Game g, Map<String, dynamic> read, bool observed) async {
+    if (!_logEnabled) return;
+    final dir = _trackDir ??= '${CaptureLog.newDir()}_track';
+    final seq = ++_doraSeq;
+    await CaptureLog.saveFile(dir, 'dora_${seq.toString().padLeft(3, '0')}.json', CaptureLog.jsonBytes({'round': g.roundLabel, 'observed': observed, 'read': read, 'tracker': _doraTracker?.toJson()}), 'application/json');
+    await _saveTrackState(g, dir);
+  }
+
   /// 판이 바뀌면(화료·유국 기록) 추적을 비운다. 처음 보는 판은 비우지 않는다(열자마자 리셋 로그가 남지 않게).
   /// 판 중간의 리치·점수 정정 기록은 판이 바뀐 게 아니다(2026-10-29 전엔 기록 수를 봐서 리치 버튼에 추적이 지워졌다).
   void _syncTrackerRound(Game g) {
@@ -775,6 +831,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     if (!first) {
       _tracker?.reset(DateTime.now());
       _riverTracker?.reset(DateTime.now());
+      _doraTracker?.reset();
+      _doraReadAt = null;
     }
   }
 
@@ -805,6 +863,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     tracker.onFrame(stats.corners, now);
     final riverActions = river.onFrame(stats.rivers, stats.strips, now);
     _recordFrame(preview, now, tracker, river, shifted);
+    // 도라 표시패: 모서리·강이 다 가만히 있고(손이 안 지나감) 카메라도 안 움직였을 때만 읽는다.
+    final still = !shifted && _lastFrameCorners != null && Side.values.every((s) => (stats.corners[s]?.diff(_lastFrameCorners![s] ?? CornerStats.empty) ?? 1) < _doraStillDiff);
+    _lastFrameCorners = stats.corners;
+    if (still) unawaited(_readDoraFrame(now, g));
     setState(() {});
     for (final a in riverActions) {
       unawaited(_readSticks(a, g));
@@ -1343,6 +1405,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             ippatsuHint: r.trackedIppatsu.contains(r.winnerSide!),
             trackedRiichi: r.trackedRiichi,
             riverSideways: r.riverSideways,
+            trackedDora: r.trackedDora,
           ),
       ];
     }
@@ -1377,6 +1440,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               trackedIppatsu: _trackedIppatsu(),
               carriedSticks: {for (final s in g.carriedStickSeats) seats.sideOf(s)},
               trackedDiscard: _trackedDiscard(),
+              trackedDora: _trackedDora(),
               trace: trace,
             )
           : reader.read(

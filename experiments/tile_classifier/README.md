@@ -81,3 +81,17 @@ python -m kaggle kernels output jjh7757/mahjong-tile-det -p experiments/tile_cla
 1. 틀 잡기: 매장 운영 틀 통과 8/25 가 다음 병목이다. 위 3차 결과로 판단한다.
 2. 분류기를 틀과 이어 점수까지 잰다(표 1-17 방식, 지금 값은 낱장뿐).
 3. 다음 매장 사진으로 처음 보는 날짜·패 상태를 평가한다. 34종 + 적5 를 순서대로 놓고 네 방향으로 찍으면 드문 종류도 보강된다.
+
+## 판 중 도라 표시패 확정 (`dora_rounds.py`·`dora_resolution.py`, metrics 표 1-53, 2026-11-03)
+
+화료 사진 한 장이 아니라 판 중 추적 프레임 여러 장의 투표로 표시패를 미리 정한다(앱 `lib/table/dora_tracker.dart`, 규칙은 두 곳이 같아야 한다).
+
+```
+python -I -X utf8 experiments/tile_classifier/dora_rounds.py        # 10-31 프레임 2,094장을 시각순으로 넣고 화료 기록 시각마다 확정값을 truth.json 과 대조, data/dora_rounds/online.json
+python -I -X utf8 experiments/tile_classifier/dora_resolution.py    # 리치 아닌 화료 원본을 4080·2040·1360·1020 으로 줄여 read_wall 로 읽기(미리보기 크기 정하기)
+python -I -X utf8 experiments/speed/flow_visit.py dora              # online.json → TRACKED_DORA(측정 테스트가 판 중 확정값으로 씀)
+```
+
+- 규칙: 서버 read_wall 의 1순위 상자(확신도 0.7 이상만 관측), 위치 묶음(패 1.5장), 지금 묶음 = 최근 20 관측에서 가장 많이 본 묶음, 확정 = 최근 5 관측 중 3 이상 같은 종류·확신도 합 60% 이상, 기록 때 비움(전판과 같은 자리·같은 패는 안 받음).
+- 1020 프레임(패 약 25px)으로는 정답 19장 중 11 맞음·2 틀림·6 없음. 해상도를 보면 1020 은 4/8, 2040 은 6/8, 4080 은 8/8(틀림 0) 이라 앱은 리치봉 읽기와 같은 고해상 프레임(`_trackSource`)을 쓴다.
+- `dora_outside.py`(metrics 표 1-54): 격자 구역(자리 띠·강·리치봉 상자) 밖의 앞면 패를 전부 표시패로 보면 어떤지. `SEAT_GROW=40|0|-40`, `TURNED=1`(돌려 읽기). 리치 9장 중 정확 3·포함 4·밖 없음 4(짝을 자리 띠 안에 둠), 리치 아님은 0(패산 표시패가 띠 안).

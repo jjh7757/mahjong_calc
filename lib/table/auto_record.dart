@@ -26,6 +26,7 @@ const cautionIssues = {
   MergeIssue.uncertainTiles,
   MergeIssue.meldUncertain,
   MergeIssue.doraFallback,
+  MergeIssue.doraTrackedMismatch,
 };
 
 /// 자동 반영을 막는 이유. 반영해도 되면 null.
@@ -62,7 +63,7 @@ List<String> autoRecordCautions({
   required bool riichi,
 }) =>
     {
-      if (doraIndicators == 0 || issues.contains(MergeIssue.doraFallback)) '도라',
+      if (doraIndicators == 0 || issues.contains(MergeIssue.doraFallback) || issues.contains(MergeIssue.doraTrackedMismatch)) '도라',
       if (riichi && doraIndicators == 1) '표시패',
       if (issues.contains(MergeIssue.uncertainTiles)) '손패',
       if (issues.contains(MergeIssue.meldUncertain)) '울기',

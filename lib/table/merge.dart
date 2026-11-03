@@ -46,6 +46,10 @@ enum MergeIssue {
   /// 자동 반영하지 않는다(2026-10-29 사용자 결정: 바깥 띠 구조 앱 흐름 D 4회가 도라 일부만 읽힌 채 자동 반영).
   doraFallback,
 
+  /// 판 중 프레임 투표로 확정한 표시패([TableReading.trackedDora])와 화료 사진에서 읽은 표시패가 다르다. 확정값을 쓰고
+  /// 경고만 한다(틀려도 결과 화면 "도라" 칩으로 고침). 2026-11-03.
+  doraTrackedMismatch,
+
   /// 게임 중 추적이 화료자의 리치봉을 그 자리 첫 버림에서 봤다(전체 4장 이하·가져감 없음) → 더블 리치로 계산.
   /// 추정이라 자동 반영하지 않고 확인을 받는다(결과 화면 상황 칩으로 바로 고칠 수 있다). 2026-10-29.
   doubleRiichiTracked,
@@ -220,6 +224,8 @@ TableMerge mergeReading({
   Set<Side> trackedRiichi = const {},
   /// 봉이 남은 자리의 강에 눕힌 패가 있는지([TableReading.riverSideways]). 없는 자리는 모름.
   Map<Side, bool?> riverSideways = const {},
+  /// 판 중 프레임 투표로 확정한 도라 표시패([TableReading.trackedDora]). 화료 사진 답을 검증하고 못 읽었으면 채운다.
+  ReadTile? trackedDora,
 }) {
   final flags = <MergeFlag>[];
   final winner = seats.seatOf(winnerSide);
@@ -462,9 +468,26 @@ TableMerge mergeReading({
   // 깡이 있으면 도라 2장·뒷도라 1장처럼 홀수일 수 있어 장수 짝 검사는 하지 않는다(사용자 결정).
   final centerIndicators = [...?center?.doraIndicators, ...?center?.uraIndicators];
   final handSide = center?.handSideIndicators ?? const <ReadTile>[];
-  final fromHandSide = riichi ? handSide.isNotEmpty : centerIndicators.isEmpty && handSide.isNotEmpty;
-  final indicators = fromHandSide ? handSide : centerIndicators;
-  final from = center?.doraFrom;
+  var fromHandSide = riichi ? handSide.isNotEmpty : centerIndicators.isEmpty && handSide.isNotEmpty;
+  var indicators = fromHandSide ? handSide : centerIndicators;
+  var from = center?.doraFrom;
+  // 판 중 프레임 투표로 확정한 표시패가 있으면: 사진 답에 그 패가 들어 있어야 믿는다(리치 화료의 탁자 위 짝은 도라 + 뒷도라라
+  // 확정한 도라가 들어 있어야 함). 없으면 확정값을 쓴다 — 사진에서 못 읽었으면 그대로, 다르게 읽었으면 경고와 함께.
+  // 리치 화료에서 확정값 한 장만 쓰면 뒷도라를 모르는 것이라 "표시패" 경고(autoRecordCautions)가 붙는다.
+  if (trackedDora case final td?) {
+    final has = indicators.any((t) => t.tile == td.tile);
+    if (!has) {
+      if (indicators.isNotEmpty) {
+        flags.add(MergeFlag(MergeIssue.doraTrackedMismatch,
+            '사진에서 읽은 표시패(${indicators.map((t) => t.code).join(' ')})에 게임 중 확정한 도라 표시패 ${td.code} 가 없어 확정값을 썼습니다. 확인하세요'));
+      }
+      indicators = [td];
+      fromHandSide = false;
+      from = DoraFrom.tracked;
+    } else if (!fromHandSide) {
+      from = DoraFrom.tracked; // 사진 답과 확정값이 같으니 왕패 상자 없이 읽었어도 빠진 표시패 경고는 하지 않는다
+    }
+  }
   if (!fromHandSide && (from == DoraFrom.center || from == DoraFrom.dealerZone)) {
     flags.add(MergeFlag(
         MergeIssue.doraFallback,

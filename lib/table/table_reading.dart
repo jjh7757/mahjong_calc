@@ -161,7 +161,8 @@ class HandReading {
 /// - dealerZone: 왕패 상자가 없어 선 기준 도라 구역에서
 /// - center: 왕패 상자가 없어 가운데 칸 전체에서(예비)
 /// - local: 화료 사진 전체에서 자체 모델이 패산 위 표시패를 찾아 읽음(`/v2/localdora`)
-enum DoraFrom { wall, dealerZone, center, local }
+/// - tracked: 화료 사진에서는 못 읽고 판 중 프레임 투표로 확정한 표시패([DoraTracker])를 씀
+enum DoraFrom { wall, dealerZone, center, local, tracked }
 
 /// `/v1/table` 응답.
 class CenterReading {
@@ -332,6 +333,9 @@ class TableReading {
 
   /// 유국으로 봉이 남은 자리의 강에 눕힌 패가 있는지(모르면 null). 그 자리만 잰다. merge 가 이번 판 리치를 이걸로 정한다.
   final Map<Side, bool?> riverSideways;
+
+  /// 판 중 프레임 투표로 확정한 도라 표시패([DoraTracker]). merge 가 화료 사진의 표시패 답을 이것으로 검증·보충한다. 없으면 null.
+  final ReadTile? trackedDora;
   const TableReading({
     required this.layout,
     this.winnerSide,
@@ -345,5 +349,6 @@ class TableReading {
     this.trackedDoubleRiichi = const {},
     this.trackedIppatsu = const {},
     this.riverSideways = const {},
+    this.trackedDora,
   });
 }

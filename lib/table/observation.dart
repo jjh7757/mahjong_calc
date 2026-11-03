@@ -10,6 +10,7 @@
 library;
 
 import '../engine/calculator.dart' show Tiles;
+import 'grid_zones.dart';
 import 'table_layout.dart';
 import 'table_reading.dart';
 
@@ -326,10 +327,74 @@ List<List<ReadTile>> parseLocalPairs(Map<String, dynamic>? j) => [
 /// 자체 모델 표시패 짝을 믿을 최소 확신도. 돌아가 겹친 패를 틀리게 읽은 답이 0.33·0.58, 맞은 답은 0.81 이상(metrics 표 1-35).
 const double localPairMinConf = 0.7;
 
-/// 리치 화료의 탁자 위 표시패: 딱 2장 묶음이 하나이고 둘 다 확신이 높을 때만 그 둘. 아니면 고르지 않는다(확인으로).
-List<ReadTile> localPairIndicators(Map<String, dynamic>? j) {
+/// `/v2/localdora` 의 짝마다 가운데(1000 분율). 서버가 `box`·`size` 를 안 주면(옛 서버) null.
+List<(int u, int v)?> localPairCenters(Map<String, dynamic>? j) {
+  final size = (j?['size'] as List<dynamic>?)?.cast<num>();
+  return [
+    for (final p in (j?['pairs'] as List<dynamic>?) ?? const [])
+      () {
+        if (size == null || size.length != 2 || size[0] <= 0 || size[1] <= 0) return null;
+        var su = 0.0, sv = 0.0, n = 0;
+        for (final t in p as List<dynamic>) {
+          final b = ((t as Map<String, dynamic>)['box'] as List<dynamic>?)?.cast<num>();
+          if (b == null || b.length < 4) return null;
+          su += (b[0] + b[2] / 2) / size[0] * 1000;
+          sv += (b[1] + b[3] / 2) / size[1] * 1000;
+          n++;
+        }
+        return n == 0 ? null : (su ~/ n, sv ~/ n);
+      }(),
+  ];
+}
+
+/// 짝이 놓인 격자 구역. 떼어 둔 화료패(화료자 자리 띠)·다른 자리 손패·강 4줄째가 표시패 짝으로 잡히지 않게 가린다(metrics 표 1-54).
+enum PairZone { outside, winnerSeat, otherSeat, river, sticks }
+
+/// 강 구역: 리치봉 상자 변에서 바깥으로 패 3줄 + 틈(1000 분율), 폭은 상자 + 양쪽 [pairRiverSide].
+const int pairRiverDepth = 130;
+const int pairRiverSide = 30;
+
+PairZone pairZoneOf(GridZones g, Side winner, (int u, int v) at) {
+  final (u, v) = at;
+  bool inSeat(Side s) {
+    final b = g.seatForRead(s);
+    return b.xmin <= u && u <= b.xmax && b.ymin <= v && v <= b.ymax;
+  }
+
+  if (inSeat(winner)) return PairZone.winnerSeat;
+  if (Side.values.any(inSeat)) return PairZone.otherSeat;
+  final s = g.sticksZone;
+  if (s.xmin <= u && u <= s.xmax && s.ymin <= v && v <= s.ymax) return PairZone.sticks;
+  final tall = s.ymin - pairRiverDepth <= v && v <= s.ymax + pairRiverDepth && s.xmin - pairRiverSide <= u && u <= s.xmax + pairRiverSide;
+  final wide = s.xmin - pairRiverDepth <= u && u <= s.xmax + pairRiverDepth && s.ymin - pairRiverSide <= v && v <= s.ymax + pairRiverSide;
+  return tall || wide ? PairZone.river : PairZone.outside;
+}
+
+/// 리치 화료의 탁자 위 표시패(딱 2장 묶음, 둘 다 확신 [localPairMinConf] 이상).
+/// 격자·화료자를 알고 서버가 위치를 주면 구역으로 고른다(2026-11-03, metrics 표 1-54): 구역 밖 짝이 하나면 그것, 여럿이면 판 중 확정한
+/// 도라 [trackedDora] 가 든 하나, 밖에 없으면 화료자 자리 띠의 짝이 하나일 때만 그것. 다른 자리·강·리치봉 상자의 짝은 쓰지 않는다
+/// (181209: 다른 자리 쪽 5s 짝을 표시패로 잡았다). 격자나 위치가 없으면 예전처럼 짝이 하나일 때만.
+List<ReadTile> localPairIndicators(Map<String, dynamic>? j, {GridZones? grid, Side? winner, ReadTile? trackedDora}) {
   final pairs = parseLocalPairs(j);
-  return pairs.length == 1 && pairs.single.every((t) => t.conf >= localPairMinConf) ? pairs.single : const [];
+  final centers = localPairCenters(j);
+  final good = [
+    for (final (i, p) in pairs.indexed)
+      if (p.every((t) => t.conf >= localPairMinConf)) (tiles: p, at: i < centers.length ? centers[i] : null),
+  ];
+  if (grid == null || winner == null || good.any((p) => p.at == null)) {
+    return good.length == 1 ? good.single.tiles : const [];
+  }
+  final zones = {for (final p in good) p: pairZoneOf(grid, winner, p.at!)};
+  List<List<ReadTile>> of(PairZone z) => [for (final p in good) if (zones[p] == z) p.tiles];
+  final outside = of(PairZone.outside);
+  if (outside.length == 1) return outside.single;
+  if (outside.length > 1) {
+    final td = trackedDora;
+    final withDora = td == null ? const <List<ReadTile>>[] : [for (final p in outside) if (p.any((t) => t.tile == td.tile)) p];
+    return withDora.length == 1 ? withDora.single : const [];
+  }
+  final mine = of(PairZone.winnerSeat);
+  return mine.length == 1 ? mine.single : const [];
 }
 
 /// `/v2/locallast3` 응답 → 자리별 눕힌 패가 있는지. 보낸 순서대로.
