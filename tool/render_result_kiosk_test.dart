@@ -1,5 +1,6 @@
 // 키오스크 결과 화면을 실제 글꼴(맑은 고딕)로 PNG 로 그린다(눈 확인용, 전체 테스트에는 안 들어감).
 //   CASE=haneman|many|yakuman OUT=build/x.png flutter test tool/render_result_kiosk_test.dart
+//   CAUTION=표시패,울기 면 대국 중 자동 반영 카운트다운과 경고 줄까지 그린다.
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -8,6 +9,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mahjong_calc/engine/calculator.dart';
+import 'package:mahjong_calc/game/game.dart';
+import 'package:mahjong_calc/game/game_store.dart';
 import 'package:mahjong_calc/ui/result_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -60,22 +63,25 @@ void main() {
     };
     final r = calculate(hand, sit);
     final key = GlobalKey();
+    final caution = Platform.environment['CAUTION']?.split(',');
+    if (caution != null) gameStore.start(const ['A', 'B', 'C', 'D'], const GameSettings());
     await tester.pumpWidget(RepaintBoundary(
       key: key,
-      child: MaterialApp(debugShowCheckedModeBanner: false, home: ResultScreen(result: r, hand: hand, situation: sit, isTsumo: sit.isTsumo)),
+      child: MaterialApp(debugShowCheckedModeBanner: false, home: ResultScreen(result: r, hand: hand, situation: sit, isTsumo: sit.isTsumo, gameSeat: caution == null ? null : 2, loser: caution == null ? null : 1, autoRecordAfter: caution == null ? null : const Duration(seconds: 600), autoCautions: caution ?? const [])),
     ));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 5));
     await tester.runAsync(() async {
       for (final e in find.byType(Image).evaluate()) {
         await precacheImage((e.widget as Image).image, e);
       }
     });
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
     await tester.runAsync(() async {
       final boundary = key.currentContext!.findRenderObject() as RenderRepaintBoundary;
       final img = await boundary.toImage();
       final png = await img.toByteData(format: ui.ImageByteFormat.png);
       File(out).writeAsBytesSync(png!.buffer.asUint8List());
     });
+    await tester.pumpWidget(const SizedBox());
   });
 }

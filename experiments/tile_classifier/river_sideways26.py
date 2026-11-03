@@ -80,6 +80,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--sheet", action="store_true")
     ap.add_argument("--height-max", type=float, help="눕힌 패 높이 상한(세운 패 높이 비율). 운영 기준 대신 이 값으로(YOLO26 상자용 시험)")
+    ap.add_argument("--local", action="store_true", help="YOLO26 틀을 rv.frame 대신 서버 자체 모델 경로 lr.river_frame 으로(높이 상한 0.9, 표 3-3)")
     a = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
     if a.height_max:
@@ -104,7 +105,7 @@ def main() -> None:
             k.save(buf, "JPEG", quality=92)
             rgb = np.asarray(k)
             t0 = time.perf_counter()
-            f26 = rv.frame(rgb, rd.detect(rgb))
+            f26 = lr.river_frame(rgb, rd.detect(rgb)) if a.local else rv.frame(rgb, rd.detect(rgb))
             ms.append((time.perf_counter() - t0) * 1000)
             f11, _ = y11.locate(buf.getvalue())
             want = (side in BCD_YES[tag]) if bcd else (None if f"?{side}" in marks else side in marks)

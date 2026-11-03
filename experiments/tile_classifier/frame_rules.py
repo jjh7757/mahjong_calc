@@ -89,7 +89,7 @@ def main() -> None:
     for g in json.loads(sg.OUT.read_text(encoding="utf-8")):
         gem.setdefault(g["name"], []).append(g["by_grow"].get("40") or {})
     scenes = []
-    for s in sg.scenes():
+    for s in sg.eval_scenes():
         if s["hand"] is None:
             continue
         part = "bcd" if not s["name"].startswith("2026") else "am" if s["name"] < "20261031_14" else "pm"

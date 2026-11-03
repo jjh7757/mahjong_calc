@@ -79,8 +79,6 @@ String? _blocker(TableMerge m) => autoRecordBlocker(
       resultValid: true,
       paoBase: 0,
       gameOver: false,
-      doraIndicators: 2,
-      riichi: m.situation.riichi,
     );
 
 void main() {

@@ -116,7 +116,7 @@ def main() -> None:
     for g in json.loads(sg.OUT.read_text(encoding="utf-8")):
         gem.setdefault(g["name"], []).append(g["by_grow"].get("40") or {})
     rows = []
-    for s in sg.scenes():
+    for s in sg.eval_scenes():
         if s["hand"] is None:
             continue
         name = s["name"]

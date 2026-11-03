@@ -56,9 +56,10 @@ String? _blocker(TableMerge m) => autoRecordBlocker(
       resultValid: true,
       paoBase: 0,
       gameOver: false,
-      doraIndicators: 1,
-      riichi: false,
     );
+
+List<String> _cautions(TableMerge m) =>
+    autoRecordCautions(issues: [for (final f in m.flags) f.issue], doraIndicators: 1, riichi: false);
 
 void main() {
   group('자체 모델 표시패 짝', () {
@@ -81,7 +82,7 @@ void main() {
     });
   });
 
-  group('자체 모델 확신도가 자동 반영을 막는다', () {
+  group('자체 모델 확신도는 막지 않고 경고로 남긴다', () {
     const hand = '1m 2m 3m 4p 5p 6p 7s 8s 9s 2m 3m 5p 5p 4m';
     List<(String, double)> tiles(double Function(int i) conf) => [
           for (final (i, t) in hand.split(' ').indexed) (t, conf(i)),
@@ -91,12 +92,14 @@ void main() {
       final m = _merge(tiles((_) => 0.9));
       expect(m.uncertain, isEmpty);
       expect(_blocker(m), isNull);
+      expect(_cautions(m), isEmpty);
     });
 
-    test('확신이 낮은 패는 노란 테두리 + 자동 반영 막힘', () {
+    test('확신이 낮은 패는 노란 테두리 + 경고', () {
       final m = _merge(tiles((i) => i == 3 ? 0.65 : 0.9));
       expect(m.uncertain, {3});
-      expect(_blocker(m), contains('uncertainTiles'));
+      expect(_blocker(m), isNull);
+      expect(_cautions(m), ['손패']);
     });
 
     test('코드로 채운 白 (확신도 0.5): 손패', () {
@@ -104,7 +107,8 @@ void main() {
         for (final t in '1m 2m 3m 4p 5p 6p 7s 8s 9s 5z 5z 7z 7z 7z'.split(' ')) (t, t == '5z' ? 0.5 : 0.9),
       ]);
       expect(m.uncertain, hasLength(2));
-      expect(_blocker(m), contains('uncertainTiles'));
+      expect(_blocker(m), isNull);
+      expect(_cautions(m), ['손패']);
     });
 
     test('코드로 채운 白 퐁(확신도 0.5): 울기', () {
@@ -113,7 +117,8 @@ void main() {
         melds: const [('5z 5z 5z', 0.5)],
       );
       expect(m.hasFlag(MergeIssue.meldUncertain), isTrue);
-      expect(_blocker(m), contains('meldUncertain'));
+      expect(_blocker(m), isNull);
+      expect(_cautions(m), ['울기']);
     });
   });
 }

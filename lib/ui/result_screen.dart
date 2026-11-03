@@ -73,6 +73,9 @@ class ResultScreen extends StatefulWidget {
   /// 그 전에 "취소" 하거나 점수 이동판에서 자리를 바꾸면 평소처럼 "대국에 반영" 을 직접 누른다. null 이면 끔.
   final Duration? autoRecordAfter;
 
+  /// 자동 반영 전에 사람이 봐야 할 것(`autoRecordCautions`). 카운트다운 줄에 크게 띄우고 기록 문구에 남긴다.
+  final List<String> autoCautions;
+
   /// 상황 칩으로 다시 계산할 때 쓰는 룰(입력 화면·거치 촬영의 룰 설정).
   final RuleSet rules;
   const ResultScreen({
@@ -93,6 +96,7 @@ class ResultScreen extends StatefulWidget {
     this.winnerRiichi = false,
     this.otherWins = const [],
     this.autoRecordAfter,
+    this.autoCautions = const [],
     this.rules = RuleSet.standard,
   });
 
@@ -492,6 +496,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
       loser: _loser,
       photoRiichiSeats: widget.photoRiichiSeats,
       winnerRiichi: _winnerRiichi,
+      cautions: widget.autoCautions,
     );
     widget.onWinRecorded?.call(outcome);
     widget.onRecorded?.call();
@@ -505,7 +510,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   Widget _autoBar({required bool kiosk}) {
     final g = _game!;
     final size = kiosk ? 20.0 : 15.0;
-    return Container(
+    final row = Container(
       key: const ValueKey('result-auto-bar'),
       padding: EdgeInsets.symmetric(horizontal: kiosk ? 16 : 10, vertical: kiosk ? 6 : 2),
       decoration: BoxDecoration(
@@ -543,6 +548,33 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
           ),
         ],
       ),
+    );
+    if (widget.autoCautions.isEmpty) return row;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          key: const ValueKey('result-auto-caution'),
+          padding: EdgeInsets.symmetric(horizontal: kiosk ? 14 : 10, vertical: kiosk ? 4 : 3),
+          margin: const EdgeInsets.only(bottom: 4),
+          decoration: BoxDecoration(color: Colors.orange.shade800, borderRadius: BorderRadius.circular(8)),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.warning_amber_rounded, size: size + 4, color: Colors.white),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  '${widget.autoCautions.join(' · ')} 확인',
+                  style: TextStyle(fontSize: size, fontWeight: FontWeight.w800, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        ),
+        row,
+      ],
     );
   }
 

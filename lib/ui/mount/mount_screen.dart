@@ -246,6 +246,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
   /// 판독이 확실하면 결과 화면에서 [autoRecordDelay] 뒤 대국에 자동 반영(기본 켬, 룰 설정·더보기에서 끔).
   static const autoRecordDelay = Duration(seconds: 10);
+
+  /// 확인할 것이 있는 판독은 더 기다린다.
+  static const autoRecordCautionDelay = Duration(seconds: 20);
   bool _autoRecord = false;
 
   @override
@@ -1469,13 +1472,16 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         resultValid: result.isValid,
         paoBase: result.isValid ? engine.paoBasePoints(result) : 0,
         gameOver: g.isOver,
+      );
+      final autoCautions = autoRecordCautions(
+        issues: [for (final f in merge.flags) f.issue],
         doraIndicators: merge.situation.doraIndicators.length,
         riichi: merge.situation.riichi,
       );
       // 테이블 화면이 열린 채 룰 설정에서 바꿨을 수 있어 매번 다시 읽는다.
       _autoRecord = await AutoRecordStore.load();
       if (!mounted) return;
-      debugPrint('[read] 결과 화면 띄움 valid=${result.isValid} autoBlock=$autoBlock');
+      debugPrint('[read] 결과 화면 띄움 valid=${result.isValid} autoBlock=$autoBlock cautions=$autoCautions');
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (ctx) => ResultScreen(
@@ -1497,7 +1503,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             onWinRecorded: (o) => saveCaptureLabel(widget.editor, o),
             onSituationChanged: widget.editor.applySituation,
             onRecorded: widget.editor.clear,
-            autoRecordAfter: _autoRecord && autoBlock == null ? autoRecordDelay : null,
+            autoRecordAfter: !_autoRecord || autoBlock != null
+                ? null
+                : (autoCautions.isEmpty ? autoRecordDelay : autoRecordCautionDelay),
+            autoCautions: autoCautions,
           ),
         ),
       );

@@ -23,7 +23,10 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "speed"))
 import flow_visit as fv  # noqa: E402
 import seat_grow as sg  # noqa: E402
+
+ARGV, sys.argv = sys.argv[1:], sys.argv[:1]  # --local = YOLO26 강 틀을 서버 자체 모델 경로 lr.river_frame 으로(표 3-3)
 from rules_core import rv, st  # noqa: E402
+from app import local_read as lr  # noqa: E402
 
 # experiments/speed/bench.py 와 이름이 같아 경로로 올린다
 _spec = importlib.util.spec_from_file_location("tile_bench", HERE / "server_bench" / "bench.py")
@@ -76,7 +79,7 @@ def main() -> None:
             if i >= 0:
                 r = json.loads(line[i + 7:])
                 gem.setdefault(r["photo"], r)
-    scenes = {(s["name"] if s["set"] == "bcd" else s["name"][-6:]): s for s in sg.scenes() if s["hand"] is not None}
+    scenes = {(s["name"] if s["set"] == "bcd" else s["name"][-6:]): s for s in sg.eval_scenes() if s["hand"] is not None}
     rows, ind_rows = [], []
     for key, s in scenes.items():
         name = s["name"]
@@ -99,7 +102,7 @@ def main() -> None:
             for label, det in (("y26", d26), ("y11", y11)):
                 t0 = time.perf_counter()
                 det.memo = {} if label == "y26" else None
-                fr = rv.frame(rgb, det.detect(rgb))
+                fr = lr.river_frame(rgb, det.detect(rgb)) if label == "y26" and "--local" in ARGV else rv.frame(rgb, det.detect(rgb))
                 t1 = time.perf_counter()
                 if fr is None:
                     tile, conf = None, 0.0

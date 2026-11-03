@@ -9,6 +9,7 @@ R=experiments/speed/results
 L=$([ "$1" = on ] && echo true || echo false)
 EXTRA=()
 [ "$1" = only ] && EXTRA=(--dart-define=LOCAL_ONLY=true)  # only = 자체 모델만, Gemini 없음(표 1-37)
+[ "$1" = sticks ] && EXTRA=(--dart-define=LOCAL_ONLY=true --dart-define=GEMINI_STICKS=true)  # sticks = 자체 모델 + Gemini 리치봉(표 1-48)
 GRIDS=$(python -I -X utf8 experiments/speed/flow_visit.py grids)
 RIICHI=$(python -I -X utf8 experiments/speed/flow_visit.py riichi)
 COMMON=(drive --profile -d windows --driver=test_driver/integration_test.dart --target=integration_test/read_grid_timing_test.dart

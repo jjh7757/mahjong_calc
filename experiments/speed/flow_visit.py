@@ -68,7 +68,7 @@ def truth_of(photo: str, scenes: dict) -> dict:
 
 
 def score(paths: list[str]) -> None:
-    scenes = {(s["name"] if s["set"] == "bcd" else s["name"][-6:]): s for s in sg.scenes()}
+    scenes = {(s["name"] if s["set"] == "bcd" else s["name"][-6:]): s for s in sg.eval_scenes()}
     rows = []
     for p in paths:
         for line in Path(p).read_text(encoding="utf-8", errors="replace").splitlines():
@@ -78,6 +78,8 @@ def score(paths: list[str]) -> None:
     tally: dict = {}
     pairs: dict = {}  # 같은 순간 짝: (세트, 사진, 회차) → 서버 → 전체 초
     for r in rows:
+        if r["photo"] not in scenes:
+            continue  # 가림 사진(sg.OCCLUDED)이 든 옛 로그
         t = truth_of(r["photo"], scenes)
         if r["scene"] == "V" and t["win"] is None:
             continue  # 화료패 정답이 없는 매장 장면(142535·174020)은 뺀다(사용자 요청 2026-11-01)

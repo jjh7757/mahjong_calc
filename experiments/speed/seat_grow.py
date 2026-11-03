@@ -40,6 +40,8 @@ BCD = {
 }
 # label.json 이 없거나 틀린 장면의 정답(2026-11-01, 사진 눈 판독 + 사용자 답 + visit_truth_check.py)
 TRUTH = json.loads((VISIT.parent / "truth.json").read_text(encoding="utf-8"))["scenes"]
+# 손·팔이 패를 가린 사진. 어떤 방법으로도 맞출 수 없어 평가에서 뺀다(사용자 결정 2026-11-02). 학습 재료로는 그대로 쓴다.
+OCCLUDED = {"20261031_172424", "20261031_174020"}
 
 
 def seat_box(g: dict, side: str, grow: int) -> tuple[int, int, int, int]:
@@ -128,6 +130,11 @@ def scenes() -> list[dict]:
             r["hand"], r["melds"] = closed, [x.strip("[]") for x in lab["melds"]]
         rows.append(r)
     return rows
+
+
+def eval_scenes() -> list[dict]:
+    """채점용 장면: [scenes] 에서 가림 사진([OCCLUDED])을 뺀 것."""
+    return [s for s in scenes() if s["name"] not in OCCLUDED]
 
 
 def post(jpg: bytes, frac: float) -> dict:

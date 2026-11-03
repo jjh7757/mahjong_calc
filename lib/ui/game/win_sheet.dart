@@ -86,7 +86,7 @@ Future<WinOutcome?> showWinSheet(BuildContext context, Game game,
 }
 
 /// 시트 없이 바로 기록한다(거치 촬영 자동 반영). 화료자 한 명, 파오 없음. 자동 리치 후보는 모두 넣는다
-/// (시트에서 칩을 하나도 안 끈 것과 같다). 기록 문구 끝에 "(자동)".
+/// (시트에서 칩을 하나도 안 끈 것과 같다). 기록 문구 끝에 "(자동)", 확인할 것을 안은 채면 "(자동·확인 필요: 도라)".
 WinOutcome recordWinDirect({
   required int basePoints,
   required bool isTsumo,
@@ -95,6 +95,7 @@ WinOutcome recordWinDirect({
   int? loser,
   Set<int> photoRiichiSeats = const {},
   bool winnerRiichi = false,
+  List<String> cautions = const [],
 }) {
   final g = gameStore.current!;
   final auto = g.autoRiichiCandidates(photoRiichiSeats, winner: winner, winnerRiichi: winnerRiichi).toList()..sort();
@@ -113,7 +114,7 @@ WinOutcome recordWinDirect({
     for (final s in auto) {
       g.declareRiichi(s, fromPhoto: true);
     }
-    g.win(winner: winner, loser: isTsumo ? null : loser, isTsumo: isTsumo, payment: p, summary: '$summary ${p.display} (자동)');
+    g.win(winner: winner, loser: isTsumo ? null : loser, isTsumo: isTsumo, payment: p, summary: '$summary ${p.display} (${cautions.isEmpty ? '자동' : '자동·확인 필요: ${cautions.join(', ')}'})');
   });
   return outcome;
 }

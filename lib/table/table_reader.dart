@@ -274,6 +274,7 @@ class TableReader {
     Side? dealer,
     bool localDora = true,
     bool localOnly = false,
+    bool geminiSticks = false,
     Future<List<Side>?> Function(List<Side> candidates)? pickWinners,
     bool Function(List<TableReading> readings)? acceptAll,
     void Function(ReadStage stage)? onStage,
@@ -489,7 +490,7 @@ class TableReader {
                 warnings.add('강 끝을 읽지 못했습니다: $e');
                 return null;
               });
-    final sticksF = call('sticks', localOnly ? null : sticksCrop, 'sticks');
+    final sticksF = call('sticks', localOnly && !geminiSticks ? null : sticksCrop, 'sticks');
     final doraF = call('dora', localOnly ? null : doraCrop, 'dora');
     final dealerDoraF = call('dora', dealerDoraCrop, 'dora_dealer');
     final trackedF = call('last', trackedCrop, 'last_tracked');
@@ -571,10 +572,15 @@ class TableReader {
     final sticksJ = await sticksF;
     final trackedJ = await trackedF;
     final trackedTile = trackedJ == null ? null : parseLastV2(trackedJ);
-    // 자체 모델만 쓰면 리치봉을 읽지 않고 강의 눕힌 패로 리치를 본다.
+    // 자체 모델만 쓰면 리치봉을 읽지 않고 강의 눕힌 패로 리치를 본다. geminiSticks 면 Gemini 리치봉도 읽어 둘 중 하나라도 보이면 리치로.
+    final geminiSeen = sticksJ == null ? const <Side, bool>{} : parseCenterV2(sticksJ).sticks;
     final sticks = localOnly
-        ? localSticksFrom(lastsJ, lastSent)
-        : (sticksJ == null ? const <Side, bool>{} : parseCenterV2(sticksJ).sticks);
+        ? {
+            for (final e in localSticksFrom(lastsJ, lastSent).entries) e.key: e.value,
+            for (final e in geminiSeen.entries)
+              if (e.value) e.key: true,
+          }
+        : geminiSeen;
     // 리치 표시패 짝은 자체 모델이 다루지 않는다. 화료자에게 리치 증거가 없을 때만(화료자를 모르면 탁자 어디에도 없을 때만)
     // 자체 답을 쓰고, 그때는 Gemini 도라 답을 기다리지 않는다(요청은 이미 보냈고 실패는 call 이 처리한다).
     final localTiles = await localDoraF;

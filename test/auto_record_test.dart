@@ -46,8 +46,6 @@ void main() {
       bool valid = true,
       int pao = 0,
       bool over = false,
-      int dora = 1,
-      bool riichi = false,
     }) =>
         autoRecordBlocker(
             warnings: warnings,
@@ -57,20 +55,28 @@ void main() {
             loser: loser,
             resultValid: valid,
             paoBase: pao,
-            gameOver: over,
-            doraIndicators: dora,
-            riichi: riichi);
+            gameOver: over);
 
     test('확인할 것 없음 + 화료자 한 명 + 방총자 앎이면 반영', () {
       expect(block(), isNull);
       expect(block(tsumo: true, loser: null), isNull);
-      expect(block(riichi: true, dora: 2), isNull);
     });
-    test('도라 표시패: 하나도 못 읽었거나, 리치 화료인데 뒷도라까지 2장이 안 보이면 사람이 확인', () {
-      expect(block(dora: 0), '도라 표시패를 못 읽음');
-      expect(block(riichi: true, dora: 1), '리치 화료인데 뒷도라 표시패가 안 보임');
-      // 리치가 아닌데 표시패가 많은 것은 막지 않는다(갤러리 연출 장면 D 는 표시패 3장, 개발 세트로 확인 불가).
-      expect(block(dora: 3), isNull);
+    test('경고: 도라 표시패를 못 읽었거나, 리치 화료인데 뒷도라까지 2장이 안 보이거나, 확신이 낮으면', () {
+      List<String> cautions({List<MergeIssue> issues = const [], int dora = 1, bool riichi = false}) =>
+          autoRecordCautions(issues: issues, doraIndicators: dora, riichi: riichi);
+      expect(cautions(), isEmpty);
+      expect(cautions(dora: 2, riichi: true), isEmpty);
+      expect(cautions(dora: 0), ['도라']);
+      expect(cautions(dora: 0, riichi: true), ['도라']);
+      expect(cautions(riichi: true), ['표시패']);
+      expect(cautions(issues: const [MergeIssue.uncertainTiles, MergeIssue.meldUncertain]), ['손패', '울기']);
+      expect(cautions(issues: const [MergeIssue.doraFallback]), ['도라']);
+      // 리치가 아닌데 표시패가 많은 것은 경고하지 않는다(갤러리 연출 장면 D 는 표시패 3장, 개발 세트로 확인 불가).
+      expect(cautions(dora: 3), isEmpty);
+      // 경고 대상은 막지 않는다.
+      for (final i in cautionIssues) {
+        expect(block(issues: [i]), isNull, reason: i.name);
+      }
     });
     test('설명용 플래그(강 끝 론·리치 판단·추적 울기)만 있으면 반영', () {
       // 운영 앱 흐름 B·C·D 12장면 중 11장면이 이 경우였다(점수 모두 정답).
@@ -80,7 +86,6 @@ void main() {
     });
     test('하나라도 애매하면 사람이 확인', () {
       expect(block(warnings: const ['자리 판독 3번이 엇갈림']), '판독 경고 1개');
-      expect(block(issues: const [MergeIssue.winFromDiscard, MergeIssue.uncertainTiles]), '확인할 것: uncertainTiles');
       for (final i in [
         MergeIssue.loserAmbiguous,
         MergeIssue.winFromWait,
@@ -88,7 +93,6 @@ void main() {
         MergeIssue.winTileAssumed,
         MergeIssue.ronTsumoUnknown,
         MergeIssue.tileCountMismatch,
-        MergeIssue.meldUncertain,
         MergeIssue.invalidHand,
         MergeIssue.multiRon,
       ]) {
@@ -117,8 +121,15 @@ void main() {
     expect(g.events, isEmpty);
   });
 
+  test('확인할 것을 안은 자동 기록은 문구에 남는다', () {
+    final r = _result();
+    recordWinDirect(
+        basePoints: r.basePoints, isTsumo: true, summary: r.summary, winner: 2, winnerRiichi: true, cautions: const ['표시패', '울기']);
+    expect(gameStore.current!.events.last.description, contains('(자동·확인 필요: 표시패, 울기)'));
+  });
+
   group('결과 화면 카운트다운', () {
-    Future<void> open(WidgetTester tester, {Duration? after = const Duration(seconds: 3)}) async {
+    Future<void> open(WidgetTester tester, {Duration? after = const Duration(seconds: 3), List<String> cautions = const []}) async {
       await tester.pumpWidget(MaterialApp(
         home: Builder(
           builder: (c) => TextButton(
@@ -129,6 +140,7 @@ void main() {
                 gameSeat: 2,
                 winnerRiichi: true,
                 autoRecordAfter: after,
+                autoCautions: cautions,
               ),
             )),
             child: const Text('열기'),
@@ -191,6 +203,53 @@ void main() {
       expect(find.byKey(const ValueKey('result-auto-bar')), findsNothing);
       await tester.pump(const Duration(seconds: 5));
       expect(gameStore.current!.events, isEmpty);
+    });
+
+    testWidgets('확인할 것이 있으면 경고를 띄우고 그대로 카운트다운한다', (tester) async {
+      await open(tester, cautions: const ['표시패', '손패']);
+      expect(find.byKey(const ValueKey('result-auto-caution')), findsOneWidget);
+      expect(find.text('표시패 · 손패 확인'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      expect(gameStore.current!.events.last.description, contains('자동·확인 필요'));
+    });
+
+    testWidgets('경고가 없으면 경고 줄도 없다', (tester) async {
+      await open(tester);
+      expect(find.byKey(const ValueKey('result-auto-caution')), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('result-auto-cancel')));
+      await tester.pump();
+    });
+
+    testWidgets('키오스크: 경고 줄과 카운트다운이 넘치지 않는다', (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await open(tester, cautions: const ['도라', '손패', '울기']);
+      expect(find.byKey(const ValueKey('result-auto-caution')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.byKey(const ValueKey('result-auto-cancel')));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('result-auto-caution')), findsNothing);
+    });
+
+    testWidgets('키오스크: 사진 판독 리치 화료는 표시패를 도라 줄에만, 직접 넣은 뒷도라만 뒷도라 줄', (tester) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      Future<void> show(List<int> ura) async {
+        final hand = Hand.parse('223344m567p67s55s 8s');
+        final sit = Situation(
+            isTsumo: false, seatWind: Tiles.south, riichi: true, doraIndicators: [Tiles.parse('4z'), Tiles.parse('1m')], uraIndicators: ura);
+        await tester.pumpWidget(MaterialApp(
+            key: UniqueKey(), home: ResultScreen(result: calculate(hand, sit), hand: hand, situation: sit)));
+        await tester.pumpAndSettle();
+      }
+
+      await show(const []);
+      expect(find.text('뒷도라'), findsNothing);
+      await show([Tiles.parse('4z')]);
+      expect(find.text('뒷도라'), findsOneWidget);
     });
 
     testWidgets('키오스크 결과 화면에도 같은 줄', (tester) async {

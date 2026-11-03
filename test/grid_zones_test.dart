@@ -458,7 +458,7 @@ void main() {
     });
 
     group('자체 모델만(readGrid(localOnly:))', () {
-      MockClient localServer(List<Uri> urls, {List<int> bottomSideways = const [], List<List<String>> pairs = const [], List<String> wallTile = const ['7z']}) =>
+      MockClient localServer(List<Uri> urls, {List<int> bottomSideways = const [], List<List<String>> pairs = const [], List<String> wallTile = const ['7z'], bool geminiSticks = false}) =>
           MockClient((r) async {
             urls.add(r.url);
             final files = RegExp(r'filename="([^"]+)\.jpg"').allMatches(latin1.decode(r.bodyBytes)).map((m) => m.group(1)!).toList();
@@ -488,18 +488,27 @@ void main() {
                   for (final p in pairs) [for (final c in p) {'tile': c, 'conf': 0.9}],
                 ],
               }),
+              '/v2/sticks' when geminiSticks => _json({'riichi_sticks': {'bottom': true}}),
               _ => http.Response('Gemini 를 부르면 안 됨: ${r.url.path}', 500),
             };
           });
 
-      Future<TableReading> read(List<Uri> urls, {List<int> bottomSideways = const [], List<List<String>> pairs = const [], List<String> wallTile = const ['7z']}) {
+      Future<TableReading> read(List<Uri> urls, {List<int> bottomSideways = const [], List<List<String>> pairs = const [], List<String> wallTile = const ['7z'], bool geminiSticks = false}) {
         final client = RecognizerClient(
           baseUrl: 'https://x.test',
           apiKey: 'k',
-          httpClient: localServer(urls, bottomSideways: bottomSideways, pairs: pairs, wallTile: wallTile),
+          httpClient: localServer(urls, bottomSideways: bottomSideways, pairs: pairs, wallTile: wallTile, geminiSticks: geminiSticks),
         );
-        return TableReader(client).readGrid(table(), grid, localOnly: true);
+        return TableReader(client).readGrid(table(), grid, localOnly: true, geminiSticks: geminiSticks);
       }
+
+      test('geminiSticks 면 강에 눕힌 패가 없어도 리치봉으로 리치를 본다', () async {
+        final urls = <Uri>[];
+        final r = await read(urls, geminiSticks: true);
+        expect(urls.map((u) => u.path), contains('/v2/sticks'));
+        expect(r.center!.riichiAt(Side.bottom), isTrue);
+        expect(r.warnings, isEmpty);
+      });
 
       test('자체 모델 API 세 개만 부르고 경고가 없다', () async {
         final urls = <Uri>[];

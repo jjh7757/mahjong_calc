@@ -50,6 +50,9 @@ app.*.map.json
 # 인식 서버 API 키 (서버 .env 와 동일, 커밋 금지)
 .recognizer_key
 
+# Roboflow API 키 (외부 모델 시험용, 커밋 금지)
+.roboflow_key
+
 # 실험 자료(사진·결과물 1.4GB)는 저장소에 안 넣고 스크립트·메모만 넣는다
 /experiments/**/*.jpg
 /experiments/**/*.jpeg

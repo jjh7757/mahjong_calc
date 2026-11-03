@@ -181,11 +181,11 @@ extension _KioskResult on _ResultScreenState {
     );
   }
 
-  /// 도라 줄(왼쪽)과 뒷도라 줄(오른쪽, 리치 화료이거나 뒷도라가 있을 때).
+  /// 도라 줄(왼쪽)과 뒷도라 줄(오른쪽, 직접 입력에서 뒷도라를 넣었을 때만). 사진 판독은 도라·뒷도라를 구분할 수 없어 모두 도라 줄에 둔다.
   List<Widget> _doraRows() {
     final sit = _shownSit;
     if (sit == null) return const [];
-    final ura = sit.riichi || sit.doubleRiichi || sit.uraIndicators.isNotEmpty;
+    final ura = sit.uraIndicators.isNotEmpty;
     return [
       Positioned(left: 300, top: 196, child: _doraRow('도라', sit.doraIndicators)),
       if (ura) Positioned(left: 760, top: 166, child: _doraRow('뒷도라', sit.uraIndicators)),

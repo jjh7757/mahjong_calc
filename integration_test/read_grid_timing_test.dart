@@ -115,6 +115,8 @@ const _set = String.fromEnvironment('SET', defaultValue: 'bcd');
 const _localDora = bool.fromEnvironment('LOCAL_DORA', defaultValue: true);
 // LOCAL_ONLY=true: 자체 모델만(Gemini 없음). readGrid(localOnly:).
 const _localOnly = bool.fromEnvironment('LOCAL_ONLY');
+// GEMINI_STICKS=true: 자체 모델만 쓰되 리치봉은 Gemini 로도 읽는다. readGrid(geminiSticks:).
+const _geminiSticks = bool.fromEnvironment('GEMINI_STICKS');
 // PHOTO_MIN·PHOTO_MAX: 사진 이름 범위 [min, max) 만 잰다(매장 오전·오후에 다른 나눔 모델을 쓰려고).
 const _photoMin = String.fromEnvironment('PHOTO_MIN');
 const _photoMax = String.fromEnvironment('PHOTO_MAX');
@@ -263,7 +265,7 @@ void main() {
                 if (dealer != null) out['dealer_side'] = dealer.name;
                 final reading = await TableReader(client, ops: _isolateOps)
                     .readGrid(shot, useGrid, rectify: rect, dealer: dealer, trace: trace, useWide: wide, wideEarly: early,
-                        wideIndicators: ind, lastHedge: ind ? const Duration(seconds: 12) : null, trackedRiichi: _localOnly ? const {} : _trackedRiichi(photo), localDora: _localDora, localOnly: _localOnly);
+                        wideIndicators: ind, lastHedge: ind ? const Duration(seconds: 12) : null, trackedRiichi: _localOnly ? const {} : _trackedRiichi(photo), localDora: _localDora, localOnly: _localOnly, geminiSticks: _geminiSticks);
                 out['local_dora'] = trace.localDora;
                 if (_trackedRiichi(photo).isNotEmpty) out['tracked_riichi'] = [for (final s in _trackedRiichi(photo)) s.name];
                 out['wide_called'] = trace.wide != null;
@@ -308,6 +310,9 @@ void main() {
                   resultValid: score?.isValid ?? false,
                   paoBase: score != null && score.isValid ? engine.paoBasePoints(score) : 0,
                   gameOver: false,
+                );
+                out['auto_cautions'] = autoRecordCautions(
+                  issues: [for (final f in merge.flags) f.issue],
                   doraIndicators: merge.situation.doraIndicators.length,
                   riichi: merge.situation.riichi,
                 );
