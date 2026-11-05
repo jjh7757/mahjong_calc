@@ -274,3 +274,27 @@ bash experiments/speed/run_baseline.sh dev <TAG>     # 홀드아웃 서버 넷 +
 U_BCD=8036 U_AM=8036 U_PMA=8036 U_PMB=8036 bash experiments/speed/run_baseline.sh dev <TAG>   # 운영과 같은 모델
 python -I -X utf8 experiments/speed/stats.py diff <A 로그들> <B 로그들>
 ```
+
+## 7-1: 세워 자른 크롭으로 분류기·역할 모델 재학습 (`harvest.py --obb`·`train.py --obb`·`role_label.py --obb`, metrics 표 1-95 기준·1-96 결과, 2026-11-06, **미채택**)
+
+운영은 8회차 회전 상자를 서버 `app/obb.upright()` 로 세워 자른 크롭을 분류기에 넣는데, 분류기는 축 상자 크롭으로 배웠다. 학습 크롭을 추론과 맞추고(같은 함수를 import, 같은 PAD), 역할 라벨을 7회차 전수 조사 상자로 다시 만들어 한 번씩 학습했다.
+
+- **크롭 모으기:** 전수 조사 상자(`data/det/obb/rects.json`, 고침 반영) 앞면 2,245개에 기존 라벨 1,550개(`data/index.json` 259 + 검토 `review.extra` 1,254 + 白 37)를 상자 IoU ≥ 0.5 로 옮김 → **1,168 크롭**(같은 패 중복 162 합침, 종류 충돌 0). 못 옮김 220 = 전수 조사 밖 사진(10-29~10-31 자정 앱 다시 읽기 'other' 219) + IoU 1. 방향은 예전 크롭과 같게(자리 크롭 = 자리 방향, harvest = 그때 고른 turn, 白 = 세로). 눈 확인: 표본 50장(`sample50.jpg`) + 적5·보통 5 99장(`check_fives.jpg`) 틀린 라벨 0.
+- **증강:** 예전 AUG 에 180° 회전(p 0.5)·JPEG 품질 q60~95(p 0.5, 정사각형으로 줄이기 전 패 해상도에서), 채도는 올리기만 (1.0, 1.2), 색상 0.02·±8°·밝기·대비·흐림·라벨 스무딩 그대로. 빨강 보존 확인(`train.py --red-check`, 서버 `signals.red_ratio`): 128px 가운데 잘라 재는 대리 지표는 채도 0.2·0·올리기만 모두 극값이 겹치고 차이는 잡음 수준 — 겹침은 밝기·대비·이동(예전부터 있던 증강) 몫(`data/harvest_obb/red_check_pct.json`).
+- **역할 라벨:** `role_label.py --obb` → `data/role/labels_obb.json`(review.json 104건 IoU 로 옮김, 지운 상자 2건 못 옮김, 124654·125839 손패 13·울기 0 유지), 옛 라벨과 같은 상자 1,364개 역할 차이 0, 새 상자 25개는 그림(`check_obb/new_boxes.jpg`)으로 보고 7개 고침(`role_label.REVIEW_OBB`). 학습은 표 1-78 과 같은 설정(`pre_synth8k_rot.pt` 를 읽어 미세 조정).
+- **결과(표 1-96):** 분류기 홀드아웃 세운 크롭 1,168/1,168 → 1,164(2m→3m·1m), 회귀 fold unsafe 26 → 43(B·C·D 울기 發→南, 축소 0.6 2p→5p — 분류기만 바꿔도 42), prod 17 → 20 → 기준 (b) 미충족, 운영 모델 그대로. 역할 모델만은 교차 검증 정답 대비 손패 장수 12 → 14/18·울기 16 → 17/18, 테스트 15장 705/706 그대로, 회귀 unsafe 26 → 27. F1400 적5만은 안 고쳐짐.
+
+```
+python -I -X utf8 experiments/tile_classifier/harvest.py --obb                 # data/harvest_obb/{crops,index.json,report.json,sheet_*,sample50.jpg}
+python -I -X utf8 experiments/tile_classifier/train.py --red-check             # 증강 뒤 적5·보통 5 빨강 비율(red_check.json)
+python -I -X utf8 experiments/tile_classifier/train.py --obb                   # cls2_{bcd,am,pm,all}{,_s1} → data/*.pt, server_bench/models/*.onnx, harvest_obb/results.json(약 30분)
+python -I -X utf8 experiments/tile_classifier/train.py --obb --eval-only       # 홀드아웃 전(cls_*)·후(cls2_*) 세운 크롭·축 크롭
+python -I -X utf8 experiments/tile_classifier/role_label.py --obb              # data/role/labels_obb.json, labels_obb_diff.json, check_obb/
+ROLE_LABELS=labels_obb.json python -I -X utf8 experiments/tile_classifier/role_set.py --feat rot --synth 8000 --synth-epochs 3 --epochs 100 --seeds 3 --pre-file pre_synth8k_rot.pt --save-folds --tag _obb
+ROLE_LABELS=labels_obb.json ROLE_TAG=_obb python -I -X utf8 experiments/tile_classifier/role_field.py score rot pre_synth8k_rot.pt   # role_all_rot_obb.pt, field/score_rot_obb.json
+python -I -X utf8 experiments/tile_classifier/role_export.py <절대경로>/data/role/role_fold_am_obb.pt <절대경로>/server_bench/models/tile-roles-rot2_fold_am.onnx --seeds-out   # pmA·pmB, role_all_rot_obb.pt → tile-roles-rot2.onnx
+bash experiments/speed/run_71.sh <TAG>          # 서버 단독: 회귀 fold·prod 전·후·분류기만·역할만 + 테스트 15장(서버 feat/cls-alt worktree ../mahjong-recognizer-s7)
+U_BCD=8063 U_AM=8064 U_PMA=8065 U_PMB=8067 bash experiments/speed/run_baseline.sh dev <TAG>   # 앱 흐름 전: launch.json recognizer-fold1-*(같은 worktree, 지금 모델)
+U_BCD=8073 U_AM=8074 U_PMA=8075 U_PMB=8077 bash experiments/speed/run_baseline.sh dev <TAG>   # 앱 흐름 후: recognizer-fold2-*(--cls-tag cls2, tile-roles-rot2*)
+U_FIELD=8066|8076 [RECOLOR=1] bash experiments/speed/run_baseline.sh field <TAG>             # 테스트 15장: recognizer-prod1(지금) / recognizer-prod2(새)
+```

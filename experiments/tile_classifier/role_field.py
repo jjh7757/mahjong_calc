@@ -207,7 +207,8 @@ def score() -> None:
     rects_dev = json.loads(rs.RECTS.read_text(encoding="utf-8")) if feat == "rot" else None
     rects_field = field_rects() if feat == "rot" else {}
     # 학습: 개발 세트 25장 전부(검토 뒤 라벨) + 합성 사전학습 가중치
-    dev_labels = json.loads((rs.OUT / "labels.json").read_text(encoding="utf-8"))
+    dev_labels = json.loads((rs.OUT / rs.LABELS).read_text(encoding="utf-8"))  # ROLE_LABELS=labels_obb.json(7-1)
+    tag = __import__("os").environ.get("ROLE_TAG", "")  # 7-1: 출력 이름 뒤에(role_all_rot<tag>.pt·score_rot<tag>.json), 기존 가중치를 덮지 않게
     dev_backs = json.loads(rs.BACKS.read_text(encoding="utf-8"))
     grids = {s["name"]: s["grid"] for s in sg.scenes()}
     tr = []
@@ -218,7 +219,7 @@ def score() -> None:
     assert pre[0].feat == rs.feat_dim(feat), (pre_file, pre[0].feat, feat)
     nets = [rs.train(tr, 100, seed, pre[seed], 3e-4) for seed in range(len(pre))]
     print("미세 조정 끝", len(nets), "특징", feat, pre_file, flush=True)
-    torch.save([n.state_dict() for n in nets], rs.OUT / f"role_all{'_rot' if feat == 'rot' else ''}.pt")  # 뒷면 포함·실제 25장 전부 미세 조정
+    torch.save([n.state_dict() for n in nets], rs.OUT / f"role_all{'_rot' if feat == 'rot' else ''}{tag}.pt")  # 뒷면 포함·실제 25장 전부 미세 조정
     (OUT / "pred").mkdir(parents=True, exist_ok=True)
     from collections import Counter
 
@@ -262,7 +263,7 @@ def score() -> None:
     print("합계 규칙", rtot, f"{sum(p['rule'] for p in per.values())}/{n}")
     print("혼동 모델", {r: dict(conf[r]) for r in ROLES})
     print("truth 손패·울기 장수 둘 다: 모델", sum(p["model_truth"] for p in per.values()), "규칙", sum(p["rule_truth"] for p in per.values()), f"/{len(per)}")
-    (OUT / f"score{'_rot' if feat == 'rot' else ''}.json").write_text(json.dumps(dict(feat=feat, pre_file=pre_file, per=per, model=tot, rule=rtot, confusion={r: dict(c) for r, c in conf.items()}), ensure_ascii=False, indent=1), encoding="utf-8")
+    (OUT / f"score{'_rot' if feat == 'rot' else ''}{tag}.json").write_text(json.dumps(dict(feat=feat, pre_file=pre_file, per=per, model=tot, rule=rtot, confusion={r: dict(c) for r, c in conf.items()}), ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 if __name__ == "__main__":

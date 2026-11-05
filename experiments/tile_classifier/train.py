@@ -49,10 +49,47 @@ AUG = T.Compose([T.RandomAffine(8, translate=(0.06, 0.06), scale=(0.9, 1.1), fil
                  T.RandomApply([T.GaussianBlur(3, (0.3, 1.2))], 0.3), T.ToTensor(), T.Normalize(MEAN, STD)])
 PLAIN = T.Compose([T.ToTensor(), T.Normalize(MEAN, STD)])
 
+# 7-1(2026-11-06): 세운 크롭(harvest.py --obb) 용 증강. 입력은 정사각형으로 만들기 전 원래 크기 크롭 —
+# JPEG 품질 지터는 서버가 받는 사진처럼 패 해상도에서(128 로 줄이기 전), 180° 회전은 강 끝 거꾸로 놓인 패(90° 는 서버가 돌려 읽으므로 안 넣음),
+# ±8° 회전·밝기·대비·흐림은 AUG 그대로, 색상 지터 0.02 그대로(빨강 보존), 채도 지터 OBB_SAT(적5·보통 5 빨강 비율이 증강 뒤에도 안 겹치는지 --red-check 로 확인).
+OBB_SAT = (1.0, 1.2)  # 채도는 올리기만(계획서 7-1 "채도는 낮추지 않기"). 0.2·0·올리기만 비교는 data/harvest_obb/red_check_pct.json — 차이는 잡음 수준, 겹침은 밝기·대비·이동 몫
+OBB_JPEG = (60, 95)
+OBB_P_JPEG, OBB_P_ROT180 = 0.5, 0.5
 
-def train(items: list[dict], images: dict, seed: int) -> nn.Module:
+
+def _jpeg(im: Image.Image) -> Image.Image:
+    import io
+    import random
+
+    if random.random() >= OBB_P_JPEG:
+        return im
+    buf = io.BytesIO()
+    im.save(buf, "JPEG", quality=random.randint(*OBB_JPEG))
+    return Image.open(io.BytesIO(buf.getvalue())).convert("RGB")
+
+
+def _rot180(im: Image.Image) -> Image.Image:
+    import random
+
+    return im.rotate(180) if random.random() < OBB_P_ROT180 else im
+
+
+def obb_pil(sat: float = OBB_SAT) -> T.Compose:
+    return T.Compose([T.Lambda(_jpeg), T.Lambda(_rot180), T.Lambda(square), T.RandomAffine(8, translate=(0.06, 0.06), scale=(0.9, 1.1), fill=114),
+                      T.ColorJitter(0.25, 0.25, sat, 0.02), T.RandomApply([T.GaussianBlur(3, (0.3, 1.2))], 0.3)])
+
+
+AUG_OBB = T.Compose([obb_pil(), T.ToTensor(), T.Normalize(MEAN, STD)])
+
+
+def train(items: list[dict], images: dict, seed: int, aug=None) -> nn.Module:
+    """aug 없으면 AUG(images = 정사각형 크롭). AUG_OBB 면 images = 원래 크기 크롭."""
+    import random
+
+    aug = aug or AUG
     torch.manual_seed(seed)
     np.random.seed(seed)
+    random.seed(seed)
     net = torchvision.models.mobilenet_v3_small(weights=torchvision.models.MobileNet_V3_Small_Weights.IMAGENET1K_V1)
     net.classifier[3] = nn.Linear(net.classifier[3].in_features, len(CLASSES))
     freq = Counter(x["tile"] for x in items)
@@ -66,7 +103,7 @@ def train(items: list[dict], images: dict, seed: int) -> nn.Module:
     for _ in range(EPOCHS):
         for _ in range(steps):
             idx = np.random.choice(len(items), 32, p=prob)
-            x = torch.stack([AUG(images[items[i]["file"]]) for i in idx])
+            x = torch.stack([aug(images[items[i]["file"]]) for i in idx])
             y = torch.tensor([CLASSES.index(items[i]["tile"]) for i in idx])
             opt.zero_grad()
             loss_fn(net(x), y).backward()
@@ -168,5 +205,168 @@ def main() -> None:
     print("총", round(time.perf_counter() - t0), "초")
 
 
+# ---------------------------------------------------------------- 7-1(2026-11-06): 세운 크롭으로 다시 학습
+OBB = DATA / "harvest_obb"
+MODELS = HERE / "server_bench" / "models"
+FIVES = ["0m", "5m", "0p", "5p", "0s", "5s"]
+RECOGNIZER_S7 = Path(r"C:\Users\jjh7757\dev\mahjong-recognizer-s7")  # feat/cls-alt worktree(signals.red_ratio)
+
+
+def obb_index() -> tuple[list[dict], dict]:
+    """harvest.py --obb 결과. images = 원래 크기 크롭(AUG_OBB 가 JPEG 지터 뒤 정사각형으로 만든다). part bcd·am·pm(B·C·D·오전·오후)."""
+    idx = json.loads((OBB / "index.json").read_text(encoding="utf-8"))
+    for x in idx:
+        x["file"] = "o_" + x["file"]
+        x["scene"] = x["photo"]
+    return idx, {x["file"]: Image.open(OBB / "crops" / x["file"][2:]).convert("RGB") for x in idx}
+
+
+def red_check(n_aug: int = 30) -> dict:
+    """증강이 적5 를 보통 5 처럼 만들지 않는지: 0x·5x 크롭마다 증강을 n_aug 번 입혀 서버 signals.red_ratio 를 잰다(정사각형 회색 바탕은 잉크 아님)."""
+    import random
+
+    sys.path.insert(0, str(RECOGNIZER_S7))
+    from app import signals as sg
+
+    idx, images = obb_index()
+    random.seed(0)
+    torch.manual_seed(0)
+    out = {}
+    for sat in (OBB_SAT,):
+        pil = obb_pil(sat)
+        d: dict = {}
+        for x in idx:
+            if x["tile"] not in FIVES:
+                continue
+            im = images[x["file"]]
+            raw = sg.red_ratio(im)
+            aug = [sg.red_ratio(pil(im)) for _ in range(n_aug)]
+            aug = [r for r in aug if r is not None]
+            k = d.setdefault(x["tile"], {"raw": [], "aug": []})
+            if raw is not None:
+                k["raw"].append(raw)
+            k["aug"] += aug
+        res = {}
+        for c in "mps":
+            r0, r5 = d.get(f"0{c}", {"raw": [], "aug": []}), d.get(f"5{c}", {"raw": [], "aug": []})
+            res[c] = {"적5 최소 원본": min(r0["raw"], default=None), "보통5 최대 원본": max(r5["raw"], default=None),
+                      "적5 최소 증강": min(r0["aug"], default=None), "보통5 최대 증강": max(r5["aug"], default=None),
+                      "적5 증강 1%": float(np.percentile(r0["aug"], 1)) if r0["aug"] else None,
+                      "보통5 증강 99%": float(np.percentile(r5["aug"], 99)) if r5["aug"] else None,
+                      "적5 크롭": len(r0["raw"]), "보통5 크롭": len(r5["raw"]), "증강 수": n_aug}
+            res[c]["겹침"] = (res[c]["적5 최소 증강"] is not None and res[c]["보통5 최대 증강"] is not None
+                            and res[c]["적5 최소 증강"] <= res[c]["보통5 최대 증강"])
+        out[f"sat{sat}"] = res
+    print(json.dumps(out, ensure_ascii=False, indent=1))
+    (OBB / "red_check.json").write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
+    return out
+
+
+def export(net: nn.Module, path: Path) -> None:
+    torch.onnx.export(net.eval(), torch.zeros(1, 3, SIZE, SIZE), path, input_names=["x"], output_names=["y"],
+                      dynamic_axes={"x": {0: "n"}, "y": {0: "n"}}, opset_version=17, dynamo=False)
+
+
+def onnx_pred(path: Path, ims: list[Image.Image]) -> list[str]:
+    """서버 LocalReader._tensor 와 같은 전처리(square + ImageNet 정규화)로 ONNX 1순위."""
+    import onnxruntime as ort
+
+    sess = ort.InferenceSession(str(path), providers=["CPUExecutionProvider"])
+    out = []
+    for i in range(0, len(ims), 64):
+        x = np.stack([PLAIN(square(im)).numpy() for im in ims[i:i + 64]])
+        out += [CLASSES[k] for k in sess.run(None, {sess.get_inputs()[0].name: x})[0].argmax(1)]
+    return out
+
+
+def five_confusion(truth: list[str], pred: list[str]) -> dict:
+    """패 단위 혼동 행렬의 0x↔5x 칸(7-1 기준 d)."""
+    c = Counter((t, p) for t, p in zip(truth, pred) if t in FIVES or p in FIVES)
+    return {"적5→5": sum(c[(f"0{s}", f"5{s}")] for s in "mps"), "5→적5": sum(c[(f"5{s}", f"0{s}")] for s in "mps"),
+            "칸": {f"{t}→{p}": n for (t, p), n in sorted(c.items()) if t != p}}
+
+
+def holdout_eval() -> dict:
+    """나눔 분류기 전(cls_<part>.onnx, 축 크롭으로 학습) · 후(cls2_<part>{,_s1}.onnx)를 같은 홀드아웃 크롭 두 벌로:
+    세운 크롭(harvest_obb, 운영 입력과 같은 모양) part == 나눔, 옛 축 크롭(data/index.json part + review.extra half) == 나눔."""
+    sys.path.insert(0, str(HERE))
+    import review as rw
+
+    idx, images = obb_index()
+    base = json.loads((DATA / "index.json").read_text(encoding="utf-8"))
+    add = rw.extra()
+    old_imgs = {x["file"]: Image.open(CROPS / x["file"]).convert("RGB") for x in base}
+    old_imgs.update({x["file"]: Image.open(x["path"]).convert("RGB") for x in add})
+    res: dict = {}
+    for crops in ("obb", "axis"):
+        for tag in ("cls", "cls_s1", "cls2", "cls2_s1"):
+            truth, pred, per = [], [], {}
+            for part in ("bcd", "am", "pm"):
+                if crops == "obb":
+                    held = [x for x in idx if x["part"] == part]
+                    ims = [images[x["file"]] for x in held]
+                else:
+                    held = [x for x in base if x["part"] == part] + [x for x in add if x["half"] == part]
+                    ims = [old_imgs[x["file"]] for x in held]
+                name = tag.replace("_s1", "") + f"_{part}" + ("_s1" if tag.endswith("_s1") else "")
+                path = MODELS / f"{name}.onnx"
+                if not path.exists():
+                    continue
+                p = onnx_pred(path, ims)
+                t = [x["tile"] for x in held]
+                per[part] = f"{sum(a == b for a, b in zip(p, t))}/{len(t)}"
+                truth += t
+                pred += p
+            if truth:
+                res[f"{crops}/{tag}"] = {"패": f"{sum(a == b for a, b in zip(pred, truth))}/{len(truth)}", "나눔별": per, **five_confusion(truth, pred),
+                                         "틀린 것": Counter(f"{a}→{b}" for a, b in zip(truth, pred) if a != b).most_common(12)}
+    return res
+
+
+def main_obb() -> None:
+    """  python -I -X utf8 experiments/tile_classifier/train.py --obb [--only bcd,am,pm,all] [--seeds 0,1] [--eval-only] [--red-check]
+    나눔 cls2_<part>(part 가 아닌 세운 크롭으로) · 전부 cls2_all, 씨드 0 = 주 분류기, 씨드 1 = 두 번째 분류기(_s1, 불확실성 S3).
+    결과 data/cls2_*.pt, server_bench/models/cls2_*.onnx, data/harvest_obb/results.json(학습 기록 + 홀드아웃 전·후)."""
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--obb", action="store_true")
+    ap.add_argument("--only", default="bcd,am,pm,all")
+    ap.add_argument("--seeds", default="0,1")
+    ap.add_argument("--eval-only", action="store_true")
+    ap.add_argument("--red-check", action="store_true")
+    a = ap.parse_args()
+    sys.stdout.reconfigure(encoding="utf-8")
+    torch.set_num_threads(12)
+    if a.red_check:
+        red_check()
+        return
+    out_p = OBB / "results.json"
+    res = json.loads(out_p.read_text(encoding="utf-8")) if out_p.exists() else {}
+    res.setdefault("train", {})
+    if not a.eval_only:
+        idx, images = obb_index()
+        for part in a.only.split(","):
+            for seed in (int(s) for s in a.seeds.split(",")):
+                name = f"cls2_{part}" + (f"_s{seed}" if seed else "")
+                dst = MODELS / f"{name}.onnx"
+                if dst.exists():
+                    print("있음(재학습 안 함)", dst, flush=True)
+                    continue
+                pool = idx if part == "all" else [x for x in idx if x["part"] != part]
+                t0 = time.perf_counter()
+                net = train(pool, images, seed, AUG_OBB)
+                torch.save(net.state_dict(), DATA / f"{name}.pt")
+                export(net, dst)
+                res["train"][name] = dict(n=len(pool), seed=seed, secs=round(time.perf_counter() - t0), sat=OBB_SAT, jpeg=list(OBB_JPEG),
+                                          p_jpeg=OBB_P_JPEG, p_rot180=OBB_P_ROT180, epochs=EPOCHS, finished=time.strftime("%Y-%m-%d %H:%M:%S"))
+                print(name, res["train"][name], flush=True)
+                out_p.write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+    res["holdout"] = holdout_eval()
+    res["holdout_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    out_p.write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(json.dumps(res["holdout"], ensure_ascii=False, indent=1))
+
+
 if __name__ == "__main__":
-    main()
+    main_obb() if "--obb" in sys.argv or "--red-check" in sys.argv else main()

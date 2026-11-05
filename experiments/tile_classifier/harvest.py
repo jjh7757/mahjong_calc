@@ -150,5 +150,145 @@ def main() -> None:
     print("총", round(time.perf_counter() - t0), "초")
 
 
+# ---------------------------------------------------------------- 7-1: 회전 상자로 세워 자른 크롭(2026-11-06)
+OBB_OUT = DATA / "harvest_obb"
+OBB_IOU = 0.5  # 기존 라벨 상자 ↔ 전수 조사 상자(축) IoU 이 이상이면 같은 패
+
+
+def _unrotate(b, side: str, cw: int, ch: int) -> tuple[float, float, float, float]:
+    """seat_grow.crop 이 돌린 자리 크롭(rotate(-ROT_CW[side], expand)) 의 상자 → 돌리기 전 크롭 좌표. cw·ch = 돌리기 전 크기."""
+    x, y, w, h = b
+    r = {"bottom": 0, "right": 90, "top": 180, "left": 270}[side]
+    if r == 0:
+        return x, y, w, h
+    if r == 90:  # 시계 90: x' = ch - y, y' = x
+        return y, ch - (x + w), h, w
+    if r == 180:
+        return cw - (x + w), ch - (y + h), w, h
+    return cw - (y + h), x, h, w  # 시계 270(= 반시계 90): x' = y, y' = cw - x
+
+
+def obb_labels() -> list[dict]:
+    """기존 라벨 전부를 원본 사진 좌표 상자로: data/index.json(자리 크롭 좌표) + review.extra(harvest 원본 좌표, 돌린 방향 turn) + 白(blank).
+    turn = 원본 방향 크롭에 PIL rotate(turn, expand) 하면 예전 학습 크롭과 같은 방향."""
+    import review as rw
+
+    sys.path.insert(0, str(ROOT / "experiments" / "speed"))
+    import seat_grow as sg
+
+    out = []
+    for x in json.loads((DATA / "index.json").read_text(encoding="utf-8")):
+        W, H = x["photo"]
+        y0, x0, y1, x1 = x["seat_box"]
+        X0, Y0, X1, Y1 = round(x0 * W / 1000), round(y0 * H / 1000), round(x1 * W / 1000), round(y1 * H / 1000)
+        bx, by, bw, bh = _unrotate(x["box"], x["side"], X1 - X0, Y1 - Y0)
+        out.append(dict(src="base", ref=x["file"], photo=x["scene"], box=[X0 + bx, Y0 + by, bw, bh], tile=x["tile"], part=x["part"],
+                        turn=-sg.ROT_CW[x["side"]], kind=x["kind"]))
+    hv = {r["file"]: r for r in json.loads((OUT / "index.json").read_text(encoding="utf-8"))}
+    bl = {r["file"]: r for r in json.loads((OUT / "blank/index.json").read_text(encoding="utf-8"))}
+    for x in rw.extra():
+        if x["file"].startswith("h_"):
+            r = hv[x["file"][2:]]
+            out.append(dict(src="extra", ref=x["file"], photo=x["photo"], box=r["box"], tile=x["tile"], part=x["half"], turn=90 * r["turn"], kind="any"))
+        else:
+            r = bl[x["file"][2:]]
+            out.append(dict(src="blank", ref=x["file"], photo=x["photo"], box=r["box"], tile=x["tile"], part=x["half"], turn=None, kind="any"))
+    return out
+
+
+def main_obb() -> None:
+    """7회차 전수 조사 회전 상자(data/det/obb/rects.json, audit/fixes.json 반영됨)를 서버 app/obb.upright(같은 PAD)로 세워 자른다 — 학습 = 추론.
+    라벨은 기존 라벨 상자와 IoU 로 옮긴다(못 옮긴 라벨은 버리고 센다). 한 상자에 라벨이 둘 이상이면(base·extra 가 같은 패) 하나로, 종류가 다르면 base 를 쓰고 기록.
+      python -I -X utf8 experiments/tile_classifier/harvest.py --obb
+    결과 data/harvest_obb/{crops/*.jpg, index.json, report.json, sheet_<종류>_<n>.jpg, sample50.jpg}"""
+    import random
+
+    from app import local_read as lr
+    from app import obb
+
+    sys.stdout.reconfigure(encoding="utf-8")
+    crops = OBB_OUT / "crops"
+    crops.mkdir(parents=True, exist_ok=True)
+    rects = json.loads((DATA / "det/obb/rects.json").read_text(encoding="utf-8"))
+    labels = obb_labels()
+    by_photo = defaultdict(list)
+    for x in labels:
+        by_photo[x["photo"]].append(x)
+    rows, lost, conflicts, ious = [], Counter(), [], []
+    for name, v in rects.items():
+        rgb = np.asarray(Image.open(v["path"]).convert("RGB"))
+        faces = [it for it in v["items"] if it["cls"] == 0]
+        got: dict[int, list] = defaultdict(list)
+        for x in by_photo.get(name, []):
+            best = max(range(len(faces)), key=lambda i: iou(faces[i]["box"], x["box"]), default=None)
+            q = iou(faces[best]["box"], x["box"]) if best is not None else 0.0
+            if q < OBB_IOU:
+                lost[x["src"]] += 1
+                continue
+            ious.append(q)
+            got[best].append(x)
+        for i, xs in sorted(got.items()):
+            xs.sort(key=lambda x: {"base": 0, "extra": 1, "blank": 2}[x["src"]])
+            x = xs[0]
+            if len({y["tile"] for y in xs}) > 1:
+                conflicts.append(dict(photo=name, box=faces[i]["box"], labels=[(y["src"], y["ref"], y["tile"]) for y in xs]))
+            it = faces[i]
+            (cx, cy), (w, h), a = it["rect"]
+            im = obb.upright(rgb, ((cx, cy), (w, h), a), lr.PAD)
+            turn = x["turn"]
+            if turn is None:  # 白: 세로로
+                turn = 90 if im.width > 1.15 * im.height else 0
+            if turn % 360:
+                im = im.rotate(turn, expand=True)
+            f = f"{len(rows):05d}.jpg"
+            im.save(crops / f, quality=95)
+            rows.append(dict(id=len(rows), file=f, photo=name, tile=x["tile"], part=x["part"], src=x["src"], ref=x["ref"], kind=x["kind"],
+                             key=it["key"], status=it["status"], angle=round(float(it["angle"]), 1), n_labels=len(xs), turn=turn))
+        print(name, "앞면 상자", len(faces), "라벨", len(by_photo.get(name, [])), "옮김", len(got), flush=True)
+    for name in set(by_photo) - set(rects):
+        lost["사진 없음 " + by_photo[name][0]["part"]] += len(by_photo[name])
+    rep = dict(labels=len(labels), labels_by_src=dict(Counter(x["src"] for x in labels)), crops=len(rows), by_part=dict(Counter(r["part"] for r in rows)),
+               by_src=dict(Counter(r["src"] for r in rows)), lost=dict(lost), conflicts=conflicts, iou_min=round(min(ious), 3) if ious else None,
+               iou_median=round(statistics.median(ious), 3) if ious else None, merged=sum(r["n_labels"] - 1 for r in rows),
+               tiles=dict(sorted(Counter(r["tile"] for r in rows).items())), not_axis=sum(r["status"] != "axis" for r in rows))
+    (OBB_OUT / "index.json").write_text(json.dumps(rows, ensure_ascii=False, indent=1), encoding="utf-8")
+    (OBB_OUT / "report.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(json.dumps({k: v for k, v in rep.items() if k != "conflicts"}, ensure_ascii=False))
+    print("종류 다름", len(conflicts), conflicts[:20])
+    obb_sheets(rows, crops)
+    random.seed(20261106)
+    sample_sheet(random.sample(rows, 50), crops, OBB_OUT / "sample50.jpg")
+
+
+def obb_sheets(rows: list[dict], crops: Path, cell: int = 76, cols: int = 16, lines: int = 9) -> None:
+    groups = defaultdict(list)
+    for r in rows:
+        groups[r["tile"]].append(r)
+    for g, v in groups.items():
+        for k in range(0, len(v), cols * lines):
+            part = v[k:k + cols * lines]
+            im = Image.new("RGB", (cols * cell, (len(part) // cols + 1) * (cell + 14)), "white")
+            d = ImageDraw.Draw(im)
+            for i, r in enumerate(part):
+                t = Image.open(crops / r["file"])
+                t.thumbnail((cell, cell))
+                x, y = (i % cols) * cell, (i // cols) * (cell + 14)
+                im.paste(t, (x, y))
+                d.text((x + 1, y + cell), str(r["id"]), fill="blue")
+            im.save(OBB_OUT / f"sheet_{g}_{k // (cols * lines)}.jpg", quality=88)
+
+
+def sample_sheet(rows: list[dict], crops: Path, dst: Path, cell: int = 150, cols: int = 10) -> None:
+    im = Image.new("RGB", (cols * cell, (len(rows) + cols - 1) // cols * (cell + 26)), "white")
+    d = ImageDraw.Draw(im)
+    for i, r in enumerate(rows):
+        t = Image.open(crops / r["file"])
+        t.thumbnail((cell, cell))
+        x, y = (i % cols) * cell, (i // cols) * (cell + 26)
+        im.paste(t, (x, y))
+        d.text((x + 2, y + cell + 2), f"{i} #{r['id']} {r['tile']}", fill="red")
+    im.save(dst, quality=90)
+
+
 if __name__ == "__main__":
-    main()
+    main_obb() if "--obb" in sys.argv else main()

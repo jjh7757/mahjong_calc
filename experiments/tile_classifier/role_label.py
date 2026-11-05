@@ -5,7 +5,7 @@
   loose(떼어 둔 패) · other(모름, 학습에서 뺌)
 규칙으로 만든 라벨이라 규칙이 틀린 곳은 틀리다. 그림 data/role/check/<이름>.jpg 로 확인하고 review.json 으로 고친다.
 
-  python -I -X utf8 experiments/tile_classifier/role_label.py
+  python -I -X utf8 experiments/tile_classifier/role_label.py [--obb]   # --obb(7-1, 2026-11-06): 앞면 = 7회차 전수 조사 상자, review.json 은 IoU 로 옮김 → labels_obb.json
 결과 data/role/labels.json
 """
 from __future__ import annotations
@@ -167,10 +167,83 @@ def label_scene(s: dict, rgb: np.ndarray) -> list[dict]:
     return [dict(box=list(b), u=round(u), v=round(v), role=r, seat=sd) for b, (u, v), r, sd in zip(boxes, cen, roles, seat)]
 
 
+def iou(a, b) -> float:
+    ix = max(0, min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0]))
+    iy = max(0, min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1]))
+    i = ix * iy
+    return i / (a[2] * a[3] + b[2] * b[3] - i + 1e-9)
+
+
+# --obb 로 새로 생긴 앞면 상자 25개(전수 조사 고침)를 data/role/check_obb/new_boxes.jpg 로 눈 확인(2026-11-06)하고 규칙 역할이 틀리거나
+# 정답(truth.json)으로 못 가리는 7개만 고침. 인덱스 = labels_obb.json. 134815 66·67: 화료자(아래) 손패가 아닌 왼쪽 아래 모서리, 정답에 白 없음 → other.
+# 170105 53: 리치 표시패 짝 두 장 중 하나(옛 라벨 pair). 172424 72: 손가락에 갈린 손패 줄 안. 183022 66~68: 오른쪽 사람 모서리, 이웃 옛 라벨 other.
+REVIEW_OBB = {"20261031_134815": {"66": "other", "67": "other"}, "20261031_170105": {"53": "pair"}, "20261031_172424": {"72": "hand"},
+              "20261031_183022": {"66": "other", "67": "other", "68": "other"}}
+
+
+def obb_boxes() -> dict:
+    """7-1(2026-11-06) --obb: 앞면 상자를 7회차 전수 조사 라벨(data/det/obb/rects.json 앞면, audit/fixes.json 반영)의 축 상자로. 크기는 boxes_r2 와 같은 사진."""
+    rects = json.loads((HERE / "data/det/obb/rects.json").read_text(encoding="utf-8"))
+    return {k: dict(size=BOXES[k]["size"], boxes=[it["box"] for it in v["items"] if it["cls"] == 0]) for k, v in rects.items() if k in BOXES}
+
+
+def move_review(review: dict, new: dict, thr: float = 0.5) -> tuple[dict, list]:
+    """review.json(옛 boxes_r2 인덱스) → 새 상자 인덱스. 옛 상자와 IoU 가 가장 큰 새 상자(thr 이상)로 옮기고, 못 옮긴 것은 목록으로."""
+    out, lost = {}, []
+    for name, fixes in review.items():
+        if name.startswith("_") or name not in new:
+            continue
+        old_b, new_b = BOXES[name]["boxes"], new[name]["boxes"]
+        for k, v in fixes.items():
+            ob = old_b[int(k)]
+            j = max(range(len(new_b)), key=lambda i: iou(new_b[i], ob))
+            if iou(new_b[j], ob) >= thr:
+                out.setdefault(name, {})[str(j)] = v
+            else:
+                lost.append((name, k, v))
+    return out, lost
+
+
+def compare_old(new_out: dict) -> dict:
+    """옛 labels.json 과 새(--obb) 라벨의 차이: 같은 패(IoU ≥ 0.5)인데 역할이 다른 수, 짝 없는 상자 수."""
+    old = json.loads((OUT / "labels.json").read_text(encoding="utf-8"))
+    diff, only_old, only_new, same, rows = 0, 0, 0, 0, []
+    for name, rec in new_out.items():
+        o_items = old[name]["items"]
+        used = set()
+        for i, it in enumerate(rec["items"]):
+            j = max(range(len(o_items)), key=lambda k: iou(o_items[k]["box"], it["box"]), default=None)
+            if j is None or iou(o_items[j]["box"], it["box"]) < 0.5:
+                only_new += 1
+                rows.append((name, i, "새 상자", it["role"]))
+                continue
+            used.add(j)
+            if o_items[j]["role"] == it["role"]:
+                same += 1
+            else:
+                diff += 1
+                rows.append((name, i, o_items[j]["role"], it["role"]))
+        only_old += len(o_items) - len(used)
+    return dict(same=same, role_diff=diff, only_new=only_new, only_old=only_old, rows=rows)
+
+
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
-    (OUT / "check").mkdir(parents=True, exist_ok=True)
+    use_obb = "--obb" in sys.argv
+    global BOXES
+    check_dir = OUT / ("check_obb" if use_obb else "check")
+    check_dir.mkdir(parents=True, exist_ok=True)
     review = json.loads((OUT / "review.json").read_text(encoding="utf-8")) if (OUT / "review.json").exists() else {}
+    if use_obb:
+        new = obb_boxes()
+        review, lost = move_review(review, new)
+        print("review 옮김", sum(len(v) for v in review.values()), "못 옮김", lost, flush=True)
+        extra = REVIEW_OBB
+        for name, fixes in extra.items():  # 새 상자 눈 확인 고침(새 인덱스)
+            if not name.startswith("_"):
+                review.setdefault(name, {}).update(fixes)
+        print("review_obb 고침", sum(len(v) for k, v in extra.items() if not k.startswith("_")), flush=True)
+        BOXES = {**BOXES, **new}
     out = {}
     total = {r: 0 for r in ROLES}
     for s in sg.scenes():
@@ -189,12 +262,20 @@ def main() -> None:
             x, y, w, h = it["box"]
             d.rectangle((x, y, x + w, y + h), outline=COLORS[it["role"]], width=5)
             d.text((x, y - 28), f"{i}", fill=COLORS[it["role"]])
-        im.resize((im.width // 2, im.height // 2)).save(OUT / "check" / f"{s['name']}.jpg", quality=80)
+        im.resize((im.width // 2, im.height // 2)).save(check_dir / f"{s['name']}.jpg", quality=80)
         c = {r: sum(1 for it in items if it["role"] == r) for r in ROLES}
         for r in ROLES:
             total[r] += c[r]
         print(s["name"], s["side"], {r: n for r, n in c.items() if n}, flush=True)
     print("합계", total)
+    if use_obb:  # 옛 labels.json 은 그대로 두고 새 파일로(role_set.py·role_field.py 는 ROLE_LABELS=labels_obb.json 로 읽음)
+        (OUT / "labels_obb.json").write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
+        cmp = compare_old(out)
+        (OUT / "labels_obb_diff.json").write_text(json.dumps(cmp, ensure_ascii=False, indent=1), encoding="utf-8")
+        print("옛 라벨 대비", {k: v for k, v in cmp.items() if k != "rows"})
+        for r in cmp["rows"]:
+            print("  ", r)
+        return
     (OUT / "labels.json").write_text(json.dumps(out, ensure_ascii=False), encoding="utf-8")
 
 

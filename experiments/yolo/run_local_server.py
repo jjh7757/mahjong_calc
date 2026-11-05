@@ -25,12 +25,14 @@ ap.add_argument("--seat-det", default="", help="--local-fold 와 함께: 자리 
 ap.add_argument("--other-det", default="", help="강·표시패 검출도 자리 판독 검출기로: obb(감싸는 축 상자) | obb-up(+세워 자르기). 비우면 2회차(LOCAL_DET_MODEL)")
 ap.add_argument("--role-model", default="", help="역할 모델(/v2/localroles): 서버 assets 안 파일 이름(예: tile-roles-rot.onnx) 또는 "
                 "server_bench/models 안 이름(예: tile-roles-rot_fold_am.onnx = 오전을 안 배운 교차 검증 가중치, 개선 계획 2단계). 비우면 서버 기본")
+ap.add_argument("--cls-tag", default="cls", help="분류기 이름 앞(7-1, 2026-11-06): cls2 = 세운 크롭 재학습(server_bench/models/cls2_<나눔>{,_s1}.onnx). "
+                "--local-fold 없이 cls2 면 운영 자리에 cls2_all·cls2_all_s1")
 a = ap.parse_args()
 if a.other_det:
     os.environ["LOCAL_OTHER_DET"] = a.other_det
 if a.role_model:
     _bench = f"C:/Users/jjh7757/dev/mahjong_calc/experiments/tile_classifier/server_bench/models/{a.role_model}"
-    os.environ["LOCAL_ROLE_MODEL"] = _bench if "_fold_" in a.role_model else f"{a.repo}/app/assets/{a.role_model}"
+    os.environ["LOCAL_ROLE_MODEL"] = _bench if "_fold_" in a.role_model or os.path.exists(_bench) else f"{a.repo}/app/assets/{a.role_model}"
     if not os.path.exists(os.environ["LOCAL_ROLE_MODEL"]):
         raise SystemExit(f"역할 모델 없음: {os.environ['LOCAL_ROLE_MODEL']}")
     print("역할 모델", os.environ["LOCAL_ROLE_MODEL"], flush=True)
@@ -39,12 +41,18 @@ if a.local_fold:
     _det, _cls = a.local_fold.split(",")
     _models = "C:/Users/jjh7757/dev/mahjong_calc/experiments/tile_classifier/server_bench/models"
     os.environ["LOCAL_DET_MODEL"] = f"{_models}/det_fold_{_det}.onnx"
-    os.environ["LOCAL_CLS_MODEL"] = f"{_models}/cls_{_cls}.onnx"
+    os.environ["LOCAL_CLS_MODEL"] = f"{_models}/{a.cls_tag}_{_cls}.onnx"
     # 불확실성 신호 S3 의 두 번째 분류기(같은 나눔·씨드 1 = 이 사진을 안 배움, 개선 계획 5단계 prep_alt_cls.py). 서버 코드가 신호를 안 내면 안 쓴다
-    if os.path.exists(f"{_models}/cls_{_cls}_s1.onnx"):
-        os.environ["LOCAL_ALT_CLS_MODEL"] = f"{_models}/cls_{_cls}_s1.onnx"
+    if os.path.exists(f"{_models}/{a.cls_tag}_{_cls}_s1.onnx"):
+        os.environ["LOCAL_ALT_CLS_MODEL"] = f"{_models}/{a.cls_tag}_{_cls}_s1.onnx"
     if a.seat_det:
         os.environ["LOCAL_SEAT_MODEL"] = f"{_models}/{a.seat_det}_fold_{_det}.onnx"
+if a.cls_tag != "cls" and not a.local_fold:  # 운영 자리에 새 분류기(7-1)
+    _models = "C:/Users/jjh7757/dev/mahjong_calc/experiments/tile_classifier/server_bench/models"
+    os.environ["LOCAL_CLS_MODEL"] = f"{_models}/{a.cls_tag}_all.onnx"
+    os.environ["LOCAL_ALT_CLS_MODEL"] = f"{_models}/{a.cls_tag}_all_s1.onnx"
+if a.cls_tag != "cls" or a.local_fold:
+    print("분류기", os.environ.get("LOCAL_CLS_MODEL"), os.environ.get("LOCAL_ALT_CLS_MODEL"), flush=True)
 load_dotenv("C:/Users/jjh7757/Downloads/부트캠프/.env")
 os.environ.setdefault("GEMINI_THINKING", "low")
 os.environ.setdefault("RATE_PER_MIN", "1000")

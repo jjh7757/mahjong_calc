@@ -611,6 +611,196 @@
       ],
       "port": 8777,
       "autoPort": false
+    },
+    {
+      "name": "recognizer-fold1-bcd",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8063",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s7",
+        "--local-fold",
+        "a,bcd",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot.onnx"
+      ],
+      "port": 8063,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-fold1-am",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8064",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s7",
+        "--local-fold",
+        "b,am",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot_fold_am.onnx"
+      ],
+      "port": 8064,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-fold1-pmA",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8065",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s7",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot_fold_pmA.onnx"
+      ],
+      "port": 8065,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-fold1-pmB",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8067",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s7",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot_fold_pmB.onnx"
+      ],
+      "port": 8067,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-fold2-bcd",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8073",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s7",
+        "--local-fold",
+        "a,bcd",
+        "--seat-det",
+        "det_r8",
+        "--cls-tag",
+        "cls2",
+        "--role-model",
+        "tile-roles-rot2.onnx"
+      ],
+      "port": 8073,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-fold2-am",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8074",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s7",
+        "--local-fold",
+        "b,am",
+        "--seat-det",
+        "det_r8",
+        "--cls-tag",
+        "cls2",
+        "--role-model",
+        "tile-roles-rot2_fold_am.onnx"
+      ],
+      "port": 8074,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-fold2-pmA",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8075",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s7",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--cls-tag",
+        "cls2",
+        "--role-model",
+        "tile-roles-rot2_fold_pmA.onnx"
+      ],
+      "port": 8075,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-fold2-pmB",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8077",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s7",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--cls-tag",
+        "cls2",
+        "--role-model",
+        "tile-roles-rot2_fold_pmB.onnx"
+      ],
+      "port": 8077,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-prod1",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8066",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s7"
+      ],
+      "port": 8066,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-prod2",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8076",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s7",
+        "--cls-tag",
+        "cls2",
+        "--role-model",
+        "tile-roles-rot2.onnx"
+      ],
+      "port": 8076,
+      "autoPort": false
     }
   ]
 }

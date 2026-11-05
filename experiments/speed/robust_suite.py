@@ -356,6 +356,10 @@ def sheets(root: Path, names: list[str], ss: list[dict]) -> None:
 
 # ---------------------------------------------------------------- 채점
 FOLD_ROLE = {"bcd": "tile-roles-rot.onnx", "am": "tile-roles-rot_fold_am.onnx", "pmA": "tile-roles-rot_fold_pmA.onnx", "pmB": "tile-roles-rot_fold_pmB.onnx"}
+# 7-1(2026-11-06): 새 분류기·역할 모델로 fold 를 재려면 ROBUST_CLS=cls2(server_bench/models/cls2_<part>{,_s1}.onnx),
+# ROBUST_ROLE=tile-roles-rot2(server_bench/models/tile-roles-rot2{,_fold_*}.onnx — bcd 는 전부 학습 모델). prod 는 서버 env LOCAL_CLS_MODEL·LOCAL_ALT_CLS_MODEL·LOCAL_ROLE_MODEL.
+CLS_TAG = os.environ.get("ROBUST_CLS", "cls")
+ROLE_TAG = os.environ.get("ROBUST_ROLE", "tile-roles-rot")
 
 
 def fold_of(name: str, meta: dict) -> tuple[str, str, str]:
@@ -391,9 +395,10 @@ class Readers:
         det, part, role = fold_of(name, self.meta)
         key = (det, part, role)
         # cls2 = 불확실성 신호 S3 의 두 번째 분류기(같은 나눔·씨드 1, 이 사진을 안 배움 — 개선 계획 5단계, prep_alt_cls.py)
-        files = {"det": f"det_fold_{det}.onnx", "seat": f"det_r8_fold_{det}.onnx", "cls": f"cls_{part}.onnx", "role": FOLD_ROLE[role], "cls2": f"cls_{part}_s1.onnx"}
+        files = {"det": f"det_fold_{det}.onnx", "seat": f"det_r8_fold_{det}.onnx", "cls": f"{CLS_TAG}_{part}.onnx", "role": FOLD_ROLE[role].replace("tile-roles-rot", ROLE_TAG, 1),
+                 "cls2": f"{CLS_TAG}_{part}_s1.onnx"}
         if key not in self.cache:
-            role_path = MODELS / files["role"] if "_fold_" in files["role"] else REPO / "app" / "assets" / files["role"]
+            role_path = MODELS / files["role"] if "_fold_" in files["role"] or (MODELS / files["role"]).exists() else REPO / "app" / "assets" / files["role"]
             for f in (MODELS / files["det"], MODELS / files["seat"], MODELS / files["cls"], role_path):
                 if not f.exists():
                     raise SystemExit(f"모델 없음: {f} — experiments/tile_classifier/README.md 끝 절 명령으로 다시 만든다")
@@ -414,8 +419,22 @@ def judge(hand: list[str], melds: list[str], block: bool, want_hand: list[str], 
     ok = bool(hand) and sorted(hand) == sorted(want_hand) and key(melds) == key(want_melds)
     passed = bool(hand) and hy.check(hand, [m.split() for m in melds])[0]
     have, want = Counter(hand + meld_tiles(melds)), Counter(want_hand + meld_tiles(want_melds))
-    return {"ok": ok, "check": passed, "unsafe": passed and not ok, "bad_auto": passed and not ok and not block,
-            "hit": sum((have & want).values()), "want": sum(want.values())}
+    out = {"ok": ok, "check": passed, "unsafe": passed and not ok, "bad_auto": passed and not ok and not block,
+           "hit": sum((have & want).values()), "want": sum(want.values())}
+    out.update(app_flags({**out, "hand": hand, "melds": melds, "block": block, "want_hand": want_hand, "want_melds": want_melds}))
+    return out
+
+
+def app_flags(r: dict) -> dict:
+    """앱과 같은 unsafe(2026-11-06, 개선 계획 5단계 검토 ①·7-1): 정답은 14장(쯔모·떼어 둔 화료패)인데 13장 텐파이로 읽은 것(화료패 누락)은
+    앱에선 론으로 보고 화료패를 강 끝·대기패로 정하며 경고가 붙으므로 '경고 있음' — unsafe_app·bad_auto_app 에서 뺀다.
+    론 장면(자리 정답이 13장)의 13장 오독은 그대로 unsafe_app. 옛 unsafe·bad_auto 열은 그대로(표 1-91·1-93 숫자 유지).
+    정답 장수를 모르는 옛 행(want_hand 없음)은 빼지 않는다."""
+    n = len(r["hand"]) + 3 * len(r["melds"])
+    nw = len(r["want_hand"]) + 3 * len(r["want_melds"]) if "want_hand" in r else None
+    miss = bool(r["unsafe"]) and n == 13 and nw == 14
+    u = bool(r["unsafe"]) and not miss
+    return {"tenpai13": miss, "unsafe_app": u, "bad_auto_app": u and not r["block"]}
 
 
 def felt_grids(root: Path) -> dict:
@@ -512,9 +531,27 @@ def summary(rows: dict) -> dict:
         t["want"] += w * r["want"]
         t["unsafe"] += w * r["unsafe"]
         t["bad_auto"] += w * r["bad_auto"]
+        f = r if "unsafe_app" in r else app_flags(r)
+        t["unsafe_app"] += w * f["unsafe_app"]
+        t["bad_auto_app"] += w * f["bad_auto_app"]
         t["err"] += w * bool(r.get("err"))
         t[f"grid_{r['grid_src']}"] += w
     return dict(t)
+
+
+def red_confusion(r: dict) -> Counter:
+    """적5↔5 혼동(7-1 기준 d): 색마다 정답보다 0x 가 모자라고 5x 가 남으면 그만큼 적5→5, 반대면 5→적5. 손패 + 울기."""
+    out = Counter()
+    if "want_hand" not in r:
+        return out
+    have = Counter(r["hand"] + meld_tiles(r["melds"]))
+    want = Counter(r["want_hand"] + meld_tiles(r["want_melds"]))
+    out["rows"] = 1
+    for c in "mps":
+        h0, h5, w0, w5 = have[f"0{c}"], have[f"5{c}"], want[f"0{c}"], want[f"5{c}"]
+        out["r2n"] += min(max(0, w0 - h0), max(0, h5 - w5))
+        out["n2r"] += min(max(0, h0 - w0), max(0, w5 - h5))
+    return out
 
 
 # ---------------------------------------------------------------- 표
@@ -537,8 +574,8 @@ def report(a) -> None:
         print(f"\n### {Path(path).name} — 모델 {m.get('models')} · {m.get('set')} · 서버 {m.get('recognizer')} · {m.get('started')} ~ {m.get('finished')}\n")
         base = res.get("orig", {})
         ctrl = res.get("felt0", {})
-        print("| 변형 | 묶음 | 장면 맞음 | 패 단위 | unsafe | 틀린 자동 | 기준 대비 새 실패 | 격자 | 판독 초(중앙) |")
-        print("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+        print("| 변형 | 묶음 | 장면 맞음 | 패 단위 | unsafe | 틀린 자동 | unsafe_app | 틀린 자동_app | 기준 대비 새 실패 | 격자 | 판독 초(중앙) |")
+        print("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
         for v in [*BASE, *STRONG]:
             rows = res.get(v)
             if not rows:
@@ -551,8 +588,23 @@ def report(a) -> None:
             secs = sorted(r["s"] for r in rows.values())
             pct = 100 * t["hit"] / max(1, t["want"])
             sc = f" · 장면 {scene_major(rows)}/5" if m.get("set") == "field" else ""
-            print(f"| `{v}` | {GROUP.get(v, '')} | {t['ok']}/{t['n']}{sc} | {t['hit']}/{t['want']} ({pct:.1f}%) | {t['unsafe']} | {t['bad_auto']} | "
+            print(f"| `{v}` | {GROUP.get(v, '')} | {t['ok']}/{t['n']}{sc} | {t['hit']}/{t['want']} ({pct:.1f}%) | {t['unsafe']} | {t['bad_auto']} | {t['unsafe_app']} | {t['bad_auto_app']} | "
                   f"{new_fail}{f' (+고침 {fixed})' if fixed else ''}{' ※felt0 대비' if v in GEOM else ''} | {gs} | {secs[len(secs) // 2]:.1f} |")
+        tot, conf = Counter(), Counter()
+        for v in FIXED:
+            rows = res.get(v)
+            if not rows:
+                continue
+            for k, n in summary(rows).items():
+                tot[k] += n
+            for r in rows.values():
+                for k, n in red_confusion(r).items():
+                    conf[k] += r["w"] * n
+        if tot:
+            print(f"| **고정 {sum(1 for v in FIXED if res.get(v))}변형 합계** | | {tot['ok']}/{tot['n']} | {tot['hit']}/{tot['want']} ({100 * tot['hit'] / max(1, tot['want']):.2f}%) | "
+                  f"{tot['unsafe']} | {tot['bad_auto']} | {tot['unsafe_app']} | {tot['bad_auto_app']} | | | |")
+            print(f"\n적5↔5 혼동(고정 변형 합계, 무게 포함, 패 다중집합으로 셈): 적5→5 {conf['r2n']} · 5→적5 {conf['n2r']}"
+                  f"{' (행에 정답 없음 — 못 셈)' if not conf['rows'] else ''}")
         if a.same and path != a.files[0]:
             # 답이 같은지(4단계: 서버에 2순위만 더한 뒤 hand·melds·block 이 사진마다 같아야 한다) — 첫 파일과 비교
             ref = json.loads(Path(a.files[0]).read_text(encoding="utf-8"))

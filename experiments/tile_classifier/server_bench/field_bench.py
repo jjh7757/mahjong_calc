@@ -53,7 +53,8 @@ bench = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(bench)
 FIELD = HERE.parents[1] / "field_20261024" / "captures"
 OUT = HERE.parent / "data" / "role" / "bench"
-CLS = Path(os.environ.get("RECOGNIZER_REPO", "C:/Users/jjh7757/dev/mahjong-recognizer")) / "app" / "assets" / "tile-cls-mnv3s.onnx"
+# 7-1(2026-11-06): LOCAL_CLS_MODEL 을 주면 그 분류기(서버 env 와 같은 이름 — 역할 모델은 LOCAL_ROLE_MODEL, 두 번째 분류기는 LOCAL_ALT_CLS_MODEL 을 서버가 읽음)
+CLS = Path(os.environ.get("LOCAL_CLS_MODEL") or Path(os.environ.get("RECOGNIZER_REPO", "C:/Users/jjh7757/dev/mahjong-recognizer")) / "app" / "assets" / "tile-cls-mnv3s.onnx")
 
 STANDARD = dict(x1=200, x2=800, y1=200, y2=800)  # lib/table/rectify.dart standardGrid
 GRID_A = dict(x1=300, x2=690, y1=150, y2=830)

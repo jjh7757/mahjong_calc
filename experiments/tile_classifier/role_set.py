@@ -45,6 +45,7 @@ COLORS = {"hand": "blue", "meld": "cyan", "river": "orange", "wall": "red", "pai
 FEAT = 9  # 예전 특징(--feat old). 회전 상자 특징은 FEAT_ROT
 FEAT_ROT = 11
 RECTS = HERE / "data" / "det" / "obb" / "rects.json"
+LABELS = __import__("os").environ.get("ROLE_LABELS", "labels.json")  # 7-1(2026-11-06): labels_obb.json = role_label.py --obb(전수 조사 상자)
 
 
 def feat_dim(feat: str) -> int:
@@ -300,7 +301,8 @@ def main() -> None:
     a = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
     torch.set_num_threads(8)
-    labels = json.loads((OUT / "labels.json").read_text(encoding="utf-8"))
+    labels = json.loads((OUT / LABELS).read_text(encoding="utf-8"))
+    print("라벨", LABELS, flush=True)
     backs = json.loads(BACKS.read_text(encoding="utf-8")) if BACKS.exists() else {}
     rects_all = json.loads(RECTS.read_text(encoding="utf-8")) if a.feat == "rot" else None
     grids = {s["name"]: s["grid"] for s in sg.scenes()}

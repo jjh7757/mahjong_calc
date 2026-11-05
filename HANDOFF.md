@@ -2,6 +2,13 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-06 새벽 추가: 개선 계획 7-1 — 세운 크롭 재학습, 미채택 (metrics 표 1-95 기준·1-96 결과, `docs/improvement_plan_1105.md` 7-1 진행 줄)
+
+- **무엇:** 분류기를 서버 `upright()` 로 세워 자른 전수 조사 상자 크롭 1,168장(+180°·JPEG q60~95 지터)으로 `cls2_*` 8벌, 역할 라벨을 전수 조사 상자로 다시 만들어(`labels_obb.json`) `tile-roles-rot2*`. 모델은 `experiments/tile_classifier/server_bench/models/`(커밋 안 함).
+- **결과:** 개발 32회 앱 흐름 434/436·경고 없는 틀린 자동 0, 테스트 15장 189/196·198/211·경고 없는 틀린 자동 3, 적5 혼동 0, 서버 시간 같음 — 그런데 회귀 unsafe fold 26 → 43·prod 17 → 20(새 분류기 몫: B·C·D 울기 發→南, 축소 0.6 2p→5p) → **(b) 미충족, 운영 모델 그대로, 서버 변경 없음.** F1400 적5만은 안 고쳐짐. 역할 rot2 만은 truth 대비 손패·울기 장수가 나음(14/18·17/18, 예전 12·16).
+- **잣대:** 회귀 `robust_suite.py report` 에 `unsafe_app`(화료패 누락형 뺌, 지금 모델 fold 10·prod 11)·합계·적5↔5 줄. S6 빨강은 회귀 변형에서 적5 miss 0(`red_variants.py`).
+- 쓰는 법: `experiments/tile_classifier/README.md` 끝 절(크롭·학습·내보내기·`run_71.sh`·launch.json `recognizer-fold1/2-*`·`prod1/2`, 서버 worktree `git -C ../mahjong-recognizer worktree add ../mahjong-recognizer-s7 feat/cls-alt` 는 측정 뒤 지웠음).
+
 ## 2026-11-06 새벽 추가: 개선 계획 6단계 — 프레임 투표 (metrics 표 1-94, `docs/improvement_plan_1105.md` 6단계 진행 줄)
 
 - **무엇:** 화료 사진 판독 뒤 자동 반영 **직전에만** 헤드 프레임 1장을 더 받아 화료자 자리를 `/v2/localroles` 로 다시 읽고, 손패·떼어 둔 패·울기가 같을 때만 자동 반영, 다르면 '프레임 불일치' 경고로 멈춤. 결과 화면은 첫 판독으로 바로 뜨고 투표는 카운트다운 동안 돈다. 정지(장면 변화 없음 + 화료자 모서리 그대로 + 손패 앞면)가 아니면 투표 없이 지금처럼. 규칙 `lib/table/frame_vote.dart` = `experiments/speed/frame_vote.py`(명세 `test/fixtures/frame_vote.json`), 거치 화면 더보기 "자동 반영 전 헤드 프레임 한 장 더 읽기 (시험)" = `mount.frameVote` **기본 끔**, 촬영 기록 `<시각>/frame_vote.json`·`frame2.jpg`.
