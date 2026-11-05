@@ -233,6 +233,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// 배경 프레임 중 추적 변화 주변만 모아 판마다 `<시각>_track/frames_##.zip` 으로(촬영 기록이 켜졌을 때, 2026-10-29).
   final FrameRecorder _frames = FrameRecorder();
   int _framesPart = 0;
+
+  /// 배경 프레임을 전부 남길지(매장 실험 때 녹화 대신, 2026-11-05). 끄면 변화 주변만.
+  static const String keepAllFramesPref = 'mount.keepAllFrames';
+
+  /// 이번 배경 프레임이 추적을 거쳐 [_recordFrame] 까지 갔는지.
+  bool _frameTracked = false;
   int _meldEventsSeen = 0;
   int _riverEventsSeen = 0;
 
@@ -325,7 +331,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       await _measureCapture(p.bytes, capture: false);
       _maybeAutoSetup();
       await _watchFelt(p.bytes);
+      _frameTracked = false;
       await _trackFrame(p.bytes);
+      // 추적이 이 프레임을 안 받았으면(격자 확인 전·편집 중·추적 꺼짐) 전부 남기기일 때만 따로 남긴다.
+      if (!_frameTracked) _recordUntracked(p.bytes);
     } on RemoteCameraException catch (e) {
       // 예전 헤드 앱(404)이나 토큰 거절이면 그만 묻는다. 연결 오류는 다음 차례에 다시.
       if (e.unsupported || e.unauthorized) _bgStopped = true;
@@ -348,6 +357,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _heightCm = p.getInt(heightPref);
       _useGrid = p.getBool(useGridPref) ?? true;
       _trackingEnabled = p.getBool(trackingPref) ?? true;
+      _frames.keepAll = p.getBool(keepAllFramesPref) ?? false;
       _autoSetupOnStart = p.getBool(autoSetupPref) ?? true;
       _gridSource = p.getString(gridSourcePref);
       _rectify = p.getBool(rectifyPref) ?? false;
@@ -873,8 +883,15 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// 배경 프레임 한 장을 [_frames] 에 넣는다(변화 주변·10장마다 한 장만 남음). 꽉 차면 그만큼 저장한다.
+  /// 추적을 거치지 않은 배경 프레임(전부 남기기일 때만 남는다).
+  void _recordUntracked(Uint8List jpeg) {
+    if (!_logEnabled || !_frames.addUntracked(jpeg, DateTime.now())) return;
+    if (_frames.isFull) _flushFrames('full');
+  }
+
+  /// 배경 프레임 한 장을 [_frames] 에 넣는다(변화 주변·10장마다 한 장만 남음, 전부 남기기면 다). 꽉 차면 그만큼 저장한다.
   void _recordFrame(Uint8List jpeg, DateTime now, MeldTracker tracker, RiverTracker river, bool shifted) {
+    _frameTracked = true;
     if (!_logEnabled) return;
     final why = frameChanges(
       melds: tracker,
@@ -902,7 +919,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       'part': _framesPart,
       'seen': _frames.seen,
       'interval_s': _bgInterval.inSeconds,
-      'keep': {'before': _frames.before, 'after': _frames.after, 'every': _frames.every},
+      'keep': {'before': _frames.before, 'after': _frames.after, 'every': _frames.every, 'all': _frames.keepAll},
       'names': g?.names,
       'bottom_seat': g?.settings.bottomSeat,
       'preview_long_side': _previewFrameLongSide,
@@ -1863,6 +1880,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     final next = !_logEnabled;
                     await CaptureLog.setEnabled(next);
                     if (mounted) setState(() => _logEnabled = next);
+                  } else if (v == 'keepAllFrames') {
+                    setState(() => _frames.keepAll = !_frames.keepAll);
+                    try {
+                      final p = await SharedPreferences.getInstance();
+                      await p.setBool(keepAllFramesPref, _frames.keepAll);
+                    } catch (_) {}
                   } else if (v == 'auto') {
                     setState(() => _autoRecord = !_autoRecord);
                     await AutoRecordStore.save(_autoRecord);
@@ -1954,6 +1977,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     value: 'log',
                     checked: _logEnabled,
                     child: const Text('촬영 기록 저장 (Download/mahjong_calc)'),
+                  ),
+                  CheckedPopupMenuItem(
+                    key: const ValueKey('mount-keep-all-frames-menu'),
+                    value: 'keepAllFrames',
+                    checked: _frames.keepAll,
+                    enabled: _logEnabled && _remoteUrl != null,
+                    child: Text('배경 프레임 전부 저장 (${_bgInterval.inSeconds}초마다, 녹화 대신)'),
                   ),
                   PopupMenuItem(
                     key: const ValueKey('mount-height-menu'),

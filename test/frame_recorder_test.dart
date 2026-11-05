@@ -42,6 +42,43 @@ void main() {
       expect(_keep(r, List.generate(25, (_) => <String>[])), [10, 20]);
     });
 
+    test('전부 남기기: 모든 프레임, 변화 프레임은 까닭 그대로', () {
+      final r = FrameRecorder(keepAll: true);
+      final whys = List.generate(6, (_) => <String>[]);
+      whys[2] = ['corner_left_moving'];
+      for (var i = 0; i < whys.length; i++) {
+        r.add(_jpg(i), _t0.add(Duration(seconds: 3 * i)), why: whys[i]);
+      }
+      final kept = r.take();
+      expect([for (final f in kept) f.index], [1, 2, 3, 4, 5, 6]);
+      expect([for (final f in kept) f.why.single], ['all', 'all', 'corner_left_moving', 'all', 'all', 'all']);
+    });
+
+    test('추적 안 거친 프레임은 전부 남기기일 때만', () {
+      final r = FrameRecorder();
+      expect(r.addUntracked(_jpg(0), _t0), isFalse);
+      expect(r.seen, 0);
+      r.keepAll = true;
+      expect(r.addUntracked(_jpg(1), _t0), isTrue);
+      r.add(_jpg(2), _t0);
+      final kept = r.take();
+      expect([for (final f in kept) f.index], [1, 2]);
+      expect(kept.first.why, ['untracked']);
+    });
+
+    test('전부 남기기를 끄면 다시 변화 주변만', () {
+      final r = FrameRecorder(every: 0, keepAll: true);
+      r.add(_jpg(0), _t0);
+      r.keepAll = false;
+      final whys = List.generate(8, (_) => <String>[]);
+      whys[5] = ['sticks_moving'];
+      for (var i = 0; i < whys.length; i++) {
+        r.add(_jpg(i + 1), _t0, why: whys[i]);
+      }
+      // 1 은 켜져 있을 때, 그 뒤는 변화(7번째)와 앞 2장·뒤 2장(뒤는 9 하나만 있음).
+      expect([for (final f in r.take()) f.index], [1, 5, 6, 7, 8, 9]);
+    });
+
     test('꽉 차면 isFull, take 뒤에도 번호는 이어진다', () {
       final r = FrameRecorder(every: 1, maxFrames: 3);
       for (var i = 0; i < 3; i++) {

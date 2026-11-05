@@ -6,6 +6,8 @@
 ///   그 프레임과 앞 [before] 장, 뒤 [after] 장을 남긴다.
 /// - 아무 일도 없어도 [every] 장마다 한 장은 남긴다(시간 흐름을 보려고).
 /// - 판이 바뀌거나 [maxFrames] 장이 차면 쓰는 쪽이 [take] 로 꺼내 [encodeFramesZip] 으로 묶어 저장한다.
+/// - [keepAll] 이면 받은 프레임을 전부 남긴다(매장 실험 때 녹화 대신, 2026-11-05 사용자: 휴대폰이 헤드 한 대뿐).
+///   헤드가 하는 일은 그대로고 태블릿 저장 공간만 더 쓴다.
 library;
 
 import 'dart:collection';
@@ -66,7 +68,10 @@ class FrameRecorder {
   final int every;
   final int maxFrames;
 
-  FrameRecorder({this.before = 2, this.after = 2, this.every = 10, this.maxFrames = 150});
+  FrameRecorder({this.before = 2, this.after = 2, this.every = 10, this.maxFrames = 150, this.keepAll = false});
+
+  /// 받은 프레임을 전부 남긴다(변화 프레임은 까닭을 그대로, 나머지는 'all').
+  bool keepAll;
 
   final ListQueue<RecordedFrame> _ring = ListQueue();
   final List<RecordedFrame> _kept = [];
@@ -90,6 +95,11 @@ class FrameRecorder {
       _afterLeft = after;
       return true;
     }
+    if (keepAll) {
+      _afterLeft = 0;
+      _kept.add(RecordedFrame(_count, at, jpeg, const ['all']));
+      return true;
+    }
     if (_afterLeft > 0) {
       _afterLeft--;
       _kept.add(RecordedFrame(_count, at, jpeg, const ['after']));
@@ -105,6 +115,14 @@ class FrameRecorder {
       _ring.removeFirst();
     }
     return false;
+  }
+
+  /// 추적을 거치지 않은 프레임(격자 확인 전·격자 편집 중·추적 꺼짐 등). [keepAll] 일 때만 'untracked' 로 남긴다.
+  bool addUntracked(Uint8List jpeg, DateTime at) {
+    if (!keepAll) return false;
+    _count++;
+    _kept.add(RecordedFrame(_count, at, jpeg, const ['untracked']));
+    return true;
   }
 
   /// 남긴 프레임을 꺼내고 비운다(앞 프레임 버퍼·뒤 남은 수는 그대로 — 저장 뒤에도 같은 판이 이어질 수 있다).
