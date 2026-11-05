@@ -2,6 +2,13 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-05 추가: 8회차 서버·앱 반영 (metrics 표 1-71, 사용자 "그냥 8회차 모델 쓰는 버전으로 서버, 앱에 반영해줘")
+
+- **서버 운영 b57e2ce(배포·확인 완료):** feat/local-read-conf(확신도·白 채우기·강 틀·read_small)와 `roles.py`(/v2/localroles)를 master 에 합치고, 자리 판독 검출기를 8회차 회전 상자 `app/assets/tile-obb-r8.onnx` 로(`app/obb.py`: 세워 자르기·가는 조각·안깡, 요청별 기록은 contextvar), `corner_blank` 에 탁자 끝 여러 줄 + 白 2장 이상 퐁(`corner_pair`), 크롭 밖 떼어 둔 화료패(`roles._loose_outside`). 강·표시패는 2회차 `tile-yolo26n.onnx` 그대로. `opencv-python-headless` 추가. pytest 149.
+- **앱 2d513f1(fix/seat-read-grow, push·master 합치기·APK 전):** `mount_screen` `readGrid(useRoles: true)`. 이 브랜치는 origin/master 보다 커밋 27개 앞(11-02~11-05 판독·자동 반영·도라 확정 등)이라 master 에 합치면 그것들도 같이 APK 에 들어간다.
+- **확인:** 운영 서버 단독(`server_bench/prod_roles_check.py`) 개발 /32 localroles 31(틀린 자동 1, 183627 떼어 둔 화료패 놓침 — final 모델 상자가 축 상자 흰 비율에 걸림) · 서버 1.66초. 앱 흐름(flutter drive)은 같은 시각 다른 세션 측정과 겹쳐 안 잼 — 다음에 `ROLES=true LOCAL_ONLY=true` 로 운영 앱 흐름을 잴 것.
+- 벤치: `role_full_bench.py --native`(어댑터 없이 서버 코드), `field_bench.py --haku2 --corner-fix --loose-ctx`·패 단위 지표. 테스트 15장 재측정(표 1-69 끝): 장면 0/15 그대로, 패 단위 44 → 111/211.
+
 ## 2026-11-05 추가: 검출기 6~8회차와 서버 정리(벤치만, 서버·앱 미반영) — metrics 표 1-66~1-70, `experiments/tile_classifier/README.md` 끝 두 절
 
 - **채점 제외(사용자 결정):** 손·팔 가림(172424·174020) + 사용자 문제(손패 흩어 놓은 183022)는 채점에서 뺀다 — `seat_grow.py` `OCCLUDED`·`USER_ERROR`(= `EXCLUDED`), 채점 스크립트는 `sg.eval_scenes()`. 개발 세트는 /34. CLAUDE.md 에 규칙.
