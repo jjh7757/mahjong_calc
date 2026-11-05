@@ -656,7 +656,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           TextButton(onPressed: _busy ? null : _cancelGallery, child: const Text('취소')),
           FilledButton(
             key: const ValueKey('mount-gallery-read'),
-            onPressed: _busy ? null : _readGallery,
+            onPressed: _busy || _setupBusy ? null : _readGallery,
             child: const Text('이 격자로 읽기'),
           ),
         ],
@@ -1306,12 +1306,32 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       codec.dispose();
     } catch (_) {}
     if (!mounted) return;
-    // 사진을 띄우고 지금 격자를 겹쳐 맞추게 한다. "이 격자로 읽기" 에서 읽는다([_readGallery]).
+    // 사진을 띄우고 먼저 펠트 네 모서리로 그 사진의 격자를 맞춰 바로 읽는다(2026-11-05 사용자: 버튼 두 번 누르지 않게).
+    // 펠트 격자는 저장 격자와 정답 수가 같다(metrics 표 1-79). 못 찾으면 지금 격자를 겹쳐 띄우고,
+    // 사용자가 "자동 맞추기"(서버 `/v2/setup`)나 끌어서 맞춘 뒤 "이 격자로 읽기"([_readGallery]).
     setState(() {
       _galleryShot = bytes;
       _galleryAspect = aspect;
       _gridBeforeEdit = _grid;
+      _setupBusy = true;
     });
+    GridZones? fromFelt;
+    try {
+      final felt = await _readFeltOf(bytes, more: false);
+      fromFelt = felt == null ? null : gridFromFelt(felt, keep: _grid);
+    } catch (e) {
+      debugPrint('[gallery] felt 실패: $e');
+    } finally {
+      if (mounted) setState(() => _setupBusy = false);
+    }
+    if (!mounted || _galleryShot != bytes) return; // 그 사이 취소
+    if (fromFelt == null) {
+      _toast('사진에서 탁자 펠트를 못 찾았습니다. "자동 맞추기" 를 누르거나 선을 끌어 맞춘 뒤 "이 격자로 읽기"', long: true);
+      return;
+    }
+    setState(() => _grid = fromFelt!);
+    debugPrint('[gallery] 펠트 격자로 바로 읽기 ${fromFelt.toJson()}');
+    await _readGallery();
   }
 
   /// 갤러리 사진 위에서 맞춘 격자로 읽는다. 끝나면 격자·읽기 방식을 고르기 전으로 되돌린다.
