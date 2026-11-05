@@ -8,6 +8,7 @@
            (격자 직사각형은 기운 사진에 안 맞는다). 규칙 원값과 나란히 채점, pred/<이름>.jpg
 
   python -I -X utf8 experiments/tile_classifier/role_field.py build|review|score
+  python -I -X utf8 experiments/tile_classifier/role_field.py score rot [pre_synth8k_rot.pt]   # 회전 상자 특징(2026-11-05): 8회차 검출 회전 상자로 기울기, score_rot.json
 """
 from __future__ import annotations
 
@@ -120,8 +121,34 @@ def homography(felt: list, W: int, H: int) -> np.ndarray:
     return cv2.getPerspectiveTransform(src, dst)
 
 
-def tokens(rec: dict, labels_rec: dict, backs: bool = True) -> tuple[np.ndarray, list[int]]:
-    """role_set.scene_tokens 과 같은 9칸 벡터. 좌표는 펠트 호모그래피, 크기는 펠트 폭(픽셀 평균)으로 나눔."""
+def field_rects() -> dict:
+    """테스트 15장을 8회차 회전 상자 검출기(server_bench/models/det_r8_final.onnx, 테스트 사진은 학습에 없음)로 검출한 회전 상자
+    {사진: {"faces": [(축 상자, 회전 상자)], "backs": [...]}} — 회전 상자 특징(role_set --feat rot)의 기울기·패 크기용. data/role/field/rects_r8.json 에 저장·재사용."""
+    cache = OUT / "rects_r8.json"
+    if cache.exists():
+        return json.loads(cache.read_text(encoding="utf-8"))
+    sys.path.insert(0, str(HERE / "server_bench"))
+    import onnxruntime as ort
+    import obb_detect as od
+
+    sess = ort.InferenceSession(str(HERE / "server_bench" / "models" / "det_r8_final.onnx"), providers=["CPUExecutionProvider"])
+    boxes = json.loads((OUT / "boxes.json").read_text(encoding="utf-8"))
+    out = {}
+    for name, rec in boxes.items():
+        rgb = np.asarray(Image.open(rec["path"]).convert("RGB"))
+        x, r, left, top = od.letterbox(rgb)
+        o = sess.run(None, {sess.get_inputs()[0].name: x})[0][0]
+        H, W = rgb.shape[:2]
+        out[name] = {"faces": [(list(b), [list(rc[0]), list(rc[1]), rc[2]]) for b, rc in od.decode(o, r, left, top, W, H)],
+                     "backs": [(list(b), [list(rc[0]), list(rc[1]), rc[2]]) for b, rc in od.decode(o, r, left, top, W, H, cls=1)]}
+        print(name, "r8 앞면", len(out[name]["faces"]), "뒷면", len(out[name]["backs"]), flush=True)
+    cache.write_text(json.dumps(out), encoding="utf-8")
+    return out
+
+
+def tokens(rec: dict, labels_rec: dict, backs: bool = True, feat: str = "old", rects: dict | None = None) -> tuple[np.ndarray, list[int]]:
+    """role_set.scene_tokens 과 같은 9칸(또는 --feat rot 11칸) 벡터. 좌표는 펠트 호모그래피, 크기는 펠트 폭(픽셀 평균)으로 나눔.
+    rot 특징의 패 크기·기울기는 rects(field_rects, 8회차 검출)에서 IoU 로 찾은 회전 상자로 — 그림 축 기준(삼각대 사진은 평면 회전이 거의 없다)."""
     import role_set as rs
 
     W, H = rec["size"]
@@ -141,16 +168,29 @@ def tokens(rec: dict, labels_rec: dict, backs: bool = True) -> tuple[np.ndarray,
         su, sv = 0.5, 0.5
     su, sv, _ = rs.turn(su, sv, rec["side"])
     rows, labs = [], []
-    allb = [(it["box"], it["role"], False) for it in labels_rec["items"]] + ([(b, None, True) for b in rec["backs"]] if backs else [])
-    for (x, y, w, h), role, back in allb:
+    faces = [it["box"] for it in labels_rec["items"]]
+    bks = rec["backs"] if backs else []
+    rr = rects or {"faces": [], "backs": []}
+    fr = rs.match_rects(faces, rr["faces"]) if feat == "rot" else [None] * len(faces)
+    br = rs.match_rects(bks, rr["backs"]) if feat == "rot" else [None] * len(bks)
+    allb = [(b, it["role"], False, r) for b, it, r in zip(faces, labels_rec["items"], fr)] + [(b, None, True, r) for b, r in zip(bks, br)]
+    for (x, y, w, h), role, back, rect in allb:
         u, v = warp(x + w / 2, y + h / 2)
         u, v, swap = rs.turn(u, v, rec["side"])
-        bw, bh = w / fw, h / fh
+        if feat == "rot":
+            # 삼각대 사진은 탁자가 그림 안에서 12~26° 돌아 있고 원근이 있어, 꼭짓점을 펠트 호모그래피로 보낸 뒤 펠트 축 기준으로 크기·기울기를 잰다
+            src =cv2.boxPoints(((float(rect[0][0]), float(rect[0][1])), (float(rect[1][0]), float(rect[1][1])), float(rect[2]))) if rect is not None \
+                else np.array([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], np.float32)
+            wp = cv2.perspectiveTransform(src.reshape(1, -1, 2).astype(np.float32), M)[0]
+            bw, bh, tilt = rs.tile_geom(None, wp)  # 펠트 = 1 단위
+        else:
+            pw, ph, tilt = rs.tile_geom((x, y, w, h), rect)
+            bw, bh = pw / fw, ph / fh
         if swap:
             bw, bh = bh, bw
-        rows.append([u, v, bw * 10, bh * 10, float(back), float(bw > bh * 1.15), u - su, v - sv, 1.0])
+        rows.append(rs.feat_row(u, v, bw, bh, back, su, sv, tilt, feat))
         labs.append(-1 if back or role not in ROLES else ROLES.index(role))
-    return np.array(rows, np.float32), labs
+    return np.array(rows, np.float32).reshape(-1, rs.feat_dim(feat)), labs
 
 
 def score() -> None:
@@ -160,23 +200,25 @@ def score() -> None:
     import seat_grow as sg
 
     torch.set_num_threads(8)
+    feat = sys.argv[2] if len(sys.argv) > 2 else "old"  # score [old|rot] [사전학습 파일]
+    pre_file = sys.argv[3] if len(sys.argv) > 3 else ("pre_synth8k_rot.pt" if feat == "rot" else "pre_synth8k.pt")
     boxes = json.loads((OUT / "boxes.json").read_text(encoding="utf-8"))
     labels = json.loads((OUT / "labels.json").read_text(encoding="utf-8"))
+    rects_dev = json.loads(rs.RECTS.read_text(encoding="utf-8")) if feat == "rot" else None
+    rects_field = field_rects() if feat == "rot" else {}
     # 학습: 개발 세트 25장 전부(검토 뒤 라벨) + 합성 사전학습 가중치
     dev_labels = json.loads((rs.OUT / "labels.json").read_text(encoding="utf-8"))
     dev_backs = json.loads(rs.BACKS.read_text(encoding="utf-8"))
     grids = {s["name"]: s["grid"] for s in sg.scenes()}
     tr = []
     for name, rec in dev_labels.items():
-        x, y = rs.scene_tokens(rec, grids[name], dev_backs.get(name, []), True)
+        x, y = rs.scene_tokens(rec, grids[name], dev_backs.get(name, []), True, feat, rs.scene_rects(name, rects_dev))
         tr.append(dict(name=name, x=x, y=y))
-    pre = []
-    for sd in torch.load(rs.OUT / "pre_synth8k.pt"):
-        net = rs.SetNet()
-        net.load_state_dict(sd)
-        pre.append(net.eval())
+    pre = rs.load_nets(rs.OUT / pre_file)
+    assert pre[0].feat == rs.feat_dim(feat), (pre_file, pre[0].feat, feat)
     nets = [rs.train(tr, 100, seed, pre[seed], 3e-4) for seed in range(len(pre))]
-    print("미세 조정 끝", len(nets), flush=True)
+    print("미세 조정 끝", len(nets), "특징", feat, pre_file, flush=True)
+    torch.save([n.state_dict() for n in nets], rs.OUT / f"role_all{'_rot' if feat == 'rot' else ''}.pt")  # 뒷면 포함·실제 25장 전부 미세 조정
     (OUT / "pred").mkdir(parents=True, exist_ok=True)
     from collections import Counter
 
@@ -185,7 +227,7 @@ def score() -> None:
     per = {}
     for name, rec in boxes.items():
         lab = labels[name]
-        x, y = tokens(rec, lab)
+        x, y = tokens(rec, lab, True, feat, rects_field.get(name))
         s = dict(name=name, x=x, y=y)
         votes = [rs.predict(n, s) for n in nets]
         pred = [Counter(v[i][0] for v in votes).most_common(1)[0][0] for i in range(len(x))]
@@ -220,7 +262,7 @@ def score() -> None:
     print("합계 규칙", rtot, f"{sum(p['rule'] for p in per.values())}/{n}")
     print("혼동 모델", {r: dict(conf[r]) for r in ROLES})
     print("truth 손패·울기 장수 둘 다: 모델", sum(p["model_truth"] for p in per.values()), "규칙", sum(p["rule_truth"] for p in per.values()), f"/{len(per)}")
-    (OUT / "score.json").write_text(json.dumps(dict(per=per, model=tot, rule=rtot, confusion={r: dict(c) for r, c in conf.items()}), ensure_ascii=False, indent=1), encoding="utf-8")
+    (OUT / f"score{'_rot' if feat == 'rot' else ''}.json").write_text(json.dumps(dict(feat=feat, pre_file=pre_file, per=per, model=tot, rule=rtot, confusion={r: dict(c) for r, c in conf.items()}), ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 if __name__ == "__main__":

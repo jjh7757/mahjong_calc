@@ -62,6 +62,7 @@ def main() -> None:
     ap.add_argument("--haku2", action="store_true", help="모서리 白 이 2장 이상 잡히면 퐁 3장으로(haku_pair.py)")
     ap.add_argument("--corner-fix", action="store_true", help="모서리 白 퐁 찾기 흔들림 고치기(corner_fix.py)")
     ap.add_argument("--loose-ctx", action="store_true", help="크롭 밖 떼어 둔 화료패를 역할 모델 판단으로(loose_ctx.py)")
+    ap.add_argument("--final", action="store_true", help="--native 와 함께: fold 대신 운영과 같은 모델(서버 assets: tile-obb-r8·tile-cls-mnv3s) — 이미 학습한 사진이라 낙관적")
     ap.add_argument("--native", action="store_true", help="어댑터 없이 서버 코드 그대로(11-05 반영판: 자리 검출기 = <det>_fold, 규칙 = LocalReader.read_seat)")
     a = ap.parse_args()
     if a.native and (a.obb or a.clean or a.haku2 or a.corner_fix or a.loose_ctx):
@@ -104,8 +105,8 @@ def main() -> None:
             continue
         w = 2 if not p["name"].startswith("2026") else 1
         key = (p["det"], p["part"])
-        fold = HERE / "models" / f"{a.det}_fold_{p['det']}.onnx"
-        reader = readers.setdefault(key, lr.LocalReader(threads=a.threads, det_model=fold, cls_model=HERE / "models" / f"cls_{p['part']}.onnx",
+        fold = lr.SEAT_MODEL if a.final else HERE / "models" / f"{a.det}_fold_{p['det']}.onnx"
+        reader = readers.setdefault(key, lr.LocalReader(threads=a.threads, det_model=fold, cls_model=lr.CLS_MODEL if a.final else HERE / "models" / f"cls_{p['part']}.onnx",
                                                         **({"seat_model": fold} if a.native else {"seat_model": None})))
         det = dets.setdefault(p["det"], bench.Det(HERE / "models" / f"{a.det}_fold_{p['det']}.onnx", a.threads))
         cls = clss.setdefault(p["part"], bench.Cls(HERE / "models" / f"cls_{p['part']}.onnx", meta, a.threads))
@@ -136,7 +137,7 @@ def main() -> None:
         rows[p["name"]] = row
         print(line, flush=True)
     print(f"--- 정답 /{tot['n']}: 규칙 {tot['rule_ok']}(자동 틀림 {tot['rule_bad']}) | hybrid {tot['hybrid_ok']}(틀림 {tot['hybrid_bad']}, 틀 {tot['hybrid_framed']}) | model {tot['model_ok']}(틀림 {tot['model_bad']}, 틀 {tot['model_framed']})")
-    (OUT / f"full_bench{'' if a.det == 'det' else '_' + a.det}{'_size' if a.size_filter else ''}{'_rotwhite' if a.rot_white else ''}{'_rotcut' if a.rot_cut else ''}{'_clean' if a.clean else ''}{'_feltonly' if a.felt_only else ''}{'_haku2' if a.haku2 else ''}{'_cornerfix' if a.corner_fix else ''}{'_loosectx' if a.loose_ctx else ''}{'_native' if a.native else ''}.json").write_text(json.dumps(dict(total=dict(tot), rows=rows), ensure_ascii=False, indent=1), encoding="utf-8")
+    (OUT / f"full_bench{'' if a.det == 'det' else '_' + a.det}{'_size' if a.size_filter else ''}{'_rotwhite' if a.rot_white else ''}{'_rotcut' if a.rot_cut else ''}{'_clean' if a.clean else ''}{'_feltonly' if a.felt_only else ''}{'_haku2' if a.haku2 else ''}{'_cornerfix' if a.corner_fix else ''}{'_loosectx' if a.loose_ctx else ''}{'_native' if a.native else ''}{'_final' if a.final else ''}{'_rotwhite' if lr.ROT_WHITE else ''}.json").write_text(json.dumps(dict(total=dict(tot), rows=rows), ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 if __name__ == "__main__":

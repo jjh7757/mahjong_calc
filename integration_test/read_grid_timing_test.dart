@@ -97,14 +97,15 @@ const _bcdTilt = {
   'D': (['tilted/k12_a', 'tilted/k12_b', 'tilted/k12_c', 'tilted/k16_a', 'tilted/k16_b', 'tilted/k16_c'], _initialGrid),
 };
 
-// SET=visit: [평가 밖·매장 개발 세트] 10/31 매장 23회(PHOTO_URL 은 visit_20261031/captures). 격자는 FIELD_GRIDS 로(사진마다 다르다,
+// SET=visit: [평가 밖·매장 개발 세트] 10/31 매장 20회(PHOTO_URL 은 visit_20261031/captures). 격자는 FIELD_GRIDS 로(사진마다 다르다,
 // experiments/speed/flow_visit.py 가 만든다). 정답은 visit_20261031/truth.json·label.json.
-// 손·팔이 패를 가린 172424·174020(사용자 결정 2026-11-02), 손패를 흩어 놓은 183022(사용자 문제, 2026-11-04)는 뺀다(seat_grow.py EXCLUDED).
+// 손·팔이 패를 가린 172424·174020(사용자 결정 2026-11-02), 손패를 흩어 놓은 183022(사용자 문제, 2026-11-04),
+// 화료패를 2장 떼어 놓은 142535·울기패를 손패 쪽으로 끌어와 섞은 175951(사용자 문제, 2026-11-05)은 뺀다(seat_grow.py EXCLUDED).
 const _visit = {
   'V': (
     [
       '123140', '124654', '125839', '130743', '131411', '132239', '132954', '133030', '133826', '134815',
-      '142535', '143104', '164501', '165043', '165614', '170105', '171025', '171245', '171505', '175951',
+      '143104', '164501', '165043', '165614', '170105', '171025', '171245', '171505',
       '181209', '183627',
     ],
     _initialGrid,
@@ -291,6 +292,10 @@ void main() {
                   final d = Directory('$_dumpDir/${photo.replaceAll('/', '_')}')..createSync(recursive: true);
                   if (trace.handCrop case final c?) File('${d.path}/seat.jpg').writeAsBytesSync(c);
                   if (trace.centerCrop case final c?) File('${d.path}/sticks.jpg').writeAsBytesSync(c);
+                  // 강 끝 크롭(`/v2/locallast3` 에 보낸 그대로) — 서버 단독 벤치용(server_bench/contention_bench.py).
+                  for (final e in trace.riverCrops.entries) {
+                    File('${d.path}/last_${e.key.name}.jpg').writeAsBytesSync(e.value);
+                  }
                 }
                 final t0 = sw.elapsedMilliseconds;
                 final merge = mergeReading(

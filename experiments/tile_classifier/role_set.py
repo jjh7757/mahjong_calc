@@ -9,7 +9,13 @@
 
   python -I -X utf8 experiments/tile_classifier/role_set.py [--epochs 300] [--seeds 3] [--no-backs]
   python -I -X utf8 experiments/tile_classifier/role_set.py --synth 20000 [--synth-epochs 3] [--epochs 100] [--ft-lr 3e-4] [--no-ft] --tag _synth
+  python -I -X utf8 experiments/tile_classifier/role_set.py --feat rot --synth 8000 ...   # 회전 상자 특징(아래)
 결과 data/role/set_cv.json(pred = 사진별 모델 역할), 예측 전체 그림 set_pred/<이름>.jpg(색 = 역할, 빨간 바깥 테두리 = 라벨과 다름), 틀린 상자만 set_wrong/
+
+특징(2026-11-05 `--feat rot`, 11칸): 검출기가 회전 상자(8회차)를 내므로 축 상자 대신 패에 맞는 상자로 잰다.
+  0 u · 1 v · 2 패 폭×10 · 3 패 높이×10(회전 상자의 변 — 기운 패도 실제 크기) · 4 뒷면 · 5 눕힘(패 폭 > 높이×1.15, 회전 상자 기준)
+  · 6 u−su · 7 v−sv · 8 상수 1 · 9 sin(2·기울기) · 10 cos(2·기울기). 기울기 = 패 변이 격자 축에서 벗어난 각(−45~45°, 시계 방향 +).
+  실제 사진의 회전 상자는 7회차 라벨(data/det/obb/rects.json)에서 IoU 로 찾고, 없으면 축(기울기 0). 예전 9칸(`--feat old`)은 그대로 둔다.
 """
 from __future__ import annotations
 
@@ -36,7 +42,75 @@ BACKS = HERE / "data" / "det" / "backs" / "boxes.json"
 TRUTH = json.loads((HERE.parents[1] / "experiments/visit_20261031/truth.json").read_text(encoding="utf-8"))["scenes"]
 ROLES = ["hand", "meld", "river", "wall", "pair", "loose"]
 COLORS = {"hand": "blue", "meld": "cyan", "river": "orange", "wall": "red", "pair": "magenta", "loose": "yellow", "other": "gray"}
-FEAT = 9
+FEAT = 9  # 예전 특징(--feat old). 회전 상자 특징은 FEAT_ROT
+FEAT_ROT = 11
+RECTS = HERE / "data" / "det" / "obb" / "rects.json"
+
+
+def feat_dim(feat: str) -> int:
+    return FEAT_ROT if feat == "rot" else FEAT
+
+
+def iou(a, b) -> float:
+    ix = max(0, min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0]))
+    iy = max(0, min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1]))
+    i = ix * iy
+    return i / (a[2] * a[3] + b[2] * b[3] - i + 1e-9)
+
+
+def tile_geom(box, rect) -> tuple[float, float, float]:
+    """(패 폭, 패 높이, 기울기°) 그림 좌표. rect = 회전 상자 ((cx, cy), (w, h), 각도°) 를 cv2.boxPoints 로 풀어 변 길이·방향으로 잰다
+    (각도 규약에 상관없음). 격자 축에 가까운 변이 폭. 기울기는 −45~45(시계 방향 +, 그림 좌표 atan2(dy, dx)). rect 없으면 축 상자, 기울기 0."""
+    if rect is None:
+        return float(box[2]), float(box[3]), 0.0
+    if isinstance(rect, np.ndarray) and rect.shape == (4, 2):  # 꼭짓점을 바로 준 경우(호모그래피로 보낸 뒤 등)
+        p = rect.astype(float)
+    else:
+        import cv2
+
+        p = cv2.boxPoints(((float(rect[0][0]), float(rect[0][1])), (float(rect[1][0]), float(rect[1][1])), float(rect[2])))
+    e1, e2 = p[1] - p[0], p[2] - p[1]
+    a1 = np.degrees(np.arctan2(e1[1], e1[0])) % 180
+    if 45 < a1 < 135:  # e1 이 세로에 가까움
+        h, w, ea = float(np.hypot(*e1)), float(np.hypot(*e2)), e2
+    else:
+        w, h, ea = float(np.hypot(*e1)), float(np.hypot(*e2)), e1
+    tilt = ((np.degrees(np.arctan2(ea[1], ea[0])) + 45) % 90) - 45
+    return w, h, float(tilt)
+
+
+def match_rects(boxes: list, rects: list, thr: float = 0.3) -> list:
+    """상자마다 IoU 가 가장 큰 회전 상자(thr 이상), 없으면 None. rects = [(축 상자, 회전 상자)]."""
+    out = []
+    for b in boxes:
+        best = max(rects, key=lambda r: iou(r[0], b), default=None)
+        out.append(best[1] if best is not None and iou(best[0], b) >= thr else None)
+    return out
+
+
+def scene_rects(name: str, rects_all: dict | None) -> dict:
+    """rects.json 의 한 장면 → {"faces": [(축 상자, 회전 상자)], "backs": [...]}."""
+    if not rects_all or name not in rects_all:
+        return {"faces": [], "backs": []}
+    out: dict = {"faces": [], "backs": []}
+    for it in rects_all[name]["items"]:
+        out["faces" if it["cls"] == 0 else "backs"].append((it["box"], it["rect"]))
+    return out
+
+
+def feat_row(u: float, v: float, bw: float, bh: float, back: bool, su: float, sv: float, tilt_deg: float, feat: str) -> list[float]:
+    """상자 벡터 한 줄. bw·bh = 펠트 기준 패 폭·높이(돌린 자리 기준, 회전 상자면 패에 맞는 변), tilt = 기울기°."""
+    row = [u, v, bw * 10, bh * 10, float(back), float(bw > bh * 1.15), u - su, v - sv, 1.0]
+    if feat == "rot":
+        t = np.radians(2 * tilt_deg)
+        row += [float(np.sin(t)), float(np.cos(t))]
+    return row
+
+
+def axis_of(w: float, h: float, tilt_deg: float) -> tuple[float, float]:
+    """기운 패(폭 w·높이 h·기울기)를 감싸는 축 상자의 폭·높이 — 예전 특징(축 상자 검출기)을 흉내 낼 때."""
+    c, s = abs(np.cos(np.radians(tilt_deg))), abs(np.sin(np.radians(tilt_deg)))
+    return w * c + h * s, w * s + h * c
 
 
 def folds(names: list[str]) -> dict[str, list[str]]:
@@ -56,8 +130,8 @@ def turn(u: float, v: float, side: str) -> tuple[float, float, bool]:
     return v, 1 - u, True  # left
 
 
-def scene_tokens(rec: dict, grid: dict, backs: list, use_backs: bool) -> tuple[np.ndarray, list[int]]:
-    """상자 벡터와 라벨 인덱스(-1 = 뒷면 또는 other)."""
+def scene_tokens(rec: dict, grid: dict, backs: list, use_backs: bool, feat: str = "old", rects: dict | None = None) -> tuple[np.ndarray, list[int]]:
+    """상자 벡터와 라벨 인덱스(-1 = 뒷면 또는 other). feat="rot" 면 rects(scene_rects)에서 찾은 회전 상자로 패 크기·기울기를 잰다."""
     W, H = rec["size"]
     x1, x2, y1, y2 = (grid[k] / 1000 for k in ("x1", "x2", "y1", "y2"))
     fw, fh = max(x2 - x1, 1e-3), max(y2 - y1, 1e-3)
@@ -68,22 +142,28 @@ def scene_tokens(rec: dict, grid: dict, backs: list, use_backs: bool) -> tuple[n
         su, sv = (x1 + x2) / 2, (y1 + y2) / 2
     su, sv, _ = turn((su - x1) / fw, (sv - y1) / fh, rec["side"])
     rows, labels = [], []
-    boxes = [(it["box"], it["role"], False) for it in rec["items"]] + ([(b, None, True) for b in backs] if use_backs else [])
-    for (x, y, w, h), role, back in boxes:
+    faces = [it["box"] for it in rec["items"]]
+    rr = rects or {"faces": [], "backs": []}
+    fr = match_rects(faces, rr["faces"]) if feat == "rot" else [None] * len(faces)
+    br = match_rects(backs, rr["backs"]) if feat == "rot" and use_backs else [None] * len(backs)
+    boxes = [(b, it["role"], False, r) for b, it, r in zip(faces, rec["items"], fr)] + ([(b, None, True, r) for b, r in zip(backs, br)] if use_backs else [])
+    for (x, y, w, h), role, back, rect in boxes:
         u, v = (x + w / 2) / W, (y + h / 2) / H
         u, v, swap = turn((u - x1) / fw, (v - y1) / fh, rec["side"])
-        bw, bh = w / W / fw, h / H / fh
+        pw, ph, tilt = tile_geom((x, y, w, h), rect)
+        bw, bh = pw / W / fw, ph / H / fh
         if swap:
             bw, bh = bh, bw
-        rows.append([u, v, bw * 10, bh * 10, float(back), float(bw > bh * 1.15), u - su, v - sv, 1.0])
+        rows.append(feat_row(u, v, bw, bh, back, su, sv, tilt, feat))
         labels.append(-1 if back or role not in ROLES else ROLES.index(role))
-    return np.array(rows, np.float32), labels
+    return np.array(rows, np.float32).reshape(-1, feat_dim(feat)), labels
 
 
 class SetNet(nn.Module):
-    def __init__(self, d: int = 64, layers: int = 3):
+    def __init__(self, d: int = 64, layers: int = 3, feat: int = FEAT):
         super().__init__()
-        self.inp = nn.Sequential(nn.Linear(FEAT, d), nn.GELU(), nn.Linear(d, d))
+        self.feat = feat
+        self.inp = nn.Sequential(nn.Linear(feat, d), nn.GELU(), nn.Linear(d, d))
         enc = nn.TransformerEncoderLayer(d, 4, d * 2, dropout=0.1, batch_first=True, norm_first=True)
         self.enc = nn.TransformerEncoder(enc, layers)
         self.head = nn.Linear(d, len(ROLES))
@@ -117,10 +197,13 @@ def batch(scenes: list[dict], rng: np.random.Generator | None):
             x[:, 0:2] = (x[:, 0:2] - 0.5) * scale + 0.5 + shift + rng.normal(0, 0.004, x[:, 0:2].shape)
             x[:, 2:4] *= rng.uniform(0.9, 1.1)
             x[:, 6:8] += shift
+            if x.shape[1] == FEAT_ROT:  # 기울기 지터(검출기 각도 오차 + 격자 회전 오차)
+                t = np.arctan2(x[:, 9], x[:, 10]) / 2 + np.radians(rng.normal(0, 1.0) + rng.normal(0, 1.5, len(x)))
+                x[:, 9], x[:, 10] = np.sin(2 * t), np.cos(2 * t)
         xs.append(torch.tensor(x))
         ys.append(torch.tensor(y))
     n = max(len(x) for x in xs)
-    X = torch.zeros(len(xs), n, FEAT)
+    X = torch.zeros(len(xs), n, xs[0].shape[1])
     Y = torch.full((len(xs), n), -1, dtype=torch.long)
     pad = torch.ones(len(xs), n, dtype=torch.bool)
     for i, (x, y) in enumerate(zip(xs, ys)):
@@ -134,7 +217,7 @@ def train(scenes: list[dict], epochs: int, seed: int, net: nn.Module | None = No
     """net 을 주면 그 가중치에서 이어서(미세 조정)."""
     torch.manual_seed(seed)
     rng = np.random.default_rng(seed)
-    net = SetNet() if net is None else copy.deepcopy(net)
+    net = SetNet(feat=scenes[0]["x"].shape[1]) if net is None else copy.deepcopy(net)
     freq = Counter(r for s in scenes for r in s["y"] if r >= 0)
     w = torch.tensor([1 / np.sqrt(max(freq[i], 1)) for i in range(len(ROLES))], dtype=torch.float32)
     w = w / w.mean()
@@ -151,6 +234,16 @@ def train(scenes: list[dict], epochs: int, seed: int, net: nn.Module | None = No
             opt.step()
         sched.step()
     return net.eval()
+
+
+def load_nets(path: Path) -> list[nn.Module]:
+    """저장한 씨드별 가중치 → SetNet 목록(특징 수는 첫 층 모양에서)."""
+    nets = []
+    for sd in torch.load(path):
+        net = SetNet(feat=sd["inp.0.weight"].shape[1])
+        net.load_state_dict(sd)
+        nets.append(net.eval())
+    return nets
 
 
 def predict(net: nn.Module, s: dict) -> list[tuple[str, float]]:
@@ -202,22 +295,27 @@ def main() -> None:
     ap.add_argument("--tag", default="")
     ap.add_argument("--crop", action="store_true", help="서버 자리 크롭처럼 자리 띠 안의 상자만 보고 배우기(합성·실제 모두)")
     ap.add_argument("--pre-file", default="", help="합성 사전학습 가중치를 여기 저장/있으면 읽음(data/role/ 아래 이름)")
+    ap.add_argument("--feat", default="old", choices=["old", "rot"], help="rot = 회전 상자 특징 11칸(패 크기·기울기), old = 예전 9칸")
     a = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
     torch.set_num_threads(8)
     labels = json.loads((OUT / "labels.json").read_text(encoding="utf-8"))
     backs = json.loads(BACKS.read_text(encoding="utf-8")) if BACKS.exists() else {}
+    rects_all = json.loads(RECTS.read_text(encoding="utf-8")) if a.feat == "rot" else None
     grids = {s["name"]: s["grid"] for s in sg.scenes()}
     scenes = []
     for name, rec in labels.items():
-        x, y = scene_tokens(rec, grids[name], backs.get(name, []), not a.no_backs)
+        x, y = scene_tokens(rec, grids[name], backs.get(name, []), not a.no_backs, a.feat, scene_rects(name, rects_all))
         if a.crop:  # 상자와 라벨 항목을 같은 마스크로 잘라 채점 인덱스를 맞춘다(앞면이 앞, 뒷면이 뒤)
             keep = crop_mask(x)
             rec = dict(rec, items=[it for it, k in zip(rec["items"], keep[: len(rec["items"])]) if k])
             x, y = x[keep], [l for l, k in zip(y, keep) if k]
         scenes.append(dict(name=name, rec=rec, x=x, y=y, n_face=len(rec["items"])))
     occl = set(getattr(sg, "EXCLUDED", ()))
-    print("사진", len(scenes), "상자", sum(len(s["x"]) for s in scenes), "앞면", sum(s["n_face"] for s in scenes), "가림 제외", sorted(occl), flush=True)
+    print("사진", len(scenes), "상자", sum(len(s["x"]) for s in scenes), "앞면", sum(s["n_face"] for s in scenes), "가림 제외", sorted(occl), "특징", a.feat, scenes[0]["x"].shape[1], flush=True)
+    if a.feat == "rot":
+        tilted = sum(int(abs(np.arctan2(s["x"][:, 9], s["x"][:, 10])).max() > np.radians(6)) for s in scenes for _ in [0])
+        print("기운 상자(3° 넘음)", sum(int((np.abs(np.arctan2(s["x"][:, 9], s["x"][:, 10]) / 2) > np.radians(3)).sum()) for s in scenes), "사진", tilted, flush=True)
     print("규칙 라벨", Counter(r for s in scenes for r in s["y"] if r >= 0), flush=True)
     fs = folds([s["name"] for s in scenes])
     conf = {r: Counter() for r in ROLES}
@@ -235,15 +333,14 @@ def main() -> None:
     if a.synth:
         pf = OUT / a.pre_file if a.pre_file else None
         if pf and pf.exists():
-            for sd in torch.load(pf):
-                net = SetNet()
-                net.load_state_dict(sd)
-                pre.append(net.eval())
+            pre = load_nets(pf)
+            if pre[0].feat != feat_dim(a.feat):
+                raise SystemExit(f"{pf}: 특징 {pre[0].feat}칸 가중치인데 --feat {a.feat} 는 {feat_dim(a.feat)}칸")
             print("사전학습 가중치 읽음", pf, len(pre), flush=True)
         else:
             import role_synth
             for seed in range(a.seeds):
-                syn = role_synth.dataset(a.synth, 100 + seed)
+                syn = role_synth.dataset(a.synth, 100 + seed, a.feat)
                 if a.no_backs:  # 서버는 뒷면 상자가 없다: 합성에서도 뺀다
                     for s in syn:
                         keep = s["x"][:, 4] == 0

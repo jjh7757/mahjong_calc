@@ -223,3 +223,23 @@ python -I -X utf8 experiments/tile_classifier/det_build.py --rim-blank --neg --b
 python -I -X utf8 experiments/tile_classifier/det_build.py --rim-blank --neg --backs --obb --recolor   # ds_r8
 python -I -X utf8 experiments/tile_classifier/server_bench/role_full_bench.py --det det_r8 --obb --rot-cut --clean --haku2 --corner-fix --loose-ctx
 ```
+
+## 역할 모델 입력에 회전 상자·뒷면, 합성 보강, 라벨 수정 (`role_set.py --feat rot`·`role_synth.py`·`role_field.py score rot`, 서버 `app/roles.py`, metrics 표 1-78, 2026-11-05)
+
+운영 역할 모델은 8회차 검출기의 회전 상자를 **감싸는 축 상자**로 받아 기운 패를 크고 정사각형으로 보고, 눕힘 플래그가 뒤집히며, 뒷면 상자는 늘 0 이었다. 한 번에 묶어 재학습:
+
+- **특징 11칸(`--feat rot`):** 회전 상자의 변으로 잰 패 폭·높이·눕힘 + sin·cos(2×기울기, −45~45°). 실제 사진은 7회차 라벨 `data/det/obb/rects.json` 을 IoU 로 매칭(`scene_rects`·`match_rects`·`tile_geom`), 테스트 15장은 `det_r8_final.onnx` 검출 회전 상자(`field_rects`, `field/rects_r8.json`)를 펠트 호모그래피로 보낸 뒤 펠트 축 기준으로 잼. 예전 9칸은 `--feat old` 그대로. 가중치 파일은 첫 층 모양으로 칸 수를 안다(`load_nets`).
+- **합성 보강:** 상자마다 기울기(줄 + 낱장 지터, 강 끝 비스듬한 패, 떼어 둔 패 ±45°, 사진 전체 ±3° 또는 5~13°), 손패 줄 끝의 떨어진 2~4장 = 손패, 안깡(앞면 2 + 양끝 뒷면 2) = 울기. `feat="old"` 면 기운 패를 감싸는 축 상자 크기로 낸다.
+- **라벨 수정:** 124654·125839 의 손패 줄 끝 3장(truth 에 울기 없음)이 규칙 라벨에서 울기였다 → 손패(`review.json` `_note_20261105`). 표 1-61 틀린 자동 반영의 원인.
+- **서버:** `obb.record` 가 뒷면 검출을 기록(`backs_of`), `roles.tokens` 가 모델 칸 수(ONNX 입력 모양, `RoleNet.feat`)에 따라 9/11칸을 만들고 11칸이면 회전 상자 꼭짓점(`unrotate_pts`)·뒷면 토큰을 넣는다. 응답에 `backs`·`feat`. 새 모델 `app/assets/tile-roles-rot.onnx`. **11-05 사용자 "11칸 서버 코드 변경" → 서버 기본값을 11칸으로(`roles.ROLE_MODEL`, 커밋·배포 전)**, 예전 9칸 `tile-roles.onnx` 는 되돌리기용으로 남겨 `LOCAL_ROLE_MODEL` 로 끼움.
+
+결과(표 1-78): 교차 검증 /1,046 — 9칸 1,034 · 11칸 1,026(130743 강 8개 씨드 흔들림), 테스트 15장 /706 — 9칸 701 · **11칸 705**(표 1-59 는 703), 자리 판독 벤치 /32 — hybrid 둘 다 32(0), model 29 → 31. 운영 채택은 다음 매장 사진으로.
+
+```
+python -I -X utf8 experiments/tile_classifier/role_synth.py --n 6 --feat rot                                     # 합성 그림 눈 확인(synth_check/)
+python -I -X utf8 experiments/tile_classifier/role_set.py --feat old --synth 8000 --synth-epochs 3 --epochs 100 --seeds 3 --pre-file pre_synth8k_v3old.pt --tag _synth3_old_fix
+python -I -X utf8 experiments/tile_classifier/role_set.py --feat rot --synth 8000 --synth-epochs 3 --epochs 100 --seeds 3 --pre-file pre_synth8k_rot.pt --tag _synth3_rot_fix
+python -I -X utf8 experiments/tile_classifier/role_field.py score rot pre_synth8k_rot.pt                         # 테스트 15장, data/role/role_all_rot.pt 저장
+python -I -X utf8 experiments/tile_classifier/role_export.py data/role/role_all_rot.pt experiments/tile_classifier/server_bench/models/tile-roles-rot.onnx
+LOCAL_ROLE_MODEL=.../tile-roles-rot.onnx python -I -X utf8 experiments/tile_classifier/server_bench/role_full_bench.py --det det_r8 --native
+```

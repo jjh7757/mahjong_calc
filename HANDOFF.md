@@ -2,6 +2,45 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-05 추가: 매장 전 운영 앱 흐름 확인 (metrics 표 1-82, 원인 표 1-84)
+
+- 운영 bacd3f6 + 지금 앱(자체 모델만 + `/v2/localroles`)을 처음으로 앱 흐름 그대로 쟀다: `LOCAL_ONLY=true ROLES=1 experiments/speed/run_prod_flow.sh <이름>`(`ROLES` 스위치 새로 더함). 32회 오류 0, 손패 30/32, 경고 없는 틀린 자동 0 — 매장에서 써도 된다.
+- 시간은 전체 7.23 / 7.97 / 13.52초로 33f60ee(5.82)보다 중앙 1.4초 느리다. 서버 단독 1.69초인 localroles 가 앱 흐름에선 5.4초라, 세 호출이 t4g.small 2 vCPU 에서 겹치는 몫으로 본다. 아래 최적화 후보 ③(한 요청으로)은 운영에서 더 효과 있을 것(안 잼).
+- **원인 확인(표 1-84, 운영에 직접 호출):** 서버가 CPU 를 다 써서 세 호출을 사실상 차례로 처리한다(동시 5.05초 ≈ 따로 처리 합 5.33초). 늘어난 1.4초는 자리 판독이 크롭 localseat 1.05초 → 원본 localroles 2.37초로 바뀐 몫이고, 그 대부분이 검출 1.23초(사진 전체 + 자리 크롭 두 번)다. 11칸 역할 모델은 20ms. 업로드는 0.1초 이하. 원본 전체 검출을 localroles·localdora 가 따로 한 번씩 하므로, 운영을 줄이려면 후보 ③(한 요청으로 합치기)이나 vCPU 늘리기. 앱 쪽 ①(요청 일찍 보내기)은 CPU 총량이 같아 운영 이득이 작을 것.
+- **요청 제한 부작용:** `/v2/locallast3` 는 사진마다 `_gate` 를 불러 요청 하나에 토큰 4개를 쓰고, 버킷이 빈 뒤 짧게 다시 보내면 앞 사진이 토큰만 먹고 계속 429 가 난다(측정이 6분 막힘). 한 판 쓰임에선 드물다. 고치려면 요청당 한 번만 `_gate`.
+- 태블릿(SM-X236N) 앱 설치 시각 11-05 14:24(master 621b2d5 뒤).
+- **서버 고침(표 1-86, mahjong-recognizer 커밋 전·운영 미반영):** 같은 원본은 받기(`prepare_image`)·디코딩을 한 번만(`app/shared.py`, `main._prepare_shared`, `local_read.decode_rgb`, roles·read_wall 이 씀), `/v2/locallast3` 요청 제한 1회. 개발 26장면 답 같음, pytest 158, 노트북 한 판 roles+dora 1,192 → 992ms. 운영은 0.7~0.8초 줄 것으로 보나 배포 뒤 `experiments/speed/prod_overlap.py`·운영 앱 흐름으로 확인할 것. 남은 큰 몫은 검출 1.23초(맥락 검출 해상도 낮추기는 정확도 재측정 필요) 또는 vCPU.
+
+## 2026-11-05 추가: 서버 경합 진단(후보 ③)은 다른 세션 측정으로 갈음 (metrics 표 1-84·1-85)
+
+- 운영 직접 호출(표 1-84, "매장 실험 준비" 세션): 세 요청 동시 5.05초 ≈ 따로 합 5.33초 — 스레드 경합이 아니라 CPU 일 총량. 서버 개선(같은 원본 디코딩 한 번·사진 전체 검출 줄이기·locallast3 토큰)은 그 세션이 맡음. 이 세션의 진단 스위치(LOCAL_THREADS·LOCAL_SERIAL)는 되돌림.
+- 보탠 것: localroles·localdora 는 `prepare_image`(max_side 4080)가 12MP 를 디코딩→줄이지 않고 JPEG q90 재인코딩→판독에서 또 디코딩. 재료: 강 끝 크롭 덤프 `experiments/speed/results/dump_1105prodlike/`, 서버 단독 벤치 `server_bench/contention_bench.py`(안 돌림), 측정 테스트 DUMP_DIR 에 강 끝 크롭 저장 추가.
+
+## 2026-11-05 추가: 최적화 후보 ① 앱에 넣음 — 1fb3404(fix/seat-read-grow, push·master·APK 전) (metrics 표 1-83)
+
+- `readGrid` 가 자체 모델 경로에서 안 쓰는 자리·리치봉·도라 크롭을 자르지 않고, `/v2/localdora` 를 디코딩 전에 보낸다. Gemini 경로는 그대로.
+- 로컬 같은 서버 연달아: 판독 32장면 전부 같음, 전체 중앙 2.86 → **2.22초**, crop 0.90 → 0.32초. 운영(read 5.2초, 서버 병목, 표 1-82)에서의 효과는 안 잼.
+- 남은 일: push·master·APK(사용자 결정), 운영 앱 흐름으로 확인(`LOCAL_ONLY=true ROLES=1 experiments/speed/run_prod_flow.sh`). 운영 병목은 ③(한 요청으로 합쳐 서버 겹침 줄이기)·④가 더 클 것.
+
+## 2026-11-05 추가: 지금 앱 흐름 최적화 후보 (metrics 표 1-81, 저장 로그 재계산, 코드 변경 없음)
+
+- 앱 흐름 2.9초 중 기기 처리 2.05초(디코딩 0.83·판정 0.27·크롭 0.95), 마지막은 언제나 `/v2/locallast3`(크롭이 다 끝나야 보냄).
+- 후보(효과는 추정, 재야 함): ① `localOnly && useRoles` 에서 안 쓰는 자리 크롭·리치봉·도라 크롭을 안 자르고 강 끝 크롭을 먼저 잘라 last3 를 바로 보내기, localdora 는 디코딩 전에 보내기(앱만, 판독 답 그대로) ② 서버가 원본 + 격자로 강 끝까지 자르게 해 기기 12MP 디코딩을 없애고 판정용 축소본만 플랫폼 디코더로 ③ localroles·localdora·locallast3 를 한 요청으로(업로드 1번, 서버 디코딩 1번, 화료자 미정 장면 4번 업로드 없앰) ④ 운영 t4g.small 2코어에서 동시 3요청 ONNX 스레드 경합 확인.
+
+## 2026-11-05 추가: 강·표시패 검출도 8회차로 합치기 시험 — 안 함 (metrics 표 1-80)
+
+- 사용자 "패 검출이 2개 있을 필요가 있니" → "그냥 8회차만 쓰면 되는거 아니니". 서버 `LOCAL_OTHER_DET=obb|obb-up`(`LocalReader.detect_other`, 기본 끔, 커밋 전)로 `/v2/locallast3`·`/v2/localdora` 검출을 8회차로 바꿔 앱 흐름 같은 시각 비교: 완전 맞음 25 → 21, **경고 없는 틀린 자동 0 → 2(k26 헛 리치)**, 표시패 15 → 13, 세워 자르기는 효과 0. 원인은 강 틀·눕힌 패·짝 규칙이 2회차 상자에 맞춰진 것 + 8회차가 白 을 잡아 울기 白 2장이 표시패 짝으로. 합치려면 그 규칙을 8회차로 다시 맞춰야 함.
+
+## 2026-11-05 추가: 역할 모델 재학습 — 회전 상자·뒷면 입력, 합성 보강, 라벨 수정 (metrics 표 1-78, `experiments/tile_classifier/README.md` 끝 절, 서버·앱 커밋 전·운영 미반영)
+
+- **왜:** 운영 역할 모델은 8회차 회전 상자 검출기 결과를 감싸는 축 상자로만 받고(기운 패가 크고 정사각형, 눕힘 플래그 뒤집힘), 검출기가 내는 뒷면은 안 썼다. 사용자 "재학습하는쪽을 추천하는가" → 추천 → "진행해라".
+- **한 것:** 특징 11칸(`role_set.py --feat rot`: 회전 상자 변으로 잰 크기·눕힘 + sin·cos 2×기울기) + 뒷면 토큰, 합성 보강(기울기·손패 줄 끝 떨어진 2~4장 = 손패·안깡), **라벨 수정 6개**(124654·125839 손패 끝 3장 — truth 에 울기 없음, 표 1-61 틀린 자동 반영의 원인). 서버 `obb.record`(뒷면 기록)·`roles.tokens`(ONNX 입력 모양으로 9/11칸)·`local_read.detect_seat`, pytest 153. 새 모델 `app/assets/tile-roles-rot.onnx`(운영 `tile-roles.onnx` 는 그대로, `LOCAL_ROLE_MODEL` 로 끼움).
+- **결과:** 교차 검증 /1,046(EXCLUDED 5장 뺀 분모) 9칸 1,034 · 11칸 1,026(130743 강 8개 씨드 흔들림). 테스트 15장 /706: 9칸 701 · **11칸 705**(예전 703). 자리 판독 벤치 /32 같은 시각: hybrid 둘 다 **32 (0)**, model 29 → **31**(124654·125839), 역할 3.5 → 6.5ms.
+- **운영 bacd3f6 배포(11-05 14시, 사용자 "커밋·배포해", test·deploy 성공, git_sha·`feat` 11 확인):** 운영 서버 단독 localroles 32/32 (틀린 자동 0)·서버 1.69초 중앙. 앱 변경 없음(같은 `/v2/localroles`), 운영 앱 흐름은 안 잼. 되돌리려면 서버 env `LOCAL_ROLE_MODEL=…/tile-roles.onnx`.
+- **서버 기본값을 11칸으로(11-05 사용자 "11칸 서버 코드 변경해줘"):** `roles.ROLE_MODEL` 기본 = `tile-roles-rot.onnx`, 9칸 `tile-roles.onnx`(틀린 울기 라벨로 학습된 운영 모델)는 되돌리기용으로 남김. pytest 153, 기본 설정 로컬 서버 응답 `feat` 11·뒷면 73·69개, 124654·125839 손패 13장·울기 없음. 같은 작업 트리에 강·표시패 8회차 스위치 `LOCAL_OTHER_DET`(기본 끔, 표 1-80)도 있음. 운영 반영은 서버 master push(→ pytest → 배포) 뒤 운영 git_sha·`/v2/localroles` 응답 `feat` 확인.
+- **앱 흐름(표 1-79, 같은 시각 연달아):** 9칸 대 11칸 저장 격자 31/32 = 31/32·완전 맞음 25 = 25, 펠트 자동 격자 30 = 30, 바뀐 건 143104 입력 화면 → 고르면 맞음 1장, 나빠진 것 0. `run_local_server.py --role-model`, launch.json `recognizer-r8rot-*`.
+- **다음:** 운영 채택은 다음 매장 방문 사진으로(개발 세트 hybrid 가 포화라 판별 못 함). 서버 변경·새 ONNX 커밋 여부는 사용자 결정. 더 할 것: 패 종류(같은 종류 3장 = 퐁)를 토큰에 넣기, 씨드 간 불일치로 확신도, 역할 라벨을 7회차 전수 조사 상자로 다시 만들기.
+
 ## 2026-11-05 추가: 8회차 서버·앱 반영 (metrics 표 1-71, 사용자 "그냥 8회차 모델 쓰는 버전으로 서버, 앱에 반영해줘")
 
 - **서버 운영 b57e2ce(배포·확인 완료):** feat/local-read-conf(확신도·白 채우기·강 틀·read_small)와 `roles.py`(/v2/localroles)를 master 에 합치고, 자리 판독 검출기를 8회차 회전 상자 `app/assets/tile-obb-r8.onnx` 로(`app/obb.py`: 세워 자르기·가는 조각·안깡, 요청별 기록은 contextvar), `corner_blank` 에 탁자 끝 여러 줄 + 白 2장 이상 퐁(`corner_pair`), 크롭 밖 떼어 둔 화료패(`roles._loose_outside`). 강·표시패는 2회차 `tile-yolo26n.onnx` 그대로. `opencv-python-headless` 추가. pytest 149.
@@ -147,7 +186,7 @@
 - **태블릿 화면 확인(10-29 22시대, SM-X236N 1920×1200 밀도 240 Android 16, 가로 = 키오스크 1280dp):** 로비·대국 시작·테이블(천화·지화·격자 편집 on/off·도라 산 찾기·헤드 QR)·천화 결과·직접 계산 → 결과 상황 칩(리치·일발 누르면 6000 으로 다시 계산) 모두 동작. **고친 것:** Android 15+ 끝까지 그리기에서 하단 작업 표시줄(48dp)·상단 상태 표시줄이 덮던 곳 — 키오스크 테이블 화면(`SafeArea(top: false)`), 키오스크 결과 화면(`SafeArea`, 뒤로·"대국에 반영" 가림), 대국 시작 화면 맨 아래 "대국 시작" 버튼(가로 태블릿에서 못 누름: `ListView` 에 패딩을 직접 주면 아래 시스템 여백을 안 더함 → `16 + MediaQuery.paddingOf(context).bottom`), 같은 꼴의 입력·연습·폰 결과 화면. 노트북 Windows 창 시험으론 안 드러나던 것. 고친 빌드(로컬 release, 운영 키)를 태블릿에 설치·가로 확인. **주의(93dea71 전 CI APK 만 해당):** CI APK 와 로컬 빌드 APK 는 서명이 달라 덮어쓰기 안 됨(지우고 다시 설치 = 데이터 삭제) — 태블릿엔 지금 로컬 빌드. 작업 표시줄은 나중에 키오스크 설정(앱 전체 화면 모드·Knox 단일 앱)으로 숨길 수 있음(사용자 제안, 미구현). 태블릿 자체 카메라 미리보기는 가로에서 세로 비율로 보임(헤드를 쓰면 무관, 미조사) — 가짜 헤드(`adb reverse tcp:8777` + 원격 카메라 주소 `http://127.0.0.1:8777?t=local`)를 붙이니 탁자 사진이 4:3 로 왼쪽을 꽉 채움. 그때 오른쪽 칸 "기록" 줄이 안내 글과 겹쳐서(큰 버튼 96·68dp 라 기록 칸 0) **화면 높이 900dp 미만이면 작은 버튼(60·48dp)** 으로(`_kioskBody` `compact`, 노트북 창 720 도 해당). 태블릿 앱의 원격 카메라 주소는 시험용 127.0.0.1:8777 로 남아 있음 — 실제 헤드는 QR 로 다시.
 - **태블릿 기기 처리 시간(10-29 23시, metrics 표 1·표 4):** 화료 촬영 B·C·D 12회(profile, 로컬 서버) 기기 처리 중앙 **1.91초**(줄이기 0.78·앞면 0.28·자르기 0.85, 노트북 2.0 과 비슷), 전체 중앙 9.1초 — D k12 에서 Gemini 꼬리 66·90초(오류 1, 11/12). 판 상태 추적 프레임 분석(`integration_test/track_frame_timing_test.dart`, 새로 만듦) 긴 변 960 **0.17초**·1440 0.37·1920 0.64 → 3초 간격에 넉넉. 측정법: `flutter drive --profile -d R5KL707NEEZ --driver=test_driver/integration_test.dart --target=…` + `adb reverse tcp:8030`·`tcp:8040`(launch.json "recognizer"·"photos"). logcat 이 1000자 넘는 줄을 잘라 `read_grid_timing_test.dart` 가 짧은 `TIMES` 줄을 더 찍게 함(`experiments/speed/device_timing.py` 는 그 줄로, 빈 값 허용).
 - **전체 화면 모드(10-29 23시대, 사용자 요청):** 테이블 화면 더보기 "전체 화면 (상태 표시줄·작업 표시줄 숨김)"(`mount-fullscreen-menu`, 기본 끔, `kiosk.fullscreen` 저장) → `FullscreenMode`(`lib/ui/kiosk.dart`) 가 앱 전체에 `SystemUiMode.immersiveSticky`(끄면 `edgeToEdge`), 앱 시작·다시 앞으로 올 때(`MahjongApp` 수명 주기) 다시 적용. 태블릿 확인: 켜면 막대가 사라져 앱이 화면 전체, 아래 가장자리를 쓸면 막대가 겹쳐 나왔다 몇 초 뒤 숨음(배치는 그대로), 앱을 껐다 켜도 유지. 테스트 `test/fullscreen_mode_test.dart`. 태블릿엔 켜 둔 상태. 측정 도구(`flutter drive`)가 앱을 지웠다 깔아 카메라 권한을 다시 물음 — 사용자가 허용함.
-- **폰 사진 입력:** 계산기 "사진" 의 손패 사진은 `/v2/seat`(`recognizer_client.dart` `recognizeSeat`, 3072px), 새 항목 "테이블 전체 사진 (갤러리)" → 거치 화면 + 갤러리 사진 위 격자 맞추기 → "이 격자로 읽기"(`mount_screen.dart` `_galleryShot`·`_readGallery`, 맞춘 격자는 그 사진에만). 폰 S25 Ultra 로 장면 C 배만 16000 확인(약 18초).
+- **폰 사진 입력:** 계산기 "사진" 의 손패 사진은 `/v2/seat`(`recognizer_client.dart` `recognizeSeat`, 3072px), 새 항목 "테이블 전체 사진 (갤러리)" → 거치 화면 + 갤러리 사진 위 격자 맞추기 → "이 격자로 읽기"(`mount_screen.dart` `_galleryShot`·`_readGallery`, 맞춘 격자는 그 사진에만). **11-05:** 사진을 고르면 펠트 격자(`gridFromFelt`)로 바로 읽고, 펠트를 못 찾을 때만 격자 화면 + "자동 맞추기"·"이 격자로 읽기"(기기에서 고르기 흐름은 안 돌려 봄). 폰 S25 Ultra 로 장면 C 배만 16000 확인(약 18초).
 - **도라:** 선 기준 도라 구역(`GridZones.doraZone`, 주사위 탁이면 예비일 뿐), **판 시작 도라 산(왕패) 상자** — 판 상태 추적의 새 판 첫 버림 때 `/v2/wall` 한 번(+ 더보기 "도라 산 찾기"), 리치 아닌 화료는 그 상자를 `/v2/walldora` 로. 프롬프트는 판 시작 전용·일자 7줄(사용자 지시: 쓸데없는 문구 금지). 합성(왕패에 七萬 붙임) 17/18, 도라 17/18.
 - **도라 안전 규칙:** 왕패 상자·리치 손패 옆이 아닌 곳(가운데 칸·선 기준 구역)에서 읽은 도라는 `MergeIssue.doraFallback` → 자동 반영 안 함(결과 화면 "확인할 것"). 가운데 칸 도라 크롭은 화료자 아닌 쪽으로 40/1000 넓힘(`doraSearchZone`) — 선에 걸친 표시패까지.
 - **처음 설정 틀(사용자 그림: 손패+울기 바깥 띠 4개 · 리치봉 상자 · 나머지 패산 구역):** 격자 맞추기 "자동 맞추기" = `/v2/setup`(Gemini 손패·울기·기기 틀) + `/v2/wall` → `proposeGrid`(선 = 손패 안쪽 끝 − 1.5u, 리치봉 = 기기 + 0.5u, 펠트 위 도라를 울기로 붙인 것은 뺌). 리치봉 상자는 옮기기·크기·회전(`GridZones.sticks`·`sticksAngle`). B·C·D 앱 흐름 12/12·틀린 자동 0(자동은 C 4회만, B·D 는 도라 출처 규칙으로 확인).

@@ -50,13 +50,11 @@ def main() -> None:
     src, dst = Path(sys.argv[1]), Path(sys.argv[2])
     if not src.is_absolute():
         src = HERE / src
-    nets = []
-    for sd in torch.load(src):
-        n = rs.SetNet()
-        n.load_state_dict(sd)
-        nets.append(n.eval())
+    nets = rs.load_nets(src)
+    feat = nets[0].feat
+    print("특징", feat, "칸(9 = 예전 축 상자, 11 = 회전 상자 특징 — 서버 roles.py 가 ONNX 입력 모양에서 읽는다)")
     ens = Ensemble(nets).eval()
-    x = torch.randn(1, 37, rs.FEAT)
+    x = torch.randn(1, 37, feat)
     with torch.no_grad():  # 수동 계산이 원래 모듈과 같은지
         pad = torch.zeros(1, 37, dtype=torch.bool)
         ref = torch.stack([torch.softmax(n(x, pad), -1) for n in nets]).mean(0)
@@ -66,7 +64,7 @@ def main() -> None:
 
     sess = ort.InferenceSession(str(dst), providers=["CPUExecutionProvider"])
     for n in (5, 37, 120):
-        x = torch.randn(1, n, rs.FEAT)
+        x = torch.randn(1, n, feat)
         a = ens(x).detach().numpy()
         b = sess.run(None, {"x": x.numpy()})[0]
         print(n, "최대 차", float(np.abs(a - b).max()))

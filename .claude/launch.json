@@ -100,21 +100,84 @@
     {
       "name": "recognizer-local-bcd",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["experiments/yolo/run_local_server.py", "--port", "8033", "--local-fold", "a,bcd"],
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8033",
+        "--local-fold",
+        "a,bcd"
+      ],
       "port": 8033,
       "autoPort": false
     },
     {
       "name": "recognizer-local-am",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["experiments/yolo/run_local_server.py", "--port", "8034", "--local-fold", "b,am"],
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8034",
+        "--local-fold",
+        "b,am"
+      ],
       "port": 8034,
       "autoPort": false
     },
     {
       "name": "recognizer-local-pm",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["experiments/yolo/run_local_server.py", "--port", "8035", "--local-fold", "a,pm"],
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8035",
+        "--local-fold",
+        "a,pm"
+      ],
+      "port": 8035,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-r8-bcd",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8033",
+        "--local-fold",
+        "a,bcd",
+        "--seat-det",
+        "det_r8"
+      ],
+      "port": 8033,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-r8-am",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8034",
+        "--local-fold",
+        "b,am",
+        "--seat-det",
+        "det_r8"
+      ],
+      "port": 8034,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-r8-pm",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8035",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8"
+      ],
       "port": 8035,
       "autoPort": false
     },
@@ -187,6 +250,170 @@
         "experiments/visit_20261031/captures"
       ],
       "port": 8042
+    },
+    {
+      "name": "recognizer-r8rot-bcd",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8033",
+        "--local-fold",
+        "a,bcd",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot.onnx"
+      ],
+      "port": 8033,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-r8rot-am",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8034",
+        "--local-fold",
+        "b,am",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot.onnx"
+      ],
+      "port": 8034,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-r8rot-pm",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8035",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot.onnx"
+      ],
+      "port": 8035,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-r8obb-bcd",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8033",
+        "--local-fold",
+        "a,bcd",
+        "--seat-det",
+        "det_r8",
+        "--other-det",
+        "obb"
+      ],
+      "port": 8033,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-r8obbup-bcd",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8033",
+        "--local-fold",
+        "a,bcd",
+        "--seat-det",
+        "det_r8",
+        "--other-det",
+        "obb-up"
+      ],
+      "port": 8033,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-r8obb-am",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8034",
+        "--local-fold",
+        "b,am",
+        "--seat-det",
+        "det_r8",
+        "--other-det",
+        "obb"
+      ],
+      "port": 8034,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-r8obbup-am",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8034",
+        "--local-fold",
+        "b,am",
+        "--seat-det",
+        "det_r8",
+        "--other-det",
+        "obb-up"
+      ],
+      "port": 8034,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-r8obb-pm",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8035",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--other-det",
+        "obb"
+      ],
+      "port": 8035,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-r8obbup-pm",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8035",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--other-det",
+        "obb-up"
+      ],
+      "port": 8035,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-prodlike",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8036"
+      ],
+      "port": 8036,
+      "autoPort": false
     }
   ]
 }

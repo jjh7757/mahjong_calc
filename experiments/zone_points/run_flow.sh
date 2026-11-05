@@ -10,6 +10,7 @@ R=experiments/speed/results
 RIICHI=$(python -I -X utf8 experiments/speed/flow_visit.py riichi)
 COMMON=(drive --profile -d windows --driver=test_driver/integration_test.dart --target=integration_test/read_grid_timing_test.dart
   --dart-define=RECOGNIZER_API_KEY=local --dart-define=SLEEP_S=5 --dart-define=LOCAL_ONLY=true)
+[ -n "$ROLES" ] && COMMON+=(--dart-define=ROLES=true)  # ROLES=1 이면 자리 판독을 /v2/localroles 로(운영 앱과 같음)
 for MODE in "$@"; do
   GRIDS=$(python -X utf8 experiments/zone_points/zones.py grids "$MODE" 2>/dev/null)
   VISIT=(--dart-define=PHOTO_URL=http://127.0.0.1:8042 --dart-define=SET=visit --dart-define=REPEAT=1 "--dart-define=FIELD_GRIDS=$GRIDS" "--dart-define=RIICHI_SIDES=$RIICHI")
