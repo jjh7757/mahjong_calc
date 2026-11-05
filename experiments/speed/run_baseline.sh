@@ -17,6 +17,9 @@ F=/c/Users/jjh7757/flutter/bin/flutter
 R="$MAIN/experiments/speed/results"
 COMMON=(drive --profile -d windows --driver=test_driver/integration_test.dart --target=integration_test/read_grid_timing_test.dart
   --dart-define=RECOGNIZER_API_KEY=local --dart-define=LOCAL_ONLY=true --dart-define=ROLES=true)
+# EXTRA="--dart-define=HAND_RULES=false" 처럼 더 넘길 정의(개선 계획 4단계 규칙 검증기 전·후 비교).
+# shellcheck disable=SC2206
+[ -n "${EXTRA:-}" ] && COMMON+=($EXTRA)
 if [ "$MODE" = dev ]; then
   RIICHI=$(python -I -X utf8 experiments/speed/flow_visit.py riichi)
   GRIDS=$(python -X utf8 experiments/zone_points/zones.py grids saved 2>/dev/null)

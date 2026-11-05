@@ -24,6 +24,7 @@ import 'package:mahjong_calc/table/auto_record.dart';
 import 'package:mahjong_calc/table/cropper.dart';
 import 'package:mahjong_calc/table/fixed_layout.dart';
 import 'package:mahjong_calc/table/grid_zones.dart';
+import 'package:mahjong_calc/table/hand_rules.dart';
 import 'package:mahjong_calc/table/merge.dart';
 import 'package:mahjong_calc/table/seat_map.dart';
 import 'package:mahjong_calc/table/shot_image.dart';
@@ -121,6 +122,9 @@ const _localOnly = bool.fromEnvironment('LOCAL_ONLY');
 const _useRoles = bool.fromEnvironment('ROLES');
 // GEMINI_STICKS=true: 자체 모델만 쓰되 리치봉은 Gemini 로도 읽는다. readGrid(geminiSticks:).
 const _geminiSticks = bool.fromEnvironment('GEMINI_STICKS');
+// HAND_RULES=false: 규칙 검증기(lib/table/hand_rules.dart, 개선 계획 4단계)의 막음을 auto_block 에 넣지 않는다(전·후 비교의 "전").
+// 켜든 끄든 검사 답은 hand_rules 로, 규칙 없는 자동 반영 조건은 auto_block_base 로 남긴다.
+const _handRules = bool.fromEnvironment('HAND_RULES', defaultValue: true);
 // PHOTO_MIN·PHOTO_MAX: 사진 이름 범위 [min, max) 만 잰다(매장 오전·오후에 다른 나눔 모델을 쓰려고).
 const _photoMin = String.fromEnvironment('PHOTO_MIN');
 const _photoMax = String.fromEnvironment('PHOTO_MAX');
@@ -320,8 +324,10 @@ void main() {
                 // 확신도 분포를 보려고 판독 원본도(손패 패별 conf, 리치봉 자리별 conf, 도라 표시패 conf).
                 out['hand_read'] = reading.hand?.toJson();
                 out['center_read'] = reading.center?.toJson();
-                // 거치 화면과 같은 자동 반영 조건(null 이면 자동 반영).
-                out['auto_block'] = autoRecordBlocker(
+                // 거치 화면과 같은 자동 반영 조건(null 이면 자동 반영). 규칙 검증기는 판독 원본 손패·울기 + 병합 화료패·표시패 + 강.
+                final rules = checkHandRules(handRuleInputOf(hand: reading.hand!, merge: merge, center: reading.center));
+                out['hand_rules'] = rules.toJson();
+                String? block(List<String> ruleBlocks) => autoRecordBlocker(
                   warnings: reading.warnings,
                   issues: [for (final f in merge.flags) f.issue],
                   otherWinners: reading.others.length,
@@ -330,7 +336,11 @@ void main() {
                   resultValid: score?.isValid ?? false,
                   paoBase: score != null && score.isValid ? engine.paoBasePoints(score) : 0,
                   gameOver: false,
+                  ruleBlocks: ruleBlocks,
                 );
+                out['auto_block_base'] = block(const []);
+                out['auto_block'] = block(_handRules ? rules.blockers : const []);
+                out['hand_rules_on'] = _handRules;
                 out['auto_cautions'] = autoRecordCautions(
                   issues: [for (final f in merge.flags) f.issue],
                   doraIndicators: merge.situation.doraIndicators.length,

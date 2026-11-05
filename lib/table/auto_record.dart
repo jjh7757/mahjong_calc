@@ -31,6 +31,8 @@ const cautionIssues = {
 
 /// 자동 반영을 막는 이유. 반영해도 되면 null.
 /// [warnings] 는 판독 경고(자리 판독이 엇갈림 등)와 동시 론 고르기 플래그, [issues] 는 화료자 병합 플래그 종류.
+/// [ruleBlocks] 는 규칙 검증기(`hand_rules.dart` [HandRuleResult.blockers]: V1 같은 패 5장·V2 적5 중복·V4 울기 구성)의 막음 사유
+/// — 사진을 안 보는 규칙서 사실이라 판독 경고·병합 플래그와 겹치지 않는다(개선 계획 4단계, 2026-11-05).
 String? autoRecordBlocker({
   required List<String> warnings,
   required List<MergeIssue> issues,
@@ -40,8 +42,10 @@ String? autoRecordBlocker({
   required bool resultValid,
   required int paoBase,
   required bool gameOver,
+  List<String> ruleBlocks = const [],
 }) {
   if (gameOver) return '대국이 이미 끝남';
+  if (ruleBlocks.isNotEmpty) return '규칙: ${ruleBlocks.join(', ')}';
   if (!resultValid) return '화료 형태가 아님';
   if (warnings.isNotEmpty) return '판독 경고 ${warnings.length}개';
   final open = issues.where((i) => !infoOnlyIssues.contains(i) && !cautionIssues.contains(i)).toList();

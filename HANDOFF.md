@@ -2,6 +2,14 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-05 밤 추가: 개선 계획 4단계 — 마작 규칙 검증기 (metrics 표 1-92, `docs/improvement_plan_1105.md` 4단계 진행 줄)
+
+- **무엇:** `lib/table/hand_rules.dart` = `experiments/speed/hand_rules.py`(같은 명세 `test/fixtures/hand_rules.json`, 35예제 양쪽 통과). V1 같은 패 5장·V2 적5 중복·V4 울기 구성 → `autoRecordBlocker(ruleBlocks:)` 막음, V3(화료형 아님 + 분류기 2순위 한 장으로 고쳐지는 결과가 하나) → 거치 화면 노란 테두리 확인 창, 바꿔도 자동 반영 안 함. V5 장수는 기존 흐름.
+- **결과:** 헛경보 0(개발·회귀 전부), 회귀 unsafe 잡음 fold 9/26·prod 4/17(전부 V4), 앱 흐름 전·후 같음. **F1400(적5만 → 5만, 경고 없는 틀린 자동 3)은 못 잡음 — 5단계 몫**(확신도 0.96, 2순위 9s).
+- **테스트 15장 서버 단독 새 기준:** `field_bench.py` 가 서버처럼 q90 재저장 → **6/15 · 장면 2/5 · 189/196**(예전 9/15 는 낙관).
+- **서버 브랜치 `feat/cls-alt` 6b7c2cb(mahjong-recognizer, push 안 함 = 운영 미반영):** 분류기 2순위 `alt`·`conf2` 를 `/v2/localroles`·`/v2/localseat` 에 더함, 답 그대로(pytest 161, 회귀 546행 같음). 운영에 없으면 앱은 V3 만 안 하고 나머지는 그대로. 배포는 사용자 결정.
+- 쓰는 법: `python -I -X utf8 experiments/speed/hand_rules.py test`, `... score <robust JSON | field_bench JSON | 앱 흐름 로그> [--detail]`, 앱 흐름 전·후는 `EXTRA="--dart-define=HAND_RULES=false" bash experiments/speed/run_baseline.sh dev|field <TAG>`.
+
 ## 2026-11-05 밤 추가: 개선 계획 3단계 — 흔들기 회귀 세트 (metrics 표 1-91, `docs/improvement_plan_1105.md` 3단계 진행 줄)
 
 - **쓰는 법:** `python -I -X utf8 experiments/speed/robust_suite.py run --models fold --tag <TAG>` → `--models prod` → `report <JSON들>`. 서버 안 띄움(서버 코드를 프로세스 안에서, 모델 한 벌 약 7분). 변형 사진이 없으면 `make` + `flutter test tool/robust_felt_grid_test.dart`(회전 격자). 목록·세기·근거는 `experiments/speed/ROBUST.md`, 고정 세트 21개(`FIXED`, JPEG 만 q35 로 한 번 올림).

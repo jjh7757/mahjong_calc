@@ -9,7 +9,12 @@ class ReadTile {
   final int tile;
   final bool red;
   final double conf;
-  const ReadTile(this.tile, {this.red = false, this.conf = 0});
+
+  /// 분류기 2순위 패 코드(`0m` 처럼 적5 그대로)와 그 확신도. 서버 `/v2/localroles`·`/v2/localseat` 가 낼 때만(개선 계획 4단계,
+  /// 2026-11-05). 답은 [tile] 그대로이고 규칙 검증기 V3(`hand_rules.dart`)가 후보를 찾는 데만 쓴다.
+  final String? alt;
+  final double conf2;
+  const ReadTile(this.tile, {this.red = false, this.conf = 0, this.alt, this.conf2 = 0});
 
   static ReadTile? fromCode(String? code, num? conf) {
     if (code == null) return null;
@@ -24,12 +29,17 @@ class ReadTile {
     }
   }
 
-  static ReadTile? fromJson(Map<String, dynamic>? j) =>
-      j == null ? null : fromCode(j['tile'] as String?, j['conf'] as num?);
+  static ReadTile? fromJson(Map<String, dynamic>? j) {
+    if (j == null) return null;
+    final t = fromCode(j['tile'] as String?, j['conf'] as num?);
+    final alt = j['alt'] as String?;
+    if (t == null || alt == null || fromCode(alt, 0) == null) return t;
+    return ReadTile(t.tile, red: t.red, conf: t.conf, alt: alt, conf2: ((j['conf2'] as num?) ?? 0).toDouble());
+  }
 
   String get code => red ? '0${Tiles.toCode(tile)[1]}' : Tiles.toCode(tile);
 
-  Map<String, dynamic> toJson() => {'tile': code, 'conf': conf};
+  Map<String, dynamic> toJson() => {'tile': code, 'conf': conf, if (alt != null) 'alt': alt, if (alt != null) 'conf2': conf2};
 
   @override
   String toString() => code;

@@ -465,11 +465,18 @@ def run(a) -> None:
             except Exception as e:  # noqa: BLE001 — 한 장 실패가 전체를 멈추지 않게
                 o, err = {"tiles": [], "separate_tile": None, "melds": [], "framed": False}, f"{type(e).__name__}: {e}"
             secs = time.perf_counter() - t0
-            hand = [t["tile"] for t in o["tiles"]] + ([o["separate_tile"]["tile"]] if o.get("separate_tile") else [])
+            hand_t = o["tiles"] + ([o["separate_tile"]] if o.get("separate_tile") else [])
+            hand = [t["tile"] for t in hand_t]
             melds = [" ".join(m["tiles"]) for m in o["melds"]]
             j = judge(hand, melds, o.get("block", False), s["hand"], s["melds"])
+            # 패별 확신도·분류기 2순위(서버가 내면 — 4단계 feat/cls-alt)와 정답: experiments/speed/hand_rules.py score 가 오프라인 재채점에 쓴다
+            extra = {"conf": [t.get("conf") for t in hand_t], "want_hand": s["hand"], "want_melds": s["melds"]}
+            if any("alt" in t for t in hand_t):
+                extra.update(alt=[t.get("alt") for t in hand_t], conf2=[t.get("conf2") for t in hand_t])
+            if any("alts" in m for m in o["melds"]):
+                extra.update(meld_conf=[m.get("conf") for m in o["melds"]], meld_alt=[m.get("alts") for m in o["melds"]], meld_conf2=[m.get("conf2s") for m in o["melds"]])
             rows[s["name"]] = dict(w=s["w"], hand=hand, melds=melds, block=o.get("block", False), framed=o.get("framed"), grid=grid, grid_src=src,
-                                   s=round(secs, 2), err=err, models=files, **j)
+                                   s=round(secs, 2), err=err, models=files, **j, **extra)
             print(f"{v:12s} {s['name'][-6:]:>6s} {'O' if j['ok'] else 'X'}{' UNSAFE' if j['unsafe'] else ''}{' 자동틀림' if j['bad_auto'] else ''} "
                   f"{j['hit']}/{j['want']} {src} {secs:.1f}s {' '.join(hand)} {melds}{' ' + err if err else ''}", flush=True)
         res[v] = rows
@@ -540,6 +547,13 @@ def report(a) -> None:
             sc = f" · 장면 {scene_major(rows)}/5" if m.get("set") == "field" else ""
             print(f"| `{v}` | {GROUP.get(v, '')} | {t['ok']}/{t['n']}{sc} | {t['hit']}/{t['want']} ({pct:.1f}%) | {t['unsafe']} | {t['bad_auto']} | "
                   f"{new_fail}{f' (+고침 {fixed})' if fixed else ''}{' ※felt0 대비' if v in GEOM else ''} | {gs} | {secs[len(secs) // 2]:.1f} |")
+        if a.same and path != a.files[0]:
+            # 답이 같은지(4단계: 서버에 2순위만 더한 뒤 hand·melds·block 이 사진마다 같아야 한다) — 첫 파일과 비교
+            ref = json.loads(Path(a.files[0]).read_text(encoding="utf-8"))
+            diff = [(v, k) for v in [*BASE, *STRONG] for k, r in (res.get(v) or {}).items()
+                    if k in (ref.get(v) or {}) and any(r[f] != ref[v][k][f] for f in ("hand", "melds", "block"))]
+            n = sum(len(res.get(v) or {}) for v in [*BASE, *STRONG])
+            print(f"\n같은 답 확인 — {Path(a.files[0]).name} 대비: 다른 행 {len(diff)}/{n}", diff[:20])
         if a.detail:
             for v in [*BASE, *STRONG]:
                 for k, r in (res.get(v) or {}).items():
@@ -564,6 +578,7 @@ def main() -> None:
     p = sub.add_parser("report")
     p.add_argument("files", nargs="+")
     p.add_argument("--detail", action="store_true")
+    p.add_argument("--same", action="store_true", help="둘째 파일부터 첫 파일과 hand·melds·block 이 사진마다 같은지")
     a = ap.parse_args()
     {"make": make, "run": run, "report": report}[a.cmd](a)
 

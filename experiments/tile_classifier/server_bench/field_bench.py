@@ -17,6 +17,11 @@
   `rule_ok`·`hyb_ok`·`*_hit`/211)은 비교용으로 그대로 남긴다 — 표 1-69 의 장면 0/15 는 일부가 이 채점 탓.
 장면 단위·행별 패(2026-11-05, 개선 계획 2단계): 독립 장면은 5개뿐이라 hybrid 자리 채점을 장면 단위 /5(사진 과반이 맞으면 1)로도 찍고,
   rows 에 사진별 `seat_hit`·`seat_want`(hybrid 자리 채점 패 단위)를 남긴다 — experiments/speed/stats.py 가 장면 묶음 부트스트랩에 쓴다.
+서버처럼 q90 재저장(2026-11-05, 개선 계획 4단계 — 3단계 검토 ③ 잣대 버그): `/v2/localroles` 는 받은 사진을 `prepare_image(4080)`(EXIF·긴 변
+  4080·JPEG q90 재저장)한 뒤 읽는다. 예전 이 벤치는 원본 바이트를 바로 넘겨 대삼원 3장(떼어 둔 패 `5s` 가 안 붙음)에서 서버보다 3장 낙관
+  (9/15 대 6/15)이었다. 이제 hybrid 는 서버와 같은 바이트를 읽는다(규칙 열 `bench.one` 은 자리 크롭 경로라 그대로). 예전 결과는
+  `field_det_final_rect_rawbytes.json` 으로 보존. rows 의 hybrid 에 패별 `conf`·`alt`·`conf2`(서버가 내면, 4단계 `feat/cls-alt`)와 서버
+  `block` 도 남긴다 — experiments/speed/hand_rules.py score 가 쓴다.
 """
 from __future__ import annotations
 
@@ -41,6 +46,7 @@ import hybrid as hy  # noqa: E402
 import seat_grow as sg  # noqa: E402
 from app import local_read as lr  # noqa: E402
 from app import river, roles  # noqa: E402
+from app.recognizer import prepare_image  # noqa: E402
 
 _spec = importlib.util.spec_from_file_location("server_bench_bench", HERE / "bench.py")
 bench = importlib.util.module_from_spec(_spec)
@@ -90,6 +96,16 @@ def tiles_hit(hand: list[str], melds: list[str], s: dict) -> int:
     got = Counter(hand + [t for m in melds for t in m.split()])
     want = Counter(s["hand"] + [t for m in s["melds"] for t in m.split()])
     return sum((got & want).values())
+
+
+def tile_extra(hand_t: list[dict], melds: list[dict]) -> dict:
+    """패별 확신도·분류기 2순위(서버 응답에 있으면). hand 와 같은 순서, 울기는 묶음마다 목록."""
+    out = {"conf": [t.get("conf") for t in hand_t]}
+    if any("alt" in t for t in hand_t):
+        out.update(alt=[t.get("alt") for t in hand_t], conf2=[t.get("conf2") for t in hand_t])
+    if any("alts" in m for m in melds):
+        out.update(meld_alt=[m.get("alts") for m in melds], meld_conf2=[m.get("conf2s") for m in melds])
+    return out
 
 
 def main() -> None:
@@ -150,17 +166,19 @@ def main() -> None:
             det.memo = {}
             rule = bench.one(buf.getvalue(), det, cls, sg.hand_frac(grid, s["side"]))
             r_ok, r_auto = judge(rule["hand"], rule["melds"], rule["block"], s)
-            o = roles.read_roles(reader, path.read_bytes(), s["side"], grid, "hybrid")
-            hand = [t["tile"] for t in o["tiles"]] + ([o["separate_tile"]["tile"]] if o["separate_tile"] else [])
+            o = roles.read_roles(reader, prepare_image(path.read_bytes(), 4080), s["side"], grid, "hybrid")
+            hand_t = o["tiles"] + ([o["separate_tile"]] if o["separate_tile"] else [])
+            hand = [t["tile"] for t in hand_t]
             melds = [" ".join(m["tiles"]) for m in o["melds"]]
             h_ok, h_auto = judge(hand, melds, o.get("block", False), s)
             sv = seat_view(s)
             rs_ok, _ = judge(rule["hand"], rule["melds"], rule["block"], sv)
             hs_ok, _ = judge(hand, melds, o.get("block", False), sv)
             rows[ph] = dict(scene=scene, rectified=path.name == "rectified.jpg", rule=dict(hand=rule["hand"], melds=rule["melds"], ok=r_ok, auto=r_auto),
-                            hybrid=dict(hand=hand, melds=melds, ok=h_ok, auto=h_auto, ms=o["ms"]),
+                            hybrid=dict(hand=hand, melds=melds, ok=h_ok, auto=h_auto, ms=o["ms"], block=o.get("block", False), **tile_extra(hand_t, o["melds"])),
                             seat_ok=dict(rule=rs_ok, hybrid=hs_ok), seat_hit=tiles_hit(hand, melds, sv),
-                            seat_want=len(sv["hand"]) + sum(len(m.split()) for m in sv["melds"]), seat_bad=h_auto and not hs_ok)
+                            seat_want=len(sv["hand"]) + sum(len(m.split()) for m in sv["melds"]), seat_bad=h_auto and not hs_ok,
+                            want_hand=sv["hand"], want_melds=sv["melds"])
             tot["n"] += 1
             tot["want"] += len(s["hand"]) + sum(len(m.split()) for m in s["melds"])
             tot["rule_hit"] += tiles_hit(rule["hand"], rule["melds"], s)

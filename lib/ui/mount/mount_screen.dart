@@ -23,6 +23,7 @@ import '../../table/felt_grid.dart';
 import '../../table/fixed_layout.dart';
 import '../../table/frame_recorder.dart';
 import '../../table/grid_zones.dart';
+import '../../table/hand_rules.dart';
 import '../../table/merge.dart';
 import '../../table/observation.dart';
 import '../../table/rectify.dart' show FeltQuad;
@@ -1424,13 +1425,14 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     // 트리플론을 유국으로 하는 규칙에서 선택 창이 바로 도중 유국을 기록했으면 판독을 멈춘다.
     var drawRecorded = false;
     // 화료자마다 병합한다. 동시 론이면 서로를 방총자 후보에서 뺀다.
-    // [winPick] 은 사용자가 후보에서 고른 화료패(화료자 자리별).
-    List<TableMerge> mergeAll(List<TableReading> readings, {Map<Side, int> winPick = const {}}) {
+    // [winPick] 은 사용자가 후보에서 고른 화료패(화료자 자리별), [handFix] 는 사용자가 받아들인 규칙 검증기 V3 후보로 고친 손패.
+    List<TableMerge> mergeAll(List<TableReading> readings, {Map<Side, int> winPick = const {}, Map<Side, HandReading> handFix = const {}}) {
       final winnerSides = {for (final r in readings) r.winnerSide!};
+      HandReading handOf(TableReading r) => handFix[r.winnerSide!] ?? r.hand!;
       return [
         for (final r in readings)
           mergeReading(
-            hand: winPick[r.winnerSide!] == null ? r.hand! : r.hand!.withWinTile(ReadTile(winPick[r.winnerSide!]!, conf: 0.9)),
+            hand: winPick[r.winnerSide!] == null ? handOf(r) : handOf(r).withWinTile(ReadTile(winPick[r.winnerSide!]!, conf: 0.9)),
             center: r.center,
             winnerSide: r.winnerSide!,
             game: g,
@@ -1507,6 +1509,26 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       final readings = [reading, ...reading.others];
       var picked = pickRonWinners(mergeAll(readings), g.settings, g.names);
       var merge = picked.kept.first;
+      // 규칙 검증기(lib/table/hand_rules.dart, 개선 계획 4단계): 사진을 안 보는 규칙서 사실. V1·V2·V4 는 자동 반영을 막고,
+      // V3(화료형이 아닌데 분류기 2순위 한 장으로 고쳐지는 결과가 하나)은 노란 테두리로 보여 주고 사람이 고르면 고쳐 계산한다 — 자동 반영은 안 한다.
+      final winnerReading = readings.firstWhere((r) => r.winnerSide == merge.winnerSide, orElse: () => reading);
+      var handFix = const <Side, HandReading>{};
+      var rules = checkHandRules(handRuleInputOf(hand: winnerReading.hand!, merge: merge, center: winnerReading.center));
+      String? ruleFixNote;
+      if (rules.kind == HandRuleKind.candidate && picked.kept.length == 1) {
+        await closeProgress();
+        if (!mounted) return;
+        final c = rules.candidate!;
+        if (await _confirmRuleCandidate(c, g.names[merge.winner]) == true) {
+          final fixed = applyHandCandidate(winnerReading.hand!, c);
+          handFix = {merge.winnerSide: fixed};
+          picked = pickRonWinners(mergeAll(readings, handFix: handFix), g.settings, g.names);
+          merge = picked.kept.first;
+          rules = checkHandRules(handRuleInputOf(hand: fixed, merge: merge, center: winnerReading.center));
+          ruleFixNote = '판독 ${c.from} 을(를) 분류기 2순위 ${c.to} 로 바꿔 계산했습니다(규칙 후보) — 확인하세요';
+        }
+        if (!mounted) return;
+      }
       // 손패가 13장이고 화료패가 여럿 가능하면 고르게 한다. 취소하면 아래에서 입력 화면으로 간다(동시 론은 그쪽에서 고친다).
       if (merge.winCandidates.isNotEmpty && picked.kept.length == 1) {
         await closeProgress();
@@ -1514,7 +1536,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         final win = await _pickWinTile(merge, g);
         if (!mounted) return;
         if (win != null) {
-          picked = pickRonWinners(mergeAll(readings, winPick: {merge.winnerSide: win}), g.settings, g.names);
+          picked = pickRonWinners(mergeAll(readings, winPick: {merge.winnerSide: win}, handFix: handFix), g.settings, g.names);
           merge = picked.kept.first;
         }
       }
@@ -1545,6 +1567,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         ...picked.flags.map((f) => f.message),
         ...merge.flags.map((f) => f.message),
         ...otherFlags,
+        for (final b in rules.blockers) '규칙 검사: $b — 판독을 확인하세요',
+        ?ruleFixNote,
       ];
       saveLog(merge: merge, warnings: reading.warnings);
       debugPrint('[read] merged winner=${merge.winner} hand=${merge.hand != null} → 진행 창 닫기');
@@ -1576,6 +1600,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         resultValid: result.isValid,
         paoBase: result.isValid ? engine.paoBasePoints(result) : 0,
         gameOver: g.isOver,
+        ruleBlocks: [...rules.blockers, if (ruleFixNote != null) '규칙 후보로 고침'],
       );
       final autoCautions = autoRecordCautions(
         issues: [for (final f in merge.flags) f.issue],
@@ -1723,6 +1748,43 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           SimpleDialogOption(padding: optionPad, onPressed: () => Navigator.pop(ctx), child: Text('취소', style: optionStyle)),
         ],
       )),
+    );
+  }
+
+  /// 규칙 검증기 V3 후보(분류기 2순위로 한 장 바꾸면 화료형)를 노란 테두리로 보여 주고 바꿀지 묻는다. 바꿔도 자동 반영은 안 한다.
+  Future<bool?> _confirmRuleCandidate(HandCandidate c, String who) {
+    final from = ReadTile.fromCode(c.from, 0)!;
+    final to = ReadTile.fromCode(c.to, 0)!;
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final w = isKioskLayout(ctx) ? 72.0 : 56.0;
+        return kioskWrap(ctx, AlertDialog(
+          title: Text('$who: 판독 후보'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('읽은 손패는 화료형이 아닙니다. 한 장을 분류기 2순위로 바꾸면 화료형이 됩니다.'),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TileView(from.tile, red: from.red, width: w, dimmed: true),
+                  const Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Icon(Icons.arrow_forward)),
+                  TileView(to.tile, red: to.red, width: w, uncertain: true, key: const ValueKey('rule-candidate')),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text('자동 반영은 하지 않습니다. 결과 화면에서 확인하세요.', style: Theme.of(ctx).textTheme.bodySmall),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('그대로')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('바꿔서 계산')),
+          ],
+        ));
+      },
     );
   }
 
