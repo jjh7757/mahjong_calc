@@ -15,6 +15,8 @@
 자리 채점(2026-11-05): 다섯 장면 모두 론이고 화료패는 방총자 강 끝에 있다(NOTES 촬영별 — 12:29 "위 강 끝 3만으로 론" 등). 자리 판독만
   보는 이 벤치는 화료패를 볼 수 없으므로 TRUTH 손패 맨 끝(화료패)을 뺀 13장을 자리 정답으로 한다(`seat_*`). 예전 채점(14장 정답,
   `rule_ok`·`hyb_ok`·`*_hit`/211)은 비교용으로 그대로 남긴다 — 표 1-69 의 장면 0/15 는 일부가 이 채점 탓.
+장면 단위·행별 패(2026-11-05, 개선 계획 2단계): 독립 장면은 5개뿐이라 hybrid 자리 채점을 장면 단위 /5(사진 과반이 맞으면 1)로도 찍고,
+  rows 에 사진별 `seat_hit`·`seat_want`(hybrid 자리 채점 패 단위)를 남긴다 — experiments/speed/stats.py 가 장면 묶음 부트스트랩에 쓴다.
 """
 from __future__ import annotations
 
@@ -157,7 +159,8 @@ def main() -> None:
             hs_ok, _ = judge(hand, melds, o.get("block", False), sv)
             rows[ph] = dict(scene=scene, rectified=path.name == "rectified.jpg", rule=dict(hand=rule["hand"], melds=rule["melds"], ok=r_ok, auto=r_auto),
                             hybrid=dict(hand=hand, melds=melds, ok=h_ok, auto=h_auto, ms=o["ms"]),
-                            seat_ok=dict(rule=rs_ok, hybrid=hs_ok))
+                            seat_ok=dict(rule=rs_ok, hybrid=hs_ok), seat_hit=tiles_hit(hand, melds, sv),
+                            seat_want=len(sv["hand"]) + sum(len(m.split()) for m in sv["melds"]), seat_bad=h_auto and not hs_ok)
             tot["n"] += 1
             tot["want"] += len(s["hand"]) + sum(len(m.split()) for m in s["melds"])
             tot["rule_hit"] += tiles_hit(rule["hand"], rule["melds"], s)
@@ -181,6 +184,11 @@ def main() -> None:
         print("돌기 확인:", tot["n"], "장 처리(점수는 안 찍음)")
         return
     tot["rectified"] = rectified
+    by: dict = {}
+    for r in rows.values():
+        by.setdefault(r["scene"], []).append(r["seat_ok"]["hybrid"])
+    tot["seat_hyb_scene"] = sum(sum(v) * 2 > len(v) for v in by.values())
+    print(f"=== 장면 단위(사진 과반 맞음) hybrid {tot['seat_hyb_scene']}/{len(by)}", {k: f"{sum(v)}/{len(v)}" for k, v in by.items()})
     print(f"=== 자리 채점(화료패 뺀 13장) /{tot['n']}: 규칙 {tot['seat_rule_ok']}(틀린 자동 {tot['seat_rule_bad']}) | hybrid {tot['seat_hyb_ok']}"
           f"(틀린 자동 {tot['seat_hyb_bad']}, 자동 {tot['hyb_auto']}) | 패 단위 규칙 {tot['seat_rule_hit']}/{tot['seat_want']} hybrid {tot['seat_hyb_hit']}/{tot['seat_want']}")
     print(f"--- 테스트 /{tot['n']}(편 사진 {rectified}): 규칙 {tot['rule_ok']}(틀린 자동 반영 {tot['rule_bad']}) | hybrid {tot['hyb_ok']}(틀린 자동 반영 {tot['hyb_bad']})"

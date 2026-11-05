@@ -296,6 +296,7 @@ def main() -> None:
     ap.add_argument("--crop", action="store_true", help="서버 자리 크롭처럼 자리 띠 안의 상자만 보고 배우기(합성·실제 모두)")
     ap.add_argument("--pre-file", default="", help="합성 사전학습 가중치를 여기 저장/있으면 읽음(data/role/ 아래 이름)")
     ap.add_argument("--feat", default="old", choices=["old", "rot"], help="rot = 회전 상자 특징 11칸(패 크기·기울기), old = 예전 9칸")
+    ap.add_argument("--save-folds", action="store_true", help="fold 별 씨드 가중치를 data/role/role_fold_<am|pmA|pmB><tag>.pt 로 저장(role_export.py 로 fold 별 ONNX, 개선 계획 2단계)")
     a = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
     torch.set_num_threads(8)
@@ -362,6 +363,10 @@ def main() -> None:
             nets = [train(tr, a.epochs, seed, pre[seed], a.ft_lr) for seed in range(a.seeds)]
         else:
             nets = [train(tr, a.epochs, seed) for seed in range(a.seeds)]
+        if a.save_folds:  # 이 fold 의 사진(names)을 안 배운 가중치
+            fk = {"오전": "am", "오후A": "pmA", "오후B": "pmB"}[fold]
+            torch.save([net.state_dict() for net in nets], OUT / f"role_fold_{fk}{a.tag}.pt")
+            print("저장", OUT / f"role_fold_{fk}{a.tag}.pt", "시험 사진", names, flush=True)
         ok, n = Counter(), Counter()
         for s in te:
             votes = [predict(net, s) for net in nets]

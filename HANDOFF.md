@@ -2,6 +2,13 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-05 밤 추가: 개선 계획 2단계 — 홀드아웃 기준선 (metrics 표 1-90, `docs/improvement_plan_1105.md` 2단계 진행 줄)
+
+- **낙관 편향 0:** 개발 32회를 그 사진을 안 배운 모델 조합으로 재도 30/32·패 434/436·경고 없는 틀린 자동 0 — 운영 모델(30/32·434/436·0)과 부트스트랩 "같음"(장면 [−2.7, +3.0]회, 패 [−0.6, +0.7]%p). 자리 판독은 나눔 모델로도 포화라 개발 32회로는 개선을 못 가린다. 틀린 2 는 강 끝 화료패.
+- 테스트 15장 펴기(운영 모델 = 홀드아웃): 앱 흐름 6/15·장면 2/5·패 198/211·경고 없는 틀린 자동 3(F1400), 서버 단독 9/15·2/5·189/196. 장면 /5 는 구간이 넓어 패 단위로만 차이를 가린다.
+- 쓰는 법: 서버 launch.json `recognizer-fold-{bcd,am,pmA,pmB}`(8033·8034·8035·8037) + `exp-files`(8043) → `bash experiments/speed/run_baseline.sh dev <TAG>`, 운영 모델은 `recognizer-prodlike` + `U_BCD=U_AM=U_PMA=U_PMB=8036`, 테스트 15장은 `run_baseline.sh field <TAG>`(`RECOLOR=1`). 비교는 `python -I -X utf8 experiments/speed/stats.py diff <A 로그들(쉼표)> <B 로그들>`. 미리보기 서버는 작업 폴더당 5개까지라 fold 넷 + exp-files 다음에 prodlike 로 바꿔 띄운다.
+- 역할 fold ONNX `server_bench/models/tile-roles-rot_fold_{am,pmA,pmB}.onnx`(커밋 안 함, 다시 만들기는 `experiments/tile_classifier/README.md` 끝 절).
+
 ## 2026-11-05 밤 추가: 개선 계획 1단계 — 테스트 15장 펴기 (metrics 표 1-89, `docs/improvement_plan_1105.md` 1단계 진행 줄)
 
 - 판별력 생김: 서버 단독 hybrid(자리 채점) 2회차 전부 0/15 · 운영 8회차 9/15, 앱 흐름 펴기 전 손패 0/15 → 후 6/15·점수 5/10. **경고 없는 틀린 자동 3**(F1400 적5만 → 5만) — 4·5단계 테스트 판정 대상.

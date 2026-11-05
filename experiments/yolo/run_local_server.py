@@ -4,6 +4,8 @@
   python experiments/yolo/run_local_server.py [--port 8031] [--seat-frame 0]   (launch.json "recognizer-noframe" = 지금 방식 비교용)
   --repo 로 다른 서버 코드(예: 기준 커밋 worktree)를 띄워 프롬프트 전·후를 나란히 잰다.
   --seat-split 0 --seat-table 0 = 지금 운영과 같은 자리 틀(launch.json "recognizer-base", 8031).
+  홀드아웃(개선 계획 2단계, 2026-11-05): launch.json "recognizer-fold-{bcd,am,pmA,pmB}" = 그 사진을 안 배운 검출기·분류기·역할 모델 조합
+  (대응표 experiments/tile_classifier/README.md 끝 절). "recognizer-prodlike"(8036) = 운영과 같은 모델.
 """
 import argparse
 import os
@@ -21,12 +23,17 @@ ap.add_argument("--wide-reads", default="1", help="/v2/seatwide 조각·모서�
 ap.add_argument("--local-fold", default="", help="자체 모델 나눔(예: a,pm = det_fold_a + cls_pm). 그 사진을 학습하지 않은 모델로 재려고. 비우면 배포 모델")
 ap.add_argument("--seat-det", default="", help="--local-fold 와 함께: 자리 판독(localseat·localroles) 검출기도 나눔 모델로(예: det_r8 → det_r8_fold_<a|b>). 비우면 서버 assets(tile-obb-r8 final = 그 사진을 학습함)")
 ap.add_argument("--other-det", default="", help="강·표시패 검출도 자리 판독 검출기로: obb(감싸는 축 상자) | obb-up(+세워 자르기). 비우면 2회차(LOCAL_DET_MODEL)")
-ap.add_argument("--role-model", default="", help="역할 모델(/v2/localroles) 파일 이름(서버 assets 안, 예: tile-roles-rot.onnx). 비우면 서버 기본 tile-roles.onnx")
+ap.add_argument("--role-model", default="", help="역할 모델(/v2/localroles): 서버 assets 안 파일 이름(예: tile-roles-rot.onnx) 또는 "
+                "server_bench/models 안 이름(예: tile-roles-rot_fold_am.onnx = 오전을 안 배운 교차 검증 가중치, 개선 계획 2단계). 비우면 서버 기본")
 a = ap.parse_args()
 if a.other_det:
     os.environ["LOCAL_OTHER_DET"] = a.other_det
 if a.role_model:
-    os.environ["LOCAL_ROLE_MODEL"] = f"C:/Users/jjh7757/dev/mahjong-recognizer/app/assets/{a.role_model}"
+    _bench = f"C:/Users/jjh7757/dev/mahjong_calc/experiments/tile_classifier/server_bench/models/{a.role_model}"
+    os.environ["LOCAL_ROLE_MODEL"] = _bench if "_fold_" in a.role_model else f"C:/Users/jjh7757/dev/mahjong-recognizer/app/assets/{a.role_model}"
+    if not os.path.exists(os.environ["LOCAL_ROLE_MODEL"]):
+        raise SystemExit(f"역할 모델 없음: {os.environ['LOCAL_ROLE_MODEL']}")
+    print("역할 모델", os.environ["LOCAL_ROLE_MODEL"], flush=True)
 
 if a.local_fold:
     _det, _cls = a.local_fold.split(",")

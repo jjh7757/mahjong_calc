@@ -9,10 +9,15 @@
 채점 보강(2026-11-03): "맞음" 은 손패·울기·화료패만 본다. "완전 맞음" 은 거기에 론/쯔모·방총자, 표시패(매장 truth 앞면 표시패 전부),
 화료자 리치, 헛 리치 자리까지 맞고 B·C·D 는 정답 점수(BCD_POINTS)까지 같은 것. "완전 틀린 자동" = 자동 반영인데 완전 맞음이 아닌 수,
 "경고 없는 틀린 자동" = 그중 auto_cautions 가 빈 것(사용자가 20초 경고도 못 보는 틀린 반영). 틀린 이유는 "틀림:..." 로 센다.
+
+패 단위(2026-11-05, 개선 계획 2단계): "패 맞음/패 정답" = 손패(화료패 포함)+울기 패를 합친 다중집합 교집합 / 정답 장수 합
+(`server_bench/field_bench.py` `tiles_hit` 와 같은 정의). 화료패 정답이 없는 B·C·D 는 앱 손패에서 화료패를 뺀 13장 기준(장면 "맞음" 과 같게).
+판독 오류 행은 0장 맞음. 끝에 "합계" 줄(부분 전체). 행별 기록은 [records](experiments/speed/stats.py 부트스트랩이 쓴다).
 """
 from __future__ import annotations
 
 import json
+import re
 import statistics
 import sys
 from collections import Counter
@@ -116,14 +121,44 @@ def judge_all(r: dict, t: dict, m: dict, full: bool, side_ok: bool, ind_ok: bool
     return not why, why
 
 
-def score(paths: list[str]) -> None:
-    scenes = {(s["name"] if s["set"] == "bcd" else s["name"][-6:]): s for s in sg.eval_scenes()}
+def meld_tiles(ms) -> list[str]:
+    return [t for m in ms for t in re.sub(r"[\[\]()]", " ", m).split()]
+
+
+def tile_hit(closed: list[str], melds: list[str], win_tile, t: dict) -> tuple[int, int]:
+    """(맞은 패, 정답 패) — 손패+울기 다중집합 교집합. 정답 손패는 화료패 포함(t["closed"]), 화료패 정답이 없으면 13장(t["hand"])이고
+    앱 손패에서도 화료패를 뺀다(14장일 때만, score 의 rest 와 같다)."""
+    got = list(closed)
+    if t["win"] is None and win_tile in got and len(closed) + 3 * len(melds) == 14:
+        got.remove(win_tile)
+    want = Counter((t["closed"] if t["win"] is not None else t["hand"]) + meld_tiles(t["melds"]))
+    have = Counter(got + meld_tiles(melds))
+    return sum((have & want).values()), sum(want.values())
+
+
+def read_rows(paths: list[str]) -> list[dict]:
     rows = []
     for p in paths:
         for line in Path(p).read_text(encoding="utf-8", errors="replace").splitlines():
             i = line.find("TIMING {")
             if i >= 0:
                 rows.append(json.loads(line[i + 7:]))
+    return rows
+
+
+def records(paths: list[str]) -> list[dict]:
+    """행별 채점(부트스트랩용): key=(사진, 회차, 서버), cluster=판 묶음(B·C·D 는 장면 글자 B/C/D — 같은 판을 두 번 찍은 사진 둘,
+    매장은 사진), ok=맞음(손패·울기·화료패), complete=완전 맞음, hit·want=패 단위, bad_auto=경고 없는 틀린 자동, sec=전체 초."""
+    return score(paths, quiet=True)
+
+
+def score(paths: list[str], quiet: bool = False) -> list[dict]:
+    import builtins
+
+    print = (lambda *_a, **_k: None) if quiet else builtins.print  # noqa: A001 — records() 는 찍지 않는다
+    recs: list[dict] = []
+    scenes = {(s["name"] if s["set"] == "bcd" else s["name"][-6:]): s for s in sg.eval_scenes()}
+    rows = read_rows(paths)
     tally: dict = {}
     pairs: dict = {}  # 같은 순간 짝: (세트, 사진, 회차) → 서버 → 전체 초
     for r in rows:
@@ -170,6 +205,11 @@ def score(paths: list[str]) -> None:
         d["자동 중 경고"] += auto and bool(cautions)
         d["완전 틀린 자동"] += auto and not complete
         d["경고 없는 틀린 자동"] += auto and not complete and not cautions
+        hit, want = tile_hit(closed, melds, m.get("win_tile"), t)
+        d["패 맞음"] += hit
+        d["패 정답"] += want
+        recs.append(dict(key=(r["photo"], r["run"], r["server"]), cluster=r["scene"] if r["scene"] != "V" else r["photo"], part=part,
+                         ok=full, complete=complete, hit=hit, want=want, bad_auto=auto and not complete and not cautions, sec=r["total_ms"] / 1000))
         for w in why:
             d[f"틀림:{w.split(' ')[0]}"] += 1
         if auto and not complete:
@@ -190,11 +230,18 @@ def score(paths: list[str]) -> None:
             print(r["photo"], r["server"], "맞음" if full else "고르면 맞음" if pick else "틀림" if wrong else "입력 화면", "넓은" if r.get("wide_called") else "", f"{r['total_ms'] / 1000:.1f}초",
                   "손패", " ".join(m.get("closed") or []), "울기", m.get("melds"), "화료", m.get("win_tile"), "쯔모" if m.get("is_tsumo") else "론", m.get("loser"), "후보", cands, "| 정답", t["win"], t["tsumo"], t["loser"], "자동" if r.get("auto_block") is None else "", r.get("error", ""))
     print()
+    servers_seen = sorted({k[1] for k in tally if len(k) == 2})
+    for sv in servers_seen:  # 부분(BCD·오전·오후)을 합친 줄
+        ks = [k for k in tally if len(k) == 2 and k[1] == sv]
+        if len(ks) > 1:
+            tot = sum((tally[k] for k in ks), Counter())
+            tally[("합계", sv)] = tot
+            tally[("합계", sv, "t")] = [x for k in ks for x in tally[(*k, "t")]]
     for k in sorted(k for k in tally if len(k) == 2):
         d = tally[k]
         ts = sorted(tally[(*k, "t")])
         ws = sorted(tally.get((*k, "w"), []))
-        print(k, {x: d[x] for x in ("n", "맞음", "완전 맞음", "론쯔모까지", "고르면 맞음", "계산했는데 틀림", "자동 반영", "틀린 자동 반영", "완전 틀린 자동", "경고 없는 틀린 자동", "자동 중 경고", "표시패", "표시패 정답 있음", "넓은 판독", "미리 보냄", "표시패용 대기", "강 끝 헤지", "추적 리치", "오류")},
+        print(k, {x: d[x] for x in ("n", "맞음", "완전 맞음", "론쯔모까지", "고르면 맞음", "계산했는데 틀림", "자동 반영", "틀린 자동 반영", "완전 틀린 자동", "경고 없는 틀린 자동", "자동 중 경고", "패 맞음", "패 정답", "표시패", "표시패 정답 있음", "넓은 판독", "미리 보냄", "표시패용 대기", "강 끝 헤지", "추적 리치", "오류")},
               {x: d[x] for x in sorted(d) if x.startswith("틀림:")},
               f"시간 {statistics.median(ts):.1f} / {ts[min(len(ts) - 1, int(.9 * len(ts)))]:.1f} / {ts[-1]:.1f}",
               f"seatwide {len(ws)}회 {statistics.median(ws):.1f} / {ws[min(len(ws) - 1, int(.9 * len(ws)))]:.1f} / {ws[-1]:.1f}" if ws else "")
@@ -207,6 +254,7 @@ def score(paths: list[str]) -> None:
             ds = sorted(v[s1] - v[s0] for k, v in pairs.items() if k[0] == part and s0 in v and s1 in v)
             if ds:
                 print(part, f"짝 차이 {s1} − {s0}: 중앙 {statistics.median(ds):+.1f}초, {s1} 이 빠름 {sum(d < 0 for d in ds)}/{len(ds)}")
+    return recs
 
 
 if __name__ == "__main__":

@@ -243,3 +243,33 @@ python -I -X utf8 experiments/tile_classifier/role_field.py score rot pre_synth8
 python -I -X utf8 experiments/tile_classifier/role_export.py data/role/role_all_rot.pt experiments/tile_classifier/server_bench/models/tile-roles-rot.onnx
 LOCAL_ROLE_MODEL=.../tile-roles-rot.onnx python -I -X utf8 experiments/tile_classifier/server_bench/role_full_bench.py --det det_r8 --native
 ```
+
+## 홀드아웃 조합 — 역할 모델 fold 별 ONNX와 나눔 대응표 (개선 계획 2단계, 2026-11-05)
+
+운영 모델(8회차 final 검출기·분류기 `tile-cls-mnv3s`·11칸 역할 모델 `tile-roles-rot`)은 개발 사진을 전부 배워, 개발 세트에서 잰 숫자는 "배포 확인" 이지 채택 근거가 아니다. 개발 32회를 **그 사진을 안 배운 모델 셋**으로 재려고 역할 모델의 3겹 교차 검증 가중치를 fold 별로 저장·내보냈다.
+
+- **다시 학습(한 번):** 3겹 가중치가 저장돼 있지 않아 같은 설정으로 다시 돌리며 저장했다(`role_set.py --save-folds`, 새 옵션). 결과는 저장된 `set_cv_synth3_rot_fix.json` 과 fold 별·합계 모두 같다(1,026/1,046) — 같은 씨드·같은 사전학습 `pre_synth8k_rot.pt` 라 재현됨.
+- **내보내기:** `role_export.py` 로 fold 별 ONNX(3씨드 평균 한 그래프, 수동 계산 대 원래 최대 차 3e-7). 파일은 `server_bench/models/`(커밋 안 함).
+- **서버:** `experiments/yolo/run_local_server.py --role-model tile-roles-rot_fold_<am|pmA|pmB>.onnx` 는 `server_bench/models/` 에서 찾는다(`_fold_` 가 든 이름). launch.json `recognizer-fold-*`.
+
+대응표(✗ = 그 사진을 학습하지 않음 → 그 서버로 잰다):
+
+| 사진 묶음 | 2회차 검출기(강·표시패) | 8회차 검출기(자리) | 분류기 | 역할 모델 | launch.json (포트) |
+| --- | --- | --- | --- | --- | --- |
+| B·C·D 6장 | `det_fold_a` ✗ | `det_r8_fold_a` ✗ | `cls_bcd` ✗ | `tile-roles-rot.onnx`(final — B·C·D 는 역할 라벨에 없어 원래 안 배움) ✗ | `recognizer-fold-bcd` (8033) |
+| 매장 오전(~13:48, 10장) | `det_fold_b` ✗ | `det_r8_fold_b` ✗ | `cls_am` ✗ | `tile-roles-rot_fold_am`(오후 15장으로 학습) ✗ | `recognizer-fold-am` (8034) |
+| 매장 오후A(142535~171025, 평가 6장) | `det_fold_a` ✗ | `det_r8_fold_a` ✗ | `cls_pm` ✗ | `tile-roles-rot_fold_pmA`(오전 + 오후B 로 학습) ✗ | `recognizer-fold-pmA` (8035) |
+| 매장 오후B(171245~, 평가 4장) | `det_fold_a` ✗ | `det_r8_fold_a` ✗ | `cls_pm` ✗ | `tile-roles-rot_fold_pmB`(오전 + 오후A 로 학습) ✗ | `recognizer-fold-pmB` (8037) |
+| 테스트 15장(10/24 삼각대) | final ✗ | final ✗ | 운영 ✗ | final ✗ | `recognizer-prodlike` (8036) |
+
+- 검출기·분류기 나눔은 시간대 둘(오전/오후 + B·C·D)이고 역할 모델은 셋(오전/오후A/오후B, `role_set.folds` — 오후를 이름순 반으로)이라 오후는 서버 둘로 나눈다. 앱 흐름 `PHOTO_MIN`·`PHOTO_MAX` 경계는 171245(`experiments/speed/run_baseline.sh`).
+- 역할 fold 모델은 실제 사진을 2/3 만 배운다(final 은 25장 전부) — 홀드아웃 숫자에는 "덜 배운 몫" 이 섞인다. 검출기·분류기 fold 도 같다.
+- 역할 모델 교차 검증의 시험 사진은 EXCLUDED 5장을 포함한 25장이고(채점에서만 뺌), 앱 흐름 평가는 EXCLUDED 를 뺀 20장이다.
+
+```
+python -I -X utf8 experiments/tile_classifier/role_set.py --feat rot --synth 8000 --synth-epochs 3 --epochs 100 --seeds 3 --pre-file pre_synth8k_rot.pt --tag _synth3_rot_folds --save-folds
+python -I -X utf8 experiments/tile_classifier/role_export.py data/role/role_fold_am_synth3_rot_folds.pt experiments/tile_classifier/server_bench/models/tile-roles-rot_fold_am.onnx   # pmA·pmB 도
+bash experiments/speed/run_baseline.sh dev <TAG>     # 홀드아웃 서버 넷 + exp-files
+U_BCD=8036 U_AM=8036 U_PMA=8036 U_PMB=8036 bash experiments/speed/run_baseline.sh dev <TAG>   # 운영과 같은 모델
+python -I -X utf8 experiments/speed/stats.py diff <A 로그들> <B 로그들>
+```
