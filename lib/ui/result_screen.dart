@@ -76,6 +76,11 @@ class ResultScreen extends StatefulWidget {
   /// 자동 반영 전에 사람이 봐야 할 것(`autoRecordCautions`). 카운트다운 줄에 크게 띄우고 기록 문구에 남긴다.
   final List<String> autoCautions;
 
+  /// 자동 반영 직전 확인(프레임 투표, `lib/table/frame_vote.dart`). 결과 화면은 기다리지 않고 바로 뜬다. 카운트다운이 끝났는데
+  /// 아직이면 "프레임 확인 중" 으로 기다린다. 답이 null 이면 그대로 자동 반영, 문자열이면 자동 반영을 멈추고 그 경고를 띄운다
+  /// (사람이 확인하고 "대국에 반영"). "지금 반영" 을 누르면 사람이 본 것이라 기다리지 않는다. null 이면 확인 없음.
+  final Future<String?>? autoRecordGate;
+
   /// 상황 칩으로 다시 계산할 때 쓰는 룰(입력 화면·거치 촬영의 룰 설정).
   final RuleSet rules;
   const ResultScreen({
@@ -97,6 +102,7 @@ class ResultScreen extends StatefulWidget {
     this.otherWins = const [],
     this.autoRecordAfter,
     this.autoCautions = const [],
+    this.autoRecordGate,
     this.rules = RuleSet.standard,
   });
 
@@ -386,6 +392,19 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         }
       });
     if (widget.result.isValid) _play();
+    widget.autoRecordGate?.then(_onGate, onError: (Object _) => _onGate(null));
+  }
+
+  /// 자동 반영 직전 확인([ResultScreen.autoRecordGate])의 답.
+  void _onGate(String? block) {
+    if (!mounted) return;
+    _gateDone = true;
+    if (block != null) {
+      _cancelAuto();
+      setState(() => _gateBlock = block);
+    } else if (_gateWaiting) {
+      _recordAuto();
+    }
   }
 
   /// 연출을 건너뛰었는지. 음성 연출 도중이면 읽기를 멈추고 등급만 읽는다.
@@ -457,12 +476,17 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   int? _autoLeft;
   bool _autoCancelled = false;
 
+  /// 자동 반영 직전 확인: 답이 왔는지, 카운트다운이 끝나 답을 기다리는 중인지, 막은 이유.
+  bool _gateDone = false;
+  bool _gateWaiting = false;
+  String? _gateBlock;
+
   bool get _autoActive => _autoLeft != null;
 
   /// 연출이 끝나면 카운트다운을 시작한다(대국 기록 중, 화료자를 알고, 론이면 방총자도 알 때만).
   void _startAuto() {
     final after = widget.autoRecordAfter;
-    if (after == null || _autoCancelled || _autoTimer != null || !_result.isValid) return;
+    if (after == null || _autoCancelled || _autoTimer != null || !_result.isValid || _gateBlock != null) return;
     if (_game == null || _winner == null || (!widget.isTsumo && _loser == null) || _others.isNotEmpty) return;
     setState(() => _autoLeft = after.inSeconds);
     _autoTimer = Timer.periodic(const Duration(seconds: 1), (t) {
@@ -472,7 +496,14 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         setState(() => _autoLeft = left);
       } else {
         t.cancel();
-        _recordAuto();
+        if (widget.autoRecordGate != null && !_gateDone) {
+          setState(() {
+            _autoLeft = 0;
+            _gateWaiting = true;
+          });
+        } else {
+          _recordAuto();
+        }
       }
     });
   }
@@ -525,7 +556,11 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
           const SizedBox(width: 8),
           Flexible(
             child: Text(
-              kiosk ? '$_autoLeft초 뒤 대국에 반영 (${g.roundLabel})' : '$_autoLeft초 뒤 자동 반영',
+              _gateWaiting
+                  ? '프레임 확인 중…'
+                  : kiosk
+                      ? '$_autoLeft초 뒤 대국에 반영 (${g.roundLabel})'
+                      : '$_autoLeft초 뒤 자동 반영',
               key: const ValueKey('result-auto-left'),
               style: TextStyle(fontSize: size, fontWeight: FontWeight.w700, color: kiosk ? Colors.white : null),
             ),
@@ -575,6 +610,29 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
         ),
         row,
       ],
+    );
+  }
+
+  /// 자동 반영 직전 확인이 막았을 때의 경고(예: '프레임 불일치'). 사람이 확인하고 "대국에 반영" 을 누른다.
+  Widget _gateBanner({required bool kiosk}) {
+    final size = kiosk ? 20.0 : 15.0;
+    return Container(
+      key: const ValueKey('result-gate-block'),
+      padding: EdgeInsets.symmetric(horizontal: kiosk ? 14 : 10, vertical: kiosk ? 6 : 4),
+      decoration: BoxDecoration(color: Colors.orange.shade800, borderRadius: BorderRadius.circular(8)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.warning_amber_rounded, size: size + 4, color: Colors.white),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              '$_gateBlock — 손패를 확인하고 반영하세요',
+              style: TextStyle(fontSize: size, fontWeight: FontWeight.w800, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -771,6 +829,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
                     ),
                     if (_game != null) ...[
                       const SizedBox(height: 10),
+                      if (_gateBlock != null) ...[_gateBanner(kiosk: false), const SizedBox(height: 6)],
                       if (_autoActive)
                         _autoBar(kiosk: false)
                       else

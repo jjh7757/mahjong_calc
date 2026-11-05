@@ -454,6 +454,7 @@ extension _KioskResult on _ResultScreenState {
         const SizedBox(width: 10),
         // 동시 론: 이전·다음 화료자. 기록은 마지막 화료자 차례에서 모두 함께.
         for (final b in _pageButtons(style: style, nextStyle: next)) ...[b, const SizedBox(width: 10)],
+        if (_gateBlock != null) ...[_gateBanner(kiosk: true), const SizedBox(width: 10)],
         if (_autoActive)
           _autoBar(kiosk: true)
         else if (_nextWin == null)

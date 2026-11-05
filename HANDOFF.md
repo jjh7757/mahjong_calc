@@ -2,6 +2,12 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-06 새벽 추가: 개선 계획 6단계 — 프레임 투표 (metrics 표 1-94, `docs/improvement_plan_1105.md` 6단계 진행 줄)
+
+- **무엇:** 화료 사진 판독 뒤 자동 반영 **직전에만** 헤드 프레임 1장을 더 받아 화료자 자리를 `/v2/localroles` 로 다시 읽고, 손패·떼어 둔 패·울기가 같을 때만 자동 반영, 다르면 '프레임 불일치' 경고로 멈춤. 결과 화면은 첫 판독으로 바로 뜨고 투표는 카운트다운 동안 돈다. 정지(장면 변화 없음 + 화료자 모서리 그대로 + 손패 앞면)가 아니면 투표 없이 지금처럼. 규칙 `lib/table/frame_vote.dart` = `experiments/speed/frame_vote.py`(명세 `test/fixtures/frame_vote.json`), 거치 화면 더보기 "자동 반영 전 헤드 프레임 한 장 더 읽기 (시험)" = `mount.frameVote` **기본 끔**, 촬영 기록 `<시각>/frame_vote.json`·`frame2.jpg`.
+- **결과:** 오프라인 불일치 짝은 100% 하나 이상 틀림(헛불일치 0)이지만, 남은 틀린 자동(F1400 적5만·143104 화료패 누락·표시패 점수)은 프레임마다 같은 오답이라 **못 막음**(F1400 0/9, 143104 0/30) → 합격 기준 (a) 미충족, 기본 끔. 노트북 끝까지 확인: 사용자 대기 +0초, 서버 +localroles 1회(0.92초). 개발 32회 앱 흐름 32/32 행 그대로. `flutter analyze` 0 · `flutter test` 664.
+- 쓰는 법: `python -I -X utf8 experiments/speed/frame_vote.py test|score|logs <촬영 기록 폴더>`. 노트북 흐름 = launch.json `recognizer-sig-prodlike`(서버 worktree `git -C ../mahjong-recognizer worktree add ../mahjong-recognizer-s5 feat/cls-alt`, 측정 뒤 지웠음) + `fake-head-vote`(`experiments/tracking/vote_pair/a.jpg`→`b.jpg`, `-raw` 는 원본 바이트) → `flutter test integration_test/frame_vote_flow_test.dart -d windows --dart-define=RECOGNIZER_URL=http://127.0.0.1:8056 --dart-define=RECOGNIZER_API_KEY=local --dart-define=FRAME_VOTE=true --dart-define=SCENE=D`. 실기기 확인(정지 판정 헛 판정·운영 시간·불일치 실제 빈도)은 사용자 몫 — 계획서 진행 줄.
+
 ## 2026-11-05 밤 추가: 개선 계획 5단계 — 불확실성 신호·온도 보정·문턱 고르기 (metrics 표 1-93, `docs/improvement_plan_1105.md` 5단계 진행 줄)
 
 - **무엇:** 서버 `feat/cls-alt` **c4484dd**(push 안 함 = 운영 미반영) `app/signals.py` 가 `/v2/localroles` 에 `signals`(S1 보정 확률 차·S2 검출 점수·S3 분류기 2벌·S4 역할 3씨드·S5 입력 흔들기·S6 5 패 빨강)를 더함, 답 그대로. 새 자산 `tile-cls-alt.onnx`(cls_all 씨드 1), `tile-roles-rot.onnx` 는 씨드 출력 달린 같은 모델. 온도 T = 0.5. 앱은 `HandReading.signals` → `lib/table/read_signals.dart` → `autoRecordBlocker(signalBlocks:)`·`autoRecordCautions(signalCautions:)`.

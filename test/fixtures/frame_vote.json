@@ -1,0 +1,20 @@
+{
+  "spec": "프레임 투표 규칙(개선 계획 6단계). 판독 = 화료자 자리 /v2/localroles 답의 tiles(코드, 적5 는 0m·0p·0s)·separate(없으면 null)·melds(tiles + closed=안깡). 같음 = 손패 다중집합·separate·울기 다중집합(울기 안은 정렬, closed 포함)이 모두 같음. 확신도·순서는 안 본다. 두 번째 판독이 없으면 none. Dart lib/table/frame_vote.dart · Python experiments/speed/frame_vote.py 가 같은 답을 내야 한다.",
+  "cases": [
+    {"name": "같은 손패 순서만 다름", "a": {"tiles": ["1m", "2m", "3m", "5z"], "separate": null, "melds": []}, "b": {"tiles": ["5z", "3m", "1m", "2m"], "separate": null, "melds": []}, "want": "agree"},
+    {"name": "패 하나 다름", "a": {"tiles": ["1m", "2m", "3m"], "separate": null, "melds": []}, "b": {"tiles": ["1m", "2m", "4m"], "separate": null, "melds": []}, "want": "mismatch"},
+    {"name": "적5 대 보통 5", "a": {"tiles": ["4m", "0m", "6m"], "separate": null, "melds": []}, "b": {"tiles": ["4m", "5m", "6m"], "separate": null, "melds": []}, "want": "mismatch"},
+    {"name": "장수 다름(한 장 더 읽음)", "a": {"tiles": ["3s", "4s", "5p"], "separate": null, "melds": []}, "b": {"tiles": ["3s", "4s", "5p", "5s"], "separate": null, "melds": []}, "want": "mismatch"},
+    {"name": "같은 패 개수 다름", "a": {"tiles": ["1m", "1m", "2m"], "separate": null, "melds": []}, "b": {"tiles": ["1m", "2m", "2m"], "separate": null, "melds": []}, "want": "mismatch"},
+    {"name": "떼어 둔 패 같음", "a": {"tiles": ["1m", "2m"], "separate": "3m", "melds": []}, "b": {"tiles": ["2m", "1m"], "separate": "3m", "melds": []}, "want": "agree"},
+    {"name": "떼어 둔 패 다름", "a": {"tiles": ["1m", "2m"], "separate": "3m", "melds": []}, "b": {"tiles": ["1m", "2m"], "separate": "4m", "melds": []}, "want": "mismatch"},
+    {"name": "떼어 둔 패 한쪽만", "a": {"tiles": ["1m", "2m", "3m"], "separate": null, "melds": []}, "b": {"tiles": ["1m", "2m"], "separate": "3m", "melds": []}, "want": "mismatch"},
+    {"name": "울기 순서·울기 안 순서 다름", "a": {"tiles": ["1p"], "separate": null, "melds": [{"tiles": ["6m", "7m", "8m"], "closed": false}, {"tiles": ["6z", "6z", "6z"], "closed": false}]}, "b": {"tiles": ["1p"], "separate": null, "melds": [{"tiles": ["6z", "6z", "6z"], "closed": false}, {"tiles": ["8m", "6m", "7m"], "closed": false}]}, "want": "agree"},
+    {"name": "울기 패 다름", "a": {"tiles": ["1p"], "separate": null, "melds": [{"tiles": ["6m", "7m", "8m"], "closed": false}]}, "b": {"tiles": ["1p"], "separate": null, "melds": [{"tiles": ["6m", "7m", "9m"], "closed": false}]}, "want": "mismatch"},
+    {"name": "울기 수 다름", "a": {"tiles": ["1p"], "separate": null, "melds": [{"tiles": ["6z", "6z", "6z"], "closed": false}]}, "b": {"tiles": ["1p"], "separate": null, "melds": []}, "want": "mismatch"},
+    {"name": "안깡 대 명깡", "a": {"tiles": ["1p"], "separate": null, "melds": [{"tiles": ["4s", "4s", "4s", "4s"], "closed": true}]}, "b": {"tiles": ["1p"], "separate": null, "melds": [{"tiles": ["4s", "4s", "4s", "4s"], "closed": false}]}, "want": "mismatch"},
+    {"name": "울기 패가 손패로 감(합은 같음)", "a": {"tiles": ["1p", "6z", "6z", "6z"], "separate": null, "melds": []}, "b": {"tiles": ["1p"], "separate": null, "melds": [{"tiles": ["6z", "6z", "6z"], "closed": false}]}, "want": "mismatch"},
+    {"name": "두 번째 판독 없음", "a": {"tiles": ["1m"], "separate": null, "melds": []}, "b": null, "want": "none"},
+    {"name": "둘 다 빈 손패", "a": {"tiles": [], "separate": null, "melds": []}, "b": {"tiles": [], "separate": null, "melds": []}, "want": "agree"}
+  ]
+}

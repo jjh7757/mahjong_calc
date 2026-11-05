@@ -3,6 +3,9 @@
 사용:
   python -I fake_head.py <사진 폴더> <포트>                       # 사진을 요청마다 차례로(배경이 바뀌는 것 확인)
   python -I fake_head.py <시퀀스 폴더> <포트> --seq --hold 12,6     # f0.jpg,f1.jpg,… 를 시간순으로 재생(판 상태 추적 확인)
+  python -I fake_head.py <사진 폴더> <포트> --after-capture          # 첫 사진만 보여 주다가 /capture 마다 다음 사진(프레임 투표 확인:
+                                                                     #   화료 촬영 = 첫 사진, 그 뒤 프레임 = 같은 판의 둘째 사진)
+  --raw-full: /preview?w= 가 원본 긴 변 이상이면 다시 저장하지 않고 원본 바이트(기본은 늘 q80 으로 다시 저장 = 실제 헤드 YUV→JPEG 흉내)
 --seq: 첫 요청 시각부터 hold 초씩 f0, f1, … 을 보여 주고 마지막 프레임은 계속. /preview 는 긴 변 w(기본 960)로 줄이고
 X-Frame-Size 에 원 크기를 적는다. /capture 는 현재 프레임 원본.
 """
@@ -14,6 +17,8 @@ from PIL import Image
 
 folder, port = sys.argv[1], int(sys.argv[2])
 SEQ = "--seq" in sys.argv
+AFTER_CAPTURE = "--after-capture" in sys.argv
+RAW_FULL = "--raw-full" in sys.argv  # /preview?w= 가 원본 긴 변 이상이면 q80 다시 저장 없이 원본 바이트(프레임 투표 확인)
 HOLD = [float(x) for x in (sys.argv[sys.argv.index("--hold") + 1].split(",") if "--hold" in sys.argv else ["10"])]
 photos = sorted(f for f in os.listdir(folder) if f.lower().endswith((".jpg", ".jpeg")) and "thumb" not in f)
 cycle = itertools.cycle(photos)
@@ -23,6 +28,8 @@ t0 = {"t": None}
 
 
 def current() -> str:
+    if AFTER_CAPTURE:
+        return photos[min(count["cap"], len(photos) - 1)]
     if not SEQ:
         return next(cycle)
     if t0["t"] is None:
@@ -72,8 +79,11 @@ class H(BaseHTTPRequestHandler):
                 im = Image.open(full).convert("RGB")
                 size = im.size
                 w = int(q.get("w", ["960"])[0])
-                im.thumbnail((w, w))
-                buf = io.BytesIO(); im.save(buf, "JPEG", quality=80); data = buf.getvalue()
+                if RAW_FULL and max(size) <= w:
+                    data = open(full, "rb").read()  # 줄일 필요가 없으면 원본 그대로(--raw-full, 다시 저장하지 않음)
+                else:
+                    im.thumbnail((w, w))
+                    buf = io.BytesIO(); im.save(buf, "JPEG", quality=80); data = buf.getvalue()
                 count["prev"] += 1
             self.send_response(200); self._cors()
             self.send_header("Content-Type", "image/jpeg"); self.send_header("Content-Length", str(len(data)))
@@ -87,5 +97,5 @@ class H(BaseHTTPRequestHandler):
         pass
 
 
-print("photos", photos, "seq" if SEQ else "cycle", HOLD, flush=True)
+print("photos", photos, "after-capture" if AFTER_CAPTURE else "seq" if SEQ else "cycle", HOLD, flush=True)
 ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()

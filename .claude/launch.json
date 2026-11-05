@@ -586,6 +586,31 @@
       ],
       "port": 8056,
       "autoPort": false
+    },
+    {
+      "name": "fake-head-vote",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/tracking/fake_head.py",
+        "experiments/tracking/vote_pair",
+        "8777",
+        "--after-capture"
+      ],
+      "port": 8777,
+      "autoPort": false
+    },
+    {
+      "name": "fake-head-vote-raw",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/tracking/fake_head.py",
+        "experiments/tracking/vote_pair",
+        "8777",
+        "--after-capture",
+        "--raw-full"
+      ],
+      "port": 8777,
+      "autoPort": false
     }
   ]
 }

@@ -160,8 +160,12 @@ class TableReadTrace {
   /// 서버 자체 모델 그림자 답(`local`, 판독에는 안 쓰고 다음 매장에서 Gemini 와 비교한다). 이름은 [callMs] 와 같다.
   final Map<String, Map<String, dynamic>> localShadow = {};
 
+  /// 자리 판독 `/v2/localroles` 원본 답(이름 `roles_<자리>`). 프레임 투표(`frame_vote.dart`)가 두 번째 프레임 답과 비교한다.
+  final Map<String, Map<String, dynamic>> roleResponses = {};
+
   void _recordCall(String name, int ms, Map<String, dynamic> response) {
     callMs[name] = ms;
+    if (name.startsWith('roles_')) roleResponses[name] = response;
     if (response['timing'] case final Map<String, dynamic> t) serverTiming[name] = t;
     if (response['local'] case final Map<String, dynamic> l) localShadow[name] = l;
   }
@@ -254,6 +258,16 @@ class TableReader {
   /// 내놓은 도라·뒷도라 표시패로 넘긴다([CenterReading.handSideIndicators], merge 가 리치면 먼저 쓴다).
   /// [lastHedge] 는 강 끝(`/v2/last3`) 헤지: 그 시간 안에 답이 없거나 먼저 실패하면 같은 요청을 한 번 더 보내 먼저 온 답을 쓴다
   /// (null 이면 안 함). 자리 판독에는 쓰지 않는다(경주는 손패 정확도를 깎았다, metrics 표 2-2).
+  /// `/v2/localroles` 쿼리(자리 + 격자). 프레임 투표가 두 번째 프레임을 같은 쿼리로 읽는다.
+  static Map<String, String> rolesQuery(Side s, GridZones grid) => {
+        'side': s.name,
+        'x1': '${grid.x1}',
+        'x2': '${grid.x2}',
+        'y1': '${grid.y1}',
+        'y2': '${grid.y2}',
+        if (grid.sticks case final b?) 'sticks': b.toList().join(','),
+      };
+
   Future<TableReading> readGrid(
     Uint8List original,
     GridZones grid, {
@@ -430,14 +444,7 @@ class TableReader {
               : roleSeats
                   // 자체 모델 새 경로: 자리 크롭 대신 사진 전체 + 격자를 보내 상자 배치 역할 모델이 그 자리 것만 고른다(/v2/localroles,
                   // 서버 app/roles.py, metrics 표 1-58~1-61). 답은 /v2/seat 모양 그대로.
-                  ? call('localroles', original, 'roles_${s.name}', required: known != null, query: {
-                      'side': s.name,
-                      'x1': '${grid.x1}',
-                      'x2': '${grid.x2}',
-                      'y1': '${grid.y1}',
-                      'y2': '${grid.y2}',
-                      if (grid.sticks case final b?) 'sticks': b.toList().join(','),
-                    })
+                  ? call('localroles', original, 'roles_${s.name}', required: known != null, query: rolesQuery(s, grid))
                   : call(localOnly ? 'localseat' : 'seat', seatCrops[s], 'seat_${s.name}', required: known != null, query: seatQuery(s)),
       };
       shadowF = {

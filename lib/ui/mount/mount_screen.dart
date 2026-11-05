@@ -22,6 +22,7 @@ import '../../table/cropper.dart';
 import '../../table/felt_grid.dart';
 import '../../table/fixed_layout.dart';
 import '../../table/frame_recorder.dart';
+import '../../table/frame_vote.dart';
 import '../../table/grid_zones.dart';
 import '../../table/hand_rules.dart';
 import '../../table/merge.dart';
@@ -239,6 +240,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// 배경 프레임을 전부 남길지(매장 실험 때 녹화 대신, 2026-11-05). 끄면 변화 주변만.
   static const String keepAllFramesPref = 'mount.keepAllFrames';
 
+  /// 프레임 투표(개선 계획 6단계, `lib/table/frame_vote.dart`): 자동 반영 직전에 헤드 프레임 1장을 더 읽어 같을 때만 반영.
+  /// 기본 끔 — 오프라인 시연이 합격 기준을 못 넘었고(metrics 표 1-94) 실기기 확인 전이다. 카메라 헤드 + 격자일 때만 돈다.
+  static const String frameVotePref = 'mount.frameVote';
+  bool _frameVote = false;
+
   /// 이번 배경 프레임이 추적을 거쳐 [_recordFrame] 까지 갔는지.
   bool _frameTracked = false;
   int _meldEventsSeen = 0;
@@ -360,6 +366,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _useGrid = p.getBool(useGridPref) ?? true;
       _trackingEnabled = p.getBool(trackingPref) ?? true;
       _frames.keepAll = p.getBool(keepAllFramesPref) ?? false;
+      _frameVote = p.getBool(frameVotePref) ?? false;
       _autoSetupOnStart = p.getBool(autoSetupPref) ?? true;
       _gridSource = p.getString(gridSourcePref);
       _rectify = p.getBool(rectifyPref) ?? false;
@@ -1616,7 +1623,21 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       // 테이블 화면이 열린 채 룰 설정에서 바꿨을 수 있어 매번 다시 읽는다.
       _autoRecord = await AutoRecordStore.load();
       if (!mounted) return;
-      debugPrint('[read] 결과 화면 띄움 valid=${result.isValid} autoBlock=$autoBlock cautions=$autoCautions');
+      // 프레임 투표: 자동 반영할 판독일 때만, 결과 화면은 기다리지 않고 바로 띄운다(투표는 자동 반영 직전 확인).
+      final firstRoles = trace.roleResponses['roles_${merge.winnerSide.name}'];
+      final captureSmall = trace.small;
+      final Future<String?>? autoGate = _frameVote &&
+              _autoRecord &&
+              autoBlock == null &&
+              result.isValid &&
+              _remoteUrl != null &&
+              _useGrid &&
+              !_rectify &&
+              firstRoles != null &&
+              captureSmall != null
+          ? _frameVoteGate(logDir, captureSmall, merge.winnerSide, firstRoles)
+          : null;
+      debugPrint('[read] 결과 화면 띄움 valid=${result.isValid} autoBlock=$autoBlock cautions=$autoCautions vote=${autoGate != null}');
       await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (ctx) => ResultScreen(
@@ -1642,6 +1663,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                 ? null
                 : (autoCautions.isEmpty ? autoRecordDelay : autoRecordCautionDelay),
             autoCautions: autoCautions,
+            autoRecordGate: autoGate,
           ),
         ),
       );
@@ -1678,6 +1700,72 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       client.close();
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// 프레임 투표 한 번: 헤드에서 지금 프레임을 받아(추적과 같은 출처 [_trackSource]) 화료자 자리를 `/v2/localroles` 로 다시 읽고,
+  /// 화료 사진과 "손패 눕힘 + 정지" 로 이어지면([judgeStill]) 두 판독을 비교한다. 결과는 촬영 기록 `frame_vote.json`·`frame2.jpg`.
+  /// 돌려주는 값은 결과 화면의 자동 반영 직전 확인: 불일치면 '프레임 불일치', 일치·투표 못 함이면 null(지금 규칙대로).
+  /// 두 번째 판독은 정지 판정과 함께 바로 보낸다(정지가 아니면 버린다) — 추가 시간 = 프레임 받기 + localroles 왕복 1회.
+  Future<String?> _frameVoteGate(String logDir, Uint8List captureSmall, Side winner, Map<String, dynamic> firstJ) async {
+    final sw = Stopwatch()..start();
+    final first = VoteRead.fromSeatJson(firstJ);
+    final grid = _grid;
+    final url = _remoteUrl;
+    Uint8List? frame;
+    FrameVoteRecord rec;
+    if (url == null) {
+      rec = FrameVoteRecord(result: FrameVoteResult.none, first: first, totalMs: 0, reason: '카메라 헤드 없음');
+    } else {
+      final cam = RemoteCamera(url, token: _remoteToken, timeout: const Duration(seconds: 20));
+      final client = RecognizerClient();
+      try {
+        final f = frame = await _trackSource(cam);
+        final callSw = Stopwatch()..start();
+        int? callMs;
+        Object? callErr;
+        final secondF = client
+            .observe('localroles', f, filename: 'frame_vote.jpg', query: TableReader.rolesQuery(winner, grid))
+            .timeout(const Duration(seconds: 20))
+            .then<Map<String, dynamic>?>((j) {
+          callMs = callSw.elapsedMilliseconds;
+          return j;
+        }, onError: (Object e) {
+          callErr = e;
+          return null;
+        });
+        final small2 = await compute(shrinkForLocate, f);
+        final before = await compute(analyzeTableFrame, (captureSmall, grid));
+        final after = await compute(analyzeTableFrame, (small2, grid));
+        final shot = await compute(analyzeGridShot, (small2, grid));
+        final still = judgeStill(before: before, after: after, winner: winner, winnerFaceUp: shot.faceUp.contains(winner));
+        if (!still.still) {
+          rec = FrameVoteRecord(result: FrameVoteResult.none, first: first, still: still, totalMs: sw.elapsedMilliseconds, reason: still.reason);
+        } else {
+          final j = await secondF;
+          final second = j == null ? null : VoteRead.fromSeatJson(j);
+          rec = FrameVoteRecord(
+            result: frameVote(first, second),
+            first: first,
+            second: second,
+            still: still,
+            totalMs: sw.elapsedMilliseconds,
+            secondCallMs: callMs,
+            reason: j == null ? '두 번째 판독 실패: $callErr' : null,
+          );
+        }
+      } catch (e) {
+        rec = FrameVoteRecord(result: FrameVoteResult.none, first: first, totalMs: sw.elapsedMilliseconds, reason: '프레임 받기 실패: $e');
+      } finally {
+        cam.close();
+        client.close();
+      }
+    }
+    debugPrint('[vote] ${rec.result.name} ${rec.totalMs}ms localroles=${rec.secondCallMs}ms ${rec.reason ?? ''}');
+    if (_logEnabled) {
+      unawaited(CaptureLog.saveFile(logDir, 'frame_vote.json', CaptureLog.jsonBytes({...rec.toJson(), 'winner_side': winner.name}), 'application/json'));
+      if (frame case final f?) unawaited(CaptureLog.saveFile(logDir, 'frame2.jpg', f, 'image/jpeg'));
+    }
+    return rec.blocker;
   }
 
   /// 촬영 기록을 백그라운드로 저장한다. 판독 흐름을 막지 않는다.
@@ -1954,6 +2042,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                       final p = await SharedPreferences.getInstance();
                       await p.setBool(keepAllFramesPref, _frames.keepAll);
                     } catch (_) {}
+                  } else if (v == 'frameVote') {
+                    setState(() => _frameVote = !_frameVote);
+                    try {
+                      final p = await SharedPreferences.getInstance();
+                      await p.setBool(frameVotePref, _frameVote);
+                    } catch (_) {}
                   } else if (v == 'auto') {
                     setState(() => _autoRecord = !_autoRecord);
                     await AutoRecordStore.save(_autoRecord);
@@ -2040,6 +2134,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     value: 'auto',
                     checked: _autoRecord,
                     child: const Text('확실한 판독은 10초 뒤 자동 반영'),
+                  ),
+                  CheckedPopupMenuItem(
+                    key: const ValueKey('mount-frame-vote-menu'),
+                    value: 'frameVote',
+                    checked: _frameVote,
+                    enabled: _useGrid && _remoteUrl != null,
+                    child: const Text('자동 반영 전 헤드 프레임 한 장 더 읽기 (시험)'),
                   ),
                   CheckedPopupMenuItem(
                     value: 'log',
