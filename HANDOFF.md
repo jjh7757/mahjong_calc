@@ -2,6 +2,12 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-05 밤 추가: 개선 계획 3단계 — 흔들기 회귀 세트 (metrics 표 1-91, `docs/improvement_plan_1105.md` 3단계 진행 줄)
+
+- **쓰는 법:** `python -I -X utf8 experiments/speed/robust_suite.py run --models fold --tag <TAG>` → `--models prod` → `report <JSON들>`. 서버 안 띄움(서버 코드를 프로세스 안에서, 모델 한 벌 약 7분). 변형 사진이 없으면 `make` + `flutter test tool/robust_felt_grid_test.dart`(회전 격자). 목록·세기·근거는 `experiments/speed/ROBUST.md`, 고정 세트 21개(`FIXED`, JPEG 만 q35 로 한 번 올림).
+- **기준선(fold / prod, /32):** 원본 31 / 32. 약한 조건 — 전구색 화이트밸런스 0 / 0(흰 비율 앞면 거르기가 전부 버림, 자동 0), 회전 ±25° 3~17, 축소 0.6 13~15(unsafe 3~4), 흐림 σ3 6 / 18, 노출 +1EV 18 / 25. 진단일 뿐 규칙을 고치지 않았다.
+- 채택 기준: 고정 세트 전부에서 unsafe·틀린 자동이 안 늘고 패 −2% 이내. 테스트 15장 편 사진 prod 6/15·장면 2/5 — `field_bench.py` 는 서버의 q90 재저장을 안 거쳐 3장 낙관적(9/15).
+
 ## 2026-11-05 밤 추가: 개선 계획 2단계 — 홀드아웃 기준선 (metrics 표 1-90, `docs/improvement_plan_1105.md` 2단계 진행 줄)
 
 - **낙관 편향 0:** 개발 32회를 그 사진을 안 배운 모델 조합으로 재도 30/32·패 434/436·경고 없는 틀린 자동 0 — 운영 모델(30/32·434/436·0)과 부트스트랩 "같음"(장면 [−2.7, +3.0]회, 패 [−0.6, +0.7]%p). 자리 판독은 나눔 모델로도 포화라 개발 32회로는 개선을 못 가린다. 틀린 2 는 강 끝 화료패.
