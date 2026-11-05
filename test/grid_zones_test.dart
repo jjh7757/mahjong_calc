@@ -6,10 +6,13 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:image/image.dart' as img;
 import 'package:mahjong_calc/services/recognizer_client.dart';
+import 'package:mahjong_calc/table/cropper.dart';
 import 'package:mahjong_calc/table/fixed_layout.dart';
 import 'package:mahjong_calc/table/grid_zones.dart';
 import 'package:mahjong_calc/table/observation.dart';
+import 'package:mahjong_calc/table/rectify.dart' show FeltQuad;
 import 'package:mahjong_calc/table/river_tracker.dart';
+import 'package:mahjong_calc/table/shot_image.dart';
 import 'package:mahjong_calc/table/table_layout.dart';
 import 'package:mahjong_calc/table/table_reader.dart';
 import 'package:mahjong_calc/table/table_reading.dart';
@@ -38,6 +41,25 @@ Uint8List table({bool bottomFaceUp = true, img.Color? back}) {
 }
 
 http.Response _json(Object body) => http.Response(jsonEncode(body), 200);
+
+/// 자른 구역을 세는 [ShotImage].
+class _CountingShot implements ShotImage {
+  final ShotImage inner;
+  final List<CropSpec> specs;
+  _CountingShot(this.inner, this.specs);
+  @override
+  Future<Uint8List> shrink() => inner.shrink();
+  @override
+  Future<List<Uint8List>> crop(List<CropSpec> s) {
+    specs.addAll(s);
+    return inner.crop(s);
+  }
+
+  @override
+  Future<FeltQuad?> rectify() => inner.rectify();
+  @override
+  Future<void> close() => inner.close();
+}
 
 /// 요청 본문 [from] 위치 뒤의 첫 JPEG.
 img.Image _jpegAt(Uint8List b, int from) {
@@ -471,6 +493,13 @@ void main() {
                 'melds': [],
                 'loose': [],
               }),
+              '/v2/localroles' => _json({
+                'face_up': r.url.queryParameters['side'] == 'bottom',
+                'tiles': r.url.queryParameters['side'] == 'bottom' ? [for (final c in hand13) {'tile': c, 'conf': 0.9}] : [],
+                'separate_tile': null,
+                'melds': [],
+                'loose': [],
+              }),
               '/v2/locallast3' => _json({
                 'method': 'frame',
                 'rivers': [
@@ -525,6 +554,29 @@ void main() {
         final r = await read(<Uri>[], bottomSideways: [3], pairs: [['1p', '8m']]);
         expect(r.center!.riichiAt(Side.bottom), isTrue);
         expect([for (final t in r.center!.handSideIndicators) t.code], ['1p', '8m']);
+      });
+
+      test('역할 경로(useRoles)는 원본을 보내고 강 끝만 자른다 — 자리·리치봉·도라 크롭 없음', () async {
+        final urls = <Uri>[];
+        final client = RecognizerClient(baseUrl: 'https://x.test', apiKey: 'k', httpClient: localServer(urls));
+        final specs = <CropSpec>[];
+        Future<ShotImage> open(Uint8List o) async => _CountingShot(DirectShotImage(o), specs);
+        final trace = TableReadTrace();
+        final r = await TableReader(
+          client,
+          ops: ImageOps(shrink: (o) async => shrinkForLocate(o), cropMany: (o, s) async => cropMany((o, s)), openShot: open),
+        ).readGrid(table(), grid, localOnly: true, useRoles: true, trace: trace);
+        expect(urls.map((u) => u.path).toSet(), {'/v2/localroles', '/v2/locallast3', '/v2/localdora'});
+        expect(urls.where((u) => u.path == '/v2/localroles').map((u) => u.queryParameters['side']), ['bottom']);
+        expect(specs.length, 4); // 네 자리 강 끝만
+        expect(trace.handCrop, isNull);
+        expect(trace.centerCrop, isNull);
+        expect(trace.wallCrop, isNull);
+        expect(trace.riverCrops.length, 4);
+        expect(r.warnings, isEmpty);
+        expect(r.hand!.tiles.length, 13);
+        expect(r.center!.lastDiscardAt(Side.right)?.code, '4p');
+        expect(r.center!.doraIndicators.map((t) => t.code), ['7z']);
       });
 
       test('2장 묶음이 둘이면 고르지 않는다', () async {

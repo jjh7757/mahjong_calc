@@ -310,8 +310,12 @@ class TableReader {
     final Uint8List small;
     final ShotAnalysis a;
     final Map<Side, Uint8List> seatCrops, cornerCrops, lastCrops;
-    final Uint8List sticksCrop, doraCrop;
-    Uint8List? trackedCrop, dealerDoraCrop, wideCrop;
+    Uint8List? sticksCrop, doraCrop, trackedCrop, dealerDoraCrop, wideCrop;
+    // 역할 경로는 자리 크롭 대신 원본을 보내고, 자체 모델만이면 리치봉(geminiSticks 아니면)·도라 칸도 보내지 않으니 자르지 않는다.
+    // 그만큼 강 끝 크롭이 빨리 끝나 장면 끝을 정하는 `/v2/locallast3` 가 먼저 나간다(metrics 표 1-81).
+    final roleSeats = localOnly && useRoles;
+    final needSticks = !localOnly || geminiSticks;
+    final needDora = !localOnly;
     final trackedBox = rectified || localOnly ? null : trackedDiscard?.box;
     final trackSide = trackedDiscard?.side;
     final warnings = <String>[];
@@ -352,7 +356,9 @@ class TableReader {
       }
     }
 
-    Future<List<ReadTile>> localDoraF = Future.value(const []);
+    // 자체 모델만이면 사진 전체만 보내므로 디코딩·크롭을 기다리지 않고 맨 먼저 보낸다(metrics 표 1-81). Gemini 경로는 자리 판독을
+    // 먼저 보내던 순서 그대로(아래).
+    var localDoraF = localOnly ? readLocalDora() : Future<List<ReadTile>>.value(const []);
 
     // 자리 전체 크롭이면 손패 칸 폭 비율을 같이 보낸다 — 서버가 손패 틀을 못 잡으면 손패 칸·모서리 칸으로 나눠 한 번 더 잡는다
     // (먼 자리 B 틀 0/2 → 2/2, 검사 통과한 틀린 틀 0, metrics 표 2-3). 예전 서버는 모르는 쿼리를 무시한다.
@@ -395,18 +401,22 @@ class TableReader {
           if (!localOnly && !splitSeat && tracked.containsKey(s)) s,
       ];
       // 장면 시간은 자리 판독(3번 동시, 가장 느림)이 정하므로 자리 크롭을 먼저 잘라 먼저 보낸다.
+      final seatCropSides = [
+        for (final s in seatSides)
+          if (!roleSeats || trackedSides.contains(s)) s,
+      ];
       final seatList = await shot.crop([
-        for (final s in seatSides) CropSpec(splitSeat ? grid.handCell(s) : grid.seatForRead(s), side: s),
+        for (final s in seatCropSides) CropSpec(splitSeat ? grid.handCell(s) : grid.seatForRead(s), side: s),
         for (final s in cornerSides) CropSpec(grid.cornerCell(s), side: s),
         for (final s in trackedSides) CropSpec(grid.handCellForRead(s), side: s),
         // 화료자를 알면 테이블 절반도 잘라 둔다. 자리 판독으로 답을 못 정한 장면에서만 보낸다(사진은 곧 닫는다).
         if (known != null && !splitSeat && useWide && !localOnly) CropSpec(grid.seatHalf(known), side: known),
       ]);
       wideCrop = known != null && !splitSeat && useWide && !localOnly ? seatList.last : null;
-      seatCrops = {for (final (i, s) in seatSides.indexed) s: seatList[i]};
-      cornerCrops = {for (final (i, s) in cornerSides.indexed) s: seatList[seatSides.length + i]};
+      seatCrops = {for (final (i, s) in seatCropSides.indexed) s: seatList[i]};
+      cornerCrops = {for (final (i, s) in cornerSides.indexed) s: seatList[seatCropSides.length + i]};
       handCrops = {
-        for (final (i, s) in trackedSides.indexed) s: seatList[seatSides.length + cornerSides.length + i],
+        for (final (i, s) in trackedSides.indexed) s: seatList[seatCropSides.length + cornerSides.length + i],
       };
       trace?.meldCrops = [...cornerCrops.values];
       onStage?.call(ReadStage.reading);
@@ -417,7 +427,7 @@ class TableReader {
           s: trackedSides.contains(s)
               ? call('handonly', handCrops[s], 'handonly_${s.name}',
                   required: known != null, query: {'melds': '${tracked[s]!.length}'})
-              : localOnly && useRoles
+              : roleSeats
                   // 자체 모델 새 경로: 자리 크롭 대신 사진 전체 + 격자를 보내 상자 배치 역할 모델이 그 자리 것만 고른다(/v2/localroles,
                   // 서버 app/roles.py, metrics 표 1-58~1-61). 답은 /v2/seat 모양 그대로.
                   ? call('localroles', original, 'roles_${s.name}', required: known != null, query: {
@@ -443,27 +453,29 @@ class TableReader {
             .then((r) => wideReady = r);
       }
       started.addAll([...seatF.values, ...shadowF.values, ...cornerF.values, ?wideF]);
-      if (localDora || localOnly) localDoraF = readLocalDora();
+      if (localDora && !localOnly) localDoraF = readLocalDora();
 
       // 게임 중 추적이 본 마지막 버림패 위치가 있으면 그 패만 따로 잘라 한 번 더 읽는다(강 끝 틀을 못 잡을 때의 대안).
+      final needDealer = dealer != null && !localOnly;
       final rest = await shot.crop([
         for (final s in lastSides) CropSpec(grid.lastZone(s), side: s),
-        CropSpec(grid.sticksZone),
+        if (needSticks) CropSpec(grid.sticksZone),
         // 도라 크롭은 가운데 칸을 화료자 아닌 쪽으로 조금 넓혀 선에 걸친 표시패까지(화료자를 모르면 넓히지 않음).
-        CropSpec(grid.doraSearchZone(except: seatSides.toSet())),
-        if (dealer != null && !localOnly) CropSpec(grid.doraZone(dealer), side: dealer),
-        if (trackedBox != null && trackSide != null && lastSides.contains(trackSide))
-          CropSpec(trackedBox, side: trackSide, pad: 0.6),
+        if (needDora) CropSpec(grid.doraSearchZone(except: seatSides.toSet())),
+        if (dealer != null && needDealer) CropSpec(grid.doraZone(dealer), side: dealer),
+        if (trackedBox != null && trackSide != null && useTracked) CropSpec(trackedBox, side: trackSide, pad: 0.6),
       ]);
       lastCrops = {for (final (i, s) in lastSides.indexed) s: rest[i]};
       trace?.riverCrops = lastCrops;
-      sticksCrop = rest[lastSides.length];
+      var next = lastSides.length;
+      Uint8List? take(bool want) => want ? rest[next++] : null;
+      sticksCrop = take(needSticks);
       trace?.centerCrop = sticksCrop;
-      doraCrop = rest[lastSides.length + 1];
+      doraCrop = take(needDora);
       trace?.wallCrop = doraCrop;
-      dealerDoraCrop = dealer != null && !localOnly ? rest[lastSides.length + 2] : null;
+      dealerDoraCrop = take(needDealer);
       trace?.dealerDoraCrop = dealerDoraCrop;
-      trackedCrop = useTracked ? rest.last : null;
+      trackedCrop = take(useTracked);
       lap('crop');
     } catch (_) {
       // 자리 판독을 보낸 뒤 나머지를 자르다 실패하면, 보낸 요청의 오류가 처리되지 않은 채 남지 않게 한다.
