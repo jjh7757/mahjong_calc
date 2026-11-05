@@ -128,7 +128,7 @@ def score(paths: list[str]) -> None:
     pairs: dict = {}  # 같은 순간 짝: (세트, 사진, 회차) → 서버 → 전체 초
     for r in rows:
         if r["photo"] not in scenes:
-            continue  # 가림 사진(sg.OCCLUDED)이 든 옛 로그
+            continue  # 채점 제외 사진(sg.EXCLUDED)이 든 옛 로그
         t = truth_of(r["photo"], scenes)
         if r["scene"] == "V" and t["win"] is None:
             continue  # 화료패 정답이 없는 매장 장면(142535·174020)은 뺀다(사용자 요청 2026-11-01)

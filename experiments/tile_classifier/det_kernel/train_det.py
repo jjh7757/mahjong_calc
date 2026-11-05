@@ -20,6 +20,7 @@ shutil.copytree(SRC, WORK, dirs_exist_ok=True)  # 입력은 읽기 전용이라 
 
 BCD = {"k25", "k28", "k15", "k26", "k12", "k16"}
 images = sorted((WORK / "images").glob("*.jpg"))
+print("이미지", len(images), "총 바이트", sum(p.stat().st_size for p in images), flush=True)  # 로컬 데이터셋과 대조(이전 버전으로 도는 실수 막기)
 
 
 def photo(p: Path) -> str:
@@ -37,8 +38,12 @@ def part(name: str) -> str:
 FOLDS = {"fold_a": ("pm", "bcd"), "fold_b": ("am", "bcd"), "final": ()}
 summary = {}
 for fold, held in FOLDS.items():
-    train = [p for p in images if part(photo(p)) not in held]
-    val = [p for p in images if part(photo(p)) in held] if held else [p for p in images if p.stem.endswith("__w")]
+    # 증강본은 학습에만, 시험은 원본 토막만. 4회차(2026-11-04) 白 증강은 재료가 fold 별로 다르다: __ra(재료 오전·기타)는 fold_a·final, __rb(재료 오후·기타)는 fold_b·final
+    # (시험 사진의 白 이 학습 사본에 붙는 누수를 막는다 — 3회차 __b 는 이걸 안 지켰다).
+    aug = lambda p: p.stem.endswith(("__b", "__ra", "__rb"))
+    skip = {"fold_a": "__rb", "fold_b": "__ra"}.get(fold)
+    train = [p for p in images if part(photo(p)) not in held and not (skip and p.stem.endswith(skip))]
+    val = [p for p in images if part(photo(p)) in held and not aug(p)] if held else [p for p in images if p.stem.endswith("__w")]
     (WORK / f"{fold}_train.txt").write_text("\n".join(map(str, train)))
     (WORK / f"{fold}_val.txt").write_text("\n".join(map(str, val)))
     yaml = WORK / f"{fold}.yaml"

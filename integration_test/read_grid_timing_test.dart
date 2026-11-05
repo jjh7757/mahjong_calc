@@ -99,13 +99,13 @@ const _bcdTilt = {
 
 // SET=visit: [평가 밖·매장 개발 세트] 10/31 매장 23회(PHOTO_URL 은 visit_20261031/captures). 격자는 FIELD_GRIDS 로(사진마다 다르다,
 // experiments/speed/flow_visit.py 가 만든다). 정답은 visit_20261031/truth.json·label.json.
-// 손·팔이 패를 가린 172424·174020 은 뺀다(사용자 결정 2026-11-02, seat_grow.py OCCLUDED).
+// 손·팔이 패를 가린 172424·174020(사용자 결정 2026-11-02), 손패를 흩어 놓은 183022(사용자 문제, 2026-11-04)는 뺀다(seat_grow.py EXCLUDED).
 const _visit = {
   'V': (
     [
       '123140', '124654', '125839', '130743', '131411', '132239', '132954', '133030', '133826', '134815',
       '142535', '143104', '164501', '165043', '165614', '170105', '171025', '171245', '171505', '175951',
-      '181209', '183022', '183627',
+      '181209', '183627',
     ],
     _initialGrid,
   ),
@@ -116,6 +116,8 @@ const _set = String.fromEnvironment('SET', defaultValue: 'bcd');
 const _localDora = bool.fromEnvironment('LOCAL_DORA', defaultValue: true);
 // LOCAL_ONLY=true: 자체 모델만(Gemini 없음). readGrid(localOnly:).
 const _localOnly = bool.fromEnvironment('LOCAL_ONLY');
+// ROLES=true: 자체 모델만 쓸 때 자리 판독을 자리 크롭(/v2/localseat) 대신 사진 전체 + 격자(/v2/localroles, 역할 모델)로. readGrid(useRoles:).
+const _useRoles = bool.fromEnvironment('ROLES');
 // GEMINI_STICKS=true: 자체 모델만 쓰되 리치봉은 Gemini 로도 읽는다. readGrid(geminiSticks:).
 const _geminiSticks = bool.fromEnvironment('GEMINI_STICKS');
 // PHOTO_MIN·PHOTO_MAX: 사진 이름 범위 [min, max) 만 잰다(매장 오전·오후에 다른 나눔 모델을 쓰려고).
@@ -276,7 +278,7 @@ void main() {
                 if (dealer != null) out['dealer_side'] = dealer.name;
                 final reading = await TableReader(client, ops: _isolateOps)
                     .readGrid(shot, useGrid, rectify: rect, dealer: dealer, trace: trace, useWide: wide, wideEarly: early,
-                        wideIndicators: ind, lastHedge: ind ? const Duration(seconds: 12) : null, trackedRiichi: _localOnly ? const {} : _trackedRiichi(photo), localDora: _localDora, localOnly: _localOnly, geminiSticks: _geminiSticks, trackedDora: _trackedDora(photo));
+                        wideIndicators: ind, lastHedge: ind ? const Duration(seconds: 12) : null, trackedRiichi: _localOnly ? const {} : _trackedRiichi(photo), localDora: _localDora, localOnly: _localOnly, useRoles: _useRoles, geminiSticks: _geminiSticks, trackedDora: _trackedDora(photo));
                 if (_trackedDora(photo) case final td?) out['tracked_dora'] = td.code;
                 out['local_dora'] = trace.localDora;
                 if (_trackedRiichi(photo).isNotEmpty) out['tracked_riichi'] = [for (final s in _trackedRiichi(photo)) s.name];

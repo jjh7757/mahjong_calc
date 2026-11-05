@@ -4,7 +4,7 @@
 틀: A = 서버 st.frame 을 검출기만 바꿔 그대로(모자이크, 운영 검사), B = 크롭 통째 검출 + st.structure_split + 운영 검사. A 를 먼저, 안 되면 B.
 모델: 시험 사진을 학습에 안 쓴 것만. 검출기 오후·B·C·D = fold_a, 오전 = fold_b. 분류기는 그 시간대를 뺀 라벨로 학습(B·C·D 는 겹침 기록도 뺌), data/cls_<부분>.pt 로 저장.
 자동 = 틀 + 장수·텐파이/화료형 검사 통과. YOLO 먼저 = 자동 아니면 저장된 Gemini 폭 40 으로 넘김(hybrid_replay.py 와 같은 계산).
-  python -I experiments/tile_classifier/det_eval.py [--strict] [--r2]
+  python -I experiments/tile_classifier/det_eval.py [--strict] [--r2|--r3]
 결과 data/det/eval.json
 """
 from __future__ import annotations
@@ -33,7 +33,7 @@ import train as tr  # noqa: E402
 from harvest import rv, st  # noqa: E402
 
 DATA = HERE / "data"
-OUT = DATA / "det" / ("kaggle_out_r2" if "--r2" in sys.argv else "kaggle_out") / "out"  # --r2 = 2회차 검출기
+OUT = DATA / "det" / ("kaggle_out_r3" if "--r3" in sys.argv else "kaggle_out_r2" if "--r2" in sys.argv else "kaggle_out") / "out"  # --r2 = 2회차, --r3 = 3회차(白 증강) 검출기
 RELAX = "--strict" not in sys.argv  # --strict = 운영 모양 검사까지(A 또는 B)
 
 

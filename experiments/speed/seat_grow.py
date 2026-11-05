@@ -41,7 +41,11 @@ BCD = {
 # label.json 이 없거나 틀린 장면의 정답(2026-11-01, 사진 눈 판독 + 사용자 답 + visit_truth_check.py)
 TRUTH = json.loads((VISIT.parent / "truth.json").read_text(encoding="utf-8"))["scenes"]
 # 손·팔이 패를 가린 사진. 어떤 방법으로도 맞출 수 없어 평가에서 뺀다(사용자 결정 2026-11-02). 학습 재료로는 그대로 쓴다.
+# 채점하는 스크립트는 정답을 [eval_scenes] 에서 가져오거나 [EXCLUDED] 로 거른다([scenes] 는 학습·격자용). 새 가림 사진은 채점 전에 사진만 보고 여기에 더한다.
 OCCLUDED = {"20261031_172424", "20261031_174020"}
+# 촬영·사용 규칙을 어긴 사진: 손패를 한 줄로 두지 않고 펠트 곳곳에 흩어 놓음(183022, 사용자 결정 2026-11-04 "사용자 문제"). 학습엔 그대로.
+USER_ERROR = {"20261031_183022"}
+EXCLUDED = OCCLUDED | USER_ERROR  # 채점에서 빼는 전부
 
 
 def seat_box(g: dict, side: str, grow: int) -> tuple[int, int, int, int]:
@@ -133,8 +137,8 @@ def scenes() -> list[dict]:
 
 
 def eval_scenes() -> list[dict]:
-    """채점용 장면: [scenes] 에서 가림 사진([OCCLUDED])을 뺀 것."""
-    return [s for s in scenes() if s["name"] not in OCCLUDED]
+    """채점용 장면: [scenes] 에서 가림·사용자 문제 사진([EXCLUDED])을 뺀 것."""
+    return [s for s in scenes() if s["name"] not in EXCLUDED]
 
 
 def post(jpg: bytes, frac: float) -> dict:

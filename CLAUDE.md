@@ -13,6 +13,7 @@
 - 시간은 "중앙 / p90 / 최대" 초, 정확도는 "맞은 수/전체". 서버 변경이면 mahjong-recognizer 커밋 해시, 앱 변경이면 파일명.
 - 운영 배포가 포함된 변경이면 "지금 기준값" 절도 갱신한다.
 - 같은 시각에 나란히 돌린 비교만 전·후로 적는다. 시각이 다르면 메모에 적는다.
+- 손·팔 가림 사진과 사용자 문제 사진(손패를 흩어 놓는 등 사용 규칙 위반)은 채점에서 뺀다. 목록은 `experiments/speed/seat_grow.py` 의 `OCCLUDED`·`USER_ERROR`(합쳐서 `EXCLUDED`), 채점 스크립트는 `sg.eval_scenes()`(또는 `EXCLUDED` 로 거르기)를 쓴다. 앱 흐름 `integration_test/read_grid_timing_test.dart` 의 `_visit` 목록에서도 뺀다. 새 사진은 채점 전에 사진만 보고 판단해 목록에 더한다.
 
 ## 저장소
 

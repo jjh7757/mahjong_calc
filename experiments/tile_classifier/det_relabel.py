@@ -42,14 +42,16 @@ def merge(boxes: list[tuple]) -> list[tuple]:
 
 
 def detect(model: YOLO, im: Image.Image) -> list[tuple]:
+    """앞면(종류 0)만. 1종 모델은 종류가 0 하나라 같고, 2종(6회차 face·back)은 뒷면을 뺀다."""
     W, H = im.size
     out: list[tuple] = []
-    r = model.predict(im, imgsz=1280, conf=CONF, verbose=False, device="cpu")[0]
-    out += [(*b, c) for b, c in zip(r.boxes.xyxy.tolist(), r.boxes.conf.tolist())]
+    bx = lambda r: r.boxes if r.boxes is not None else r.obb  # 회전 상자 모델(7회차~)은 r.obb — xyxy 는 감싸는 축 상자
+    r = model.predict(im, imgsz=1280, conf=CONF, verbose=False, device="cpu", classes=[0])[0]
+    out += [(*b, c) for b, c in zip(bx(r).xyxy.tolist(), bx(r).conf.tolist())]
     for y0 in (0, (H - db.TH) // 2, H - db.TH):
         for x0 in (0, (W - db.TW) // 2, W - db.TW):
-            r = model.predict(im.crop((x0, y0, x0 + db.TW, y0 + db.TH)), imgsz=1280, conf=CONF, verbose=False, device="cpu")[0]
-            for (a, b, c, d), s in zip(r.boxes.xyxy.tolist(), r.boxes.conf.tolist()):
+            r = model.predict(im.crop((x0, y0, x0 + db.TW, y0 + db.TH)), imgsz=1280, conf=CONF, verbose=False, device="cpu", classes=[0])[0]
+            for (a, b, c, d), s in zip(bx(r).xyxy.tolist(), bx(r).conf.tolist()):
                 # 토막 끝에 닿은 상자는 잘린 패일 수 있다(사진 끝이면 그대로)
                 if (a < 3 and x0 > 0) or (b < 3 and y0 > 0) or (c > db.TW - 3 and x0 + db.TW < W) or (d > db.TH - 3 and y0 + db.TH < H):
                     continue

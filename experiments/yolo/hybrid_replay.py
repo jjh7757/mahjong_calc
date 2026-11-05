@@ -44,6 +44,8 @@ def replay() -> list[dict]:
         gem = g["by_grow"].get("40")
         if gem is None:
             continue
+        if g["name"] in sg.EXCLUDED:
+            continue  # 가림·사용자 문제 사진은 채점에서 뺌
         n, s = g["name"], truth[g["name"]]
         known = s["hand"] is not None
         v = dets[n]

@@ -276,6 +276,7 @@ class TableReader {
     ReadTile? trackedDora,
     bool localDora = true,
     bool localOnly = false,
+    bool useRoles = false,
     bool geminiSticks = false,
     Future<List<Side>?> Function(List<Side> candidates)? pickWinners,
     bool Function(List<TableReading> readings)? acceptAll,
@@ -416,7 +417,18 @@ class TableReader {
           s: trackedSides.contains(s)
               ? call('handonly', handCrops[s], 'handonly_${s.name}',
                   required: known != null, query: {'melds': '${tracked[s]!.length}'})
-              : call(localOnly ? 'localseat' : 'seat', seatCrops[s], 'seat_${s.name}', required: known != null, query: seatQuery(s)),
+              : localOnly && useRoles
+                  // 자체 모델 새 경로: 자리 크롭 대신 사진 전체 + 격자를 보내 상자 배치 역할 모델이 그 자리 것만 고른다(/v2/localroles,
+                  // 서버 app/roles.py, metrics 표 1-58~1-61). 답은 /v2/seat 모양 그대로.
+                  ? call('localroles', original, 'roles_${s.name}', required: known != null, query: {
+                      'side': s.name,
+                      'x1': '${grid.x1}',
+                      'x2': '${grid.x2}',
+                      'y1': '${grid.y1}',
+                      'y2': '${grid.y2}',
+                      if (grid.sticks case final b?) 'sticks': b.toList().join(','),
+                    })
+                  : call(localOnly ? 'localseat' : 'seat', seatCrops[s], 'seat_${s.name}', required: known != null, query: seatQuery(s)),
       };
       shadowF = {
         for (final s in trackedSides)

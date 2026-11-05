@@ -85,6 +85,9 @@ def mode_grid(mode: str, name: str, labels: dict, rows: dict, saved: dict) -> di
     if mode == "gemini":  # 운영 /v2/setup 값(gemini_setup.py). 못 낸 사진은 저장 격자.
         d = json.loads((DATA / "gemini_setup.json").read_text(encoding="utf-8")).get(name)
         return d["grid"] if d and d["grid"] else saved.get(name)
+    if mode == "tile":  # 패 상자만으로 만든 선(tile_grid.py). 못 낸 사진은 저장 격자.
+        d = json.loads((DATA / "tile_grid.json").read_text(encoding="utf-8")).get(name)
+        return d["grid"] if d and d["grid"] else saved.get(name)
     if mode == "dart":  # 앱 코드 값. 믿지 못한 사진은 앱처럼 지금 격자(저장 격자)를 그대로 쓴다.
         d = json.loads((DATA / "dart_felt.json").read_text(encoding="utf-8")).get(name)
         return d["grid"] if d and d["ok"] and d["grid"] else saved.get(name)
@@ -107,7 +110,7 @@ def field_key(name: str) -> str:
 
 def grids(mode: str) -> None:
     labels, rows = tables()
-    saved = saved_grids() if mode in ("saved", "dart", "gemini") else {}
+    saved = saved_grids() if mode in ("saved", "dart", "gemini", "tile") else {}
     out = []
     for n in scene_list():
         g = mode_grid(mode, n, labels, rows, saved)
@@ -122,7 +125,7 @@ def check() -> None:
     saved = saved_grids()
     boxes = json.loads((DATA.parent / "det" / "boxes_final.json").read_text(encoding="utf-8"))
     print("방식: 강 패가 가운데 칸 밖 / 강 패 수, 손패·울기 패가 가운데 칸 안 / 수, 어긋난 사진 수")
-    for mode in ("median", "single", "saved", "initial"):
+    for mode in sys.argv[2:] or ("median", "single", "saved", "initial"):
         tally = {}
         for n in scene_list():
             r = labels[n]

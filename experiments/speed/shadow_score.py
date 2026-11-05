@@ -20,7 +20,7 @@ def q(a: list) -> str:
     return f"{a[len(a) // 2] / 1000:.2f} / {a[min(len(a) - 1, int(.9 * len(a)))] / 1000:.2f} / {a[-1] / 1000:.2f}" if a else "—"
 
 
-scenes = {(s["name"] if s["set"] == "bcd" else s["name"][-6:]): s for s in sg.scenes() if s["hand"] is not None}
+scenes = {(s["name"] if s["set"] == "bcd" else s["name"][-6:]): s for s in sg.eval_scenes() if s["hand"] is not None}  # 가림 사진 뺌
 rows = []
 for p in sys.argv[1:]:
     for line in Path(p).read_text(encoding="utf-8", errors="replace").splitlines():

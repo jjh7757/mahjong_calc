@@ -95,3 +95,131 @@ python -I -X utf8 experiments/speed/flow_visit.py dora              # online.jso
 - 규칙: 서버 read_wall 의 1순위 상자(확신도 0.7 이상만 관측), 위치 묶음(패 1.5장), 지금 묶음 = 최근 20 관측에서 가장 많이 본 묶음, 확정 = 최근 5 관측 중 3 이상 같은 종류·확신도 합 60% 이상, 기록 때 비움(전판과 같은 자리·같은 패는 안 받음).
 - 1020 프레임(패 약 25px)으로는 정답 19장 중 11 맞음·2 틀림·6 없음. 해상도를 보면 1020 은 4/8, 2040 은 6/8, 4080 은 8/8(틀림 0) 이라 앱은 리치봉 읽기와 같은 고해상 프레임(`_trackSource`)을 쓴다.
 - `dora_outside.py`(metrics 표 1-54): 격자 구역(자리 띠·강·리치봉 상자) 밖의 앞면 패를 전부 표시패로 보면 어떤지. `SEAT_GROW=40|0|-40`, `TURNED=1`(돌려 읽기). 리치 9장 중 정확 3·포함 4·밖 없음 4(짝을 자리 띠 안에 둠), 리치 아님은 0(패산 표시패가 띠 안).
+
+## 앞면 패 역할 분류기 가능성 확인 (`role_label.py`·`role_train.py`, metrics 표 1-56, 2026-11-03)
+
+규칙으로 역할 라벨(손패 줄·울기·강·패산 위 표시패·탁자 위 짝·떼어 둔 패)을 자동 생성하고, 패 주변 패치(패 폭 8배, 160px)를 MobileNetV3 Small 로 분류해 사진 단위 3겹 교차 검증. 흔한 역할 95% 이상, 짝 5/16·떼어 둔 패 0/11 — 표본이 없어 규칙을 못 이긴다. 라벨이 쌓이면 다시.
+
+```
+python -I -X utf8 experiments/tile_classifier/role_label.py   # data/role/labels.json, check/<이름>.jpg(역할별 색), review.json 으로 고침
+python -I -X utf8 experiments/tile_classifier/role_train.py   # data/role/cv.json
+```
+
+## 패 상자 배치만으로 역할 — 집합 Transformer (`role_set.py`, metrics 표 1-57, 2026-11-03)
+
+그림 없이 상자 집합(앞면 + 뒷면 `data/det/backs/boxes.json`)만 넣어 상자마다 역할을 내는 Transformer 인코더. 좌표는 펠트 격자 기준 0~1 로 바꾸고 화료자 자리가 아래로 오게 돌린다. 학습 전에 라벨 독립 검토(확인 그림 25장, 확실한 오류 100개 → `data/role/review.json`, `labels.json` 의 `rule` 칸이 수정 전 규칙 값)를 받았다. 3겹 교차 검증 결과 전체 1,138/1,204 로 규칙 1,144 와 같은 수준, 손패 줄은 모델이 낫고 드문 역할(울기·패산 표시패·짝·떼어 둔 패)은 규칙이 낫다. 합성 레이아웃으로 드문 역할을 채우기 전에는 채택하지 않는다.
+
+```
+python -I -X utf8 experiments/tile_classifier/role_label.py                 # review.json 반영해 labels.json 다시
+python -I -X utf8 experiments/tile_classifier/role_set.py [--epochs 300] [--seeds 3] [--no-backs]   # data/role/set_cv.json, set_wrong/<이름>.jpg
+```
+
+## 합성 배치로 사전학습 (`role_synth.py`, metrics 표 1-58, 2026-11-03)
+
+`role_synth.py` 가 마작 규칙으로 탁자 배치(펠트 기준 좌표, 화료자 아래)를 만들고 검출 잡음을 섞는다. `role_set.py --synth N` 은 씨드마다 합성 N장으로 먼저 학습한 뒤 실제 겹으로 미세 조정하고, `--pre-file` 로 가중치를 저장·재사용, `--no-ft` 로 합성만 채점한다. 합성 8,000장 결과: 합성만 1,158/1,204, 미세 조정 1,172(규칙 1,144, 실제만 1,138). 울기·짝·패산 표시패가 올라가고 떼어 둔 패는 아직 못 배운다. 떼어 둔 패·표시패 비율을 올린 보강(`pre_synth8k_v2.pt`)은 1,170 으로 차이가 없어 채택 안 함.
+
+```
+python -I -X utf8 experiments/tile_classifier/role_synth.py --n 12          # data/role/synth_check/<k>.png 눈 확인
+python -I -X utf8 experiments/tile_classifier/role_set.py --synth 8000 --synth-epochs 3 --epochs 100 --seeds 3 --pre-file pre_synth8k.pt --tag _synth_ft
+python -I -X utf8 experiments/tile_classifier/role_set.py --synth 8000 --seeds 3 --pre-file pre_synth8k.pt --no-ft --tag _synth_only
+```
+
+## 테스트 세트 비교 (`role_field.py`, metrics 표 1-59, 2026-11-04)
+
+10-24 삼각대 15장(기울고 원근 있음)으로 역할 모델 대 규칙을 한 번 쟀다. `build` 가 검출기·펠트 모서리·뒷면·규칙 라벨을 만들고(`data/role/field/`), 독립 검토를 `review.json` 으로 반영(`review`), `score` 가 `pre_synth8k.pt` 를 개발 25장 전부로 미세 조정해 채점한다(좌표는 펠트 네 모서리 호모그래피). 결과 모델 703/706(99.6%), 규칙 645/706(91.4%). 규칙은 대삼원 장면의 손패 줄 전부와 다른 자리 퐁에서 틀린다.
+
+```
+python -I -X utf8 experiments/tile_classifier/role_field.py build    # boxes.json, labels.json, check/
+python -I -X utf8 experiments/tile_classifier/role_field.py review   # review.json 반영
+python -I -X utf8 experiments/tile_classifier/role_field.py score    # score.json, pred/
+```
+
+## 자리 판독 벤치에 역할 모델 끼우기 (`server_bench/role_bench.py`, metrics 표 1-60, 2026-11-04)
+
+서버 조건(자리 크롭만, 뒷면 없음)으로 다시 학습한 모델(`role_set.py --no-backs --crop`, `pre_synth8k_nbc2.pt` → `role_nbc_all.pt`)을 자리 판독 단독 벤치에 끼워 규칙과 같은 크롭·검출기·분류기로 쟀다. 모델 틀 20/37, 모델이 고른 상자만 서버 `split_frame` 에 넣는 혼합 28/37 = 규칙 28/37. 남은 실패는 검출(白·가림) 문제라 둘이 같다. 크롭에서는 모델의 이점(탁자 전체 맥락)이 사라지므로, 서버에 붙이려면 사진 전체 + 펠트 모서리를 받는 새 경로가 필요하다.
+
+```
+python -I -X utf8 experiments/tile_classifier/role_set.py --synth 8000 --synth-epochs 3 --epochs 100 --seeds 3 --no-backs --crop --pre-file pre_synth8k_nbc2.pt --tag _synth_ft_nbc2
+python -I -X utf8 experiments/tile_classifier/server_bench/role_bench.py [--hybrid]    # data/role/bench/role_bench[_hybrid].json, <이름>.jpg
+```
+
+## 서버 새 경로 /v2/localroles (`role_export.py`·`run_roles_flow.sh`·`server_bench/role_full_bench.py`, metrics 표 1-61, 2026-11-04)
+
+역할 모델을 서버에 붙인 경로. `role_export.py` 가 `role_nb_all.pt`(뒷면 없음, 실제 25장 전부 미세 조정) 3씨드를 ONNX 하나로(어텐션을 수동 계산으로 내보내 길이 N 가변), 서버 `app/roles.py` 가 사진 전체 + 격자 + 자리를 받아 역할 → hybrid 틀 → 분류·白 채우기. 앱은 `readGrid(useRoles:)`(측정 `ROLES=true`). 앱 흐름 29/34(규칙 30/34)에 틀린 자동 반영 1건이라 기본은 끔.
+
+```
+python -I -X utf8 experiments/tile_classifier/role_export.py data/role/role_nb_all.pt C:/Users/jjh7757/dev/mahjong-recognizer/app/assets/tile-roles.onnx
+python -I -X utf8 experiments/tile_classifier/server_bench/role_full_bench.py      # 오프라인: 규칙 대 hybrid·model, data/role/bench/full_bench.json
+bash experiments/tile_classifier/run_roles_flow.sh plain roles                      # 앱 흐름(로컬 서버 셋 + 사진 서버 둘 먼저)
+```
+
+## 검출기 3회차 — 白 붙여넣기 증강 (`det_blank_cands.py`·`det_build.py --blank-swap`·`det_blank_recall.py`, metrics 표 1-62, 2026-11-04)
+
+라벨 白(무늬 없음) 크롭으로 학습 토막 상자 20% 를 덮은 사본(`__b`, 학습 전용)을 더해 캐글에서 다시 학습(`kaggle_out_r3`). 白 재현 68 → 71/80(183022 모서리 白 퐁 0 → 3/3)이지만 164501·171245 는 그대로 0/3, 서랍 속 종이를 패로 잡는 헛검출이 생겨 자리 판독은 1장 줄어 채택 안 함. `det_blank_cands.py` 는 YOLO11 로 라벨 밖 白 후보를 찾는 도구(후보 20개는 전부 탁자 흰 테두리·패산 면이라 쓰지 않음). 공개 YOLO11·HaseLab YOLO26 도 흰 테두리 위 白 퐁을 못 잡는다.
+
+```
+python -I -X utf8 experiments/tile_classifier/det_build.py --blank-swap       # data/det/ds + blank/bank_sheet.jpg(白 재료 확인)
+python -m kaggle datasets version -p experiments/tile_classifier/data/det/ds -m "..." --dir-mode zip
+python -m kaggle kernels push -p experiments/tile_classifier/det_kernel
+python -m kaggle kernels output jjh7757/mahjong-tile-det -p experiments/tile_classifier/data/det/kaggle_out_r3
+python -I -X utf8 experiments/tile_classifier/det_blank_recall.py r2 r3       # 白·무늬 패 재현
+python -I -X utf8 experiments/tile_classifier/server_bench/role_full_bench.py --det det_r3 [--size-filter]   # 자리 판독(server_bench/models/det_r3_fold_*.onnx 먼저 복사)
+```
+
+**크기 거르기(표 1-63):** 검출 상자가 패 크기 중앙값의 1.6배를 넘으면 버린다(`role_full_bench.drop_oversize`). 2회차엔 해가 없고 3회차의 종이 헛검출을 없애 둘 다 규칙 28·새 경로 30/37 로 같다. 3회차는 142535 의 白 2장을 더 찾는다. 다음 매장 사진으로 회차를 정한다.
+
+## 검출기 4회차 — 흰 테두리 위 白 증강, fold 별 재료 (`det_rim_aug.py`·`det_build.py --rim-blank`, metrics 표 1-64, 2026-11-04)
+
+3회차의 누수(시험 사진 白 이 학습 사본에 붙음)를 막으려고 白 재료를 fold 별로 나눠 사본 `__ra`(fold_a 전용)·`__rb`(fold_b 전용)를 만들고, 커널이 fold 마다 다른 쪽을 뺀다. 白 은 실제 크롭의 패 몸통만 펠트 가장자리·흰 테두리에 1~4장씩 섞는다. 白 재현 68 → 79/80(흰 테두리 위 白 퐁 164501 3/3·171245 2/3)이지만 서랍 속 종이 헛검출로 자리 판독 1장 감소 — 보류, 다음은 "패 아닌 흰 물체" 음성 합성.
+
+```
+python -I -X utf8 experiments/tile_classifier/det_build.py --rim-blank      # data/det/ds, blank/rim_check/<이름>.jpg(새 白 빨간 상자)
+python -m kaggle datasets version -p experiments/tile_classifier/data/det/ds -m "..." --dir-mode zip
+# 데이터셋 처리가 끝난 뒤(datasets files 에 __ra 가 보일 때) 커널을 올린다 — 먼저 올리면 이전 버전으로 돈다
+python -m kaggle kernels push -p experiments/tile_classifier/det_kernel
+```
+## 검출기 5회차 — 패 아닌 흰 물체 음성 합성 (`det_rim_aug.negative_patch`·`place_negatives`, `det_build.py --rim-blank --neg`, metrics 표 1-65, 2026-11-04)
+
+4회차 증강 사본마다 라벨 없는 흰·베이지·분홍 종이 조각 4개(글줄·QR 무늬, 절반은 패보다 크고 길쭉, 절반은 패 크기지만 늘 무늬 있음)를 더해 "흰 것 = 패" 쏠림을 막는다. 白 재현 80/80(흰 테두리 白 퐁 전부), 서랍 속 종이 헛검출 사라짐, 큰 헛검출 3 → 1. 자리 판독 /34 규칙 28 → 29, hybrid 30 그대로. 다만 181209 의 45° 기운 화료패를 더 정확한(큰) 상자로 잡아 서버 `keep_faces`(상자 안 흰 비율 0.5 이상) 에 걸려 빠지고 규칙이 틀린 자동 반영 — 보류. 커널 로그의 "이미지 646 총 바이트 357787726" 이 로컬과 같은지 먼저 본다.
+
+```
+python -I -X utf8 experiments/tile_classifier/det_build.py --rim-blank --neg
+python -I -X utf8 experiments/tile_classifier/det_blank_recall.py r4 r5
+python -I -X utf8 experiments/tile_classifier/server_bench/role_full_bench.py --det det_r5 [--size-filter]
+```
+
+
+## 검출기 6회차 — 앞면·뒷면 2종 (`det_build.py --rim-blank --neg --backs`, `det_kernel_r6/`, metrics 표 1-67, 2026-11-04)
+
+5회차 데이터에 표 1-54 검수 2차 뒷면 1,817개를 종류 1 로 더했다(白·음성 증강은 뒷면 위에 안 놓음 — `det_rim_aug.augment(avoid=)`, 재색칠은 비교를 위해 뺌). 새 데이터셋 `mahjong-tile-fb-r6`. 2종 ONNX 는 출력이 1×6×N(cx, cy, w, h, 앞면, 뒷면)이라 서버 `LocalReader.detect` 가 그대로 앞면만 읽는다. `det_relabel.detect` 는 `classes=[0]` 로 앞면만. 결과: 헛검출 30 → 26, 안깡 뒷면 4/4 지만 앞면 −3·白 −1, 자리 판독 hybrid 30 → 28 — 보류.
+
+## 7회차 준비 — 회전 상자(OBB) 라벨과 전수 조사 (`det_obb.py`·`det_audit.py`·`det_audit_apply.py`, `det_build.py --obb`, `det_kernel_r7/`, 2026-11-04)
+
+축 상자는 기운 패를 펠트째 감싸 흰 비율 거르기 같은 규칙을 패 모양마다 다시 맞춰야 한다(표 1-65 181209). 그래서 회전 상자로 바꾼다.
+
+1. `det_obb.py`: 축 라벨 → 회전 상자 초안. 패 마스크의 minAreaRect 에서 각도만, 크기는 라벨 상자에 내접하게 기하로(`inscribed`). 진짜 기운 낱장은 내접 사각형 밖 귀퉁이가 펠트(rot). 줄(패산·손패)은 이어진 3개 이상이 한 직선이면 직선 각도(row) — 단 내접 사각형이 축 상자보다 사진 속 반듯한 패 모양에 가까울 때만(계단처럼 비켜 놓은 반듯한 패는 축). 뒷면 낱장은 10°·귀퉁이 25% 로 보수적. 고른 값은 `obb/review_obb.json`({key: axis|mask|inscribed|{"angle": 도}}, 각도 = 이미지 좌표 atan2(dy,dx) 를 −45~45 로 접은 값, 시계 방향 +).
+2. 독립 검수(81개) → `review_obb.json`, 170105 두 장 묶음 상자 둘로 나눔.
+3. 전수 조사: `det_audit.py` 가 사진마다 라벨 + 그 사진을 학습 안 한 2종 검출기(표 1-54)와 어긋난 곳(노랑 = 라벨 없는 검출, 자홍 = 검출 없는 라벨)을 그리고(`obb/audit/<사진>.jpg`), 하위 에이전트 5개(Opus, 7장씩, 지시 `obb/audit/BRIEF.md`)가 35장 상자 4,027개를 모두 확대해 보고 제안(`obb/audit/fix_g*.json`)을 썼다. `det_audit_apply.py check` 의 비교 그림(`check_*.jpg`)으로 389건을 전부 눈으로 확인한 뒤 `apply` → `obb/audit/fixes.json`(det_backs 가 FACE_*·BACK_* 에 더해 읽음, 더한 뒤 지움) + `review_obb.json`.
+   - 고친 것: 앞면 더함 15·지움 10(빠진 패, 두 장 묶음, 주사위 버튼 헛 라벨, 옆면까지 넣은 白), 뒷면 더함 23·지움 22(세운 손패 보라 띠 잘림, 패산이 모서리 패까지 덮음, 절반 미만 보이는 아래층, 흐트러진 왕패 헛 상자), 각도 319.
+   - 조사에서 나온 자동 규칙의 약점(새 사진에서 다시 볼 것): 줄 중간 앞면 표시패는 종류가 달라 줄에서 빠짐, 낱장 8~15° 가 귀퉁이 판정(옆면이 흼)으로 축에 남음, 도미노처럼 기운 줄은 중심선 각도 부호가 패와 반대, 사진 전체가 5~13° 돌아간 매장 사진(125839·130743·134815)은 5° 기준 근처에 몰림, 옆면을 상자에 넣는 기준이 섞임(안깡 뒷면·흰 판 위 白).
+4. `det_build.py --rim-blank --neg --backs --obb` → `data/det/ds_r7`(YOLO OBB 라벨: 종류 + 네 꼭짓점), 커널 `det_kernel_r7/`(6회차 커널 + `yolo26n-obb.pt`), 새 데이터셋 `mahjong-tile-obb-r7`.
+
+```
+python -I -X utf8 experiments/tile_classifier/det_obb.py
+python -I -X utf8 experiments/tile_classifier/det_audit.py            # 조사 그림
+python -I -X utf8 experiments/tile_classifier/det_audit_apply.py check [fix_g2,...]
+python -I -X utf8 experiments/tile_classifier/det_audit_apply.py apply [--skip 번호,...]
+python -I -X utf8 experiments/tile_classifier/det_obb.py              # 반영 뒤 다시
+python -I -X utf8 experiments/tile_classifier/det_build.py --rim-blank --neg --backs --obb
+```
+
+## 7·8회차 결과와 서버 정리 벤치 (`server_bench/obb_detect.py`·`haku_pair.py`·`corner_fix.py`·`loose_ctx.py`·`felt_only.py`·`field_bench.py`, `make_recolor_test.py`, metrics 표 1-68~1-70, 2026-11-05)
+
+- 7회차(회전 상자) 와 8회차(+ 재색칠, `det_build.py --recolor`, 시험용 색 테두리 검정·펠트 파랑·뒷면 노랑은 학습에서 뺌)는 서버 코드가 축 상자를 가정해 그대로는 이득이 없다. `obb_detect.install(bench, lr, river, rot_white, rot_cut, sliver, kan)` 이 OBB ONNX(1×7×N)를 감싸는 축 상자로 바꿔 넘기고, `rot_cut` 이면 분류기 크롭을 회전 상자대로 세워 자른다(134815 −12° 2만: 축 8m 0.18 → 세움 2m 0.87).
+- `role_full_bench.py` 옵션: `--obb --rot-cut --clean --haku2 --corner-fix --loose-ctx`(+ `--felt-only` 시험, 모서리 울기가 펠트 밖이라 멈춤). 8회차 + 전부 = 개발 34 hybrid 32 (틀린 자동 반영 0).
+- 테스트 세트 벤치 `field_bench.py`(10/24 삼각대 15장, `--recolored` = `make_recolor_test.py` 색 바꾼 사본): 기운 탁자라 2회차·8회차 모두 0/15 — 판별력 없음.
+
+```
+python -I -X utf8 experiments/tile_classifier/det_build.py --rim-blank --neg --backs --obb --recolor   # ds_r8
+python -I -X utf8 experiments/tile_classifier/server_bench/role_full_bench.py --det det_r8 --obb --rot-cut --clean --haku2 --corner-fix --loose-ctx
+```

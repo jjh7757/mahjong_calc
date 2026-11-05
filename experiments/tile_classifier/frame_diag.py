@@ -90,7 +90,7 @@ def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     dets = {"a": de.Det(de.OUT / "fold_a.pt"), "b": de.Det(de.OUT / "fold_b.pt")}
     rows = []
-    for s in sg.scenes():
+    for s in sg.eval_scenes():
         if s["hand"] is None:
             continue
         name = s["name"]

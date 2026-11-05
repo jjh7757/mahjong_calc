@@ -16,12 +16,14 @@ from det_eval import hr, hy, sg  # noqa: E402
 
 meta = json.loads((HERE / "meta.json").read_text(encoding="utf-8"))
 base = json.loads((HERE.parent / "data" / "det" / "rules_r2.json").read_text(encoding="utf-8"))["+줄"]["photos"]
-truth = {s["name"]: s for s in sg.scenes() if s["hand"] is not None}
+truth = {s["name"]: s for s in sg.eval_scenes() if s["hand"] is not None}  # 가림 사진 뺌
 readers = {}
 key = lambda melds: sorted(" ".join(sorted(m.split())) for m in melds)
 same = ok = auto = bad = framed = 0
 secs = []
 for p in meta["photos"]:
+    if p["name"] not in truth:
+        continue
     k = (p["det"], p["part"])
     r = readers.setdefault(k, lr.LocalReader(det_model=HERE / "models" / f"det_fold_{p['det']}.onnx", cls_model=HERE / "models" / f"cls_{p['part']}.onnx"))
     o = r.read_seat((HERE / "crops" / f"{p['name']}.jpg").read_bytes(), p["frac"])

@@ -64,7 +64,7 @@ def main() -> None:
     rows = []
     for d in sorted(p for p in a.captures.iterdir() if p.is_dir() and not p.name.endswith("_track")):
         meta_f, photo = d / "meta.json", d / "original.jpg"
-        if not meta_f.exists() or not photo.exists() or d.name in sg.OCCLUDED:
+        if not meta_f.exists() or not photo.exists() or d.name in sg.EXCLUDED:
             continue
         m = json.loads(meta_f.read_text(encoding="utf-8"))
         side = m.get("winner_side")
