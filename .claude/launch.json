@@ -497,6 +497,95 @@
       ],
       "port": 8043,
       "autoPort": false
+    },
+    {
+      "name": "recognizer-sig-fold-bcd",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8053",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s5",
+        "--local-fold",
+        "a,bcd",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot.onnx"
+      ],
+      "port": 8053,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-sig-fold-am",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8054",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s5",
+        "--local-fold",
+        "b,am",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot_fold_am.onnx"
+      ],
+      "port": 8054,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-sig-fold-pmA",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8055",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s5",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot_fold_pmA.onnx"
+      ],
+      "port": 8055,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-sig-fold-pmB",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8057",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s5",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot_fold_pmB.onnx"
+      ],
+      "port": 8057,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-sig-prodlike",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8056",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s5"
+      ],
+      "port": 8056,
+      "autoPort": false
     }
   ]
 }

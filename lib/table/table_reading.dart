@@ -104,6 +104,10 @@ class HandReading {
   /// 서버가 알려 준 토큰 수(input_tokens·output_tokens). 비용 집계용.
   final Map<String, int> usage;
 
+  /// 판독 불확실성 신호(`/v2/localroles` 의 `signals`, 개선 계획 5단계 — 서버 feat/cls-alt). 답은 안 바꾸는 부가 정보이고,
+  /// 문턱은 `read_signals.dart` 가 갖는다. 서버가 안 내면 null(그러면 신호로 막지 않는다).
+  final Map<String, dynamic>? signals;
+
   const HandReading({
     this.tiles = const [],
     this.melds = const [],
@@ -112,6 +116,7 @@ class HandReading {
     this.model = '',
     this.latencyMs = 0,
     this.usage = const {},
+    this.signals,
   });
 
   factory HandReading.fromJson(Map<String, dynamic> j) {
@@ -133,8 +138,21 @@ class HandReading {
       model: (j['model'] as String?) ?? '',
       latencyMs: ((j['latency_ms'] as num?) ?? 0).toInt(),
       usage: parseUsage(j['usage']),
+      signals: j['signals'] as Map<String, dynamic>?,
     );
   }
+
+  /// 서버 자리 판독의 불확실성 신호를 붙인 사본(관찰 → 손패 판독으로 바꿀 때 `table_reader.dart` 가 쓴다).
+  HandReading withSignals(Map<String, dynamic>? s) => HandReading(
+    tiles: tiles,
+    melds: melds,
+    winTile: winTile,
+    notes: notes,
+    model: model,
+    latencyMs: latencyMs,
+    usage: usage,
+    signals: s,
+  );
 
   /// 화료패를 사용자가 후보에서 골랐을 때의 손패(다시 병합할 때 쓴다).
   HandReading withWinTile(ReadTile win) => HandReading(
@@ -145,6 +163,7 @@ class HandReading {
     model: model,
     latencyMs: latencyMs,
     usage: usage,
+    signals: signals,
   );
 
   /// 서버 응답과 같은 모양. 촬영 기록 저장용.
@@ -157,6 +176,7 @@ class HandReading {
     'model': model,
     'latency_ms': latencyMs,
     'usage': usage,
+    if (signals != null) 'signals': signals,
   };
 
   /// 손패·화료패·울기까지 합친 장수(깡은 4장).

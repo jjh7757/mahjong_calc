@@ -1,6 +1,8 @@
 """역할 모델을 서버용 ONNX 로(2026-11-04). 입력 x[1, N, 9](role_set.scene_tokens 벡터), 출력 logits[1, N, 6]. 패딩 없음(한 장면씩).
 3씨드 가중치를 하나의 그래프로 합친다(세 인코더의 softmax 평균 → 투표 대신 평균, 결과는 거의 같다).
-  python -I -X utf8 experiments/tile_classifier/role_export.py data/role/role_nb_all.pt <출력.onnx>
+  python -I -X utf8 experiments/tile_classifier/role_export.py data/role/role_nb_all.pt <출력.onnx> [--seeds-out]
+--seeds-out(개선 계획 5단계 S4, 2026-11-05): 출력을 둘로 — probs(평균, 예전과 같음) + seeds[S, 1, N, 6](씨드별 softmax). 서버는 첫 출력으로
+답을 내고 둘째 출력으로 씨드 투표 불일치를 센다. 같은 가중치면 probs 가 예전 ONNX 와 같다(--check <예전.onnx> 로 확인).
 """
 from __future__ import annotations
 
@@ -38,36 +40,48 @@ def manual_forward(net: rs.SetNet, x: torch.Tensor) -> torch.Tensor:
 
 
 class Ensemble(nn.Module):
-    def __init__(self, nets: list[nn.Module]):
+    def __init__(self, nets: list[nn.Module], seeds_out: bool = False):
         super().__init__()
         self.nets = nn.ModuleList(nets)
+        self.seeds_out = seeds_out
 
     def forward(self, x):
-        return torch.stack([torch.softmax(manual_forward(n, x), -1) for n in self.nets]).mean(0)
+        each = torch.stack([torch.softmax(manual_forward(n, x), -1) for n in self.nets])
+        return (each.mean(0), each) if self.seeds_out else each.mean(0)
 
 
 def main() -> None:
-    src, dst = Path(sys.argv[1]), Path(sys.argv[2])
+    args = [v for v in sys.argv[1:] if not v.startswith("--")]
+    seeds_out = "--seeds-out" in sys.argv
+    check = sys.argv[sys.argv.index("--check") + 1] if "--check" in sys.argv else None
+    src, dst = Path(args[0]), Path(args[1])
     if not src.is_absolute():
         src = HERE / src
     nets = rs.load_nets(src)
     feat = nets[0].feat
     print("특징", feat, "칸(9 = 예전 축 상자, 11 = 회전 상자 특징 — 서버 roles.py 가 ONNX 입력 모양에서 읽는다)")
-    ens = Ensemble(nets).eval()
+    ens = Ensemble(nets, seeds_out).eval()
+    mean = lambda x: ens(x)[0] if seeds_out else ens(x)
     x = torch.randn(1, 37, feat)
     with torch.no_grad():  # 수동 계산이 원래 모듈과 같은지
         pad = torch.zeros(1, 37, dtype=torch.bool)
         ref = torch.stack([torch.softmax(n(x, pad), -1) for n in nets]).mean(0)
-        print("수동 계산 대 원래", float((ens(x) - ref).abs().max()))
-    torch.onnx.export(ens, (x,), str(dst), input_names=["x"], output_names=["probs"], dynamic_axes={"x": {1: "n"}, "probs": {1: "n"}}, opset_version=17, dynamo=False)
+        print("수동 계산 대 원래", float((mean(x) - ref).abs().max()))
+    names = ["probs", "seeds"] if seeds_out else ["probs"]
+    axes = {"x": {1: "n"}, "probs": {1: "n"}, **({"seeds": {2: "n"}} if seeds_out else {})}
+    torch.onnx.export(ens, (x,), str(dst), input_names=["x"], output_names=names, dynamic_axes=axes, opset_version=17, dynamo=False)
     import onnxruntime as ort
 
     sess = ort.InferenceSession(str(dst), providers=["CPUExecutionProvider"])
+    old = ort.InferenceSession(str(check), providers=["CPUExecutionProvider"]) if check else None
     for n in (5, 37, 120):
         x = torch.randn(1, n, feat)
-        a = ens(x).detach().numpy()
-        b = sess.run(None, {"x": x.numpy()})[0]
-        print(n, "최대 차", float(np.abs(a - b).max()))
+        a = mean(x).detach().numpy()
+        out = sess.run(None, {"x": x.numpy()})
+        print(n, "최대 차", float(np.abs(a - out[0]).max()), *(["씨드 출력", out[1].shape, "평균 대 probs", float(np.abs(out[1].mean(0) - out[0]).max())] if seeds_out else []))
+        if old is not None:
+            o = old.run(None, {"x": x.numpy()})[0]
+            print("   예전 ONNX 대 probs 최대 차", float(np.abs(o - out[0]).max()), "argmax 다름", int((o.argmax(-1) != out[0].argmax(-1)).sum()))
     print("저장", dst, dst.stat().st_size // 1024, "KB")
 
 

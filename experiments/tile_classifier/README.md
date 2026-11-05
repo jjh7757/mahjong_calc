@@ -268,7 +268,8 @@ LOCAL_ROLE_MODEL=.../tile-roles-rot.onnx python -I -X utf8 experiments/tile_clas
 
 ```
 python -I -X utf8 experiments/tile_classifier/role_set.py --feat rot --synth 8000 --synth-epochs 3 --epochs 100 --seeds 3 --pre-file pre_synth8k_rot.pt --tag _synth3_rot_folds --save-folds
-python -I -X utf8 experiments/tile_classifier/role_export.py data/role/role_fold_am_synth3_rot_folds.pt experiments/tile_classifier/server_bench/models/tile-roles-rot_fold_am.onnx   # pmA·pmB 도
+python -I -X utf8 experiments/tile_classifier/role_export.py data/role/role_fold_am_synth3_rot_folds.pt experiments/tile_classifier/server_bench/models/tile-roles-rot_fold_am.onnx --seeds-out   # pmA·pmB 도. --seeds-out(5단계 S4): 씨드별 둘째 출력, 평균은 같음
+python -I -X utf8 experiments/tile_classifier/server_bench/prep_alt_cls.py   # 5단계 S3 두 번째 분류기 cls_{bcd,am,pm,all}_s1.onnx(씨드 1, 약 17분)
 bash experiments/speed/run_baseline.sh dev <TAG>     # 홀드아웃 서버 넷 + exp-files
 U_BCD=8036 U_AM=8036 U_PMA=8036 U_PMB=8036 bash experiments/speed/run_baseline.sh dev <TAG>   # 운영과 같은 모델
 python -I -X utf8 experiments/speed/stats.py diff <A 로그들> <B 로그들>

@@ -25,6 +25,7 @@ import '../../table/frame_recorder.dart';
 import '../../table/grid_zones.dart';
 import '../../table/hand_rules.dart';
 import '../../table/merge.dart';
+import '../../table/read_signals.dart';
 import '../../table/observation.dart';
 import '../../table/rectify.dart' show FeltQuad;
 import '../../table/seat_map.dart';
@@ -1560,6 +1561,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         );
       }
       widget.editor.setFromMerge(merge, g);
+      // 판독 불확실성 신호(lib/table/read_signals.dart, 개선 계획 5단계): 서버가 신호를 내면 고른 문턱으로 막거나 경고. 규칙 후보로 고친 손패도 같은 판독이다.
+      final signalCheck = checkReadSignals(winnerReading.hand?.signals);
       final flags = [
         for (final r in readings) ...r.warnings.where((w) => r == reading || !reading.warnings.contains(w)),
         if (trace.autoMultiRon && picked.kept.length > 1)
@@ -1569,6 +1572,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         ...otherFlags,
         for (final b in rules.blockers) '규칙 검사: $b — 판독을 확인하세요',
         ?ruleFixNote,
+        for (final b in [...signalCheck.blocks, ...signalCheck.cautions]) '판독 신호: $b — 손패를 확인하세요',
       ];
       saveLog(merge: merge, warnings: reading.warnings);
       debugPrint('[read] merged winner=${merge.winner} hand=${merge.hand != null} → 진행 창 닫기');
@@ -1601,11 +1605,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         paoBase: result.isValid ? engine.paoBasePoints(result) : 0,
         gameOver: g.isOver,
         ruleBlocks: [...rules.blockers, if (ruleFixNote != null) '규칙 후보로 고침'],
+        signalBlocks: signalCheck.blocks,
       );
       final autoCautions = autoRecordCautions(
         issues: [for (final f in merge.flags) f.issue],
         doraIndicators: merge.situation.doraIndicators.length,
         riichi: merge.situation.riichi,
+        signalCautions: signalCheck.cautions,
       );
       // 테이블 화면이 열린 채 룰 설정에서 바꿨을 수 있어 매번 다시 읽는다.
       _autoRecord = await AutoRecordStore.load();

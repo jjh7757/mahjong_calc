@@ -33,6 +33,7 @@ const cautionIssues = {
 /// [warnings] 는 판독 경고(자리 판독이 엇갈림 등)와 동시 론 고르기 플래그, [issues] 는 화료자 병합 플래그 종류.
 /// [ruleBlocks] 는 규칙 검증기(`hand_rules.dart` [HandRuleResult.blockers]: V1 같은 패 5장·V2 적5 중복·V4 울기 구성)의 막음 사유
 /// — 사진을 안 보는 규칙서 사실이라 판독 경고·병합 플래그와 겹치지 않는다(개선 계획 4단계, 2026-11-05).
+/// [signalBlocks] 는 판독 불확실성 신호(`read_signals.dart` [ReadSignalCheck.blocks], 개선 계획 5단계)의 막음 사유.
 String? autoRecordBlocker({
   required List<String> warnings,
   required List<MergeIssue> issues,
@@ -43,9 +44,11 @@ String? autoRecordBlocker({
   required int paoBase,
   required bool gameOver,
   List<String> ruleBlocks = const [],
+  List<String> signalBlocks = const [],
 }) {
   if (gameOver) return '대국이 이미 끝남';
   if (ruleBlocks.isNotEmpty) return '규칙: ${ruleBlocks.join(', ')}';
+  if (signalBlocks.isNotEmpty) return '판독 신호: ${signalBlocks.join(', ')}';
   if (!resultValid) return '화료 형태가 아님';
   if (warnings.isNotEmpty) return '판독 경고 ${warnings.length}개';
   final open = issues.where((i) => !infoOnlyIssues.contains(i) && !cautionIssues.contains(i)).toList();
@@ -61,14 +64,17 @@ String? autoRecordBlocker({
 /// 도라 표시패는 규칙에서 나온 장수로 본다. 확신도로는 알 수 없었다(2026-10-27, 리치봉은 있으면 늘 0.9, 5 패는 적5든 아니든 0.99):
 /// 표시패가 하나도 안 읽혔으면([doraIndicators] 0), 리치 화료인데 뒷도라까지 2장이 안 보이면(촬영 순서: 화료 → 리치면 뒷도라 뒤집기 → 촬영).
 /// "리치가 아닌데 표시패가 1 + 깡 수보다 많음" 은 갤러리 장면이 연출이라(D 는 리치 없이 표시패 3장) 개발 세트로 확인할 수 없어 넣지 않았다.
+/// [signalCautions] 는 판독 불확실성 신호 중 경고로 둔 것(`read_signals.dart`, 있으면 "판독 신호").
 List<String> autoRecordCautions({
   required List<MergeIssue> issues,
   required int doraIndicators,
   required bool riichi,
+  List<String> signalCautions = const [],
 }) =>
     {
       if (doraIndicators == 0 || issues.contains(MergeIssue.doraFallback) || issues.contains(MergeIssue.doraTrackedMismatch)) '도라',
       if (riichi && doraIndicators == 1) '표시패',
       if (issues.contains(MergeIssue.uncertainTiles)) '손패',
       if (issues.contains(MergeIssue.meldUncertain)) '울기',
+      if (signalCautions.isNotEmpty) '판독 신호',
     }.toList();

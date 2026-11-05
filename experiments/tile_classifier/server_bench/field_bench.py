@@ -122,6 +122,7 @@ def main() -> None:
     ap.add_argument("--seat-det", default="server", choices=["server", "none"],
                     help="자리 판독 검출기: server = 서버 기본(운영 8회차 tile-obb-r8), none = --det 모델")
     ap.add_argument("--rectify", action="store_true", help="편 사진(rectified.jpg) + 표준 격자. 없으면 원본 + 장면 격자")
+    ap.add_argument("--suffix", default="", help="결과 파일 이름 끝에 붙임(예: _sig — 예전 결과를 덮지 않게, 개선 계획 5단계)")
     a = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
     if a.obb:
@@ -175,7 +176,8 @@ def main() -> None:
             rs_ok, _ = judge(rule["hand"], rule["melds"], rule["block"], sv)
             hs_ok, _ = judge(hand, melds, o.get("block", False), sv)
             rows[ph] = dict(scene=scene, rectified=path.name == "rectified.jpg", rule=dict(hand=rule["hand"], melds=rule["melds"], ok=r_ok, auto=r_auto),
-                            hybrid=dict(hand=hand, melds=melds, ok=h_ok, auto=h_auto, ms=o["ms"], block=o.get("block", False), **tile_extra(hand_t, o["melds"])),
+                            hybrid=dict(hand=hand, melds=melds, ok=h_ok, auto=h_auto, ms=o["ms"], block=o.get("block", False), **tile_extra(hand_t, o["melds"]),
+                                        **({"signals": o["signals"]} if "signals" in o else {})),  # 불확실성 신호(개선 계획 5단계)
                             seat_ok=dict(rule=rs_ok, hybrid=hs_ok), seat_hit=tiles_hit(hand, melds, sv),
                             seat_want=len(sv["hand"]) + sum(len(m.split()) for m in sv["melds"]), seat_bad=h_auto and not hs_ok,
                             want_hand=sv["hand"], want_melds=sv["melds"])
@@ -211,7 +213,7 @@ def main() -> None:
           f"(틀린 자동 {tot['seat_hyb_bad']}, 자동 {tot['hyb_auto']}) | 패 단위 규칙 {tot['seat_rule_hit']}/{tot['seat_want']} hybrid {tot['seat_hyb_hit']}/{tot['seat_want']}")
     print(f"--- 테스트 /{tot['n']}(편 사진 {rectified}): 규칙 {tot['rule_ok']}(틀린 자동 반영 {tot['rule_bad']}) | hybrid {tot['hyb_ok']}(틀린 자동 반영 {tot['hyb_bad']})"
           f" | 패 단위 규칙 {tot['rule_hit']}/{tot['want']} hybrid {tot['hyb_hit']}/{tot['want']}")
-    tag = a.det + ("_obb" if a.obb else "") + ("_rotcut" if a.rot_cut else "") + ("_clean" if a.clean else "") + ("_haku2" if a.haku2 else "") + ("_cornerfix" if a.corner_fix else "") + ("_loosectx" if a.loose_ctx else "") + ("_recolored" if a.recolored else "") + ("_rect" if a.rectify else "") + ("_seat2" if a.seat_det == "none" else "")
+    tag = a.det + ("_obb" if a.obb else "") + ("_rotcut" if a.rot_cut else "") + ("_clean" if a.clean else "") + ("_haku2" if a.haku2 else "") + ("_cornerfix" if a.corner_fix else "") + ("_loosectx" if a.loose_ctx else "") + ("_recolored" if a.recolored else "") + ("_rect" if a.rectify else "") + ("_seat2" if a.seat_det == "none" else "") + a.suffix
     (OUT / f"field_{tag}.json").write_text(json.dumps(dict(total=tot, rows=rows), ensure_ascii=False, indent=1), encoding="utf-8")
 
 

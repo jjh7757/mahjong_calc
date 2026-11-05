@@ -30,7 +30,7 @@ if a.other_det:
     os.environ["LOCAL_OTHER_DET"] = a.other_det
 if a.role_model:
     _bench = f"C:/Users/jjh7757/dev/mahjong_calc/experiments/tile_classifier/server_bench/models/{a.role_model}"
-    os.environ["LOCAL_ROLE_MODEL"] = _bench if "_fold_" in a.role_model else f"C:/Users/jjh7757/dev/mahjong-recognizer/app/assets/{a.role_model}"
+    os.environ["LOCAL_ROLE_MODEL"] = _bench if "_fold_" in a.role_model else f"{a.repo}/app/assets/{a.role_model}"
     if not os.path.exists(os.environ["LOCAL_ROLE_MODEL"]):
         raise SystemExit(f"역할 모델 없음: {os.environ['LOCAL_ROLE_MODEL']}")
     print("역할 모델", os.environ["LOCAL_ROLE_MODEL"], flush=True)
@@ -40,6 +40,9 @@ if a.local_fold:
     _models = "C:/Users/jjh7757/dev/mahjong_calc/experiments/tile_classifier/server_bench/models"
     os.environ["LOCAL_DET_MODEL"] = f"{_models}/det_fold_{_det}.onnx"
     os.environ["LOCAL_CLS_MODEL"] = f"{_models}/cls_{_cls}.onnx"
+    # 불확실성 신호 S3 의 두 번째 분류기(같은 나눔·씨드 1 = 이 사진을 안 배움, 개선 계획 5단계 prep_alt_cls.py). 서버 코드가 신호를 안 내면 안 쓴다
+    if os.path.exists(f"{_models}/cls_{_cls}_s1.onnx"):
+        os.environ["LOCAL_ALT_CLS_MODEL"] = f"{_models}/cls_{_cls}_s1.onnx"
     if a.seat_det:
         os.environ["LOCAL_SEAT_MODEL"] = f"{_models}/{a.seat_det}_fold_{_det}.onnx"
 load_dotenv("C:/Users/jjh7757/Downloads/부트캠프/.env")

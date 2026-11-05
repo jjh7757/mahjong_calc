@@ -2,6 +2,12 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-05 밤 추가: 개선 계획 5단계 — 불확실성 신호·온도 보정·문턱 고르기 (metrics 표 1-93, `docs/improvement_plan_1105.md` 5단계 진행 줄)
+
+- **무엇:** 서버 `feat/cls-alt` **c4484dd**(push 안 함 = 운영 미반영) `app/signals.py` 가 `/v2/localroles` 에 `signals`(S1 보정 확률 차·S2 검출 점수·S3 분류기 2벌·S4 역할 3씨드·S5 입력 흔들기·S6 5 패 빨강)를 더함, 답 그대로. 새 자산 `tile-cls-alt.onnx`(cls_all 씨드 1), `tile-roles-rot.onnx` 는 씨드 출력 달린 같은 모델. 온도 T = 0.5. 앱은 `HandReading.signals` → `lib/table/read_signals.dart` → `autoRecordBlocker(signalBlocks:)`·`autoRecordCautions(signalCautions:)`.
+- **결과:** 개발 입력에 잡을 "경고 없는 틀린 자동"이 화료패 누락형(13장 텐파이, 신호로 못 잡음) 말고 없어 **막는 문턱은 모두 끔**, S6 만 경고(만 0.659·통 0.507·삭 0.469). 앱 흐름 전·후 같음(개발 자동 29·경고 없는 틀린 자동 0, 테스트 15장 경고 없는 틀린 자동 3). **F1400 못 잡음**(빨강 비율 0.09~0.20 = 보통 5만처럼 보임). 서버 +0.05초.
+- 쓰는 법: 서버 worktree `git -C ../mahjong-recognizer worktree add ../mahjong-recognizer-s5 feat/cls-alt`(측정 뒤 지웠음) → launch.json `recognizer-sig-fold-*`·`recognizer-sig-prodlike` → `select_thresholds.py temp|select|apply`(회귀 JSON 은 `RECOGNIZER_REPO=<worktree> LOCAL_SIGNALS_TOP=5 robust_suite.py run`). 두 번째 분류기는 `server_bench/prep_alt_cls.py`(커밋 안 하는 `models/`), 역할 fold ONNX 는 `role_export.py --seeds-out` 로 바꿔 둠(평균 출력 같음).
+
 ## 2026-11-05 밤 추가: 개선 계획 4단계 — 마작 규칙 검증기 (metrics 표 1-92, `docs/improvement_plan_1105.md` 4단계 진행 줄)
 
 - **무엇:** `lib/table/hand_rules.dart` = `experiments/speed/hand_rules.py`(같은 명세 `test/fixtures/hand_rules.json`, 35예제 양쪽 통과). V1 같은 패 5장·V2 적5 중복·V4 울기 구성 → `autoRecordBlocker(ruleBlocks:)` 막음, V3(화료형 아님 + 분류기 2순위 한 장으로 고쳐지는 결과가 하나) → 거치 화면 노란 테두리 확인 창, 바꿔도 자동 반영 안 함. V5 장수는 기존 흐름.

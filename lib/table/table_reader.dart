@@ -525,6 +525,13 @@ class TableReader {
       for (final e in seatF.entries)
         if (await e.value case final j?) e.key: parseSeatV2(j),
     };
+    // 판독 불확실성 신호(`/v2/localroles` 의 signals, 개선 계획 5단계): 추적 자리(손패 전용 판독)에는 없다.
+    final seatSignals = <Side, Map<String, dynamic>>{
+      for (final e in seatF.entries)
+        if (!trackedSides.contains(e.key))
+          if (await e.value case final j?)
+            if (j['signals'] case final Map<String, dynamic> sig) e.key: sig,
+    };
     // 추적 자리: 손패 전용 판독에 미리 읽은 울기를 채우고 장수(14 − 3 × 울기)를 검사한다. 안 맞으면 자리 전체를 다시 읽는다.
     for (final s in trackedSides) {
       final h = seats[s];
@@ -736,7 +743,7 @@ class TableReader {
       return TableReading(
         layout: layout,
         winnerSide: side,
-        hand: observation.toHandReading(side),
+        hand: observation.toHandReading(side).withSignals(seatSignals[side]),
         center: observation.toCenterReading(),
         warnings: ws,
         meldsTracked: trackedMode[side] == 'handonly',

@@ -385,16 +385,20 @@ class Readers:
             key = ("prod",)
             if key not in self.cache:
                 self.cache[key] = (lr.LocalReader(threads=self.threads), roles.RoleNet(roles.ROLE_MODEL, threads=self.threads))
-            return self.cache[key], {"det": lr.DET_MODEL.name, "seat": lr.SEAT_MODEL.name, "cls": lr.CLS_MODEL.name, "role": roles.ROLE_MODEL.name}
+            alt = self.cache[key][0].alt_cls_model if hasattr(self.cache[key][0], "alt_cls_model") else None
+            return self.cache[key], {"det": lr.DET_MODEL.name, "seat": lr.SEAT_MODEL.name, "cls": lr.CLS_MODEL.name, "role": roles.ROLE_MODEL.name,
+                                     "cls2": alt.name if alt else None}
         det, part, role = fold_of(name, self.meta)
         key = (det, part, role)
-        files = {"det": f"det_fold_{det}.onnx", "seat": f"det_r8_fold_{det}.onnx", "cls": f"cls_{part}.onnx", "role": FOLD_ROLE[role]}
+        # cls2 = 불확실성 신호 S3 의 두 번째 분류기(같은 나눔·씨드 1, 이 사진을 안 배움 — 개선 계획 5단계, prep_alt_cls.py)
+        files = {"det": f"det_fold_{det}.onnx", "seat": f"det_r8_fold_{det}.onnx", "cls": f"cls_{part}.onnx", "role": FOLD_ROLE[role], "cls2": f"cls_{part}_s1.onnx"}
         if key not in self.cache:
             role_path = MODELS / files["role"] if "_fold_" in files["role"] else REPO / "app" / "assets" / files["role"]
             for f in (MODELS / files["det"], MODELS / files["seat"], MODELS / files["cls"], role_path):
                 if not f.exists():
                     raise SystemExit(f"모델 없음: {f} — experiments/tile_classifier/README.md 끝 절 명령으로 다시 만든다")
-            self.cache[key] = (lr.LocalReader(threads=self.threads, det_model=MODELS / files["det"], cls_model=MODELS / files["cls"], seat_model=MODELS / files["seat"]),
+            kw = {"alt_cls_model": MODELS / files["cls2"]} if "alt_cls_model" in lr.LocalReader.__init__.__code__.co_varnames else {}
+            self.cache[key] = (lr.LocalReader(threads=self.threads, det_model=MODELS / files["det"], cls_model=MODELS / files["cls"], seat_model=MODELS / files["seat"], **kw),
                                roles.RoleNet(role_path, threads=self.threads))
         return self.cache[key], files
 
@@ -475,6 +479,8 @@ def run(a) -> None:
                 extra.update(alt=[t.get("alt") for t in hand_t], conf2=[t.get("conf2") for t in hand_t])
             if any("alts" in m for m in o["melds"]):
                 extra.update(meld_conf=[m.get("conf") for m in o["melds"]], meld_alt=[m.get("alts") for m in o["melds"]], meld_conf2=[m.get("conf2s") for m in o["melds"]])
+            if "signals" in o:  # 불확실성 신호(개선 계획 5단계, 서버 feat/cls-alt): select_thresholds.py 가 읽는다
+                extra.update(signals=o["signals"], ms=o.get("ms"))
             rows[s["name"]] = dict(w=s["w"], hand=hand, melds=melds, block=o.get("block", False), framed=o.get("framed"), grid=grid, grid_src=src,
                                    s=round(secs, 2), err=err, models=files, **j, **extra)
             print(f"{v:12s} {s['name'][-6:]:>6s} {'O' if j['ok'] else 'X'}{' UNSAFE' if j['unsafe'] else ''}{' 자동틀림' if j['bad_auto'] else ''} "

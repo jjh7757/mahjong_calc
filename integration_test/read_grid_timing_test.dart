@@ -25,6 +25,7 @@ import 'package:mahjong_calc/table/cropper.dart';
 import 'package:mahjong_calc/table/fixed_layout.dart';
 import 'package:mahjong_calc/table/grid_zones.dart';
 import 'package:mahjong_calc/table/hand_rules.dart';
+import 'package:mahjong_calc/table/read_signals.dart';
 import 'package:mahjong_calc/table/merge.dart';
 import 'package:mahjong_calc/table/seat_map.dart';
 import 'package:mahjong_calc/table/shot_image.dart';
@@ -125,6 +126,9 @@ const _geminiSticks = bool.fromEnvironment('GEMINI_STICKS');
 // HAND_RULES=false: 규칙 검증기(lib/table/hand_rules.dart, 개선 계획 4단계)의 막음을 auto_block 에 넣지 않는다(전·후 비교의 "전").
 // 켜든 끄든 검사 답은 hand_rules 로, 규칙 없는 자동 반영 조건은 auto_block_base 로 남긴다.
 const _handRules = bool.fromEnvironment('HAND_RULES', defaultValue: true);
+// SIGNALS=false: 판독 불확실성 신호(lib/table/read_signals.dart, 개선 계획 5단계)의 막음·경고를 auto_block·auto_cautions 에 넣지 않는다(전·후 비교의 "전").
+// 켜든 끄든 신호 판정은 read_signals 로, 서버 신호 원본은 hand_read.signals 로 남는다.
+const _signals = bool.fromEnvironment('SIGNALS', defaultValue: true);
 // PHOTO_MIN·PHOTO_MAX: 사진 이름 범위 [min, max) 만 잰다(매장 오전·오후에 다른 나눔 모델을 쓰려고).
 const _photoMin = String.fromEnvironment('PHOTO_MIN');
 const _photoMax = String.fromEnvironment('PHOTO_MAX');
@@ -327,7 +331,7 @@ void main() {
                 // 거치 화면과 같은 자동 반영 조건(null 이면 자동 반영). 규칙 검증기는 판독 원본 손패·울기 + 병합 화료패·표시패 + 강.
                 final rules = checkHandRules(handRuleInputOf(hand: reading.hand!, merge: merge, center: reading.center));
                 out['hand_rules'] = rules.toJson();
-                String? block(List<String> ruleBlocks) => autoRecordBlocker(
+                String? block(List<String> ruleBlocks, [List<String> signalBlocks = const []]) => autoRecordBlocker(
                   warnings: reading.warnings,
                   issues: [for (final f in merge.flags) f.issue],
                   otherWinners: reading.others.length,
@@ -337,14 +341,19 @@ void main() {
                   paoBase: score != null && score.isValid ? engine.paoBasePoints(score) : 0,
                   gameOver: false,
                   ruleBlocks: ruleBlocks,
+                  signalBlocks: signalBlocks,
                 );
+                final sig = checkReadSignals(reading.hand!.signals);
+                out['read_signals'] = sig.toJson();
+                out['signals_on'] = _signals;
                 out['auto_block_base'] = block(const []);
-                out['auto_block'] = block(_handRules ? rules.blockers : const []);
+                out['auto_block'] = block(_handRules ? rules.blockers : const [], _signals ? sig.blocks : const []);
                 out['hand_rules_on'] = _handRules;
                 out['auto_cautions'] = autoRecordCautions(
                   issues: [for (final f in merge.flags) f.issue],
                   doraIndicators: merge.situation.doraIndicators.length,
                   riichi: merge.situation.riichi,
+                  signalCautions: _signals ? sig.cautions : const [],
                 );
               } catch (e) {
                 out['error'] = '$e';
