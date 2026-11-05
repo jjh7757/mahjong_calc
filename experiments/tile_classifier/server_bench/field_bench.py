@@ -66,6 +66,15 @@ def judge(hand: list[str], melds: list[str], block: bool, s: dict) -> tuple[bool
     return ok, auto
 
 
+def tiles_hit(hand: list[str], melds: list[str], s: dict) -> int:
+    """패 단위 맞은 수(손패·울기 합친 다중집합 교집합, 정답 장수가 분모). 0/15 처럼 장면 단위로 판별이 안 될 때 보조."""
+    from collections import Counter
+
+    got = Counter(hand + [t for m in melds for t in m.split()])
+    want = Counter(s["hand"] + [t for m in s["melds"] for t in m.split()])
+    return sum((got & want).values())
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--det", required=True, help="server_bench/models/<det>.onnx (예: det_final, det_r7_final)")
@@ -73,6 +82,9 @@ def main() -> None:
     ap.add_argument("--rot-cut", action="store_true")
     ap.add_argument("--clean", action="store_true", help="서버 정리(가는 조각 버리기 + 안깡 묶기)")
     ap.add_argument("--dry", action="store_true", help="점수를 안 찍고 돌기만 확인")
+    ap.add_argument("--haku2", action="store_true", help="모서리 白 2장 이상이면 퐁 3장(haku_pair.py)")
+    ap.add_argument("--corner-fix", action="store_true", help="모서리 탁자 끝 찾기 흔들림 고치기(corner_fix.py)")
+    ap.add_argument("--loose-ctx", action="store_true", help="크롭 밖 떼어 둔 화료패를 역할 모델 판단으로(loose_ctx.py)")
     ap.add_argument("--recolored", action="store_true", help="색 바꾼 테스트(make_recolor_test.py, captures_recolor)")
     a = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
@@ -80,13 +92,25 @@ def main() -> None:
         import obb_detect
 
         obb_detect.install(bench, lr, river, False, a.rot_cut, sliver=a.clean, kan=a.clean)
+    if a.loose_ctx:
+        import loose_ctx
+
+        loose_ctx.install(roles)
+    if a.corner_fix:
+        import corner_fix
+
+        corner_fix.install(lr)
+    if a.haku2:
+        import haku_pair
+
+        haku_pair.install(lr)
     meta = json.loads((HERE / "meta.json").read_text(encoding="utf-8"))
     det_path = HERE / "models" / f"{a.det}.onnx"
     reader = lr.LocalReader(det_model=det_path, cls_model=CLS)
     det = bench.Det(det_path, 2)
     cls = bench.Cls(CLS, meta, 2)
     T = truth()
-    rows, tot = {}, dict(n=0, rule_ok=0, rule_bad=0, hyb_ok=0, hyb_bad=0)
+    rows, tot = {}, dict(n=0, rule_ok=0, rule_bad=0, hyb_ok=0, hyb_bad=0, want=0, rule_hit=0, hyb_hit=0)
     for scene, (photos, grid) in SCENES.items():
         s = T[scene]
         for ph in photos:
@@ -107,17 +131,21 @@ def main() -> None:
             rows[ph] = dict(scene=scene, rule=dict(hand=rule["hand"], melds=rule["melds"], ok=r_ok, auto=r_auto),
                             hybrid=dict(hand=hand, melds=melds, ok=h_ok, auto=h_auto, ms=o["ms"]))
             tot["n"] += 1
+            tot["want"] += len(s["hand"]) + sum(len(m.split()) for m in s["melds"])
+            tot["rule_hit"] += tiles_hit(rule["hand"], rule["melds"], s)
+            tot["hyb_hit"] += tiles_hit(hand, melds, s)
             tot["rule_ok"] += r_ok
             tot["rule_bad"] += r_auto and not r_ok
             tot["hyb_ok"] += h_ok
             tot["hyb_bad"] += h_auto and not h_ok
             if not a.dry:
-                print(ph, scene, "규칙", "O" if r_ok else "X", "hybrid", "O" if h_ok else "X", flush=True)
+                print(ph, scene, "규칙", "O" if r_ok else "X", len(rule["hand"]), "장", "hybrid", "O" if h_ok else "X", len(hand), "장", flush=True)
     if a.dry:
         print("돌기 확인:", tot["n"], "장 처리(점수는 안 찍음)")
         return
-    print(f"--- 테스트 /{tot['n']}: 규칙 {tot['rule_ok']}(틀린 자동 반영 {tot['rule_bad']}) | hybrid {tot['hyb_ok']}(틀린 자동 반영 {tot['hyb_bad']})")
-    tag = a.det + ("_obb" if a.obb else "") + ("_rotcut" if a.rot_cut else "") + ("_clean" if a.clean else "") + ("_recolored" if a.recolored else "")
+    print(f"--- 테스트 /{tot['n']}: 규칙 {tot['rule_ok']}(틀린 자동 반영 {tot['rule_bad']}) | hybrid {tot['hyb_ok']}(틀린 자동 반영 {tot['hyb_bad']})"
+          f" | 패 단위 규칙 {tot['rule_hit']}/{tot['want']} hybrid {tot['hyb_hit']}/{tot['want']}")
+    tag = a.det + ("_obb" if a.obb else "") + ("_rotcut" if a.rot_cut else "") + ("_clean" if a.clean else "") + ("_haku2" if a.haku2 else "") + ("_cornerfix" if a.corner_fix else "") + ("_loosectx" if a.loose_ctx else "") + ("_recolored" if a.recolored else "")
     (OUT / f"field_{tag}.json").write_text(json.dumps(dict(total=tot, rows=rows), ensure_ascii=False, indent=1), encoding="utf-8")
 
 

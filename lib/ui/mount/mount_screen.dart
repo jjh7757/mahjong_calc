@@ -1417,6 +1417,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               _grid,
               // 화료 판독은 자체 모델만(Gemini 없음, 2026-11-02 사용자 결정, metrics 표 1-37). 못 읽으면 입력 화면으로.
               localOnly: true,
+              // 자리 판독은 사진 전체 + 격자 → 역할 모델(/v2/localroles, 서버 8회차 회전 상자 검출기·정리, 2026-11-05 사용자 "8회차 반영",
+              // metrics 표 1-70: 개발 32/32 · 틀린 자동 반영 0, 자리 크롭 경로 30/32).
+              useRoles: true,
               rectify: _rectify,
               dealer: seats.sideOf(g.dealer),
               onStage: (s) => stage.value = s,
