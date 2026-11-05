@@ -2,6 +2,12 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-05 밤 추가: 개선 계획 1단계 — 테스트 15장 펴기 (metrics 표 1-89, `docs/improvement_plan_1105.md` 1단계 진행 줄)
+
+- 판별력 생김: 서버 단독 hybrid(자리 채점) 2회차 전부 0/15 · 운영 8회차 9/15, 앱 흐름 펴기 전 손패 0/15 → 후 6/15·점수 5/10. **경고 없는 틀린 자동 3**(F1400 적5만 → 5만) — 4·5단계 테스트 판정 대상.
+- `field_bench.py`: 예전 채점은 화료패(론 — 방총자 강 끝)까지 자리에서 찾아 구조적으로 0/15 였다 → 화료패 뺀 13장으로. 서버 `LocalReader` 는 자리엔 늘 8회차라 `--det det_final` = 운영, 2회차 전부는 `--seat-det none`. 편 사진은 `flutter test tool/rectify_field_test.dart` 가 만든 `rectified.jpg`(커밋 안 하는 사진 폴더).
+- 앱 버그(안 고침): 거치 화면 "펴기" 토글 + 자체 모델 경로면 `/v2/localroles`·`/v2/localdora` 에 펴지 않은 원본을 보냄. 색 바꾼 사본은 펴기(`FeltMask` 초록 고정)가 0/15.
+
 ## 2026-11-05 추가: 매장 전 운영 앱 흐름 확인·서버 개선 (metrics 표 1-82, 원인 1-84, 고침 1-86·1-87)
 
 - 운영 bacd3f6 + 지금 앱(자체 모델만 + `/v2/localroles`)을 처음으로 앱 흐름 그대로 쟀다: `LOCAL_ONLY=true ROLES=1 experiments/speed/run_prod_flow.sh <이름>`(`ROLES` 스위치 새로 더함). 32회 오류 0, 손패 30/32, 경고 없는 틀린 자동 0 — 매장에서 써도 된다.

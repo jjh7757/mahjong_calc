@@ -7,6 +7,14 @@
   규칙 = server_bench/bench.one(자리 크롭), 새 경로 = app.roles.read_roles(hybrid)
   python -I -X utf8 experiments/tile_classifier/server_bench/field_bench.py --det det_final [--obb --rot-cut] [--dry]
 결과 data/role/bench/field_<det>[_obb][_rotcut].json. --dry 는 점수를 안 찍고 돌기만 확인.
+--rectify(개선 계획 1단계, 2026-11-05): 앱과 같은 규칙으로 편 사진(`tool/rectify_field_test.dart` 가 만든 rectified.jpg,
+  _rectifyJob 과 같은 3200px·q92)을 표준 격자(200, 800, 200, 800)로 읽는다. 펠트를 못 찾아 rectified.jpg 가 없으면 원본 + 장면 격자
+  (측정 테스트 RECTIFY=true 와 같다).
+--seat-det(2026-11-05): 서버 f33d632 의 LocalReader 는 자리 판독에 늘 운영 8회차(`seat_model` = assets/tile-obb-r8.onnx)를 쓴다. 그래서
+  `--det det_final` 만 주면 hybrid 는 "8회차 자리 + 2회차 맥락" = 운영 그대로다. `--seat-det none` 이면 자리도 --det 모델(2회차 전부).
+자리 채점(2026-11-05): 다섯 장면 모두 론이고 화료패는 방총자 강 끝에 있다(NOTES 촬영별 — 12:29 "위 강 끝 3만으로 론" 등). 자리 판독만
+  보는 이 벤치는 화료패를 볼 수 없으므로 TRUTH 손패 맨 끝(화료패)을 뺀 13장을 자리 정답으로 한다(`seat_*`). 예전 채점(14장 정답,
+  `rule_ok`·`hyb_ok`·`*_hit`/211)은 비교용으로 그대로 남긴다 — 표 1-69 의 장면 0/15 는 일부가 이 채점 탓.
 """
 from __future__ import annotations
 
@@ -39,6 +47,7 @@ FIELD = HERE.parents[1] / "field_20261024" / "captures"
 OUT = HERE.parent / "data" / "role" / "bench"
 CLS = Path(os.environ.get("RECOGNIZER_REPO", "C:/Users/jjh7757/dev/mahjong-recognizer")) / "app" / "assets" / "tile-cls-mnv3s.onnx"
 
+STANDARD = dict(x1=200, x2=800, y1=200, y2=800)  # lib/table/rectify.dart standardGrid
 GRID_A = dict(x1=300, x2=690, y1=150, y2=830)
 GRID_A2 = dict(x1=300, x2=720, y1=150, y2=830)
 GRID_B1 = dict(x1=315, x2=760, y1=200, y2=740)
@@ -56,7 +65,8 @@ def truth() -> dict:
     src = (HERE.parents[1] / "rectify" / "recheck_test.py").read_text(encoding="utf-8")
     block = src[src.index("TRUTH = {"):src.index("}\n", src.index("TRUTH = {")) + 1]
     t = eval(block.split("=", 1)[1])  # 상수 dict 리터럴
-    return {k: dict(side=v[0], hand=v[2].split(), melds=[re.sub(r"[\[\]()]", "", m) for m in v[3]]) for k, v in t.items()}
+    # TRUTH 손패는 화료패가 맨 끝(NOTES 촬영별: 론 패 = 방총자 강 끝). seat = 자리에 실제로 있는 13장.
+    return {k: dict(side=v[0], hand=v[2].split(), seat=v[2].split()[:-1], melds=[re.sub(r"[\[\]()]", "", m) for m in v[3]]) for k, v in t.items()}
 
 
 def judge(hand: list[str], melds: list[str], block: bool, s: dict) -> tuple[bool, bool]:
@@ -64,6 +74,11 @@ def judge(hand: list[str], melds: list[str], block: bool, s: dict) -> tuple[bool
     ok = bool(hand) and sorted(hand) == sorted(s["hand"]) and key(melds) == key(s["melds"])
     auto = bool(hand) and not block and hy.check(hand, [m.split() for m in melds])[0]
     return ok, auto
+
+
+def seat_view(s: dict) -> dict:
+    """자리 정답(화료패 뺀 13장)으로 바꾼 정답."""
+    return dict(s, hand=s["seat"])
 
 
 def tiles_hit(hand: list[str], melds: list[str], s: dict) -> int:
@@ -86,6 +101,9 @@ def main() -> None:
     ap.add_argument("--corner-fix", action="store_true", help="모서리 탁자 끝 찾기 흔들림 고치기(corner_fix.py)")
     ap.add_argument("--loose-ctx", action="store_true", help="크롭 밖 떼어 둔 화료패를 역할 모델 판단으로(loose_ctx.py)")
     ap.add_argument("--recolored", action="store_true", help="색 바꾼 테스트(make_recolor_test.py, captures_recolor)")
+    ap.add_argument("--seat-det", default="server", choices=["server", "none"],
+                    help="자리 판독 검출기: server = 서버 기본(운영 8회차 tile-obb-r8), none = --det 모델")
+    ap.add_argument("--rectify", action="store_true", help="편 사진(rectified.jpg) + 표준 격자. 없으면 원본 + 장면 격자")
     a = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
     if a.obb:
@@ -106,15 +124,21 @@ def main() -> None:
         haku_pair.install(lr)
     meta = json.loads((HERE / "meta.json").read_text(encoding="utf-8"))
     det_path = HERE / "models" / f"{a.det}.onnx"
-    reader = lr.LocalReader(det_model=det_path, cls_model=CLS)
+    reader = lr.LocalReader(det_model=det_path, cls_model=CLS, **({"seat_model": None} if a.seat_det == "none" else {}))
     det = bench.Det(det_path, 2)
     cls = bench.Cls(CLS, meta, 2)
     T = truth()
-    rows, tot = {}, dict(n=0, rule_ok=0, rule_bad=0, hyb_ok=0, hyb_bad=0, want=0, rule_hit=0, hyb_hit=0)
-    for scene, (photos, grid) in SCENES.items():
+    rows, tot = {}, dict(n=0, rule_ok=0, rule_bad=0, hyb_ok=0, hyb_bad=0, want=0, rule_hit=0, hyb_hit=0,
+                        seat_want=0, seat_rule_ok=0, seat_rule_bad=0, seat_hyb_ok=0, seat_hyb_bad=0, seat_rule_hit=0, seat_hyb_hit=0, hyb_auto=0)
+    rectified = 0
+    for scene, (photos, scene_grid) in SCENES.items():
         s = T[scene]
         for ph in photos:
-            path = (FIELD.parent / "captures_recolor" if a.recolored else FIELD) / f"20261024_{ph}" / "original.jpg"
+            folder = (FIELD.parent / "captures_recolor" if a.recolored else FIELD) / f"20261024_{ph}"
+            path, grid = folder / "original.jpg", scene_grid
+            if a.rectify and (folder / "rectified.jpg").exists():
+                path, grid = folder / "rectified.jpg", STANDARD
+                rectified += 1
             im = Image.open(path).convert("RGB")
             crop = sg.crop(im, sg.seat_box(grid, s["side"], 40), s["side"])
             import io
@@ -128,8 +152,12 @@ def main() -> None:
             hand = [t["tile"] for t in o["tiles"]] + ([o["separate_tile"]["tile"]] if o["separate_tile"] else [])
             melds = [" ".join(m["tiles"]) for m in o["melds"]]
             h_ok, h_auto = judge(hand, melds, o.get("block", False), s)
-            rows[ph] = dict(scene=scene, rule=dict(hand=rule["hand"], melds=rule["melds"], ok=r_ok, auto=r_auto),
-                            hybrid=dict(hand=hand, melds=melds, ok=h_ok, auto=h_auto, ms=o["ms"]))
+            sv = seat_view(s)
+            rs_ok, _ = judge(rule["hand"], rule["melds"], rule["block"], sv)
+            hs_ok, _ = judge(hand, melds, o.get("block", False), sv)
+            rows[ph] = dict(scene=scene, rectified=path.name == "rectified.jpg", rule=dict(hand=rule["hand"], melds=rule["melds"], ok=r_ok, auto=r_auto),
+                            hybrid=dict(hand=hand, melds=melds, ok=h_ok, auto=h_auto, ms=o["ms"]),
+                            seat_ok=dict(rule=rs_ok, hybrid=hs_ok))
             tot["n"] += 1
             tot["want"] += len(s["hand"]) + sum(len(m.split()) for m in s["melds"])
             tot["rule_hit"] += tiles_hit(rule["hand"], rule["melds"], s)
@@ -138,14 +166,26 @@ def main() -> None:
             tot["rule_bad"] += r_auto and not r_ok
             tot["hyb_ok"] += h_ok
             tot["hyb_bad"] += h_auto and not h_ok
+            tot["seat_want"] += len(sv["hand"]) + sum(len(m.split()) for m in sv["melds"])
+            tot["seat_rule_hit"] += tiles_hit(rule["hand"], rule["melds"], sv)
+            tot["seat_hyb_hit"] += tiles_hit(hand, melds, sv)
+            tot["seat_rule_ok"] += rs_ok
+            tot["seat_rule_bad"] += r_auto and not rs_ok
+            tot["seat_hyb_ok"] += hs_ok
+            tot["seat_hyb_bad"] += h_auto and not hs_ok
+            tot["hyb_auto"] += h_auto
             if not a.dry:
-                print(ph, scene, "규칙", "O" if r_ok else "X", len(rule["hand"]), "장", "hybrid", "O" if h_ok else "X", len(hand), "장", flush=True)
+                print(ph, scene, "규칙", "O" if rs_ok else "X", len(rule["hand"]), "장", "hybrid", "O" if hs_ok else "X", len(hand), "장",
+                      "자동" if h_auto else "-", flush=True)
     if a.dry:
         print("돌기 확인:", tot["n"], "장 처리(점수는 안 찍음)")
         return
-    print(f"--- 테스트 /{tot['n']}: 규칙 {tot['rule_ok']}(틀린 자동 반영 {tot['rule_bad']}) | hybrid {tot['hyb_ok']}(틀린 자동 반영 {tot['hyb_bad']})"
+    tot["rectified"] = rectified
+    print(f"=== 자리 채점(화료패 뺀 13장) /{tot['n']}: 규칙 {tot['seat_rule_ok']}(틀린 자동 {tot['seat_rule_bad']}) | hybrid {tot['seat_hyb_ok']}"
+          f"(틀린 자동 {tot['seat_hyb_bad']}, 자동 {tot['hyb_auto']}) | 패 단위 규칙 {tot['seat_rule_hit']}/{tot['seat_want']} hybrid {tot['seat_hyb_hit']}/{tot['seat_want']}")
+    print(f"--- 테스트 /{tot['n']}(편 사진 {rectified}): 규칙 {tot['rule_ok']}(틀린 자동 반영 {tot['rule_bad']}) | hybrid {tot['hyb_ok']}(틀린 자동 반영 {tot['hyb_bad']})"
           f" | 패 단위 규칙 {tot['rule_hit']}/{tot['want']} hybrid {tot['hyb_hit']}/{tot['want']}")
-    tag = a.det + ("_obb" if a.obb else "") + ("_rotcut" if a.rot_cut else "") + ("_clean" if a.clean else "") + ("_haku2" if a.haku2 else "") + ("_cornerfix" if a.corner_fix else "") + ("_loosectx" if a.loose_ctx else "") + ("_recolored" if a.recolored else "")
+    tag = a.det + ("_obb" if a.obb else "") + ("_rotcut" if a.rot_cut else "") + ("_clean" if a.clean else "") + ("_haku2" if a.haku2 else "") + ("_cornerfix" if a.corner_fix else "") + ("_loosectx" if a.loose_ctx else "") + ("_recolored" if a.recolored else "") + ("_rect" if a.rectify else "") + ("_seat2" if a.seat_det == "none" else "")
     (OUT / f"field_{tag}.json").write_text(json.dumps(dict(total=tot, rows=rows), ensure_ascii=False, indent=1), encoding="utf-8")
 
 
