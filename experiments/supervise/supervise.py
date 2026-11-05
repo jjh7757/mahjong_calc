@@ -8,6 +8,8 @@
   python supervise.py head-set IP|주소        헤드 주소 저장. IP 만 주면 저장된 토큰을 그대로 씀
   python supervise.py head-qr                (폰을 adb 로 붙였을 때만) 폰 화면 QR 에서 주소·토큰 저장
   python supervise.py preview                헤드 최대 해상도 프레임 한 장 저장(거치·패 폭 확인)
+  python supervise.py netdiag                태블릿 ↔ 헤드 네트워크 상태를 net/<시각>.txt 로(정상 때 한 번 떠 두면 비교용)
+                                             태블릿에서 헤드가 안 될 때는 status·watch 가 알아서 남긴다
   python supervise.py shot [tablet|phone]    기기 화면 캡처 저장
   python supervise.py pull                   새 촬영 기록을 받음
   python supervise.py report [--since 시각]  받은 화료별 표와 요약
@@ -129,7 +131,63 @@ def tablet_head_alert(tablet: str) -> str | None:
         return None
     host, _, port = base.removeprefix('http://').partition('?')[0].partition(':')
     out = adb('shell', f'nc -z -w 3 {host} {port} </dev/null; echo rc=$?', serial=tablet)
-    return None if 'rc=0' in out else f'태블릿에서 헤드({host}:{port})로 연결 안 됨 (공유기·Wi-Fi 확인)'
+    if 'rc=0' in out:
+        return None
+    return f'태블릿에서 헤드({host}:{port})로 연결 안 됨 (공유기·Wi-Fi 확인) — 진단 {net_diag(tablet)}'
+
+
+def head_host() -> str | None:
+    base = head_url()
+    return base.removeprefix('http://').partition('?')[0].partition(':')[0] if base else None
+
+
+def local(*cmd: str) -> str:
+    """노트북(Windows) 명령. 출력이 한글 코드페이지라 mbcs 로 푼다."""
+    r = subprocess.run(list(cmd), capture_output=True, timeout=20)
+    enc = 'mbcs' if os.name == 'nt' else 'utf-8'
+    return (r.stdout + r.stderr).decode(enc, 'replace')
+
+
+def net_diag(tablet: str | None) -> Path:
+    """태블릿 ↔ 폰 끊김(ping 실패·ARP 미완료, 10-30·10-31) 원인을 가리려고 그 순간을 남긴다.
+
+    비교할 것: 태블릿 ip neigh 의 헤드 줄(FAILED/INCOMPLETE 인지, MAC) vs 노트북 arp 의 헤드 MAC
+    (다르면 MAC 이 바뀐 것), 태블릿 → 공유기·노트북 ping(되면 두 기기 사이만 막힌 것),
+    cmd wifi status 의 BSSID·주파수·MAC(재연결·대역 이동·랜덤 MAC).
+    """
+    host = head_host()
+    out = VISIT / 'net' / f'{now_stamp()}.txt'
+    out.parent.mkdir(parents=True, exist_ok=True)
+    parts = [f'# {datetime.now():%Y-%m-%d %H:%M:%S} 헤드 {host}']
+    if tablet:
+        st = device_state(tablet)
+        gw = re.search(r'default via (\S+)', adb('shell', 'ip route show table all', serial=tablet))
+        sh = [
+            'ip -f inet addr show wlan0',
+            'ip neigh show dev wlan0',
+            f'ping -c 3 -W 1 {host}' if host else 'true',
+            f'ping -c 3 -W 1 {gw.group(1)}' if gw else 'echo 기본 경로 없음',
+            'ip neigh show dev wlan0',  # ping 으로 ARP 를 다시 시도한 뒤 상태
+            'cmd wifi status',
+        ]
+        if host:
+            sh.insert(3, f'nc -z -w 3 {host} 8765 </dev/null; echo nc rc=$?')
+        for c in sh:
+            parts.append(f'\n## 태블릿$ {c}\n' + adb('shell', c, serial=tablet).rstrip())
+        tablet_ip = st['ip']
+    else:
+        parts.append('\n(태블릿 adb 안 붙음)')
+        tablet_ip = None
+    if host:
+        parts.append(f'\n## 노트북> ping {host}\n' + local('ping', '-n', '2', '-w', '1000', host).rstrip())
+    if tablet_ip:
+        parts.append(f'\n## 노트북> ping {tablet_ip}\n' + local('ping', '-n', '2', '-w', '1000', tablet_ip).rstrip())
+    arp = local('arp', '-a')
+    want = [ip for ip in (host, tablet_ip) if ip]
+    parts.append('\n## 노트북> arp -a (헤드·태블릿 줄)\n' + '\n'.join(
+        line for line in arp.splitlines() if any(re.search(rf'\b{re.escape(ip)}\b', line) for ip in want)))
+    out.write_text('\n'.join(parts) + '\n', encoding='utf-8')
+    return out
 
 
 def server_state() -> str:
@@ -210,6 +268,10 @@ def screencap(role: str) -> Path:
         subprocess.run([ADB, '-s', serial, 'exec-out', 'screencap', '-p'],
                        stdout=f, check=True, timeout=30, env=env)
     return out
+
+
+def cmd_netdiag(_) -> None:
+    print(net_diag(devices().get('tablet')))
 
 
 def cmd_shot(a) -> None:
@@ -333,6 +395,7 @@ def main() -> None:
     s.add_argument('addr')
     s.set_defaults(fn=cmd_head_set)
     sub.add_parser('preview').set_defaults(fn=cmd_preview)
+    sub.add_parser('netdiag').set_defaults(fn=cmd_netdiag)
     s = sub.add_parser('pull')
     s.add_argument('--since')
     s.set_defaults(fn=cmd_pull)
