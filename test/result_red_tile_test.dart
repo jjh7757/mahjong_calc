@@ -126,6 +126,25 @@ void main() {
       expect(find.text('• ${flags.last}'), findsNothing);
     });
 
+    testWidgets('키오스크: 부수 내역이 누르지 않아도 보이고, 패·점수와 안 겹친다', (tester) async {
+      for (final size in const [Size(1280, 800), Size(1280, 720)]) {
+        await open(tester, size);
+        final panel = find.byKey(const ValueKey('result-kiosk-fu'));
+        expect(panel, findsOneWidget);
+        expect(find.text('단기 대기'), findsOneWidget);
+        expect(find.text('32 → 40부'), findsOneWidget, reason: '올림은 합계 줄에');
+        expect(find.text('점수 이동'), findsOneWidget, reason: '버튼은 점수 이동만');
+
+        final r = tester.getRect(panel);
+        for (final e in find.byType(TileView).evaluate()) {
+          final t = tester.getRect(find.byWidget(e.widget).first);
+          expect(r.overlaps(t), isFalse, reason: '$size 패와 겹침');
+        }
+        final score = tester.getRect(find.text('${calculate(hand(redTiles: [m5]), Situation(isTsumo: false, seatWind: Tiles.south)).payment.total}점', findRichText: true));
+        expect(r.bottom, lessThan(score.top), reason: '$size 점수와 겹침');
+      }
+    });
+
     testWidgets('키오스크: 확인할 것이 없으면 문구 자리도 없다', (tester) async {
       await open(tester, const Size(1280, 800));
       expect(find.byKey(const ValueKey('result-kiosk-flags')), findsNothing);

@@ -31,7 +31,7 @@ extension _KioskResult on _ResultScreenState {
               builder: (context, box) => FittedBox(
                 child: SizedBox(
                   width: _w,
-                  height: (_w * box.maxHeight / box.maxWidth).clamp(600.0, 960.0),
+                  height: _canvasH(box),
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -40,8 +40,12 @@ extension _KioskResult on _ResultScreenState {
                       Positioned(left: 150, top: 70, right: 170, child: _handRow()),
                       Positioned(right: 48, top: 44, child: _sealMark(widget.isTsumo ? '쯔모' : '론')),
                       ..._doraRows(),
-                      ..._yakuRows(n),
+                      ..._yakuRows(n, _canvasH(box)),
                       Positioned(left: 690, top: 300, child: _fadeIn(n, _hanFuCircle())),
+                      // 부수 내역: 판·부 원 오른쪽 빈 칸. 역 줄이 5개 넘으면 그 칸을 역이 쓰는데, 그땐 5판 이상이라
+                      // 부수가 점수에 안 들어가니 시트(부수·점수 이동)로만 본다.
+                      if (_fuInline)
+                        Positioned(left: 920, top: 236, child: _fadeIn(n, _fuPanel())),
                       if (stamp.isNotEmpty)
                         Positioned(
                           left: 70,
@@ -63,6 +67,9 @@ extension _KioskResult on _ResultScreenState {
       ),
     );
   }
+
+  /// 캔버스 높이(폭 1280 기준, 화면 비율대로). 16:9 = 720, 16:10 = 800.
+  static double _canvasH(BoxConstraints box) => (_w * box.maxHeight / box.maxWidth).clamp(600.0, 960.0);
 
   /// 맨 위 줄: 뒤로, 화료자·국, 확인할 것. 손패(top 70) 위에 들어가게 높이를 정해 둔다 — 전엔 문구가 손패 뒤로 가렸다.
   /// 문구는 3줄까지만 보이고, 누르면 전부 본다.
@@ -215,11 +222,24 @@ extension _KioskResult on _ResultScreenState {
   }
 
   /// 역 줄: 왼쪽 칸에 먼저(최대 4줄 기준), 넘치면 판·부 원 오른쪽 칸으로. 줄마다 조금씩 어긋나게(지그재그).
-  List<Widget> _yakuRows(int n) {
+  ///
+  /// 왼쪽 칸은 아래에서 잰 상황 칩(바닥 176 + 높이 약 58) 위에서 끝나야 한다. 캔버스가 낮으면(16:9 = 720)
+  /// 4줄째가 칩에 가렸다 — 먼저 도라 줄 바로 아래(262)까지 올리고, 그래도 모자라면 줄 간격을 줄인다.
+  /// 16:10(800) 이상은 예전 자리 그대로.
+  List<Widget> _yakuRows(int n, double h) {
     final leftCount = n <= 4 ? n : (n + 1) ~/ 2;
     final rightCount = n - leftCount;
     final rows = leftCount > rightCount ? leftCount : rightCount;
-    final step = rows <= 4 ? 64.0 : 256.0 / rows;
+    var step = rows <= 4 ? 64.0 : 256.0 / rows;
+    final limit = h - 176 - 58 - 8;
+    double end(double top, double s) => top + (leftCount - 1) * s + 54 * (s / 64).clamp(0.62, 1.0);
+    var leftTop = 290.0;
+    if (end(leftTop, step) > limit) {
+      leftTop = (leftTop - (end(leftTop, step) - limit)).clamp(262.0, 290.0);
+      if (end(leftTop, step) > limit && leftCount > 1) {
+        step = (limit - leftTop) / (leftCount - 1 + 54 / 64);
+      }
+    }
     final scale = (step / 64).clamp(0.62, 1.0);
     const zig = [0.0, -34.0, -14.0, 30.0];
     return [
@@ -227,7 +247,7 @@ extension _KioskResult on _ResultScreenState {
         () {
           final right = i >= leftCount;
           final row = right ? i - leftCount : i;
-          final top = (right ? 250.0 : 290.0) + step * row;
+          final top = (right ? 250.0 : leftTop) + step * row;
           final edge = (right ? 1150.0 : 640.0) + (right ? 26.0 * row : zig[row % zig.length]);
           return Positioned(
             right: _w - edge,
@@ -331,6 +351,63 @@ extension _KioskResult on _ResultScreenState {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  /// 부수 내역을 화면에 바로 펼치는지: 역만이 아니고 역 줄이 왼쪽 칸(4줄)에 다 들어갈 때.
+  bool get _fuInline => !result.isYakuman && result.yaku.length <= 4 && result.fu.items.isNotEmpty;
+
+  /// 부수 내역 패널: 항목별 부 + 합계(올림이 있으면 "32 → 40부").
+  Widget _fuPanel() {
+    final items = result.fu.items.where((f) => f.label != '올림').toList();
+    final raw = items.fold<int>(0, (s, f) => s + f.fu);
+    final total = result.fu.total;
+    const label = TextStyle(fontSize: 18, color: Colors.white70, height: 1.3);
+    const value = TextStyle(
+      fontSize: 18,
+      color: Colors.white,
+      fontWeight: FontWeight.w700,
+      height: 1.3,
+      fontFeatures: [FontFeature.tabularFigures()],
+    );
+    return SizedBox(
+      key: const ValueKey('result-kiosk-fu'),
+      width: 300,
+      height: 224,
+      child: FittedBox(
+        alignment: Alignment.topLeft,
+        fit: BoxFit.scaleDown,
+        child: Container(
+          width: 300,
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+          decoration: BoxDecoration(
+            color: const Color(0xB30B1222),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('부수', style: TextStyle(fontSize: 15, color: _gold, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              for (final f in items)
+                Row(children: [
+                  Expanded(child: Text(f.label, style: label, overflow: TextOverflow.ellipsis)),
+                  Text('${f.fu}', style: value),
+                ]),
+              const Divider(height: 12, color: Colors.white30),
+              Row(children: [
+                const Expanded(child: Text('합계', style: label)),
+                Text(
+                  raw == total ? '$total부' : '$raw → $total부',
+                  style: value.copyWith(color: _gold, fontSize: 20),
+                ),
+              ]),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -450,7 +527,7 @@ extension _KioskResult on _ResultScreenState {
           ),
           const SizedBox(width: 10),
         ],
-        OutlinedButton(style: style, onPressed: () => _showDetails(context), child: const Text('부수·점수 이동')),
+        OutlinedButton(style: style, onPressed: () => _showDetails(context), child: Text(_fuInline ? '점수 이동' : '부수·점수 이동')),
         const SizedBox(width: 10),
         // 동시 론: 이전·다음 화료자. 기록은 마지막 화료자 차례에서 모두 함께.
         for (final b in _pageButtons(style: style, nextStyle: next)) ...[b, const SizedBox(width: 10)],

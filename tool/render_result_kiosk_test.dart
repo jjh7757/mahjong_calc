@@ -1,5 +1,5 @@
 // 키오스크 결과 화면을 실제 글꼴(맑은 고딕)로 PNG 로 그린다(눈 확인용, 전체 테스트에는 안 들어감).
-//   CASE=haneman|many|yakuman OUT=build/x.png flutter test tool/render_result_kiosk_test.dart
+//   CASE=haneman|many|yakuman|fu|four OUT=build/x.png flutter test tool/render_result_kiosk_test.dart
 //   CAUTION=표시패,울기 면 대국 중 자동 반영 카운트다운과 경고 줄까지 그린다.
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -40,10 +40,15 @@ void main() {
     final c = Platform.environment['CASE'] ?? 'haneman';
     final hand = switch (c) {
       'yakuman' => Hand.parse('555z666z777z123m4p 4p'),
+      // 부수가 점수에 들어가는 손패: 백 암각 + 간짱 대기 → 기본 20 + 멘젠 론 10 + 8 + 2 = 40부.
+      'fu' => Hand.parse('234m678p555z13s99m 2s'),
       _ => Hand.parse('223344m567p67s55s 8s'),
     };
     final sit = switch (c) {
       'yakuman' => Situation(isTsumo: false, seatWind: Tiles.south, doraIndicators: [Tiles.parse('3p')]),
+      // 역 4줄(리치·탕야오·핑후·이페코): 16:9 에서 4줄째가 상황 칩에 안 가리는지.
+      'four' => Situation(isTsumo: false, seatWind: Tiles.south, riichi: true, doraIndicators: [Tiles.parse('1z')]),
+      'fu' => Situation(isTsumo: false, seatWind: Tiles.south, riichi: true, doraIndicators: [Tiles.parse('7p')]),
       'many' => Situation(
           isTsumo: true,
           seatWind: Tiles.south,

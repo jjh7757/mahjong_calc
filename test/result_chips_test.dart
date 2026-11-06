@@ -51,6 +51,39 @@ void main() {
     expect(find.textContaining('3900', findRichText: true), findsWidgets);
   });
 
+  testWidgets('키오스크: 16:9·16:10 화면에서 역 4줄이 상황 칩에 안 가린다', (tester) async {
+    for (final size in const [Size(1280, 720), Size(1280, 800), Size(1920, 1080)]) {
+      SharedPreferences.setMockInitialValues({'voice.result': false});
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final r = calculate(hand, sit);
+      expect(r.yaku.length, 4);
+      await tester.pumpWidget(MaterialApp(
+        home: ResultScreen(result: r, hand: hand, situation: sit, isTsumo: false, seatWind: Tiles.south),
+      ));
+      await tester.pump(const Duration(seconds: 5));
+
+      final chips = find.byKey(const ValueKey('result-chips'));
+      final chipRect = tester.getRect(chips);
+      final inChips = <Element>{};
+      for (final y in r.yaku) {
+        inChips.addAll(find.descendant(of: chips, matching: find.text(y.yaku.label)).evaluate());
+      }
+      var rows = 0;
+      for (final y in r.yaku) {
+        for (final e in find.text(y.yaku.label).evaluate()) {
+          if (inChips.contains(e)) continue;
+          rows++;
+          final t = tester.getRect(find.byWidget(e.widget).first);
+          expect(t.overlaps(chipRect), isFalse, reason: '$size ${y.yaku.label} 줄이 칩에 가림');
+        }
+      }
+      expect(rows, 4);
+      await tester.pumpWidget(const SizedBox());
+    }
+  });
+
   testWidgets('칩으로 고치면 onSituationChanged 로 알린다(기록 label.json 이 계산과 같아지게)', (tester) async {
     Situation? got;
     SharedPreferences.setMockInitialValues({'voice.result': false});

@@ -49,7 +49,8 @@ void main() {
     expect(find.text('1300점'), findsOneWidget);
     expect(find.text('핑후'), findsOneWidget);
     expect(find.text('1판'), findsNWidgets(2)); // 역 옆 동그라미 + 판·부 원
-    expect(find.text('30부'), findsOneWidget);
+    expect(find.text('30부'), findsNWidgets(2)); // 판·부 원 + 부수 내역 합계
+    expect(find.text('멘젠 론'), findsOneWidget); // 부수 내역이 누르지 않아도 보인다
     expect(find.text('도라'), findsOneWidget);
 
     await tester.tap(find.textContaining('대국에 반영'));
