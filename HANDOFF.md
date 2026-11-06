@@ -2,11 +2,24 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-06 저녁 추가: 개선 계획 7-2a — 분류기만 합성 사전학습(새 씨드), **채택 — 서버 feat/cls-alt 599473e, push 안 함 = 운영 미반영** (metrics 표 1-99 기준·1-100 결과, `docs/improvement_plan_1105.md` 7-2a 진행 줄)
+
+- **무엇:** 검출기 8회차·역할 모델·규칙 그대로, 분류기만 7-2 와 같은 합성 크롭 사전학습 + 운영과 같은 미세 조정을 새 씨드(10·11)로 — `train.py --synth-pre --tag cls4 --seed-offset 10` → `cls4_*` 8벌(`server_bench/models/`, 커밋 안 함).
+- **결과:** 회귀 21변형 unsafe/unsafe_app fold 26/10 → 22/3·prod 17/11 → 11/5(축소 0.6·흐림 σ3), 개발 32회 앱 흐름 434 → 433/436(171245 화료패 놓침 → 후보 고르기)·경고 없는 틀린 자동 0, 테스트 15장 서버 189/196·앱 198/211·경고 없는 틀린 자동 3, **색 바꾼 15장 서버 145·앱 145 그대로**, 서버 시간 0.82 → 0.82초 → 기준 (a)~(d) 전부 충족. 7-2 의 색 바꾼 하락·F1434 회귀는 검출기 몫이었음. F1400 적5만은 그대로.
+- **(d) 메모:** 첫 측정 prod `orig` 중앙 +0.14초는 바꾸지 않은 검출 단계까지 +86ms 느려진 측정 오염이라, 사용자 결정으로 시간만 전·후 번갈아 3번 다시 재어(78회씩) 판정. 17:13~17:44 첫 측정은 사용자 지시로 멈춰 버렸고 20:01~ 새 TAG `1106b` 로 통째로 다시 잼.
+- **서버:** `feat/cls-alt` **599473e** = `app/assets/tile-cls-mnv3s-v2.onnx`(cls4_all)·`tile-cls-alt-v2.onnx`(cls4_all_s1) + `local_read`·`signals` 기본 경로 v2(옛 파일은 남겨 `LOCAL_CLS_MODEL`·`LOCAL_ALT_CLS_MODEL` 로 되돌림), pytest 169. **배포는 사용자 결정** — feat/cls-alt(4단계 2순위 + 5단계 신호 + v2 분류기)를 master 로 합쳐 push 하면 운영 배포. 서버 작업 트리는 master f33d632 그대로, 측정 worktree `-s9` 는 지웠음.
+- 쓰는 법: `experiments/tile_classifier/README.md` 끝 절(`run_72a.sh`, launch.json `recognizer-fold4-*`·`prod4`). feat/cls-alt 가 이제 v2 기본이라 "전" 은 env 로 옛 파일을 못박는다(`run_72a.sh` 는 반영함).
+
 ## 2026-11-06 저녁 추가: 개선 계획 8b-2 — 패 단위 구역표 JSON + Dart·Python 로더 (metrics 표 1-103, 브랜치 `claude/8b-zone-table-2c0f98`, push 안 함)
 
 - 구역표 `assets/table_frame/zones.json`: 규칙 몫 `rules`(탁자 무관)와 기종 프로필 `profiles.amos`(패산/기기 3.85·뒷면 → u 0.87)를 나눴고, 값은 8b-1(`wall_frame.py`, 표 1-101) 상수 그대로. 기준점 `TableFrame` + 구역 `TableZones` 를 앱 `lib/table/table_frame.dart` 와 `experiments/zone_points/table_frame.py`(표준 라이브러리만, 서버 `app/` 로 옮길 것)가 같은 파일로 계산한다.
 - 예제 `test/fixtures/table_frame.json`(19사례·상자 532)을 `flutter test test/table_frame_test.dart`·`table_frame.py --test` 가 둘 다 통과. 새 로더로 8b-1 재채점(`table_frame_score.py`): 판정 차이 0, 틀린 수 개발 10·테스트 7·색 바꾼 7 그대로, 표시패 제 칸(가운데 ∪ 왕패 칸) 26/26 ≥ 19 — 왕패 칸이 손패와 겹쳐(57%) 구분은 역할 모델 몫.
 - 격자·거치 화면·서버 코드는 무변경. 다음은 3번(서버 `WALL_FRAME=1`): 로더를 `app/` 로 옮기고 기준점 잡기 + 구역표 자르기, 답 동일 비교. 8b-1 산출물(`wall_frame.py`·표 1-101)은 본 체크아웃에서 커밋 전이라 이 브랜치엔 없다(재채점은 그 폴더를 읽기만).
+
+## 2026-11-06 오후 추가: 개선 계획 8b-1 — 탁자 독립 기준점(기기 + 패산) 오프라인 실험, 쓸 만함 (metrics 표 1-101, `docs/improvement_plan_1105.md` 8b-1 진행 줄)
+
+- **무엇:** `experiments/zone_points/wall_frame.py det|run|sheet` — 운영 8회차 검출기 상자만으로(색 안 씀) 가운데 기기(앞면 패 무리 안 빈 정사각형)·패산 사각형(눕힌 뒷면)을 찾아 중심·방향·u 를 잡고, 패 단위 바람개비 구역에 정답 패가 드는지 채점. 검출 캐시 `experiments/tile_classifier/data/zone_points/wall_frame_det.json`, 결과 `experiments/zone_points/results/wall_frame.json`·확인 그림 `wall_frame_sheet_*.jpg`(커밋 안 함). 격자·서버 코드는 안 바꿈, 커밋 안 함.
+- **결과:** 기기 개발 25/26·테스트 15/15·색 바꾼 15/15·재색칠 25/26×3, 패산은 막 올라온 프레임 12/13 이지만 30초 뒤 4/14·화료 시점 3/26. 구역 틀린 수 개발 10(저장 격자 44)·테스트 펴기 없이 7(장면 격자 27, 펴기+표준 8)·색 바꾼 15 7. 펠트 색을 기기 둘레에서 재면 회색·파랑 펠트도 된다. → 8b 2번(구역표 JSON)으로 갈 근거. 판 시작 = 패산 올라온 첫 프레임, 화료 = 기기.
 
 ## 2026-11-06 오후 추가: 개선 계획 7-2 — 장면 합성 사전학습, 미채택 (metrics 표 1-97 기준·1-98 결과, `docs/improvement_plan_1105.md` 7-2 진행 줄)
 
@@ -360,7 +373,7 @@
 - Projection Mahjong 에서 가져올 것: 엎은 패로 화료 신호 → 카메라 헤드 자동 촬영 트리거, 리치봉 N프레임 연속 감지(`docs/market_research.md`)
 - 자동화 다음 단계(사용자 요청 방향): 정확도 측정 뒤 기준을 정해 자동 반영(음성으로 결과 읽고 10초 취소), ~~카메라 헤드 자동 촬영~~(10-28 하지 않기로), 화료자 자동 판단, 리치 화료 뒤 뒷도라 자동 촬영(판독은 이미 됨, 지금은 뒤집은 뒤 찍어야 함), 유국 텐파이 자동 판정
 - 카메라 헤드 다음 단계(공개 전): 마작방 Wi-Fi 의 기기 간 통신 차단 대비(핫스팟 안내 또는 서버 중계), 서버 기기별 호출 제한(앱에 서버 API 키가 들어 있음), 정식 서명·개인정보 처리방침. 그 밖: 헤드가 원본을 자기 Download 에도 남기기, `mahjongcam://` 딥링크, 라즈베리파이 헤드(picamera2 로 같은 `/capture`·`/status` + 토큰). 이야기한 방향: 개인용은 폰 헤드 + 태블릿, 매장 고정 설치는 라즈베리파이 카메라(약 10만 원) + 태블릿, 나중에 Pi 5 + 터치 디스플레이 일체형 검토.
-- 거치 모드 소소한 것: 대국 시작 폼에 "화면 아래쪽 자리"(지금은 거치 화면 AppBar 메뉴에서만), 진행 초에서 사용자가 고르는 시간 빼기, 결과 화면 플래그를 칩으로 눌러 리치·방총자 바로 고치기(설계 문서 4단계 "확인 질문"의 다음 형태), 폰이 안 움직였을 때 직전 locate 재사용(화료당 6초 절약).
+- 거치 모드 소소한 것: 진행 초에서 사용자가 고르는 시간 빼기, 결과 화면 플래그를 칩으로 눌러 리치·방총자 바로 고치기(설계 문서 4단계 "확인 질문"의 다음 형태), 폰이 안 움직였을 때 직전 locate 재사용(화료당 6초 절약).
 - 중앙 크롭 하나로 강 4개가 안 읽히면 강별 4호출로 쪼개기(locate 가 rivers 상자를 이미 준다).
 - 기타: 3인 마작, 기록 정정, 역 설명, 패 이미지(`experiments/vlm/tiles/` CC0), Roboflow 리치마작 데이터셋(CC BY 4.0, 256장·424장, 로그인 수동 다운로드)으로 손패 크롭 대량 정확도 측정.
 

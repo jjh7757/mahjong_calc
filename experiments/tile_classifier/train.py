@@ -408,7 +408,8 @@ def pretrain_synth(pool: str, seed: int) -> dict:
 
 
 def main_synth() -> None:
-    """  python -I -X utf8 experiments/tile_classifier/train.py --synth-pre [--only bcd,am,pm,all] [--seeds 0,1]
+    """  python -I -X utf8 experiments/tile_classifier/train.py --synth-pre [--only bcd,am,pm,all] [--seeds 0,1] [--tag cls4 --seed-offset 10]
+    7-2a(2026-11-06): --tag·--seed-offset 로 같은 설정을 새 씨드로(cls4 = 주 10·두 번째 11, 사전학습 난수 1000 + 씨드). 결과는 data/synth/results_<tag>.json.
     cls3_<part>{,_s1}: 합성 사전학습 + 운영 cls_<part>(det_eval.classifiers)·cls_all(prep_deploy)·_s1(prep_alt_cls) 과 같은 묶음·씨드·AUG 로 미세 조정.
     결과 server_bench/models/cls3_*.onnx, data/cls3_*.pt, data/synth/results.json(학습 기록 + 홀드아웃 전 cls·후 cls3)."""
     import argparse
@@ -421,10 +422,12 @@ def main_synth() -> None:
     ap.add_argument("--only", default="bcd,am,pm,all")
     ap.add_argument("--seeds", default="0,1")
     ap.add_argument("--eval-only", action="store_true")
+    ap.add_argument("--tag", default="cls3")
+    ap.add_argument("--seed-offset", type=int, default=0)
     a = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
     torch.set_num_threads(12)
-    out_p = SYNTH / "results.json"
+    out_p = SYNTH / ("results.json" if a.tag == "cls3" else f"results_{a.tag}.json")
     res = json.loads(out_p.read_text(encoding="utf-8")) if out_p.exists() else {}
     res.setdefault("train", {})
     if not a.eval_only:
@@ -437,8 +440,9 @@ def main_synth() -> None:
                 pool = base + add
             else:  # det_eval.classifiers·prep_alt_cls 와 같은 묶음
                 pool = [x for x in base if x["part"] != part] + [x for x in add if x["half"] != part and (part != "bcd" or x["half"] != "other")]
-            for seed in (int(s) for s in a.seeds.split(",")):
-                name = f"cls3_{part}" + (f"_s{seed}" if seed else "")
+            for k in (int(s) for s in a.seeds.split(",")):
+                name = f"{a.tag}_{part}" + (f"_s{k}" if k else "")
+                seed = a.seed_offset + k
                 dst = MODELS / f"{name}.onnx"
                 if dst.exists():
                     print("있음(재학습 안 함)", dst, flush=True)
@@ -454,7 +458,7 @@ def main_synth() -> None:
                                           secs=round(time.perf_counter() - t1), epochs=EPOCHS, finished=time.strftime("%Y-%m-%d %H:%M:%S"))
                 print(name, res["train"][name], flush=True)
                 out_p.write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
-    res["holdout"] = holdout_eval(("cls", "cls_s1", "cls3", "cls3_s1"))
+    res["holdout"] = holdout_eval(("cls", "cls_s1", a.tag, f"{a.tag}_s1"))
     res["holdout_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
     out_p.write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
     print(json.dumps(res["holdout"], ensure_ascii=False, indent=1))
