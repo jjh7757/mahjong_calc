@@ -74,6 +74,8 @@ flutter:
   # 패 그림(CC0, 출처는 assets/tiles/LICENSE.md)
   assets:
     - assets/tiles/
+    # 패 단위 구역표(8b, lib/table/table_frame.dart · experiments/zone_points/table_frame.py 가 같이 읽음)
+    - assets/table_frame/zones.json
     # 결과 음성(Gemini TTS 로 만든 mp3, tool/make_voice.py). 목소리마다 폴더(voiceChoices 와 같게)
     - assets/voice/Kore/
     - assets/voice/Zephyr/

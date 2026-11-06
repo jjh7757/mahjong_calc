@@ -2,6 +2,12 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-06 저녁 추가: 개선 계획 8b-2 — 패 단위 구역표 JSON + Dart·Python 로더 (metrics 표 1-103, 브랜치 `claude/8b-zone-table-2c0f98`, push 안 함)
+
+- 구역표 `assets/table_frame/zones.json`: 규칙 몫 `rules`(탁자 무관)와 기종 프로필 `profiles.amos`(패산/기기 3.85·뒷면 → u 0.87)를 나눴고, 값은 8b-1(`wall_frame.py`, 표 1-101) 상수 그대로. 기준점 `TableFrame` + 구역 `TableZones` 를 앱 `lib/table/table_frame.dart` 와 `experiments/zone_points/table_frame.py`(표준 라이브러리만, 서버 `app/` 로 옮길 것)가 같은 파일로 계산한다.
+- 예제 `test/fixtures/table_frame.json`(19사례·상자 532)을 `flutter test test/table_frame_test.dart`·`table_frame.py --test` 가 둘 다 통과. 새 로더로 8b-1 재채점(`table_frame_score.py`): 판정 차이 0, 틀린 수 개발 10·테스트 7·색 바꾼 7 그대로, 표시패 제 칸(가운데 ∪ 왕패 칸) 26/26 ≥ 19 — 왕패 칸이 손패와 겹쳐(57%) 구분은 역할 모델 몫.
+- 격자·거치 화면·서버 코드는 무변경. 다음은 3번(서버 `WALL_FRAME=1`): 로더를 `app/` 로 옮기고 기준점 잡기 + 구역표 자르기, 답 동일 비교. 8b-1 산출물(`wall_frame.py`·표 1-101)은 본 체크아웃에서 커밋 전이라 이 브랜치엔 없다(재채점은 그 폴더를 읽기만).
+
 ## 2026-11-06 오후 추가: 개선 계획 7-2 — 장면 합성 사전학습, 미채택 (metrics 표 1-97 기준·1-98 결과, `docs/improvement_plan_1105.md` 7-2 진행 줄)
 
 - **무엇:** `experiments/tile_classifier/scene_synth.py` 로 실제 패·뒷면 크롭과 펠트 조각을 마작 규칙대로 놓고 카메라로 찍은 것처럼 합성(시험용 색 없음, 나눔마다 홀드아웃 사진 재료를 뺀 풀). 검출기 9회차 `det_r9_*`(캐글 `det_kernel_r9/`, 합성 8,000장 6에폭 → 8회차와 같은 미세 조정)·분류기 `cls3_*`(`train.py --synth-pre`, 합성 크롭 2.3만 2에폭 → 운영과 같은 미세 조정). 모델은 `experiments/tile_classifier/server_bench/models/`(커밋 안 함).

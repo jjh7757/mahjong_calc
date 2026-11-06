@@ -49,3 +49,20 @@ python -I experiments/zone_points/corner_review.py <json> <출력 앞이름> [--
 ```
 
 `labels.json` 을 그대로 넣을 수 있다. `overlay.py` 는 전체 그림, `corner_review.py` 는 점 하나씩 확대한 그림이다.
+
+## 패 단위 구역표와 기준점 로더 (8b-2, 2026-11-06, `docs/metrics.md` 표 1-103)
+
+8b "탁자 독립 격자" 의 구역은 사진 좌표 선 4개가 아니라 **기준점**(가운데 기기 가운데·방향 θ·패 한 장 짧은 변 u·기기 반폭 D)과 **패 단위 구역표**로 만든다. 기준점 찾기는 8b-1 `wall_frame.py`(화료 = 기기, 배패 = 패산이 올라온 첫 프레임, 표 1-101).
+
+- 구역표 `assets/table_frame/zones.json` — `rules`(규칙 몫, 탁자 무관: 바람개비 자리·가운데 R = D + 6u, 손패 띠 ±8u·깊이 6u, 울기 모서리, 강, 리치봉 상자·띠, 왕패 칸 8~13u, 표시패 탐색 칸, 거치 이동 1u·3°)과 `profiles.amos`(기종 값: 패산/기기 3.85, 뒷면 → u 0.87). 기종이 바뀌면 프로필만 더한다. 값은 8b-1 상수 그대로.
+- 로더 두 벌이 같은 파일을 읽는다: 앱 `lib/table/table_frame.dart`, 서버용 `table_frame.py`(표준 라이브러리만 — 서버 `app/` 로 옮길 것). `TableFrame`(JSON 왕복·`scaled_to`·`from_wall`·`moved_from`) → `TableZones(table, frame, W, H)` → `seat/hand/corner/river/stick_strip/dead_wall(side)`·`center/device/sticks/dora_search(except)` = `RotRect`(네 점·`angle_deg`·`bbox`·`norm`), `zone_of(x, y)`(바람개비 칸), `inside(name, side, x, y)`.
+- 같은 답 확인: 예제 `test/fixtures/table_frame.json`(실제 기준점 10 + 손 경계 사례 9, 상자 532). 구역표나 로더를 고치면 `--make-fixture` 로 기대 출력을 다시 만들고 둘 다 돌린다.
+
+```
+python -I -X utf8 experiments/zone_points/table_frame.py --test          # Python
+flutter test test/table_frame_test.dart                                   # Dart(같은 예제)
+python -I -X utf8 experiments/zone_points/table_frame.py --make-fixture  # 기대 출력 다시 만들기(wall_frame.json 필요)
+python -I -X utf8 experiments/zone_points/table_frame_score.py           # 8b-1 채점을 새 로더로(wall_frame.py·결과·라벨 필요)
+```
+
+재채점 결과(표 1-103): 점마다 판정이 8b-1 과 같고(차이 0) 틀린 수 개발 10·테스트 7·색 바꾼 7 그대로, 표시패 제 칸(가운데 ∪ 왕패 칸) 26/26. 왕패 칸은 손패와 겹쳐(개발 손패 57%) 표시패/손패 구분은 역할 모델 몫이다. `wall_frame.py` 가 이 폴더에 없으면 `WALL_FRAME_DIR`(기본 본 체크아웃)에서 읽기만 한다.
