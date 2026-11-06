@@ -17,12 +17,18 @@ import 'package:image/image.dart' as img;
 ///   조작 기기가 테이블 화면 배경으로 몇 초마다 받는다(기본 긴 변 960). `w` 를 주면 그 긴 변까지(프레임 원 크기가 상한),
 ///   판 상태 추적이 울기 모서리를 읽을 때 쓴다. 응답 헤더 `X-Frame-Size: WxH` 는 줄이기 전 프레임 크기(해상도 게이트 측정용).
 ///   헤드가 미리보기를 못 주면 404.
-/// - `GET /status`  → 토큰 없이(또는 틀리면) `{"ok":true,"auth":false}` 만(살아 있는지 확인용).
-///   맞는 토큰이면 `{"ok":true,"auth":true,"captures":N,"last_capture":"<iso>"|null}`.
+/// - `GET /status`  → 토큰 없이(또는 틀리면) `{"ok":true,"auth":false,"head":"mahjongcam","pair":bool}` 만
+///   (살아 있는지·버튼 연결을 받는지 확인용, [discoverCameraHeads] 가 이걸로 헤드를 찾는다).
+///   맞는 토큰이면 `{"ok":true,"auth":true,"head":"mahjongcam","pair":bool,"captures":N,"last_capture":"<iso>"|null}`.
+/// - `GET /pair` → [allowPair] 가 켜져 있으면 `{"ok":true,"token":"..."}`, 꺼져 있으면 403 `{"ok":false,"error":"pair"}`.
+///   QR 없이 버튼으로 연결할 때(테스트용). 같은 Wi-Fi 의 누구나 토큰을 받아 가므로 헤드 화면 토글로만 켠다.
 class CameraHeadServer {
   static const int defaultPort = 8765;
   static const String tokenHeader = 'X-Head-Token';
   static const String frameSizeHeader = 'X-Frame-Size';
+
+  /// `/status` 의 `head` 값. 같은 포트의 다른 서비스와 헤드를 가른다.
+  static const String headId = 'mahjongcam';
 
   /// 실제로 사진을 찍는 함수. 카메라가 준비되지 않았으면 던진다.
   final Future<Uint8List> Function() capture;
@@ -39,6 +45,9 @@ class CameraHeadServer {
   /// 조작 기기가 보내야 하는 토큰. 바꾸면 다음 요청부터 새 토큰만 받는다(재발급).
   String token;
 
+  /// 켜져 있으면 `/pair` 가 토큰 없이 토큰을 내준다(버튼 연결). 헤드 화면의 토글.
+  bool allowPair;
+
   HttpServer? _server;
   Future<void> _chain = Future<void>.value();
   int captureCount = 0;
@@ -52,6 +61,7 @@ class CameraHeadServer {
     this.preview,
     this.onChanged,
     this.headers,
+    this.allowPair = false,
   });
 
   bool get isRunning => _server != null;
@@ -130,6 +140,14 @@ class CameraHeadServer {
             res.headers.set(frameSizeHeader, '${frame.frameWidth}x${frame.frameHeight}');
             res.contentLength = frame.jpeg.length;
             res.add(frame.jpeg);
+          case '/pair':
+            res.headers.contentType = ContentType.json;
+            if (!allowPair) {
+              res.statusCode = HttpStatus.forbidden;
+              res.write(jsonEncode({'ok': false, 'error': 'pair'}));
+              break;
+            }
+            res.write(jsonEncode({'ok': true, 'token': token}));
           case '/':
           case '/status':
             res.headers.contentType = ContentType.json;
@@ -137,10 +155,12 @@ class CameraHeadServer {
                 ? {
                     'ok': true,
                     'auth': true,
+                    'head': headId,
+                    'pair': allowPair,
                     'captures': captureCount,
                     'last_capture': lastCaptureAt?.toIso8601String(),
                   }
-                : {'ok': true, 'auth': false}));
+                : {'ok': true, 'auth': false, 'head': headId, 'pair': allowPair}));
           default:
             res.statusCode = HttpStatus.notFound;
         }
@@ -243,6 +263,110 @@ Future<List<String>> localIPv4Addresses() async {
   }
 }
 
+/// 사설 IPv4 인가(10/8, 172.16/12, 192.168/16). 헤드 찾기는 이 대역만 훑는다.
+bool isPrivateIPv4(String ip) {
+  final p = ip.split('.').map(int.tryParse).toList();
+  if (p.length != 4 || p.any((x) => x == null || x < 0 || x > 255)) return false;
+  final a = p[0]!, b = p[1]!;
+  return a == 10 || (a == 172 && b >= 16 && b <= 31) || (a == 192 && b == 168);
+}
+
+/// [localAddresses](이 기기 IPv4, Wi-Fi 먼저)의 /24 대역에서 헤드 후보 주소(.1~.254, 자기 자신 제외).
+/// 사설 대역만, 앞에서부터 [maxSubnets] 개 대역까지. 자기 주소 가까운 쪽을 먼저 둔다(공유기가 붙여 준 번호가 비슷한 경우가 많다).
+List<String> subnetHosts(List<String> localAddresses, {int maxSubnets = 2}) {
+  final selves = localAddresses.toSet();
+  final out = <String>[];
+  final seen = <String>{};
+  final subnets = <String>[];
+  for (final ip in localAddresses) {
+    if (!isPrivateIPv4(ip)) continue;
+    final prefix = ip.substring(0, ip.lastIndexOf('.'));
+    if (subnets.contains(prefix)) continue;
+    if (subnets.length >= maxSubnets) break;
+    subnets.add(prefix);
+    final me = int.parse(ip.substring(ip.lastIndexOf('.') + 1));
+    final order = [for (var i = 1; i <= 254; i++) i]..sort((x, y) => (x - me).abs().compareTo((y - me).abs()));
+    for (final i in order) {
+      final h = '$prefix.$i';
+      if (selves.contains(h) || !seen.add(h)) continue;
+      out.add(h);
+    }
+  }
+  return out;
+}
+
+/// [discoverCameraHeads] 가 찾은 카메라 헤드 하나.
+class FoundHead {
+  /// `http://host:port` 꼴.
+  final String baseUrl;
+
+  /// 넘긴 토큰을 헤드가 받아 줬다(이미 연결했던 헤드).
+  final bool authorized;
+
+  /// 헤드가 버튼 연결(`/pair`)을 허용한다.
+  final bool pairable;
+  const FoundHead(this.baseUrl, {this.authorized = false, this.pairable = false});
+
+  @override
+  String toString() => 'FoundHead($baseUrl, auth: $authorized, pair: $pairable)';
+}
+
+/// 같은 Wi-Fi 의 카메라 헤드를 찾는다: [hosts] 의 [port] 에 TCP 로 붙어 보고(빠르게 거름), 열린 곳만 `/status` 를 묻는다.
+/// [token] 을 주면 그 토큰을 받아 주는 헤드에 [FoundHead.authorized] 를 단다. 받아 주는 헤드 → 버튼 연결 허용 → 나머지 순.
+/// 254곳을 [concurrency] 개씩 동시에 물어 보통 1~2초 걸린다.
+Future<List<FoundHead>> discoverCameraHeads({
+  required Iterable<String> hosts,
+  int port = CameraHeadServer.defaultPort,
+  String? token,
+  Duration connectTimeout = const Duration(milliseconds: 700),
+  Duration statusTimeout = const Duration(seconds: 2),
+  int concurrency = 64,
+}) async {
+  final queue = hosts.toList();
+  final found = <FoundHead>[];
+  var next = 0;
+  final client = http.Client();
+  Future<void> probe(String host) async {
+    try {
+      final s = await Socket.connect(host, port, timeout: connectTimeout);
+      s.destroy();
+    } catch (_) {
+      return;
+    }
+    final base = 'http://$host:$port';
+    try {
+      final r = await client
+          .get(
+            Uri.parse('$base/status'),
+            headers: token == null ? null : {CameraHeadServer.tokenHeader: token},
+          )
+          .timeout(statusTimeout);
+      if (r.statusCode != 200) return;
+      final m = jsonDecode(r.body);
+      if (m is! Map || m['ok'] != true) return;
+      // 예전 헤드 앱은 `head` 없이 {"ok":true,"auth":...} 만 준다.
+      final isHead = m['head'] == CameraHeadServer.headId || (m['head'] == null && m['auth'] is bool);
+      if (!isHead) return;
+      found.add(FoundHead(base, authorized: m['auth'] == true, pairable: m['pair'] == true));
+    } catch (_) {}
+  }
+
+  Future<void> worker() async {
+    while (next < queue.length) {
+      await probe(queue[next++]);
+    }
+  }
+
+  try {
+    await Future.wait([for (var i = 0; i < concurrency && i < queue.length; i++) worker()]);
+  } finally {
+    client.close();
+  }
+  int rank(FoundHead h) => h.authorized ? 0 : (h.pairable ? 1 : 2);
+  found.sort((a, b) => rank(a).compareTo(rank(b)));
+  return found;
+}
+
 /// 헤드가 만든 미리보기 한 장: 줄인 JPEG 와 줄이기 전 프레임 크기.
 class PreviewFrame {
   final Uint8List jpeg;
@@ -282,7 +406,19 @@ class RemoteCameraException implements Exception {
 
   /// 헤드가 그 기능이 없다(404, 예전 헤드 앱의 `/preview`). 다시 묻지 않는다.
   final bool unsupported;
-  const RemoteCameraException(this.message, {this.unauthorized = false, this.unsupported = false});
+
+  /// 주소로 닿지 않았다(연결 거부·시간 초과). 헤드 IP 가 바뀌었을 수 있어 [discoverCameraHeads] 로 다시 찾을 만하다.
+  final bool unreachable;
+
+  /// `/pair` 가 꺼져 있다(헤드 화면의 "버튼 연결 허용" 이 꺼짐).
+  final bool pairOff;
+  const RemoteCameraException(
+    this.message, {
+    this.unauthorized = false,
+    this.unsupported = false,
+    this.unreachable = false,
+    this.pairOff = false,
+  });
   @override
   String toString() => message;
 }
@@ -368,6 +504,35 @@ class RemoteCamera {
     return m;
   }
 
+  /// 버튼 연결: 헤드가 허용했으면 토큰을 받아 온다(토큰 없이 부른다). 꺼져 있으면 `pairOff`.
+  Future<String> pair() async {
+    final http.Response r;
+    try {
+      r = await _http.get(Uri.parse('$baseUrl/pair')).timeout(timeout);
+    } on SocketException {
+      throw RemoteCameraException('카메라 기기($baseUrl)에 연결할 수 없습니다.', unreachable: true);
+    } on TimeoutException {
+      throw RemoteCameraException('카메라 기기가 ${timeout.inSeconds}초 안에 응답하지 않습니다.', unreachable: true);
+    } on http.ClientException catch (e) {
+      throw RemoteCameraException('카메라 기기 연결 오류: ${e.message}', unreachable: true);
+    }
+    if (r.statusCode == HttpStatus.forbidden) {
+      throw const RemoteCameraException(
+        '카메라 헤드의 "버튼 연결 허용" 이 꺼져 있습니다. 헤드 화면 오른쪽 위 고리 아이콘을 켜거나 QR 을 스캔하세요.',
+        pairOff: true,
+      );
+    }
+    if (r.statusCode == HttpStatus.notFound) {
+      throw const RemoteCameraException('카메라 헤드 앱이 예전 버전이라 버튼 연결을 못 합니다. QR 을 스캔하세요.', unsupported: true);
+    }
+    try {
+      final m = jsonDecode(r.body) as Map<String, dynamic>;
+      final t = m['token'];
+      if (r.statusCode == 200 && t is String && t.isNotEmpty) return t;
+    } catch (_) {}
+    throw RemoteCameraException('카메라 기기 오류 (HTTP ${r.statusCode})');
+  }
+
   Future<http.Response> _get(String path) async {
     final http.Response r;
     try {
@@ -379,11 +544,14 @@ class RemoteCamera {
           )
           .timeout(timeout);
     } on SocketException {
-      throw RemoteCameraException('카메라 기기($baseUrl)에 연결할 수 없습니다. 같은 Wi-Fi 인지, 카메라 헤드 화면이 켜져 있는지 확인하세요.');
+      throw RemoteCameraException(
+        '카메라 기기($baseUrl)에 연결할 수 없습니다. 같은 Wi-Fi 인지, 카메라 헤드 화면이 켜져 있는지 확인하세요.',
+        unreachable: true,
+      );
     } on TimeoutException {
-      throw RemoteCameraException('카메라 기기가 ${timeout.inSeconds}초 안에 응답하지 않습니다.');
+      throw RemoteCameraException('카메라 기기가 ${timeout.inSeconds}초 안에 응답하지 않습니다.', unreachable: true);
     } on http.ClientException catch (e) {
-      throw RemoteCameraException('카메라 기기 연결 오류: ${e.message}');
+      throw RemoteCameraException('카메라 기기 연결 오류: ${e.message}', unreachable: true);
     }
     if (r.statusCode == 200) return r;
     if (r.statusCode == HttpStatus.unauthorized) {

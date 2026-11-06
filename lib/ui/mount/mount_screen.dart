@@ -84,7 +84,8 @@ const ImageOps _isolateOps = ImageOps(
 /// 사진 출처는 둘 중 하나다.
 /// - 이 기기의 카메라(기본).
 /// - 원격 카메라: 같은 Wi-Fi 의 다른 기기가 "카메라 헤드" 화면을 켜 두면 그 주소에서 받아 온다
-///   (메뉴 "카메라 헤드 QR 스캔" 또는 "원격 카메라 주소", 주소·토큰은 기기에 저장).
+///   (메뉴 "카메라 헤드 찾기"(QR 없이, 헤드가 버튼 연결을 허용할 때)·"카메라 헤드 QR 스캔"·"원격 카메라 주소",
+///   주소·토큰은 기기에 저장). 저장한 주소로 안 닿으면 같은 Wi-Fi 를 훑어 헤드의 바뀐 주소를 스스로 찾아 간다.
 ///   이때 이 기기는 화면·조작만 맡는다.
 class MountScreen extends StatefulWidget {
   final HandEditor editor;
@@ -158,6 +159,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
   /// 헤드가 미리보기를 못 주거나(예전 앱) 토큰을 거절하면 더 묻지 않는다. 주소를 바꾸면 다시 시도.
   bool _bgStopped = false;
+
+  /// 헤드 찾기(같은 Wi-Fi 훑기)가 도는 중인지, 마지막 자동 찾기 시각(끊겼을 때 30초에 한 번만).
+  bool _findingHead = false;
+  DateTime? _lastAutoFind;
 
   /// 마지막 헤드 미리보기 오류(없으면 연결됨). 테이블 화면 "헤드" 버튼이 빨강/초록으로 보여 주고, 누르면 다시 붙거나 QR 스캔.
   String? _headError;
@@ -348,6 +353,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       // 예전 헤드 앱(404)이나 토큰 거절이면 그만 묻는다. 연결 오류는 다음 차례에 다시.
       if (e.unsupported || e.unauthorized) _bgStopped = true;
       if (mounted) setState(() => _headError = e.message);
+      // 헤드 IP 가 바뀌었거나(안 닿음) 헤드 토큰이 바뀌었으면(거절) 같은 Wi-Fi 를 훑어 다시 붙어 본다.
+      if (e.unreachable || e.unauthorized) _maybeAutoFind();
     } catch (e) {
       if (mounted) setState(() => _headError = '연결 안 됨 ($e)');
     } finally {
@@ -452,6 +459,99 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     if (!await _setRemoteUrl(link.baseUrl, token: link.token)) return;
     await _checkRemote();
   }
+
+  /// 끊겼을 때 조용히 헤드를 다시 찾는다(30초에 한 번까지).
+  void _maybeAutoFind() {
+    final now = DateTime.now();
+    final last = _lastAutoFind;
+    if (_findingHead || (last != null && now.difference(last) < const Duration(seconds: 30))) return;
+    _lastAutoFind = now;
+    unawaited(_findHead(silent: true));
+  }
+
+  /// QR 없이 같은 Wi-Fi 의 /24 대역을 훑어 카메라 헤드를 찾아 붙는다. 붙었으면 true.
+  /// - 저장한 토큰을 받아 주는 헤드가 있으면 그 토큰 그대로(주소만 바뀐 경우).
+  /// - 없으면 "버튼 연결 허용" 을 켠 헤드에서 `/pair` 로 토큰을 받는다. 여럿이면 고르게 한다.
+  /// [silent](끊겼을 때 자동)면 안내 없이, 지금 토큰을 받아 주는 헤드 하나나 지금 주소의 헤드만 다시 붙는다
+  /// (다른 탁자의 헤드로 몰래 갈아타지 않게).
+  Future<bool> _findHead({bool silent = false}) async {
+    if (_findingHead) return false;
+    _findingHead = true;
+    try {
+      final hosts = subnetHosts(await localIPv4Addresses());
+      if (hosts.isEmpty) {
+        if (!silent) _toast('Wi-Fi 에 연결되어 있지 않아 카메라 헤드를 찾을 수 없습니다.');
+        return false;
+      }
+      if (!silent) _toast('같은 Wi-Fi 에서 카메라 헤드를 찾는 중…');
+      final found = await discoverCameraHeads(hosts: hosts, token: _remoteToken);
+      if (!mounted) return false;
+      final current = _remoteUrl;
+      final usable = found.where((h) => h.authorized || h.pairable).toList();
+      FoundHead? pick;
+      if (silent) {
+        final authed = usable.where((h) => h.authorized).toList();
+        if (authed.length == 1) {
+          pick = authed.first;
+        } else if (authed.isEmpty) {
+          pick = usable.where((h) => h.baseUrl == current).firstOrNull;
+        }
+        if (pick == null) return false;
+        // 같은 주소에서 토큰도 그대로 받아 주면 잠깐 늦었던 것뿐이다(다시 붙일 것 없음).
+        if (pick.authorized && pick.baseUrl == current) return true;
+      } else if (usable.isEmpty) {
+        _toastScan(found.isEmpty
+            ? '카메라 헤드를 찾지 못했습니다. 헤드 화면이 켜져 있고 같은 Wi-Fi 인지 확인하세요.'
+            : '카메라 헤드(${found.map((h) => h.baseUrl).join(', ')})는 찾았지만 버튼 연결이 꺼져 있습니다. '
+                '헤드 화면 오른쪽 위 고리 아이콘을 켜거나 QR 을 스캔하세요.');
+        return false;
+      } else if (usable.length == 1) {
+        pick = usable.first;
+      } else {
+        pick = await _chooseHead(usable);
+        if (pick == null || !mounted) return false;
+      }
+      var token = pick.authorized ? _remoteToken : null;
+      if (token == null) {
+        final cam = RemoteCamera(pick.baseUrl, timeout: const Duration(seconds: 4));
+        try {
+          token = await cam.pair();
+        } on RemoteCameraException catch (e) {
+          if (!silent) _toastScan(e.message);
+          return false;
+        } finally {
+          cam.close();
+        }
+      }
+      if (!mounted || !await _setRemoteUrl(pick.baseUrl, token: token)) return false;
+      if (silent) {
+        _toast(current == pick.baseUrl
+            ? '카메라 헤드에 다시 연결했습니다 (토큰 새로 받음)'
+            : '카메라 헤드 주소가 바뀌어 다시 연결했습니다 ($current → ${pick.baseUrl})');
+      } else {
+        await _checkRemote();
+      }
+      return true;
+    } finally {
+      _findingHead = false;
+    }
+  }
+
+  /// 찾은 헤드가 여럿이면 고른다. 이미 연결했던 헤드(토큰이 맞음)에 표시를 단다.
+  Future<FoundHead?> _chooseHead(List<FoundHead> heads) => showDialog<FoundHead>(
+        context: context,
+        builder: (ctx) => SimpleDialog(
+          title: const Text('카메라 헤드 고르기'),
+          children: [
+            for (final h in heads)
+              SimpleDialogOption(
+                key: ValueKey('found-head-${h.baseUrl}'),
+                onPressed: () => Navigator.pop(ctx, h),
+                child: Text('${h.baseUrl}${h.authorized ? '  (연결했던 헤드)' : ''}${h.baseUrl == _remoteUrl ? '  · 지금 주소' : ''}'),
+              ),
+          ],
+        ),
+      );
 
   /// 저장한 원격 카메라에 /status 로 붙어 보고 결과를 알린다(찍지는 않는다).
   Future<void> _checkRemote() async {
@@ -581,6 +681,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       } else {
         _toast(e.message, long: true);
       }
+      if (e.unreachable || e.unauthorized) _maybeAutoFind();
       return;
     } finally {
       cam.close();
@@ -1029,9 +1130,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     if (url == null) {
       return TextButton.icon(
         key: const ValueKey('table-head'),
-        onPressed: _busy ? null : _scanQr,
-        icon: const Icon(Icons.qr_code_scanner, size: 16),
-        label: const Text('헤드 QR'),
+        onPressed: _busy || _findingHead ? null : _findHead,
+        onLongPress: _busy ? null : _scanQr,
+        icon: const Icon(Icons.wifi_find, size: 16),
+        label: const Text('헤드 찾기'),
       );
     }
     final ok = _headError == null && _bgTimer != null && !_bgStopped;
@@ -1046,8 +1148,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                 _toast('카메라 헤드 연결됨 ($url)');
                 return;
               }
-              // 다시 붙어 본다(토큰 거절·옛 헤드로 멈춘 것도 풀고). 안 되면 QR 스캔.
+              // 다시 붙어 본다(토큰 거절·옛 헤드로 멈춘 것도 풀고). 안 되면 같은 Wi-Fi 에서 헤드를 찾고,
+              // 그래도 안 되면 _findHead 가 QR 스캔 버튼이 달린 안내를 띄운다.
               _bgStopped = false;
+              _lastAutoFind = DateTime.now(); // 아래 _tickBg 실패가 조용한 자동 찾기를 먼저 돌리지 않게
               setState(() => _headError = null);
               _startBg();
               await _tickBg();
@@ -1055,15 +1159,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               if (_headError == null) {
                 _toast('카메라 헤드에 다시 연결했습니다');
               } else {
-                final m = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
-                m.showSnackBar(
-                  SnackBar(
-                    content: Text('헤드 연결 실패: $_headError'),
-                    duration: const Duration(seconds: 10),
-                    persist: false,
-                    action: SnackBarAction(label: 'QR 스캔', onPressed: _scanQr),
-                  ),
-                );
+                await _findHead();
               }
             },
       icon: Icon(ok ? Icons.videocam : Icons.videocam_off, size: 16),
@@ -2049,6 +2145,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     await _askRemoteUrl();
                   } else if (v == 'scan') {
                     await _scanQr();
+                  } else if (v == 'findHead') {
+                    await _findHead();
                   } else if (v == 'height') {
                     await _askHeight();
                   } else if (v == 'grid') {
@@ -2152,6 +2250,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     key: const ValueKey('mount-height-menu'),
                     value: 'height',
                     child: Text(_heightCm == null ? '거치 높이…' : '거치 높이: ${_heightCm}cm'),
+                  ),
+                  const PopupMenuItem(
+                    key: ValueKey('mount-find-head-menu'),
+                    value: 'findHead',
+                    child: Text('카메라 헤드 찾기 (QR 없이)'),
                   ),
                   const PopupMenuItem(key: ValueKey('mount-scan-menu'), value: 'scan', child: Text('카메라 헤드 QR 스캔')),
                   PopupMenuItem(

@@ -17,6 +17,10 @@ import '../../services/screen_wake.dart';
 /// QR 에는 주소와 토큰이 들어 있다. 토큰은 기기에 저장해 다시 열어도 같고(한 번 스캔하면 끝),
 /// 오른쪽 위 "새 QR" 로 바꾸면 이전에 스캔한 기기는 더 이상 찍을 수 없다.
 ///
+/// 테스트용 버튼 연결: 오른쪽 위 고리 아이콘으로 "버튼 연결 허용" 을 켜면, 조작 기기의 "카메라 헤드 찾기" 가
+/// 같은 Wi-Fi 를 훑어 이 헤드를 찾고 `/pair` 로 토큰까지 받아 간다(QR 없이). 켠 상태는 기기에 저장된다.
+/// 같은 Wi-Fi 의 누구나 토큰을 받을 수 있으므로 기본은 꺼짐.
+///
 /// 카메라는 camera 플러그인이 아니라 전용 [HeadCamera](Android, 셔터 없이 미리보기 + 12MP YUV 스트림)다.
 /// `/capture` 와 `/preview` 모두 스트림의 최신 프레임에서 JPEG 를 만든다 — 셔터음이 없고, 미리보기도 촬영과 같은
 /// 해상도까지 줄 수 있다(판 상태 추적의 울기 모서리 읽기용, NOTES 32). 줌은 둘 다에 적용된다.
@@ -30,6 +34,7 @@ class CameraHeadScreen extends StatefulWidget {
 class _CameraHeadScreenState extends State<CameraHeadScreen> {
   static const String zoomPref = 'cameraHead.zoom';
   static const String tokenPref = 'cameraHead.token';
+  static const String allowPairPref = 'cameraHead.allowPair';
   static const List<double> zoomSteps = [1, 1.5, 2, 3, 4];
 
   HeadCamera? _cam;
@@ -86,7 +91,25 @@ class _CameraHeadScreenState extends State<CameraHeadScreen> {
       } else {
         await p.setString(tokenPref, _server.token);
       }
+      _server.allowPair = p.getBool(allowPairPref) ?? false;
     } catch (_) {}
+  }
+
+  /// 버튼 연결(토큰 없이 `/pair` 로 토큰 내주기)을 켜고 끈다.
+  Future<void> _toggleAllowPair() async {
+    final next = !_server.allowPair;
+    setState(() => _server.allowPair = next);
+    try {
+      await (await SharedPreferences.getInstance()).setBool(allowPairPref, next);
+    } catch (_) {}
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(next
+            ? '버튼 연결 허용: 조작 기기의 "카메라 헤드 찾기" 로 QR 없이 연결됩니다.'
+            : '버튼 연결 끔: 새 기기는 QR 로만 연결합니다(이미 연결된 기기는 그대로).'),
+      ));
   }
 
   /// 토큰을 바꾼다. 이전 QR 로 연결한 기기는 다시 스캔해야 한다.
@@ -251,6 +274,13 @@ class _CameraHeadScreenState extends State<CameraHeadScreen> {
         title: const Text('카메라 헤드'),
         actions: [
           IconButton(
+            key: const ValueKey('head-allow-pair'),
+            tooltip: _server.allowPair ? '버튼 연결 허용 중 (끄기)' : '버튼 연결 허용 (QR 없이)',
+            icon: Icon(_server.allowPair ? Icons.link : Icons.link_off),
+            color: _server.allowPair ? Colors.lightGreenAccent : null,
+            onPressed: _toggleAllowPair,
+          ),
+          IconButton(
             key: const ValueKey('head-new-token'),
             tooltip: '새 QR (토큰 재발급)',
             icon: const Icon(Icons.autorenew),
@@ -293,6 +323,7 @@ class _CameraHeadScreenState extends State<CameraHeadScreen> {
                       running: _server.isRunning,
                       urls: urls,
                       qr: qr,
+                      allowPair: _server.allowPair,
                       status: _status(),
                     ),
                   ),
@@ -379,12 +410,14 @@ class _InfoPanel extends StatelessWidget {
 
   /// 조작 기기가 스캔할 QR 문자열(첫 번째 주소 + 토큰). 주소가 없으면 null.
   final String? qr;
+  final bool allowPair;
   final String status;
   const _InfoPanel({
     required this.serverError,
     required this.running,
     required this.urls,
     required this.qr,
+    required this.allowPair,
     required this.status,
   });
 
@@ -406,6 +439,13 @@ class _InfoPanel extends StatelessWidget {
             Text(
               '조작 기기의 거치 촬영 → 더보기 → "카메라 헤드 QR 스캔" 으로 이 QR 을 찍으세요.',
               style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white),
+            ),
+            Text(
+              allowPair
+                  ? '버튼 연결 허용 중: 조작 기기의 더보기 → "카메라 헤드 찾기" 로 QR 없이 연결됩니다.'
+                  : '버튼 연결 꺼짐(오른쪽 위 고리 아이콘으로 켜면 QR 없이 "카메라 헤드 찾기" 로 연결).',
+              key: const ValueKey('head-pair-state'),
+              style: white?.copyWith(color: allowPair ? Colors.lightGreenAccent : null),
             ),
             Text('직접 적을 때(원격 카메라 주소):', style: white),
             for (final u in urls)

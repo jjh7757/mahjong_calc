@@ -258,7 +258,7 @@ void main() {
 
     test('/status 는 토큰 없이 ok 만, 맞는 토큰이면 촬영 수까지', () async {
       final open = jsonDecode((await http.get(Uri.parse('${url()}/status'))).body);
-      expect(open, {'ok': true, 'auth': false});
+      expect(open, {'ok': true, 'auth': false, 'head': 'mahjongcam', 'pair': false});
       final authed = jsonDecode((await http.get(
         Uri.parse('${url()}/status'),
         headers: {'X-Head-Token': _tok},
@@ -313,9 +313,56 @@ void main() {
           (e) => e.message,
           'message',
           contains('연결할 수 없습니다'),
-        )),
+        ).having((e) => e.unreachable, 'unreachable', isTrue)),
       );
       cam.close();
+    });
+
+    test('/pair 는 버튼 연결이 꺼져 있으면 403(pairOff), 켜면 토큰을 준다', () async {
+      final cam = RemoteCamera(url());
+      await expectLater(
+        cam.pair(),
+        throwsA(isA<RemoteCameraException>().having((e) => e.pairOff, 'pairOff', isTrue)),
+      );
+      server.allowPair = true;
+      expect(jsonDecode((await http.get(Uri.parse('${url()}/status'))).body)['pair'], true);
+      final t = await cam.pair();
+      expect(t, _tok);
+      cam.close();
+      final paired = RemoteCamera(url(), token: t);
+      expect((await paired.capture()).bytes, _jpeg);
+      paired.close();
+    });
+
+    test('discoverCameraHeads: 열린 헤드만 찾고, 토큰이 맞으면 authorized·버튼 연결이면 pairable', () async {
+      // 같은 주소의 꺼진 포트(헤드 없음)는 건너뛴다.
+      final dead = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final deadPort = dead.port;
+      await dead.close();
+      expect(await discoverCameraHeads(hosts: ['127.0.0.1'], port: deadPort), isEmpty);
+
+      var found = await discoverCameraHeads(hosts: ['127.0.0.1'], port: server.port);
+      expect(found.map((h) => h.baseUrl), [url()]);
+      expect(found.single.authorized, isFalse);
+      expect(found.single.pairable, isFalse);
+
+      server.allowPair = true;
+      found = await discoverCameraHeads(hosts: ['127.0.0.1'], port: server.port, token: _tok);
+      expect(found.single.authorized, isTrue);
+      expect(found.single.pairable, isTrue);
+      found = await discoverCameraHeads(hosts: ['127.0.0.1'], port: server.port, token: 'wrong');
+      expect(found.single.authorized, isFalse);
+    });
+
+    test('discoverCameraHeads: 같은 포트의 다른 HTTP 서버는 헤드로 치지 않는다', () async {
+      final other = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      other.listen((req) {
+        req.response.headers.contentType = ContentType.json;
+        req.response.write(jsonEncode({'ok': true, 'name': 'something else'}));
+        req.response.close();
+      });
+      expect(await discoverCameraHeads(hosts: ['127.0.0.1'], port: other.port), isEmpty);
+      await other.close(force: true);
     });
 
     test('응답이 느리면 시간 초과 메시지', () async {
@@ -338,6 +385,32 @@ void main() {
       );
       cam.close();
       await slow.stop();
+    });
+  });
+
+  group('subnetHosts', () {
+    test('같은 /24 의 .1~.254 에서 자기 주소를 빼고, 가까운 번호부터', () {
+      final h = subnetHosts(['192.168.0.10']);
+      expect(h.length, 253);
+      expect(h, isNot(contains('192.168.0.10')));
+      expect(h.take(2).toSet(), {'192.168.0.9', '192.168.0.11'});
+      expect(h.toSet().length, 253);
+      expect(h, containsAll(['192.168.0.1', '192.168.0.254']));
+    });
+    test('사설 대역이 아니면 훑지 않고, 대역은 앞에서 maxSubnets 개까지', () {
+      expect(subnetHosts(['8.8.8.8', '100.64.0.2']), isEmpty);
+      final two = subnetHosts(['10.0.0.5', '172.20.1.2', '192.168.1.3']);
+      expect(two.length, 253 * 2);
+      expect(two.any((x) => x.startsWith('192.168.1.')), isFalse);
+      expect(subnetHosts(['10.0.0.5', '10.0.0.6']).length, 252); // 같은 대역 두 주소(둘 다 빠짐)
+    });
+    test('isPrivateIPv4', () {
+      expect(isPrivateIPv4('10.1.2.3'), isTrue);
+      expect(isPrivateIPv4('172.16.0.1'), isTrue);
+      expect(isPrivateIPv4('172.32.0.1'), isFalse);
+      expect(isPrivateIPv4('192.168.255.1'), isTrue);
+      expect(isPrivateIPv4('192.169.0.1'), isFalse);
+      expect(isPrivateIPv4('abc'), isFalse);
     });
   });
 
