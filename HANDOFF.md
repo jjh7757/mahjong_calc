@@ -2,6 +2,44 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 배포 준비(2026-11-07) — 서버 master 를 로컬에서 합쳐 둠, **push·배포는 사용자가** (metrics 표 1-113)
+
+- **서버 상태:** `C:\Users\jjh7757\dev\mahjong-recognizer` master = **08e44b0**(로컬, origin/master·운영 = f33d632). `feat/table-frame` 을 빨리 감기로 합침 — 들어간 커밋 15개: 6b7c2cb(분류기 2순위 alt·conf2) · c4484dd(불확실성 신호 6종) · b0c9a39(WALL_FRAME axis·rot 실험) · b957432(표시패 채점 스크립트) · 599473e(**v2 분류기 기본**) · ed6b4f3(병합) · bc556f6(rot2) · 3816750(README) · 18a54ca(hybrid) · 1fdb079(로그) · 3a79920(README) · b2b4757(grid_src 없음 → 지금 경로) · cecc67a(**WALL_FRAME 기본 hybrid**) · 87af0d8(locallast3 로그) · 08e44b0(README). 충돌 없음, pytest 213 통과. 라우트는 f33d632 와 같은 22개(새 기능은 질의 인자 `grid_src`·`frame`·`sides` 뿐) — 워크플로의 '라우트 확인' 은 그대로 통과할 것.
+- **검사 결과(표 1-113, 같은 시각 로컬 08e44b0 / f33d632, 환경 변수 없이):** 기본값 = 분류기 v2·신호 두 번째 분류기 alt-v2·`WALL_FRAME` hybrid 확인. **옛 앱 요청(`grid_src` 없음)으로 개발 32회 앱 흐름 장면 32/32 답 같음**(둘 다 패 434/436·경고 없는 틀린 자동 0·표시패 14/18), 회귀 `orig` 26장 서버 단독 3번 모두 같음(343/343·unsafe 0). 예상했던 171245 차이(434 → 433)는 이번엔 안 남 — 두 서버 다 '고르면 맞음'. 한 장 시간 0.73 → 0.79초(+0.06, 운영에선 약 +0.2~0.3초 예상), 앱 흐름 2.1 / 2.2 / 2.6 → 2.1 / 2.2 / 2.4초. `grid_src=none` 한 장(133011) → `wall_frame: rot2`, 없음 → `saved`. 앱 `flutter analyze` 이상 없음·`flutter test` 713 통과.
+
+**사용자가 할 순서**
+
+1. **서버 배포:**
+   ```bash
+   git -C C:/Users/jjh7757/dev/mahjong-recognizer push origin master
+   ```
+   → GitHub Actions `deploy`(pytest → arm64 빌드·ECR → SSM `deploy-app` → 운영 `/` 의 `git_sha` 가 **08e44b0…** 인지·`app/main.py` 의 POST 라우트가 운영 `openapi.json` 에 다 있는지)가 초록이면 끝. 손으로 한 번 더: `curl -s https://mahjong.ai-agent-develop.cloud/ | python -c "import json,sys; b=json.load(sys.stdin); print(b['git_sha'], len(b['endpoints']))"` → `08e44b0…  22`.
+2. **운영 앱 흐름 재측정 → metrics "지금 기준값" 갱신:** launch.json `photos`(8040)·`visit-captures`(8042)를 띄우고
+   ```bash
+   LOCAL_ONLY=true ROLES=1 bash experiments/speed/run_prod_flow.sh prod_08e44b0_roles
+   ```
+   → `python -I -X utf8 experiments/speed/flow_visit.py score experiments/speed/results/log_flow_prod_08e44b0_roles_{bcd,visit}.txt` 로 채점, 표 1-87(f33d632: 32회 손패 30/32·완전 맞음 23·경고 없는 틀린 자동 0·5.88 / 6.26 / 9.08초·메모리 최대 1045MB)과 같은 꼴로 새 표 + "지금 기준값" 절 갱신. 측정 앱은 저장 격자라 `grid_src=saved` = 옛 앱(출처 없음)과 같은 경로. 응답 `rss_mb`(운영 리눅스 최대 메모리)를 꼭 본다.
+3. **앱 push·APK:** fix/seat-read-grow 는 로컬에서 `flutter analyze` 이상 없음·`flutter test` 713 통과(표 1-113). **CI(`ci.yml`)는 master push·PR·수동 실행에서만 돈다** — 브랜치 push 만으로는 안 돈다. 확인하려면 push 뒤 `gh workflow run ci.yml --ref fix/seat-read-grow`(이때 APK artifact 도 만듦) 또는 PR. APK 는 **새 서버가 올라간 뒤에**(새 앱의 `grid_src=none` 경로·강 끝 `sides=` 는 옛 서버에서 무시돼 지금 경로로 감 — 위험은 없지만 이득도 없음) "자주 쓰는 명령" 의 `flutter build apk --release --dart-define=RECOGNIZER_API_KEY=<.recognizer_key 내용>` → `adb … install -r …app-release.apk`(**`flutter install` 금지** — 앱 데이터가 지워짐, 메모리 `apk-install-keep-data`).
+4. **매장 체크리스트에 8b-4b 실기기 확인 항목 더하기**(`docs/improvement_plan_1105.md` 8b-4a 진행 줄의 다섯 가지): ① 저장 격자·끌어 맞춤·자동 맞추기·초기값·갤러리 각각 촬영 기록 `grid_src` 가 기대값인지 ② 격자를 저장한 카메라와 지금 카메라가 다를 때(헤드 주소가 바뀐 경우 포함) none 으로 보낼지 ③ 격자 저장 때 기준점 저장·프레임 여러 장 중앙값 거치 이동 감시 ④ '기기·모서리 확인' UI ⑤ 앱 `rectify` 설정을 없앨지. 그리고 8b-4a 조건부 채택의 최종 확정 = 새 매장 사진에서 '펴기 없이 경로의 경고 없는 틀린 자동 ≤ 펴기 경로'.
+
+**되돌리기(운영에서 문제가 보이면)**
+
+- **즉시(재빌드 없이):** 운영 서버 `.env`(TIL `AWS배포환경` 관례상 `/srv/mahjong-recognizer/.env`, SSM 세션으로)에 줄을 더하고 컨테이너를 다시 만든다(`sudo /usr/local/bin/deploy-app mahjong-recognizer <지금 sha>` — compose 가 `.env` 를 다시 읽음).
+  - 탁자 기준점 끄기: `WALL_FRAME=off` (빈 값도 끔. 새 앱이 `grid_src=none` 을 보내도 지금 격자 경로)
+  - 옛 분류기: `LOCAL_CLS_MODEL=/srv/app/app/assets/tile-cls-mnv3s.onnx` (이미지 안 경로, 옛 파일은 지우지 않고 넣어 둠)
+  - 신호용 두 번째 분류기: `LOCAL_ALT_CLS_MODEL=/srv/app/app/assets/tile-cls-alt.onnx`(옛 짝) 또는 신호 전부 끄기 `LOCAL_SIGNALS=0`(두 번째 분류기를 아예 안 올림. 답은 원래 안 바뀜, 메모리·시간만 줄어듦 — 앱 S6 적5 빨강 경고는 안 뜸, V3 후보는 본 분류기 2순위라 그대로)
+  - 셋 다 넣으면 판독 답은 f33d632 와 같은 경로(응답에 `alts`·신호 필드만 남거나 빠짐).
+- **통째로:** f33d632 를 다시 배포 — `git -C C:/Users/jjh7757/dev/mahjong-recognizer push origin f33d632:refs/heads/rollback-f33d632` 뒤 `gh workflow run deploy.yml --repo jjh7757/mahjong-recognizer --ref rollback-f33d632`(워크플로가 그 커밋 sha 로 빌드·확인). master 는 08e44b0 그대로라 다음 master push 때 다시 새 코드가 나간다 — 오래 되돌릴 거면 master 에 `git revert` 커밋.
+
+**알려진 위험**
+
+- **메모리:** 로컬 Windows 측정이라 리눅스 값과 같지 않다(WSL 에 pip 이 없어 못 잼). 조건 맞춘 프로세스 안 26장에서 +7~10MB(alt-v2 5.9MB 몫). 운영 f33d632 응답 `rss_mb` 최대 1045MB(표 1-87) → **약 1.06GB 예상**, 2GB 인스턴스를 다른 앱들과 나눠 씀(아래). 새 앱이 `grid_src=none` 을 보내면 rot2 크롭이 커서 한 장에 +50MB 쯤 더. 배포 뒤 2번 재측정에서 응답 `rss_mb` 를 보고, 늘었으면 `LOCAL_SIGNALS=0`(두 번째 분류기 안 올림)이 첫 손.
+- **답이 바뀌는 곳:** 옛 앱 요청에서는 이번 검사로 0(32/32·26장). 7-2a 에서 v2 분류기로 달라졌던 171245(434 → 433, 경고 있는 후보 고르기)는 지금 앱에서는 옛 서버도 같은 후보 고르기라 차이가 안 남. 새 APK 가 `grid_src=none`(갤러리·기본값 격자·펴기 없이)을 보낼 때만 rot2 로 답이 달라진다(표 1-112: 펴기 없이 155 → 201).
+- **F1400 적5만 → 5만 오독은 그대로**(테스트 15장 경고 없는 틀린 자동 3, 1단계부터 — 이번 배포와 무관, 7단계 몫). 8b-4a 조건부 채택의 최종 확정도 다음 매장 사진 몫.
+- 시간: 서버 단독 한 장 +0.06초(신호 S3 두 번째 분류기 + 기준점 잡기). 운영은 노트북보다 약 4배 느려 localroles 한 번에 약 +0.2~0.3초 예상 — 2번 재측정에서 표 1-87(5.88 / 6.26 / 9.08초)과 비교.
+- 운영 인스턴스(t4g.small 2GB)는 rag-agent-practice(상한 900MB)·kic-alerts(768MB)·virtual-financial-services·공용 Postgres·Redis·Caddy 와 같이 쓴다(TIL `환경정보.md`). mahjong-recognizer 컨테이너의 메모리 상한은 이 저장소들에 기록이 없다 — `/srv/mahjong-recognizer/docker-compose.yml` 의 `limits.memory` 를 배포 전에 한 번 보면 좋다.
+- 측정용으로 만든 것: launch.json `recognizer-deploy-new`(8186, 합친 master, 환경 변수 없음)·`recognizer-deploy-old`(8187, f33d632 worktree `../mahjong-recognizer-deploy-old` — 측정 뒤 지움, 다시 쓰려면 `git -C ../mahjong-recognizer worktree add --detach ../mahjong-recognizer-deploy-old f33d632`). 서버 worktree `../mahjong-recognizer-8b`(`feat/table-frame` 08e44b0)는 그대로 둠 — master 와 같은 커밋.
+
 ## 2026-11-07 아침: 개선 계획 8b-4a — 서버 hybrid 기본 켬 + 앱이 `grid_src` 를 보냄, **미리 적은 기준으로는 미채택(c2 하나), 나머지 충족 — 해석은 계획 세션** (metrics 표 1-111 기준·1-112 결과, `docs/improvement_plan_1105.md` 8b "할 일 4" 진행 줄)
 
 - **서버** `../mahjong-recognizer-8b` `feat/table-frame` b2b4757·cecc67a·87af0d8(push 안 함 = 운영 미반영): hybrid 에서 `grid_src` 없음 → 격자 질의가 없어도 지금 경로, **`WALL_FRAME` 변수가 없으면 hybrid**(끄기 `WALL_FRAME=off` — Windows `set WALL_FRAME=` 는 변수를 지워 기본값이 됨), locallast3 로그 줄. 옛 앱 답 무변경 확인(회귀 `orig`·표시패 개발).

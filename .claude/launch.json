@@ -1548,6 +1548,30 @@
       ],
       "port": 8176,
       "autoPort": false
+    },
+    {
+      "name": "recognizer-deploy-new",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8186",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer"
+      ],
+      "port": 8186
+    },
+    {
+      "name": "recognizer-deploy-old",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8187",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-deploy-old"
+      ],
+      "port": 8187
     }
   ]
 }
