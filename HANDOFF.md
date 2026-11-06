@@ -2,6 +2,13 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-06 밤 추가: 개선 계획 8b-3 — 서버 실험 옵션 `WALL_FRAME`(탁자 기준점 + 구역표 자르기), **미채택 — 기본 끔, 서버 feat/table-frame 브랜치만(push 안 함)** (metrics 표 1-104 기준·1-105 결과, `docs/improvement_plan_1105.md` 8b "할 일 3" 진행 줄 셋)
+
+- **무엇:** 서버 `../mahjong-recognizer-8b` worktree, 브랜치 `feat/table-frame` **b0c9a39**(c4484dd 위: `app/table_frame.py` = 8b-2 로더 그대로 + 구역표 복사본 `app/assets/table_frame_zones.json`, `app/table_locate.py` = 8b-1 기기·패산 찾기 그대로 + 세워 자르기, 사진 전체 자리 검출 공유 `LocalReader.full_raw`(8단계 P1), `WALL_FRAME=axis|rot`, 요청 `frame=`, `/v2/locallast3?sides=`, pytest 193) + **b957432**(`scripts/wall_frame_dora.py` 표시패 서버 단독 채점). 옵션 설명은 서버 README "탁자 기준점 실험 옵션" 절. 분류기는 c4484dd 의 옛 것(7-2a 채택 v2 아님).
+- **결과:** 기준점은 서버 파이프라인에서 늘 잡힘. rot 는 기울기·색에 강함 — 회귀 ±25° 장면 prod 3·17 → 28·30, 테스트 15장 펴기 없이 서버 158 → 191/196(펴기 뒤 189 보다 높음), 색 바꾼 15장 145 → 181(서버·앱 같음), 서버 시간 +0.055초. **그러나 개발 32회 앱 흐름 434 → 429/436·경고 없는 틀린 자동 0 → 1·표시패 15 → 14/18** → (a)·① 미충족. 원인은 전부 크롭 정의: 자리 크롭 a 하한 −R 에 잘리는 손패 끝 장(170105·171025), 크롭이 넓어져 크롭 안으로 들어온 떼어 둔 쯔모패(143104, `_loose_outside` 경로를 잃음), 표시패 ±13u 정사각형 끝에 잘린 손패 조각의 헛 짝(165614)·13u 밖 진짜 짝(B·C·D). axis 는 기운 사진에서 나빠 후보 아님.
+- **다음(8b-3b 후보, 기준 먼저·한 번):** ① 자리 읽기 크롭을 이웃 자리와 겹치게(a 하한 −R − 3u) + 역할 모델이 가름, ② 크롭 안 `loose` 도 떼어 둔 패 후보에, ③ 표시패는 사진 전체 검출 + 구역 거르기(또는 크롭 끝 조각을 짝에서 빼기). 앱 4번(기준점 확인·패산 감시)은 그 뒤. 펴기 없이 앱 흐름은 앱이 강 끝을 장면 격자로 잘라 손패 0/15 — 강 끝도 서버(`sides=`)로 옮기는 게 앱 4번 몫.
+- 쓰는 법: 서버 단독 = `RECOGNIZER_REPO=C:/Users/jjh7757/dev/mahjong-recognizer-8b WALL_FRAME=rot python -I -X utf8 experiments/speed/robust_suite.py run …`·`field_bench.py --det det_final [--rectify|--recolored]`·`python -X utf8 <8b worktree>/scripts/wall_frame_dora.py --out …`(전·후 = WALL_FRAME 없음·rot). 앱 흐름 = launch.json `recognizer-wf0-*`(8113~8117)·`recognizer-wfr-*`(8133~8137) + `exp-files` → `run_baseline.sh dev|field`(미리보기 서버는 한 번에 5개라 전 4대 → rot 4대 차례로). 결과·로그 `experiments/speed/results/*wf*_1106*`·`log_8b3_*`, 인수 메모 side-session-notes `8b-3_server_wall_frame.md`.
+
 ## 2026-11-06 저녁 추가: 개선 계획 7-2a — 분류기만 합성 사전학습(새 씨드), **채택 — 서버 feat/cls-alt 599473e, push 안 함 = 운영 미반영** (metrics 표 1-99 기준·1-100 결과, `docs/improvement_plan_1105.md` 7-2a 진행 줄)
 
 - **무엇:** 검출기 8회차·역할 모델·규칙 그대로, 분류기만 7-2 와 같은 합성 크롭 사전학습 + 운영과 같은 미세 조정을 새 씨드(10·11)로 — `train.py --synth-pre --tag cls4 --seed-offset 10` → `cls4_*` 8벌(`server_bench/models/`, 커밋 안 함).
