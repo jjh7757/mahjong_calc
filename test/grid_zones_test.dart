@@ -480,10 +480,11 @@ void main() {
     });
 
     group('자체 모델만(readGrid(localOnly:))', () {
-      MockClient localServer(List<Uri> urls, {List<int> bottomSideways = const [], List<List<String>> pairs = const [], List<String> wallTile = const ['7z'], bool geminiSticks = false}) =>
+      MockClient localServer(List<Uri> urls, {List<int> bottomSideways = const [], List<List<String>> pairs = const [], List<String> wallTile = const ['7z'], bool geminiSticks = false, List<List<String>>? lastFiles}) =>
           MockClient((r) async {
             urls.add(r.url);
             final files = RegExp(r'filename="([^"]+)\.jpg"').allMatches(latin1.decode(r.bodyBytes)).map((m) => m.group(1)!).toList();
+            if (r.url.path == '/v2/locallast3') lastFiles?.add(files);
             final name = files.isEmpty ? '' : files.first;
             return switch (r.url.path) {
               '/v2/localseat' => _json({
@@ -503,7 +504,8 @@ void main() {
               '/v2/locallast3' => _json({
                 'method': 'frame',
                 'rivers': [
-                  for (final f in files)
+                  // sides= 면 사진 전체 한 장이고 rivers 는 sides 순서(8b-4a, 서버 read_rivers_full).
+                  for (final f in r.url.queryParameters['sides']?.split(',').map((s) => 'last_$s') ?? files)
                     {
                       'last_tile': f == 'last_right' ? {'tile': '4p', 'conf': 0.9} : {'tile': '9s', 'conf': 0.9},
                       'tile_count': 8,
@@ -577,6 +579,75 @@ void main() {
         expect(r.hand!.tiles.length, 13);
         expect(r.center!.lastDiscardAt(Side.right)?.code, '4p');
         expect(r.center!.doraIndicators.map((t) => t.code), ['7z']);
+        // 격자 출처를 안 주면 8b-4a 전과 같은 요청(grid_src 없음, localdora 질의 없음).
+        expect(urls.where((u) => u.queryParameters.containsKey('grid_src')), isEmpty);
+        expect(urls.singleWhere((u) => u.path == '/v2/localdora').query, isEmpty);
+        expect(trace.gridSrc, isNull);
+        expect(trace.lastFull, isFalse);
+      });
+
+      group('격자 출처 grid_src(8b-4a)', () {
+        Future<(TableReading, List<Uri>, List<CropSpec>, TableReadTrace, List<List<String>>)> readSrc(GridSource src) async {
+          final urls = <Uri>[];
+          final lastFiles = <List<String>>[];
+          final client = RecognizerClient(baseUrl: 'https://x.test', apiKey: 'k', httpClient: localServer(urls, lastFiles: lastFiles));
+          final specs = <CropSpec>[];
+          Future<ShotImage> open(Uint8List o) async => _CountingShot(DirectShotImage(o), specs);
+          final trace = TableReadTrace();
+          final r = await TableReader(
+            client,
+            ops: ImageOps(shrink: (o) async => shrinkForLocate(o), cropMany: (o, s) async => cropMany((o, s)), openShot: open),
+          ).readGrid(table(), grid, localOnly: true, useRoles: true, trace: trace, gridSrc: src);
+          return (r, urls, specs, trace, lastFiles);
+        }
+
+        Map<String, String> q(List<Uri> urls, String path) => urls.singleWhere((u) => u.path == path).queryParameters;
+        final g = {'x1': '${grid.x1}', 'x2': '${grid.x2}', 'y1': '${grid.y1}', 'y2': '${grid.y2}'};
+
+        for (final src in [GridSource.saved, GridSource.manual, GridSource.felt]) {
+          test('${src.name}: 세 호출에 grid_src=${src.name}, localdora 에 격자, 강 끝은 지금처럼 크롭 네 장', () async {
+            final (r, urls, specs, trace, lastFiles) = await readSrc(src);
+            expect(q(urls, '/v2/localroles'), {'side': 'bottom', ...g, 'grid_src': src.name});
+            expect(q(urls, '/v2/localdora'), {...g, 'grid_src': src.name});
+            expect(q(urls, '/v2/locallast3'), {'grid_src': src.name});
+            expect(specs.length, 4);
+            expect(lastFiles.single, ['last_bottom', 'last_right', 'last_top', 'last_left']);
+            expect(trace.gridSrc, src);
+            expect(trace.lastFull, isFalse);
+            expect(r.center!.lastDiscardAt(Side.right)?.code, '4p');
+          });
+        }
+
+        test('none: 강 끝은 크롭 없이 사진 전체 한 장 + sides=(+ 격자·grid_src), 답은 sides 순서로', () async {
+          final (r, urls, specs, trace, lastFiles) = await readSrc(GridSource.none);
+          expect(q(urls, '/v2/localroles')['grid_src'], 'none');
+          expect(q(urls, '/v2/localdora'), {...g, 'grid_src': 'none'});
+          expect(q(urls, '/v2/locallast3'), {'sides': 'bottom,right,top,left', ...g, 'grid_src': 'none'});
+          expect(lastFiles.single, ['last_full'], reason: '사진 전체 한 장');
+          expect(specs, isEmpty, reason: '강 끝 크롭 없음(역할 경로라 다른 크롭도 없음)');
+          expect(trace.riverCrops, isEmpty);
+          expect(trace.gridSrc, GridSource.none);
+          expect(trace.lastFull, isTrue);
+          expect(r.warnings, isEmpty);
+          expect(r.center!.lastDiscardAt(Side.right)?.code, '4p');
+          expect(r.center!.lastDiscardAt(Side.top)?.code, '9s');
+          expect(r.hand!.tiles.length, 13);
+        });
+
+        test('저장 격자를 불러올 때 기본값이면 none, 아니면 saved', () {
+          expect(GridSource.ofLoaded(null), GridSource.none);
+          expect(GridSource.ofLoaded(GridZones.initial), GridSource.none);
+          expect(GridSource.ofLoaded(GridZones.initial.copyWith(x1: 300)), GridSource.saved);
+          expect([for (final s in GridSource.values) s.query], ['saved', 'manual', 'felt', 'none']);
+          expect(GridSource.none.fitted, isFalse);
+          expect(GridSource.felt.fitted, isTrue);
+        });
+
+        test('rolesQuery 는 출처가 있으면 grid_src 를, 리치봉 상자가 있으면 sticks 를 붙인다', () {
+          final gs = grid.copyWith(sticks: const NormBox(400, 400, 600, 600));
+          expect(TableReader.rolesQuery(Side.left, gs), {'side': 'left', ...g, 'sticks': '400,400,600,600'});
+          expect(TableReader.rolesQuery(Side.left, gs, GridSource.manual), {'side': 'left', ...g, 'grid_src': 'manual', 'sticks': '400,400,600,600'});
+        });
       });
 
       test('2장 묶음이 둘이면 고르지 않는다', () async {
@@ -649,9 +720,11 @@ void main() {
       final client =
           RecognizerClient(baseUrl: 'https://x.test', apiKey: 'k', httpClient: server(names, images, urls: urls));
       final trace = TableReadTrace();
-      final reading = await TableReader(client).readGrid(table(), grid, rectify: true, trace: trace);
+      final reading = await TableReader(client).readGrid(table(), grid, rectify: true, trace: trace, gridSrc: GridSource.saved);
 
       expect(trace.feltQuad, isNotNull);
+      // 편 사진의 표준 격자는 원본(사진 전체로 보내는 호출)에 맞춘 격자가 아니다 → 격자 출처 none(8b-4a).
+      expect(trace.gridSrc, GridSource.none);
       expect(trace.timingsMs, contains('rectify'));
       expect(reading.winnerSide, Side.bottom);
       // 표준 격자(200/800)의 아래 자리 = 편 사진(3200) 아래 20% + 가운데 쪽 4%, 전체 폭.
@@ -668,9 +741,11 @@ void main() {
       final gray = img.Image(width: 1000, height: 1000);
       img.fill(gray, color: img.ColorRgb8(128, 128, 128));
       await TableReader(client)
-          .readGrid(Uint8List.fromList(img.encodeJpg(gray)), grid, rectify: true, trace: trace, pickWinners: (c) async => [c.first])
+          .readGrid(Uint8List.fromList(img.encodeJpg(gray)), grid,
+              rectify: true, trace: trace, gridSrc: GridSource.saved, pickWinners: (c) async => [c.first])
           .catchError((Object _) => TableReading(layout: grid.toLayout(faceUp: const [])));
       expect(trace.feltQuad, isNull);
+      expect(trace.gridSrc, GridSource.saved, reason: '펴지 못했으면 맞춘 격자 그대로 = 출처 그대로');
       expect(images['seat_bottom']!.width, 750, reason: '원본 1000px 의 맞춘 격자(아래 자리 750×200)로 자름');
     });
 

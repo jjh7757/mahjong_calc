@@ -181,6 +181,12 @@ class TableReadTrace {
 
   /// 사진을 펴서 읽었으면 찾은 펠트 네 모서리(원본 사진 정규화 좌표). 펴기를 껐거나 펠트를 못 찾으면 null.
   FeltQuad? feltQuad;
+
+  /// 서버에 보낸 격자 출처(`grid_src`, 개선 계획 8b-4a). 안 보냈으면 null.
+  GridSource? gridSrc;
+
+  /// 강 끝을 크롭 대신 사진 전체(`/v2/locallast3?sides=`)로 보냈나(격자 출처 none).
+  bool lastFull = false;
 }
 
 /// 그림자 모드: 같은 사진의 한 자리를 손패 전용(/v2/handonly)과 자리 전체(/v2/seat)로 동시에 읽은 두 답. 기록용(설계 7절).
@@ -258,14 +264,22 @@ class TableReader {
   /// 내놓은 도라·뒷도라 표시패로 넘긴다([CenterReading.handSideIndicators], merge 가 리치면 먼저 쓴다).
   /// [lastHedge] 는 강 끝(`/v2/last3`) 헤지: 그 시간 안에 답이 없거나 먼저 실패하면 같은 요청을 한 번 더 보내 먼저 온 답을 쓴다
   /// (null 이면 안 함). 자리 판독에는 쓰지 않는다(경주는 손패 정확도를 깎았다, metrics 표 2-2).
-  /// `/v2/localroles` 쿼리(자리 + 격자). 프레임 투표가 두 번째 프레임을 같은 쿼리로 읽는다.
-  static Map<String, String> rolesQuery(Side s, GridZones grid) => {
+  /// `/v2/localroles` 쿼리(자리 + 격자 + 격자 출처). 프레임 투표가 두 번째 프레임을 같은 쿼리로 읽는다.
+  /// [src] 가 null 이면 `grid_src` 를 안 붙인다(서버는 지금 경로 — 8b-4a 전 앱과 같음).
+  static Map<String, String> rolesQuery(Side s, GridZones grid, [GridSource? src]) => {
         'side': s.name,
+        ...gridQuery(grid, src),
+        if (grid.sticks case final b?) 'sticks': b.toList().join(','),
+      };
+
+  /// 격자 선 x1·x2·y1·y2 + 격자 출처(`grid_src`, [src] 가 있을 때). `/v2/localdora`·`/v2/locallast3?sides=` 에도 붙인다 — 서버
+  /// `WALL_FRAME=hybrid` 는 grid_src 로 경로를 고르고(none → 탁자 기준점), 기준점을 못 잡으면 이 격자로 지금처럼 자른다.
+  static Map<String, String> gridQuery(GridZones grid, [GridSource? src]) => {
         'x1': '${grid.x1}',
         'x2': '${grid.x2}',
         'y1': '${grid.y1}',
         'y2': '${grid.y2}',
-        if (grid.sticks case final b?) 'sticks': b.toList().join(','),
+        if (src != null) 'grid_src': src.query,
       };
 
   Future<TableReading> readGrid(
@@ -292,6 +306,9 @@ class TableReader {
     bool localOnly = false,
     bool useRoles = false,
     bool geminiSticks = false,
+    // 격자 출처(개선 계획 8b-4a, [GridSource]). 주면 자체 모델 호출(localroles·localdora·locallast3)에 `grid_src=` 를 붙이고, none 이면
+    // 강 끝을 크롭 대신 사진 전체 `/v2/locallast3?sides=` 로 보낸다(서버가 탁자 기준점으로 자름). null 이면 8b-4a 전과 같은 요청.
+    GridSource? gridSrc,
     Future<List<Side>?> Function(List<Side> candidates)? pickWinners,
     bool Function(List<TableReading> readings)? acceptAll,
     void Function(ReadStage stage)? onStage,
@@ -328,6 +345,13 @@ class TableReader {
     // 역할 경로는 자리 크롭 대신 원본을 보내고, 자체 모델만이면 리치봉(geminiSticks 아니면)·도라 칸도 보내지 않으니 자르지 않는다.
     // 그만큼 강 끝 크롭이 빨리 끝나 장면 끝을 정하는 `/v2/locallast3` 가 먼저 나간다(metrics 표 1-81).
     final roleSeats = localOnly && useRoles;
+    // 펴서 표준 격자로 바꿨으면 그 격자는 편 사진의 것이다 — 사진 전체로 보내는 호출(localroles·localdora)의 원본에는 맞춘 격자가 없다(none).
+    final src = gridSrc == null ? null : (rectified ? GridSource.none : gridSrc);
+    trace?.gridSrc = src;
+    // 격자가 이 사진에 맞지 않으면(none) 강 끝도 서버가 사진 전체에서 자른다(앱 lastZone 크롭은 그 격자 기준이라 론 화료패를 놓친다,
+    // metrics 표 1-109 '펴기 없이·색 바꾼 앱 손패 0/15').
+    final lastFull = localOnly && src == GridSource.none;
+    trace?.lastFull = lastFull;
     final needSticks = !localOnly || geminiSticks;
     final needDora = !localOnly;
     final trackedBox = rectified || localOnly ? null : trackedDiscard?.box;
@@ -360,7 +384,9 @@ class TableReader {
     Future<List<ReadTile>> readLocalDora() async {
       final t = Stopwatch()..start();
       try {
-        final j = await client.observe('localdora', original, filename: 'local_dora.jpg').timeout(_localDoraTimeout);
+        final j = await client
+            .observe('localdora', original, filename: 'local_dora.jpg', query: src == null ? null : gridQuery(grid, src))
+            .timeout(_localDoraTimeout);
         trace?._recordCall('local_dora', t.elapsedMilliseconds, j);
         trace?.localDora = j;
         localDoraJ = j;
@@ -444,7 +470,7 @@ class TableReader {
               : roleSeats
                   // 자체 모델 새 경로: 자리 크롭 대신 사진 전체 + 격자를 보내 상자 배치 역할 모델이 그 자리 것만 고른다(/v2/localroles,
                   // 서버 app/roles.py, metrics 표 1-58~1-61). 답은 /v2/seat 모양 그대로.
-                  ? call('localroles', original, 'roles_${s.name}', required: known != null, query: rolesQuery(s, grid))
+                  ? call('localroles', original, 'roles_${s.name}', required: known != null, query: rolesQuery(s, grid, src))
                   : call(localOnly ? 'localseat' : 'seat', seatCrops[s], 'seat_${s.name}', required: known != null, query: seatQuery(s)),
       };
       shadowF = {
@@ -464,17 +490,18 @@ class TableReader {
 
       // 게임 중 추적이 본 마지막 버림패 위치가 있으면 그 패만 따로 잘라 한 번 더 읽는다(강 끝 틀을 못 잡을 때의 대안).
       final needDealer = dealer != null && !localOnly;
+      final cropLastSides = lastFull ? const <Side>[] : lastSides;
       final rest = await shot.crop([
-        for (final s in lastSides) CropSpec(grid.lastZone(s), side: s),
+        for (final s in cropLastSides) CropSpec(grid.lastZone(s), side: s),
         if (needSticks) CropSpec(grid.sticksZone),
         // 도라 크롭은 가운데 칸을 화료자 아닌 쪽으로 조금 넓혀 선에 걸친 표시패까지(화료자를 모르면 넓히지 않음).
         if (needDora) CropSpec(grid.doraSearchZone(except: seatSides.toSet())),
         if (dealer != null && needDealer) CropSpec(grid.doraZone(dealer), side: dealer),
         if (trackedBox != null && trackSide != null && useTracked) CropSpec(trackedBox, side: trackSide, pad: 0.6),
       ]);
-      lastCrops = {for (final (i, s) in lastSides.indexed) s: rest[i]};
+      lastCrops = {for (final (i, s) in cropLastSides.indexed) s: rest[i]};
       trace?.riverCrops = lastCrops;
-      var next = lastSides.length;
+      var next = cropLastSides.length;
       Uint8List? take(bool want) => want ? rest[next++] : null;
       sticksCrop = take(needSticks);
       trace?.centerCrop = sticksCrop;
@@ -498,14 +525,23 @@ class TableReader {
     // 늘었고, 한 호출에선 모델이 생각을 건너뛰어 빠르다(B·C·D 60장면: 론 패 54 → 60/60, 중앙 8.5 → 5.9초, p90 32.7 → 14.4초).
     final lastSent = [
       for (final s in lastSides)
-        if (lastCrops[s] != null) s,
+        if (lastFull || lastCrops[s] != null) s,
     ];
     // 헤지: [lastHedge] 안에 답이 없거나 먼저 실패하면(503 등) 같은 요청을 한 번 더 보내 먼저 온 답을 쓴다. 강 끝은 한 호출에
     // 60/60 이라 정확도 손해 없이 Gemini 꼬리(같은 사진 5~60초)와 일시 오류를 자른다(10-25 시뮬 헤지 p90 34.6 → 17.6초, 표 2-2).
+    // [lastFull] 이면 사진 전체 한 장 + `sides=`(보낸 자리 순서 = 응답 rivers 순서) + 격자(서버가 기준점을 못 잡을 때 쓸 것)·grid_src.
     Future<Map<String, dynamic>> lastOnce(String name) {
       final t = Stopwatch()..start();
       return client
-          .observeLasts([for (final s in lastSent) (lastCrops[s]!, 'last_${s.name}.jpg')], path: localOnly ? '/v2/locallast3' : '/v2/last3')
+          .observeLasts(
+            lastFull
+                ? [(original, 'last_full.jpg')]
+                : [for (final s in lastSent) (lastCrops[s]!, 'last_${s.name}.jpg')],
+            path: localOnly ? '/v2/locallast3' : '/v2/last3',
+            query: lastFull
+                ? {'sides': [for (final s in lastSent) s.name].join(','), ...gridQuery(grid, src)}
+                : (localOnly && src != null ? {'grid_src': src.query} : null),
+          )
           .then((j) {
         trace?._recordCall(name, t.elapsedMilliseconds, j);
         return j;

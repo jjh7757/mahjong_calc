@@ -2416,6 +2416,27 @@ a·d·c·e·① 전부 넘으면 채택 → `WALL_FRAME=hybrid` 를 **기본 켬
 
 **최종 판정(표 1-108): 채택 — a·d·c·e·① 전부 충족.** `WALL_FRAME=hybrid` 를 **기본 켬 후보**로 적는다(서버 `feat/table-frame` 18a54ca·1fdb079, push 안 함 — 운영 배포는 사용자 결정, 그 전에 `feat/cls-alt`(v2 분류기) 배포 결정이 먼저). 뜻: 앱이 이 탁자 격자를 가진 지금 매장(저장 격자)에서는 답이 그대로(+0.02초)이고, 격자가 없거나 기본값인 새 탁자·기운 사진·다른 색 탁자에서는 8b-3b rot2 의 이득(테스트 펴기 없이 158 → 191, 색 바꾼 145 → 179)을 얻는다. 경로를 정하는 것이 **앱이 보내는 `grid_src`** 이므로 이득은 앱 4번이 끝나야 실제로 나온다(지금 앱은 `grid_src` 를 안 보냄 → 강제값이 없으면 localroles 는 격자가 있어 saved, localdora 는 격자 질의가 없어 rot2 — 4번 전에 기본으로 켜면 localdora 만 rot2 로 간다는 점에 주의, 8b-3b 앱 흐름에서 rot2 표시패 맞음은 15 = 15 였지만 165614(`4m → 5z`)·181209(`5s → 4s`) 표시패 답이 바뀌었다). **앱 4번에 넘길 것:** ① `grid_src=saved|manual|felt|none|default` 를 localroles·localdora(격자 x1..y2 도)·locallast3 에 보내기 ② 격자를 저장할 때 그 순간의 기준점(`TableFrame`)도 같이 저장 ③ 거치 이동 감시는 사진 한 장 θ 가 아니라 **프레임 여러 장의 중앙값**으로(표 1-108: 같은 거치에서 한 장 θ 0.3~4.2°) ④ 강 끝도 사진 전체(`/v2/locallast3?sides=`)로 — 펴기 없이·색 바꾼 앱 손패 0/15 는 앱이 강 끝을 장면 격자로 잘라 론 화료패를 못 찾는 몫.
 
+### 표 1-111. 8b-4a 합격 기준 — 서버 hybrid 기본 켬 + 앱이 `grid_src` 를 보내고 격자 없으면 강 끝 사진 전체, 측정 전에 적음(2026-11-07 아침, 개선 계획 8b-3c 진행 줄 아래 검토 ③④, 서버 mahjong-recognizer `feat/table-frame` **b2b4757·cecc67a·87af0d8** worktree `../mahjong-recognizer-8b`, 앱 브랜치 `claude/8b-4a-grid-src-bbecea`(07eab49 위), push 안 함. 결과를 본 뒤 기준·정의·코드를 바꾸지 않고 재시도 없음. **1-110 은 비워 둠**(본 체크아웃 마지막 1-109 + 2, 다른 세션과 번호 겹침 방지))
+
+**서버(측정 전, 끝남):** ① `WALL_FRAME=hybrid` 에서 요청에 `grid_src` 가 없으면 **격자 질의가 없어도 지금 경로(saved)**, 명시적 `none|default` 만 rot2(b2b4757, 8b-3c 의 '격자 질의 없음 → rot2' 를 버림 — 옛 앱 localdora 가 rot2 로 가던 위험) ② **변수가 없으면 `WALL_FRAME=hybrid`**(cecc67a, 끄기는 `off|0|none|false|빈 값`) ③ `locallast3` 로그 줄(87af0d8, 답 무변경). pytest 213. 확인(프로세스 안, `grid_src` 없이, 같은 시각 연달아): ① 뒤 `WALL_FRAME` 끔 / hybrid, ② 뒤 `off` / 변수 없음 — 둘 다 회귀 prod `orig` 26장(/32) **시간 칸을 뺀 행 전체 같음**(패 421 = 421·unsafe 0 = 0), 표시패 개발 20장(`wall_frame_dora.py --sets dev --modes ,hybrid`) **20/20 같음·전부 `cut: grid`**(8b-3c 서버였으면 rot2).
+
+**앱(이 브랜치):** `GridSource {saved, manual, felt, none}`(`lib/table/grid_zones.dart`). 거치 화면: 저장 격자 불러옴 = saved(기본값과 같으면 none), 끌어 맞춤 = manual, 자동 맞추기 성공(펠트·`/v2/setup`)·카메라 이동 뒤 다시 맞춤 = felt, 초기값·처음 = none, **갤러리 사진은 펠트·자동·끌어 맞추기 전까지 none**(거치 격자는 그 사진의 것이 아님), 끝나면 되돌림. `readGrid(gridSrc:)` → localroles·localdora(격자 x1..y2 도)·locallast3 에 `grid_src=`, **none 이면 강 끝을 크롭 없이 사진 전체 한 장 `/v2/locallast3?sides=…`(+ 격자·grid_src)**, `rectify` 로 편 사진이면 none(원본에 맞춘 격자가 아님), null 이면 8b-4a 전과 같은 요청. 거치 화면 UI 는 그대로(4b). 단위 테스트 713 통과.
+
+**측정 흐름의 격자 출처(`read_grid_timing_test.dart`, 표 1-108·1-109 해석 그대로):** 개발 32회(B·C·D 격자·매장 `FIELD_GRIDS`) = saved, 테스트 펴기(표준 격자) = saved, 테스트 펴기 없이(`RECTIFY=false`)·색 바꾼(`RECTIFY=false` + `RECOLOR=1`) = **none**(장면 격자는 편 사진 기준이라 원본엔 격자가 없는 것과 같음) — 앱이 스스로 정함, 서버 강제값(`WALL_FRAME_GRID_SRC`) 안 씀. `GRID_SRC=` 로 덮을 수 있음.
+
+**전 = 서버 hybrid 기본(변수 없음) + 07eab49 앱(`grid_src` 안 보냄, 따로 꺼낸 worktree `../mahjong_calc-8b4a-base`) / 후 = 같은 서버 + 이 브랜치 앱**, 같은 시각 연달아(전 → 후, 세트마다). 서버는 launch.json(이 worktree) `recognizer-wf4-{bcd,am,pmA,pmB}`(8173~8175·8177, fold 분류기 `cls4`)·`recognizer-wf4-prod`(8176), 사진 `exp-files-8b4a`(8043, 본 체크아웃 experiments). `run_baseline.sh`(`APP_DIR`, `U_*=817x`). 채점 `flow_visit.py score`(개발)·`summarize_field.py`(테스트)·`flow_same.py`(답 동일), 경로는 서버 로그 `localroles|localdora|locallast3 … wall_frame=` 줄.
+
+| # | 기준(미리) | 세트 | 판정 |
+| --- | --- | --- | --- |
+| a | 나눔 개발 32회 앱 흐름 **답 동일**(`flow_same.py` 장면 32/32), 패 = 전, 경고 없는 틀린 자동 0, 표시패 맞음 = 전, **서버 로그 경로 saved 전부**(후의 localroles·localdora `wall_frame=saved`, locallast3 크롭 경로 `grid_src=saved`) | 앱 흐름 | 판정 |
+| c1 | 테스트 15장 펴기(saved): 답 동일(장면 15/15)·패 = 전 | 앱 흐름 | 판정 |
+| c2 | 테스트 15장 **펴기 없이·색 바꾼: 앱이 스스로 `grid_src=none`** → 서버 로그 localroles·localdora·locallast3(`sides=`, `cut: rot`) 전부 rot2, **패 ≥ 191/211(펴기 없이)·≥ 179/211(색 바꾼)** = 표 1-109 앱 흐름 후(서버 강제 none) 값과 같거나 위, 경고 없는 틀린 자동 ≤ 전. 손패 /15 가 0 에서 오르면(강 끝 사진 전체로 론 화료패) 보고 | 앱 흐름 | 판정 |
+| e | 앱 흐름 개발 중앙 ≤ 전 + 0.1초 | 앱 흐름 | 판정 |
+| g | 갤러리/폰 사진 경로 한 장: 테스트 133011 을 기본값 격자(`FIELD_GRID=initial`) + `GRID_SRC=none`(갤러리에서 펠트·자동 맞추기 전 = 격자 없음)으로 — 서버 로그에 `grid_src=none`·`wall_frame=rot2`(세 호출) | 앱 흐름 1장 | 판정 |
+| ⑤ | 측정 뒤 정의·코드 무변경, 재시도 없음 | — | 지킴 |
+
+a·c1·c2·e·g 전부 넘으면 채택 → 4b(격자 저장 때 기준점 저장, 프레임 중앙값 거치 이동 감시 `FeltWatch` 대체, 거치 화면 '기기·모서리 확인', 실기기 확인)로. 하나라도 못 넘으면 미채택(앱은 `gridSrc` 를 안 넘기는 지금 요청으로, 서버 기본 켬은 ① 덕분에 그대로 무해). 측정 순서: 개발 전 → 후, 테스트 펴기 전 → 후, 펴기 없이 전 → 후, 색 바꾼 전 → 후, (g) 한 장.
+
 ## 표 2. 자리 판독 단독 (Gemini 직접, `experiments/speed/bench.py` 계열)
 
 손패 + 울기 모두 맞아야 정답. "지금" = 그 시점의 운영 프롬프트. 생각 = 생각 토큰이 0 이 아닌 호출 수.

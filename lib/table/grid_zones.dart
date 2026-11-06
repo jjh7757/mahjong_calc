@@ -67,6 +67,30 @@ typedef RelBox = ({int u0, int v0, int u1, int v1});
 /// (왕패 = 나눈 곳 오른쪽 7줄, 표시패 = 그 3번째 줄 위 — 사용자가 준 규칙 글, 2026-10-29).
 const RelBox doraRelDefault = (u0: 500, v0: 750, u1: 1250, v1: 1250);
 
+/// 지금 격자가 **이 탁자·이 사진에 맞춘 것인지**(격자 출처, 개선 계획 8b-4a). 서버 `WALL_FRAME=hybrid` 가 요청의 `grid_src=` 로 경로를
+/// 고른다 — saved·manual·felt 면 지금 경로(격자 그대로, 8b-3c 까지와 같은 답), none 이면 서버가 사진에서 탁자 기준점(가운데 기기·패산)을
+/// 잡아 패 단위 구역으로 자른다(rot2, 기운 사진·다른 색 탁자에서 이득, metrics 표 1-109). 앱은 none 이면 강 끝도 크롭 대신 사진 전체를
+/// `/v2/locallast3?sides=` 로 보낸다(서버가 자름).
+/// - [saved]: 저장해 둔 격자를 불러옴(거치 화면을 다시 열었을 때).
+/// - [manual]: 사용자가 선을 끌어 맞춤.
+/// - [felt]: 자동 맞추기 성공(펠트 네 모서리 [gridFromFelt], 못 찾으면 `/v2/setup` 틀) — 카메라 이동 뒤 다시 맞춘 것도.
+/// - [none]: 기본값 격자([GridZones.initial])·자동 맞추기 실패·갤러리/폰 사진에 맞춘 격자 없음.
+enum GridSource {
+  saved,
+  manual,
+  felt,
+  none;
+
+  /// 서버 질의 값(`grid_src=`).
+  String get query => name;
+
+  /// 이 격자를 탁자에 맞췄나(none 이 아님).
+  bool get fitted => this != none;
+
+  /// 저장해 둔 격자를 불러올 때: 기본값 그대로면 맞춘 적 없음(none), 아니면 saved.
+  static GridSource ofLoaded(GridZones? grid) => grid == null || grid == GridZones.initial ? none : saved;
+}
+
 class GridZones {
   /// 세로선(왼쪽·오른쪽)과 가로선(위·아래), 0~1000.
   final int x1, x2, y1, y2;

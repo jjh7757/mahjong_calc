@@ -144,6 +144,17 @@ const _dumpDir = String.fromEnvironment('DUMP_DIR');
 // (예전 실험 방식: 펴서 JPEG 로 다시 인코딩한 뒤 readGrid. 앱은 readGrid(rectify:) 로 디코딩한 이미지를 바로 편다.)
 const _rectifyOn = bool.fromEnvironment('RECTIFY');
 
+// 격자 출처(readGrid(gridSrc:), 개선 계획 8b-4a — 서버 WALL_FRAME=hybrid 가 경로를 고름, metrics 표 1-111). 기본: B·C·D 격자·매장
+// FIELD_GRIDS(저장 격자)·테스트 펴기(표준 격자 = 저장 격자와 같은 뜻) = saved, 테스트 SET=field 를 펴지 않으면(RECTIFY=false, 색 바꾼 사본
+// 포함) none — 장면 격자는 편 사진 기준으로 맞춘 것이라 원본에는 격자가 없는 것과 같다(표 1-108·1-109 해석). none 이면 강 끝도 사진 전체.
+// GRID_SRC=saved|manual|felt|none 이면 그 값, off 면 grid_src 를 안 보냄(8b-4a 전 앱과 같은 요청).
+const _gridSrcEnv = String.fromEnvironment('GRID_SRC');
+GridSource? get _gridSrc => switch (_gridSrcEnv) {
+      'off' => null,
+      '' => _set == 'field' && !_rectifyOn ? GridSource.none : GridSource.saved,
+      final v => GridSource.values.byName(v),
+    };
+
 // PAIR_RECTIFY=true: 같은 사진을 같은 순간 두 번 — 앱 흐름 그대로(server "plain")와 readGrid(rectify: true)("rect").
 // 같은 서버(RECOGNIZER_URL)로. Gemini 호출이 두 배라 SLEEP_S 를 넉넉히.
 const _pairRectify = bool.fromEnvironment('PAIR_RECTIFY');
@@ -287,7 +298,10 @@ void main() {
                 if (dealer != null) out['dealer_side'] = dealer.name;
                 final reading = await TableReader(client, ops: _isolateOps)
                     .readGrid(shot, useGrid, rectify: rect, dealer: dealer, trace: trace, useWide: wide, wideEarly: early,
-                        wideIndicators: ind, lastHedge: ind ? const Duration(seconds: 12) : null, trackedRiichi: _localOnly ? const {} : _trackedRiichi(photo), localDora: _localDora, localOnly: _localOnly, useRoles: _useRoles, geminiSticks: _geminiSticks, trackedDora: _trackedDora(photo));
+                        wideIndicators: ind, lastHedge: ind ? const Duration(seconds: 12) : null, trackedRiichi: _localOnly ? const {} : _trackedRiichi(photo), localDora: _localDora, localOnly: _localOnly, useRoles: _useRoles, geminiSticks: _geminiSticks, trackedDora: _trackedDora(photo),
+                        gridSrc: _gridSrc);
+                out['grid_src'] = trace.gridSrc?.query;
+                out['last_full'] = trace.lastFull;
                 if (_trackedDora(photo) case final td?) out['tracked_dora'] = td.code;
                 out['local_dora'] = trace.localDora;
                 if (_trackedRiichi(photo).isNotEmpty) out['tracked_riichi'] = [for (final s in _trackedRiichi(photo)) s.name];

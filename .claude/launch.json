@@ -1436,6 +1436,118 @@
       ],
       "port": 8168,
       "autoPort": false
+    },
+    {
+      "name": "exp-files-8b4a",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8043",
+        "--bind",
+        "127.0.0.1",
+        "-d",
+        "C:/Users/jjh7757/dev/mahjong_calc/experiments"
+      ],
+      "port": 8043,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-wf4-bcd",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8173",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-8b",
+        "--local-fold",
+        "a,bcd",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot.onnx",
+        "--cls-tag",
+        "cls4"
+      ],
+      "port": 8173,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-wf4-am",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8174",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-8b",
+        "--local-fold",
+        "b,am",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot_fold_am.onnx",
+        "--cls-tag",
+        "cls4"
+      ],
+      "port": 8174,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-wf4-pmA",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8175",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-8b",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot_fold_pmA.onnx",
+        "--cls-tag",
+        "cls4"
+      ],
+      "port": 8175,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-wf4-pmB",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8177",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-8b",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot_fold_pmB.onnx",
+        "--cls-tag",
+        "cls4"
+      ],
+      "port": 8177,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-wf4-prod",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8176",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-8b"
+      ],
+      "port": 8176,
+      "autoPort": false
     }
   ]
 }

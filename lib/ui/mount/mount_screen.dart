@@ -121,6 +121,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// 격자를 맞추는 중이면 편집 전 값(취소용). null 이면 편집 중 아님.
   GridZones? _gridBeforeEdit;
 
+  /// [_grid] 의 출처(개선 계획 8b-4a): 판독 요청 `grid_src=` 로 보낸다. none(기본값·자동 맞추기 실패·갤러리 사진에 안 맞춘 격자)이면
+  /// 서버가 탁자 기준점으로 자르고 강 끝도 사진 전체로 보낸다. [_gridSrcBeforeEdit] 는 편집·갤러리 전 값(취소·되돌리기용).
+  GridSource _gridSrc = GridSource.none;
+  GridSource? _gridSrcBeforeEdit;
+
   /// 갤러리에서 고른 사진(읽기 전)과 그 가로/세로 비율. 있으면 이 사진 위에서 격자를 맞춘 뒤 읽는다.
   /// 갤러리 사진은 거치 카메라와 찍은 자리가 달라 저장된 격자가 맞지 않는다. 맞춘 격자는 이 한 장에만 쓰고 저장하지 않는다.
   Uint8List? _galleryShot;
@@ -380,6 +385,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _rectify = p.getBool(rectifyPref) ?? false;
       final g = p.getString(gridPref);
       if (g != null) _grid = GridZones.fromJson(jsonDecode(g) as Map<String, dynamic>) ?? GridZones.initial;
+      _gridSrc = GridSource.ofLoaded(g == null ? null : _grid);
       final felt = p.getString(gridFeltPref);
       if (felt != null) _feltWatch.reset(feltQuadFromJson(jsonDecode(felt) as Map<String, dynamic>));
     } catch (_) {}
@@ -737,7 +743,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     if (moved == null) return;
     final grid = gridFromFelt(moved, keep: _grid);
     if (grid == null) return;
-    setState(() => _grid = grid);
+    setState(() {
+      _grid = grid;
+      _gridSrc = GridSource.felt;
+    });
     await _saveGrid(felt: moved);
     debugPrint('[felt] 카메라 이동, 격자 ${grid.toJson()}');
     if (mounted) _toast('카메라가 움직여 격자를 다시 맞췄습니다. 틀렸으면 더보기 "구역 격자 맞추기" 에서 고치세요', long: true);
@@ -773,7 +782,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         alignment: WrapAlignment.end,
         children: [
           _autoSetupButton(),
-          TextButton(onPressed: () => setState(() => _grid = GridZones.initial), child: const Text('초기값')),
+          TextButton(onPressed: _resetGrid, child: const Text('초기값')),
           TextButton(onPressed: _busy ? null : _cancelGallery, child: const Text('취소')),
           FilledButton(
             key: const ValueKey('mount-gallery-read'),
@@ -795,10 +804,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             onPressed: _busy ? null : () => _shootRemote(remote, read: false),
           ),
         _autoSetupButton(),
-        TextButton(onPressed: () => setState(() => _grid = GridZones.initial), child: const Text('초기값')),
+        TextButton(onPressed: _resetGrid, child: const Text('초기값')),
         TextButton(
           onPressed: () => setState(() {
             _grid = _gridBeforeEdit ?? _grid;
+            _gridSrc = _gridSrcBeforeEdit ?? _gridSrc;
             _gridBeforeEdit = null;
           }),
           child: const Text('취소'),
@@ -815,6 +825,19 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       ],
     );
   }
+
+  /// "초기값": 기본값 격자는 이 탁자에 맞춘 것이 아니다(격자 출처 none, 8b-4a).
+  void _resetGrid() => setState(() {
+        _grid = GridZones.initial;
+        _gridSrc = GridSource.none;
+      });
+
+  /// 격자 편집을 연다(취소용으로 지금 격자·출처를 둔다).
+  void _beginGridEdit() => setState(() {
+        _useGrid = true;
+        _gridBeforeEdit = _grid;
+        _gridSrcBeforeEdit = _gridSrc;
+      });
 
   Widget _autoSetupButton() => OutlinedButton.icon(
         key: const ValueKey('mount-grid-auto'),
@@ -1082,7 +1105,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       if (!mounted) return false;
       final fromFelt = felt == null ? null : gridFromFelt(felt, keep: _grid);
       if (fromFelt != null) {
-        setState(() => _grid = fromFelt);
+        setState(() {
+          _grid = fromFelt;
+          _gridSrc = GridSource.felt;
+        });
         if (auto) await _saveGrid(felt: felt);
         if (gallery == null) {
           final shrunk = await _shrinkInIsolate(src);
@@ -1099,7 +1125,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       if (!mounted) return false;
       final proposed = proposeGrid(setup, keep: _grid);
       setState(() {
-        if (proposed != null) _grid = proposed;
+        if (proposed != null) {
+          _grid = proposed;
+          _gridSrc = GridSource.felt; // 자동 맞추기 성공(펠트 대신 /v2/setup 틀) — 이 사진에 맞춘 격자
+        }
       });
       if (auto && proposed != null) await _saveGrid();
       if (gallery == null) {
@@ -1436,6 +1465,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _galleryShot = bytes;
       _galleryAspect = aspect;
       _gridBeforeEdit = _grid;
+      _gridSrcBeforeEdit = _gridSrc;
+      // 거치 격자는 이 갤러리 사진에 맞춘 것이 아니다 — 펠트·자동 맞추기·끌어 맞추기 전까지 none(서버가 탁자 기준점으로, 8b-4a).
+      _gridSrc = GridSource.none;
       _setupBusy = true;
     });
     GridZones? fromFelt;
@@ -1452,7 +1484,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _toast('사진에서 탁자 펠트를 못 찾았습니다. "자동 맞추기" 를 누르거나 선을 끌어 맞춘 뒤 "이 격자로 읽기"', long: true);
       return;
     }
-    setState(() => _grid = fromFelt!);
+    setState(() {
+      _grid = fromFelt!;
+      _gridSrc = GridSource.felt;
+    });
     debugPrint('[gallery] 펠트 격자로 바로 읽기 ${fromFelt.toJson()}');
     await _readGallery();
   }
@@ -1462,6 +1497,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     final bytes = _galleryShot;
     if (bytes == null || _busy) return;
     final savedGrid = _gridBeforeEdit ?? _grid;
+    final savedSrc = _gridSrcBeforeEdit ?? _gridSrc;
     final savedUseGrid = _useGrid;
     setState(() {
       _gridBeforeEdit = null;
@@ -1473,6 +1509,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       if (mounted) {
         setState(() {
           _grid = savedGrid;
+          _gridSrc = savedSrc;
           _useGrid = savedUseGrid;
           _galleryShot = null;
           _galleryAspect = null;
@@ -1483,6 +1520,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
   void _cancelGallery() => setState(() {
         _grid = _gridBeforeEdit ?? _grid;
+        _gridSrc = _gridSrcBeforeEdit ?? _gridSrc;
         _gridBeforeEdit = null;
         _galleryShot = null;
         _galleryAspect = null;
@@ -1564,6 +1602,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               // 자리 판독은 사진 전체 + 격자 → 역할 모델(/v2/localroles, 서버 8회차 회전 상자 검출기·정리, 2026-11-05 사용자 "8회차 반영",
               // metrics 표 1-70: 개발 32/32 · 틀린 자동 반영 0, 자리 크롭 경로 30/32).
               useRoles: true,
+              // 격자 출처(8b-4a): 서버 WALL_FRAME=hybrid 가 맞춘 격자면 지금 경로, none 이면 탁자 기준점으로. 강 끝도 none 이면 사진 전체.
+              gridSrc: _gridSrc,
               rectify: _rectify,
               dealer: seats.sideOf(g.dealer),
               onStage: (s) => stage.value = s,
@@ -1807,6 +1847,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     final sw = Stopwatch()..start();
     final first = VoteRead.fromSeatJson(firstJ);
     final grid = _grid;
+    final gridSrc = _gridSrc;
     final url = _remoteUrl;
     Uint8List? frame;
     FrameVoteRecord rec;
@@ -1821,7 +1862,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         int? callMs;
         Object? callErr;
         final secondF = client
-            .observe('localroles', f, filename: 'frame_vote.jpg', query: TableReader.rolesQuery(winner, grid))
+            .observe('localroles', f, filename: 'frame_vote.jpg', query: TableReader.rolesQuery(winner, grid, gridSrc))
             .timeout(const Duration(seconds: 20))
             .then<Map<String, dynamic>?>((j) {
           callMs = callSw.elapsedMilliseconds;
@@ -2162,10 +2203,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     } catch (_) {}
                     if (_autoSetupOnStart) _maybeAutoSetup();
                   } else if (v == 'gridEdit') {
-                    setState(() {
-                      _useGrid = true;
-                      _gridBeforeEdit = _grid;
-                    });
+                    _beginGridEdit();
                   } else if (v == 'rectify') {
                     setState(() => _rectify = !_rectify);
                     try {
@@ -2510,12 +2548,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             TextButton(onPressed: () => push(SettingsScreen(editor: widget.editor)), child: const Text('룰 설정')),
             TextButton.icon(
               key: const ValueKey('table-grid-edit'),
-              onPressed: _busy
-                  ? null
-                  : () => setState(() {
-                        _useGrid = true;
-                        _gridBeforeEdit = _grid;
-                      }),
+              onPressed: _busy ? null : _beginGridEdit,
               icon: const Icon(Icons.grid_4x4, size: 16),
               label: const Text('격자 편집'),
             ),
@@ -2691,12 +2724,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                   // 격자 편집 켬: 선·리치봉 상자를 끌 수 있고, 아래 "저장 (편집 끝)"/"취소" 로 끈다(평소엔 끌리지 않아 잘못 터치해도 안전).
                   TextButton.icon(
                     key: const ValueKey('table-grid-edit'),
-                    onPressed: _busy
-                        ? null
-                        : () => setState(() {
-                              _useGrid = true;
-                              _gridBeforeEdit = _grid;
-                            }),
+                    onPressed: _busy ? null : _beginGridEdit,
                     icon: const Icon(Icons.grid_4x4, size: 16),
                     label: const Text('격자 편집'),
                   ),
@@ -2800,7 +2828,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             grid: _grid,
             editing: editing,
             dealer: seats.sideOf(g.dealer),
-            onChanged: (v) => setState(() => _grid = v),
+            onChanged: (v) => setState(() {
+              _grid = v;
+              _gridSrc = GridSource.manual; // 사용자가 끌어 맞춤(8b-4a)
+            }),
           ),
         if (!editing)
           LayoutBuilder(
