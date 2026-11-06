@@ -256,6 +256,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   static const String frameVotePref = 'mount.frameVote';
   bool _frameVote = false;
 
+  /// 화료 판독을 예전 Gemini 경로로(`readGrid(localOnly: false)`: 자리 `/v2/seat` 3번 + 만장일치, 강 끝 `/v2/last3`, 리치봉
+  /// `/v2/sticks`, 도라 `/v2/dora` + `/v2/localdora`, 넓은 구역 `/v2/seatwide`). 기본 끔 = 자체 모델(2026-11-02 사용자 결정,
+  /// metrics 표 1-37). 느리고(표 1-37 중앙 15초) 호출마다 API 비용이 들며, 불확실성 신호·2순위 후보·프레임 투표는 없다.
+  /// 판 중 추적·펠트 격자·판 중 도라 읽기(`/v2/localdora`)는 그대로.
+  static const String geminiReadPref = 'mount.geminiRead';
+  bool _geminiRead = false;
+
   /// 이번 배경 프레임이 추적을 거쳐 [_recordFrame] 까지 갔는지.
   bool _frameTracked = false;
   int _meldEventsSeen = 0;
@@ -380,6 +387,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _trackingEnabled = p.getBool(trackingPref) ?? true;
       _frames.keepAll = p.getBool(keepAllFramesPref) ?? false;
       _frameVote = p.getBool(frameVotePref) ?? false;
+      _geminiRead = p.getBool(geminiReadPref) ?? false;
       _autoSetupOnStart = p.getBool(autoSetupPref) ?? true;
       _gridSource = p.getString(gridSourcePref);
       _rectify = p.getBool(rectifyPref) ?? false;
@@ -1597,11 +1605,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           ? reader.readGrid(
               bytes,
               _grid,
-              // 화료 판독은 자체 모델만(Gemini 없음, 2026-11-02 사용자 결정, metrics 표 1-37). 못 읽으면 입력 화면으로.
-              localOnly: true,
+              // 화료 판독은 기본 자체 모델만(Gemini 없음, 2026-11-02 사용자 결정, metrics 표 1-37). 못 읽으면 입력 화면으로.
+              // 더보기 "화료 판독을 Gemini 로" 를 켜면 예전 Gemini 경로(2026-11-07 사용자 요청, [_geminiRead]).
+              localOnly: !_geminiRead,
               // 자리 판독은 사진 전체 + 격자 → 역할 모델(/v2/localroles, 서버 8회차 회전 상자 검출기·정리, 2026-11-05 사용자 "8회차 반영",
-              // metrics 표 1-70: 개발 32/32 · 틀린 자동 반영 0, 자리 크롭 경로 30/32).
-              useRoles: true,
+              // metrics 표 1-70: 개발 32/32 · 틀린 자동 반영 0, 자리 크롭 경로 30/32). Gemini 경로면 자리 크롭 → /v2/seat.
+              useRoles: !_geminiRead,
               // 격자 출처(8b-4a): 서버 WALL_FRAME=hybrid 가 맞춘 격자면 지금 경로, none 이면 탁자 기준점으로. 강 끝도 none 이면 사진 전체.
               gridSrc: _gridSrc,
               rectify: _rectify,
@@ -2179,6 +2188,15 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                       final p = await SharedPreferences.getInstance();
                       await p.setBool(frameVotePref, _frameVote);
                     } catch (_) {}
+                  } else if (v == 'geminiRead') {
+                    setState(() => _geminiRead = !_geminiRead);
+                    try {
+                      final p = await SharedPreferences.getInstance();
+                      await p.setBool(geminiReadPref, _geminiRead);
+                    } catch (_) {}
+                    _toast(_geminiRead
+                        ? '화료 판독을 Gemini 로 합니다 — 느리고(약 15초) 호출마다 비용이 듭니다'
+                        : '화료 판독을 자체 모델로 합니다');
                   } else if (v == 'auto') {
                     setState(() => _autoRecord = !_autoRecord);
                     await AutoRecordStore.save(_autoRecord);
@@ -2269,8 +2287,16 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     key: const ValueKey('mount-frame-vote-menu'),
                     value: 'frameVote',
                     checked: _frameVote,
-                    enabled: _useGrid && _remoteUrl != null,
+                    // 프레임 투표는 자체 모델 답(/v2/localroles)끼리 비교한다 — Gemini 판독이면 돌지 않는다.
+                    enabled: _useGrid && _remoteUrl != null && !_geminiRead,
                     child: const Text('자동 반영 전 헤드 프레임 한 장 더 읽기 (시험)'),
+                  ),
+                  CheckedPopupMenuItem(
+                    key: const ValueKey('mount-gemini-read-menu'),
+                    value: 'geminiRead',
+                    checked: _geminiRead,
+                    enabled: _useGrid,
+                    child: const Text('화료 판독을 Gemini 로 (예전 방식, 느림·유료)'),
                   ),
                   CheckedPopupMenuItem(
                     value: 'log',

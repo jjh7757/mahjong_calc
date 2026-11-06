@@ -2,6 +2,12 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-07 아침: 거치 화면 "화료 판독을 Gemini 로" 토글 (metrics 표 1-115, 커밋 전)
+
+- 사용자 "예전 제미나이 쓰는 버전으로 앱에서 선택으로" → 더보기 체크 메뉴 `mount-gemini-read-menu`(설정 `mount.geminiRead`, 기본 끔). 켜면 `readGrid(localOnly: false, useRoles: false)` = 11-02 전 Gemini 경로(`/v2/seat` 3번 + 만장일치·`/v2/last3`·`/v2/sticks`·`/v2/dora`+`/v2/localdora`·`/v2/seatwide`). 판 중 추적·펠트 격자·판 중 도라는 그대로, 프레임 투표 메뉴는 Gemini 면 꺼짐. 촬영 기록에 `reader: local|gemini`.
+- 운영 08e44b0 앱 흐름 32회(표 1-115): 손패 29/32·완전 맞음 26·패 432/436·경고 없는 틀린 자동 0·자동 20, **17.1 / 20.2 / 26.2초**(자체 모델 표 1-114: 30/32·23·434/436·0·자동 29·6.22초, 시각 다름). 경로 오류 0.
+- `flutter analyze` 이상 없음·`flutter test` 713 통과. 태블릿에 쓰려면 APK 다시 빌드·`adb install -r`.
+
 ## 배포 준비(2026-11-07) — **07:30 배포 완료(사용자 지시로 계획 세션이 push, deploy 성공, 운영 git_sha 08e44b0·라우트 22, 확인 측정 표 1-114: 답 동일 32회·434/436·6.22 / 6.89 / 7.20초·rss 최대 1040MB)** — 아래는 준비 때 적은 절차·되돌리기 (metrics 표 1-113)
 
 - **서버 상태:** `C:\Users\jjh7757\dev\mahjong-recognizer` master = **08e44b0**(로컬, origin/master·운영 = f33d632). `feat/table-frame` 을 빨리 감기로 합침 — 들어간 커밋 15개: 6b7c2cb(분류기 2순위 alt·conf2) · c4484dd(불확실성 신호 6종) · b0c9a39(WALL_FRAME axis·rot 실험) · b957432(표시패 채점 스크립트) · 599473e(**v2 분류기 기본**) · ed6b4f3(병합) · bc556f6(rot2) · 3816750(README) · 18a54ca(hybrid) · 1fdb079(로그) · 3a79920(README) · b2b4757(grid_src 없음 → 지금 경로) · cecc67a(**WALL_FRAME 기본 hybrid**) · 87af0d8(locallast3 로그) · 08e44b0(README). 충돌 없음, pytest 213 통과. 라우트는 f33d632 와 같은 22개(새 기능은 질의 인자 `grid_src`·`frame`·`sides` 뿐) — 워크플로의 '라우트 확인' 은 그대로 통과할 것.

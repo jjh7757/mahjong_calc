@@ -187,6 +187,9 @@ class TableReadTrace {
 
   /// 강 끝을 크롭 대신 사진 전체(`/v2/locallast3?sides=`)로 보냈나(격자 출처 none).
   bool lastFull = false;
+
+  /// 격자 판독이 어느 경로였나: `local`(자체 모델만) · `gemini`(예전 Gemini 경로). 격자 판독이 아니면 null.
+  String? reader;
 }
 
 /// 그림자 모드: 같은 사진의 한 자리를 손패 전용(/v2/handonly)과 자리 전체(/v2/seat)로 동시에 읽은 두 답. 기록용(설계 7절).
@@ -321,6 +324,7 @@ class TableReader {
     }
 
     trace?.layoutMode = 'grid';
+    trace?.reader = localOnly ? 'local' : 'gemini';
     onStage?.call(ReadStage.decoding);
     // 원본은 한 번만 디코딩한다(축소본·크롭을 같은 이미지에서). 다 자르면 바로 놓는다.
     final shot = await ops.openShot(original);

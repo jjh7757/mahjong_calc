@@ -203,6 +203,7 @@ class CaptureLog {
       if (trace?.feltQuad case final q?) 'felt_quad': q.toJson(),  // 펴서 읽었으면 원본 사진의 펠트 네 모서리
       if (trace?.gridSrc case final s?) 'grid_src': s.query, // 서버에 보낸 격자 출처(8b-4a)
       if (trace?.lastFull ?? false) 'last_full': true, // 강 끝을 사진 전체로 보냄(grid_src none)
+      'reader': ?trace?.reader, // 격자 판독 경로: local(자체 모델) · gemini(예전 경로, 거치 화면 토글)
       'fixed_analysis': trace?.analysis?.toJson(),
       'warnings': warnings,
       'error': error,
