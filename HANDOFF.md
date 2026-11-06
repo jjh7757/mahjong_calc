@@ -10,6 +10,11 @@
 - **서버:** `feat/cls-alt` **599473e** = `app/assets/tile-cls-mnv3s-v2.onnx`(cls4_all)·`tile-cls-alt-v2.onnx`(cls4_all_s1) + `local_read`·`signals` 기본 경로 v2(옛 파일은 남겨 `LOCAL_CLS_MODEL`·`LOCAL_ALT_CLS_MODEL` 로 되돌림), pytest 169. **배포는 사용자 결정** — feat/cls-alt(4단계 2순위 + 5단계 신호 + v2 분류기)를 master 로 합쳐 push 하면 운영 배포. 서버 작업 트리는 master f33d632 그대로, 측정 worktree `-s9` 는 지웠음.
 - 쓰는 법: `experiments/tile_classifier/README.md` 끝 절(`run_72a.sh`, launch.json `recognizer-fold4-*`·`prod4`). feat/cls-alt 가 이제 v2 기본이라 "전" 은 env 로 옛 파일을 못박는다(`run_72a.sh` 는 반영함).
 
+## 2026-11-06 오후 추가: 개선 계획 8b-1 — 탁자 독립 기준점(기기 + 패산) 오프라인 실험, 쓸 만함 (metrics 표 1-101, `docs/improvement_plan_1105.md` 8b-1 진행 줄)
+
+- **무엇:** `experiments/zone_points/wall_frame.py det|run|sheet` — 운영 8회차 검출기 상자만으로(색 안 씀) 가운데 기기(앞면 패 무리 안 빈 정사각형)·패산 사각형(눕힌 뒷면)을 찾아 중심·방향·u 를 잡고, 패 단위 바람개비 구역에 정답 패가 드는지 채점. 검출 캐시 `experiments/tile_classifier/data/zone_points/wall_frame_det.json`, 결과 `experiments/zone_points/results/wall_frame.json`·확인 그림 `wall_frame_sheet_*.jpg`(커밋 안 함). 격자·서버 코드는 안 바꿈, 커밋 안 함.
+- **결과:** 기기 개발 25/26·테스트 15/15·색 바꾼 15/15·재색칠 25/26×3, 패산은 막 올라온 프레임 12/13 이지만 30초 뒤 4/14·화료 시점 3/26. 구역 틀린 수 개발 10(저장 격자 44)·테스트 펴기 없이 7(장면 격자 27, 펴기+표준 8)·색 바꾼 15 7. 펠트 색을 기기 둘레에서 재면 회색·파랑 펠트도 된다. → 8b 2번(구역표 JSON)으로 갈 근거. 판 시작 = 패산 올라온 첫 프레임, 화료 = 기기.
+
 ## 2026-11-06 오후 추가: 개선 계획 7-2 — 장면 합성 사전학습, 미채택 (metrics 표 1-97 기준·1-98 결과, `docs/improvement_plan_1105.md` 7-2 진행 줄)
 
 - **무엇:** `experiments/tile_classifier/scene_synth.py` 로 실제 패·뒷면 크롭과 펠트 조각을 마작 규칙대로 놓고 카메라로 찍은 것처럼 합성(시험용 색 없음, 나눔마다 홀드아웃 사진 재료를 뺀 풀). 검출기 9회차 `det_r9_*`(캐글 `det_kernel_r9/`, 합성 8,000장 6에폭 → 8회차와 같은 미세 조정)·분류기 `cls3_*`(`train.py --synth-pre`, 합성 크롭 2.3만 2에폭 → 운영과 같은 미세 조정). 모델은 `experiments/tile_classifier/server_bench/models/`(커밋 안 함).
