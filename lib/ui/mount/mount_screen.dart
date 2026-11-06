@@ -47,6 +47,7 @@ import '../input_screen.dart';
 import '../kiosk.dart';
 import '../result_screen.dart';
 import '../score_table_screen.dart';
+import '../seat_picker.dart';
 import '../settings_screen.dart';
 import '../tile_view.dart';
 import 'capture_label.dart';
@@ -2016,18 +2017,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                   onPressed: () => Navigator.of(context)
                       .push(MaterialPageRoute(builder: (_) => SettlementScreen(game: g))),
                 ),
-              PopupMenuButton<int>(
-                tooltip: '화면 아래쪽에 앉은 사람',
+              IconButton(
+                key: const ValueKey('mount-seats'),
+                tooltip: '자리 맞추기 (카메라 사진 방향)',
                 icon: const Icon(Icons.person_pin_circle_outlined),
-                onSelected: (s) => gameStore.mutate((g) => g.settings = g.settings.copyWith(bottomSeat: s)),
-                itemBuilder: (_) => [
-                  for (var s = 0; s < 4; s++)
-                    CheckedPopupMenuItem(
-                      value: s,
-                      checked: s == g.settings.bottomSeat,
-                      child: Text('아래쪽: ${g.names[s]}'),
-                    ),
-                ],
+                onPressed: _askSeats,
               ),
               PopupMenuButton<String>(
                 tooltip: '더보기',
@@ -2234,7 +2228,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         children: [
           if (_galleryShot != null)
             Text(
-              '갤러리 사진에 격자를 맞추세요. 사진 아래쪽은 ${_bottomName()} 자리입니다(위 사람 아이콘에서 바꿈).',
+              '갤러리 사진에 격자를 맞추세요. 사진 아래쪽은 ${_bottomName()} 자리입니다(위 사람 아이콘 "자리 맞추기"에서 바꿈).',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           Text(
@@ -2246,6 +2240,39 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           const SizedBox(height: 6),
           _gridEditBar(),
         ],
+      ),
+    );
+  }
+
+  /// 누가 사진 어느 변에 앉았는지 탁자 그림으로 맞춘다. 돌릴 때마다 바로 반영(점수판·격자 이름이 따라 돈다).
+  Future<void> _askSeats() {
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) => ListenableBuilder(
+        listenable: gameStore,
+        builder: (ctx, _) {
+          final g = gameStore.current;
+          return AlertDialog(
+            title: const Text('자리 맞추기'),
+            content: g == null
+                ? const Text('진행 중인 대국이 없습니다.')
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('앉은 그대로 두고, 그림을 실제 자리(카메라 사진 방향)에 맞게 돌리세요.'),
+                      const SizedBox(height: 12),
+                      SeatSidePicker(
+                        labels: [
+                          for (var s = 0; s < 4; s++) '${Game.windNames[((s - g.dealer) % 4 + 4) % 4]} ${g.names[s]}',
+                        ],
+                        bottomSeat: g.settings.bottomSeat,
+                        onChanged: (v) => gameStore.mutate((g) => g.settings = g.settings.copyWith(bottomSeat: v)),
+                      ),
+                    ],
+                  ),
+            actions: [TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('닫기'))],
+          );
+        },
       ),
     );
   }

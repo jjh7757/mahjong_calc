@@ -171,7 +171,7 @@ lib/
    - 볼륨키는 Flutter `Focus`/`onKeyEvent` 로는 안 온다(시스템 볼륨 UI 가 가로챔). `MainActivity.onKeyDown` 에서 MethodChannel(`dev.jjh.mahjong_calc/volume`)로 넘기고, 거치 화면이 떠 있는 동안만 가로챈다(`lib/services/volume_keys.dart`).
    - 진행 다이얼로그가 스스로 닫히는 구조에서는 닫힘(`await showDialog`)을 기다린 뒤 다음 화면을 띄워야 한다. 안 그러면 다이얼로그의 pop 이 방금 띄운 결과 화면을 닫는다(겪은 버그).
    - 디코딩·크롭은 `compute()` 로 isolate 에서, 원본을 두 번 디코딩한다(locate 용 축소본, 크롭). 디버그 빌드 + WebP 2000px 에서 수 초. 실기기 릴리즈 + JPEG 는 더 빠를 것.
-   - 아래쪽 자리는 거치 화면 AppBar 의 사람 아이콘 메뉴에서 바꾼다(`GameSettings.bottomSeat`, 대국과 함께 저장). 대국 시작 폼에는 아직 없음.
+   - 아래쪽 자리는 대국 시작 폼 "카메라 쪽 자리"와 거치 화면 AppBar 사람 아이콘 "자리 맞추기"에서 탁자 그림을 돌려 맞춘다(`lib/ui/seat_picker.dart`, `GameSettings.bottomSeat`, 대국과 함께 저장, 11-06).
 5. ~~합성 전경~~ 대신 게임 리플레이 캡처(`experiments/vlm/samples_game/`)로 `mahjong-recognizer/scripts/pipeline.py`(locate→크롭·회전→병렬 호출, 앱 로직의 PC 판)를 돌려 확인함(2026-10-23, RESULTS.md 마지막 절). 앱의 `cropper`·`table_reader` 는 이 스크립트를 Dart 로 옮기면 된다.
 6. 실제 사진 세트(거치 높이 60·70·90cm, 줌 1x·2x)가 오면 `recognize_vlm.py --mode` 로 3종 정확도 측정. 기준: 손패 전부 정답, 도라 정답, 리치 4자리 정답.
 

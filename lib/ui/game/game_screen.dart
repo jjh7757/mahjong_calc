@@ -6,6 +6,7 @@ import '../../game/game.dart';
 import '../../game/game_store.dart';
 import '../kiosk.dart';
 import '../name_keyboard.dart';
+import '../seat_picker.dart';
 import 'history_screen.dart';
 import 'record_edit.dart';
 import 'settlement_screen.dart';
@@ -62,6 +63,9 @@ class _SetupFormState extends State<_SetupForm> {
   bool _tenpaiYame = true;
   bool _overtime = true;
 
+  /// 카메라 사진 아래쪽에 앉는 자리(0 = 동가). 사람이 카메라에 맞춰 앉지 않고 앱에서 맞춘다.
+  int _bottomSeat = 0;
+
   // 중간부터 시작
   bool _resume = false;
   int _roundWind = 0;
@@ -96,6 +100,7 @@ class _SetupFormState extends State<_SetupForm> {
       agariYame: _agariYame,
       tenpaiYame: _tenpaiYame,
       overtime: _overtime,
+      bottomSeat: _bottomSeat,
     );
   }
 
@@ -266,6 +271,21 @@ class _SetupFormState extends State<_SetupForm> {
               ),
             ),
           ),
+        const SizedBox(height: 8),
+        Text('카메라 쪽 자리', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 4),
+        Text(
+          '앉은 그대로 두고, 돌리기 버튼으로 그림을 실제 자리(카메라 사진 방향)에 맞추세요. 대국 중에도 테이블 화면 사람 아이콘에서 바꿀 수 있습니다.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: 6),
+        Center(
+          child: SeatSidePicker(
+            labels: [for (var s = 0; s < 4; s++) '${Game.windNames[s]} ${_nameList[s]}'],
+            bottomSeat: _bottomSeat,
+            onChanged: (v) => setState(() => _bottomSeat = v),
+          ),
+        ),
         const SizedBox(height: 8),
         Text('규칙', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
