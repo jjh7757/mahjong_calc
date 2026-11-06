@@ -2,6 +2,14 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-06 밤 추가(3): 개선 계획 8b-3c — 서버 `WALL_FRAME=hybrid`(앱이 격자를 가졌으면 지금 경로, 아니면 rot2), **채택 — 기본 켬 후보, 서버 feat/table-frame 18a54ca·1fdb079 만(push 안 함 = 운영 미반영)** (metrics 표 1-108 기준·1-109 결과, `docs/improvement_plan_1105.md` 8b "진행(8b-3c)" 줄)
+
+- **무엇:** 경로를 요청 `grid_src`(격자 출처)로 고른다 — `saved|manual|felt` → 지금 경로(답 그대로, 기준점은 잡아 응답에만), `none|default`·격자 질의 없음 → 8b-3b rot2, 기준점 못 잡으면 지금 경로. 응답 `wall_frame: saved|rot2|none`·`wall_frame_src`·`wall_frame_check`(진단). 측정용 강제값 `WALL_FRAME_GRID_SRC`. localdora 에 격자 x1..y2 선택 인자. 서버 로그 줄 앞에 `wall_frame=`. pytest 210.
+- **처음 지시(격자 ↔ 기준점 1u·3° 대조)는 측정 전 버림:** 개발 31장에서 saved 6/31 — 저장 격자 가운데 칸 중심은 기기 중심에서 거치마다 일정하게 1~3u 어긋나고(손패 띠 기준으로 맞춘 선), **사진 한 장 θ 가 같은 거치에서 0.3~4.2° 흔들림**. → 거치 이동 감시는 프레임 여러 장 중앙값으로(4번).
+- **결과:** 개발 32회 앱 흐름 장면 32/32 답 같음·패 433·경고 없는 틀린 자동 0·표시패 15, 경로 saved 32/32. 회귀 prod 세 변형 78행 같음. 테스트 서버 단독 펴기 없이 158 → 191·펴기 189 = 189·색 바꾼 145 → 179, 앱 흐름 펴기 198 = 198·펴기 없이 155 → 191·색 바꾼 145 → 179. 표시패 50장 같음. 시간 +0.020초.
+- **다음 = 앱 4번:** `grid_src` 보내기(localroles·localdora(+격자)·locallast3), 격자 저장 때 기준점 저장, 프레임 중앙값 거치 이동 감시, 강 끝 사진 전체(`sides=`). **4번 전에 서버에서 hybrid 를 켜면 localdora 가 rot2 로 간다**(지금 앱은 localdora 에 격자를 안 보냄). 배포는 사용자 결정, `feat/cls-alt` 배포가 먼저.
+- **측정 도구:** `experiments/speed/run_8b3c.sh <TAG> [e]`, `flow_same.py`(앱 흐름 전·후 장면별 답 동일 + localdora 경로 수), `e_time.py`((e) 사진별 시간), launch.json `recognizer-wf3-*`(8163~8167, saved 강제)·`recognizer-wf3n-prod`(8168, none). localroles 경로 수는 preview_logs 검색 `wall_frame=`.
+
 ## 2026-11-06 밤: 태블릿 → 헤드 끊김 오래 지켜보기 — 재현 안 됨
 
 - 사용자: 오프라인 실험 때 폰 헤드 연결이 여러 번 끊겨 1시간 연결 시험. 새 도구 `experiments/supervise/head_link_watch.py`(용법·결과는 `docs/visit_supervision.md` "오래 지켜보기"). 20:35~22:07(65분 + 27분에서 사용자 중지) 1,110회 끊김 0, ARP·MAC·BSSID·주파수 변화 없음. 결과 `experiments/visit_20261106/link/`(커밋 안 함).
