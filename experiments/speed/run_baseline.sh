@@ -6,6 +6,8 @@
 #   field: recognizer-prodlike(8036) — 운영 모델은 테스트 15장을 학습하지 않아 이게 곧 홀드아웃. RECOLOR=1 이면 색 바꾼 사본.
 #   bash experiments/speed/run_baseline.sh dev <TAG>     → results/log_flow_base_<TAG>_{bcd,am,pmA,pmB}.txt, 채점 flow_visit.py score
 #   bash experiments/speed/run_baseline.sh field <TAG>   → results/log_flow_base_<TAG>_field.txt, 채점 experiments/rectify/summarize_field.py
+# APP_DIR=<다른 체크아웃> 이면 flutter drive 만 그 폴더에서(다른 세션이 본 체크아웃 앱 코드를 고치는 중일 때, 8b-3b), 사진·채점은 본 체크아웃.
+# RECTIFY=false 면 field 를 펴기 없이(원본 + 장면 격자, 8b-3).
 # 나눔(experiments/tile_classifier/README.md 끝 절): 오후A/오후B 경계는 역할 모델 교차 검증 fold(role_set.folds)와 같은 171245.
 set -u
 MAIN="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -25,6 +27,7 @@ if [ "$MODE" = dev ]; then
   GRIDS=$(python -X utf8 experiments/zone_points/zones.py grids saved 2>/dev/null)
   VISIT=(--dart-define=SLEEP_S=5 --dart-define=PHOTO_URL=$P/visit_20261031/captures --dart-define=SET=visit --dart-define=REPEAT=1 "--dart-define=FIELD_GRIDS=$GRIDS" "--dart-define=RIICHI_SIDES=$RIICHI")
   BCD=(--dart-define=SLEEP_S=5 --dart-define=PHOTO_URL=$P/field_20261024/kakao_photos --dart-define=SET=bcd --dart-define=REPEAT=2)
+  cd "${APP_DIR:-$MAIN}"
   echo "$TAG bcd 시작 $(date +%T)"
   "$F" "${COMMON[@]}" --dart-define=RECOGNIZER_URL=http://127.0.0.1:$U_BCD "${BCD[@]}" > "$R/log_flow_base_${TAG}_bcd.txt" 2>&1
   echo "$TAG bcd 끝 $? $(date +%T)"
@@ -36,9 +39,10 @@ if [ "$MODE" = dev ]; then
   echo "$TAG pmB 끝 $? $(date +%T)"
 elif [ "$MODE" = field ]; then
   DIR=captures; [ -n "${RECOLOR:-}" ] && DIR=captures_recolor
+  cd "${APP_DIR:-$MAIN}"
   echo "$TAG field($DIR) 시작 $(date +%T)"
   "$F" "${COMMON[@]}" --dart-define=RECOGNIZER_URL=http://127.0.0.1:$U_FIELD --dart-define=SLEEP_S=0 --dart-define=PHOTO_URL=$P/field_20261024/$DIR \
-    --dart-define=SET=field --dart-define=RECTIFY=true --dart-define=REPEAT=1 > "$R/log_flow_base_${TAG}_field.txt" 2>&1
+    --dart-define=SET=field --dart-define=RECTIFY=${RECTIFY:-true} --dart-define=REPEAT=1 > "$R/log_flow_base_${TAG}_field.txt" 2>&1
   echo "$TAG field 끝 $? $(date +%T)"
 else
   echo "모드는 dev 또는 field"; exit 2

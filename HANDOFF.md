@@ -2,6 +2,18 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-06 밤: 태블릿 → 헤드 끊김 오래 지켜보기 — 재현 안 됨
+
+- 사용자: 오프라인 실험 때 폰 헤드 연결이 여러 번 끊겨 1시간 연결 시험. 새 도구 `experiments/supervise/head_link_watch.py`(용법·결과는 `docs/visit_supervision.md` "오래 지켜보기"). 20:35~22:07(65분 + 27분에서 사용자 중지) 1,110회 끊김 0, ARP·MAC·BSSID·주파수 변화 없음. 결과 `experiments/visit_20261106/link/`(커밋 안 함).
+- 찾은 것: 태블릿 테이블 화면(`MountScreen`)은 화면 켜 두기를 안 켠다(헤드 화면만 `ScreenWake.keepOn`). 21:08 화면이 꺼지자 앱이 뒤로 가 미리보기가 멈춤 — 오프라인 실험의 "끊김" 이 이것이었을 수 있다(그때 태블릿 화면이 꺼졌는지 확인 필요). 앱은 안 고침.
+
+## 2026-11-06 밤 추가(2): 개선 계획 8b-3b — 서버 `WALL_FRAME=rot2`(rot 의 크롭 정의 손실 세 가지를 고친 후보), **미채택 — 기본 끔, 서버 feat/table-frame bc556f6 만(push 안 함)** (metrics 표 1-106 기준·1-107 결과, `docs/improvement_plan_1105.md` 8b "진행(8b-3b)" 줄)
+
+- **무엇:** 서버 `../mahjong-recognizer-8b` 브랜치 `feat/table-frame` = b957432 + `feat/cls-alt` 599473e 병합(ed6b4f3, **v2 분류기 기본**) + **bc556f6**(`WALL_FRAME=rot2`): ① 자리 읽기 크롭 = 구역표 새 항목 `seat_read`(seat 를 이웃 자리 쪽으로 3u 겹침, 구역은 seat 그대로) ② 크롭 안 `loose` 가 틀에 안 쓰였고 홀로 놓였으면 떼어 둔 화료패 후보(`from: loose_inside`) ③ 표시패는 세워 자르지 않고 사진 전체 검출에서 패산 표시패 후보만 구역으로, 짝은 지금처럼(`cut: whole`). 구역표 바뀜: 앱 `assets/table_frame/zones.json`·`test/fixtures/table_frame.json`(상자 608)·서버 복사본 — 셋이 같아야 함(서버 pytest 가 확인).
+- **결과:** 8b-3 rot 의 손실(손패 끝 장·떼어 둔 쯔모패·표시패 헛 짝·14u 짝)은 전부 사라짐, 회귀 prod 장면 553 → 599/672·unsafe 11 → 2, ±25° 크게 오름, 테스트 펴기 없이 158 → 191·색 바꾼 145 → 179, 시간 +0.065초. **그러나 개발 32회 앱 흐름 패 433 → 429/436**(기준 ≥ 431): 새 손실 171245(나눔 역할 모델에서 모서리 白 울기 `[5z 5z 5z]` 채우기 실패, 입력 화면)·171505(`3m → 2m` 크롭 안 오독, 경고 있음). 경고 없는 틀린 자동 0·표시패 15/18 은 그대로.
+- **다음(계획 세션 결정):** 171245 白 채우기가 넓어진 크롭에서 왜 깨지는지 개발 사진으로 단위 확인 → 기준 먼저·한 번(8b-3c 후보). 앱 4번(기준점 확인·패산 감시·`/v2/locallast3?sides=`)은 (a) 를 넘긴 뒤.
+- **측정 도구:** `experiments/speed/run_8b3b.sh <TAG>`(서버 단독 전·후), `run_baseline.sh` 에 `APP_DIR`(다른 체크아웃에서 flutter drive)·`RECTIFY=false`, launch.json `recognizer-wf2b0-*`(8143~8147)·`recognizer-wf2-*`(8153~8157), 서버 `scripts/wall_frame_{check,dora}.py --modes ,rot2`. **태그는 겹치지 않게** — 이번에 `1106` 이 8b-3 의 커밋 안 된 회귀 결과 두 파일을 덮었다.
+
 ## 2026-11-06 밤 추가: 개선 계획 8b-3 — 서버 실험 옵션 `WALL_FRAME`(탁자 기준점 + 구역표 자르기), **미채택 — 기본 끔, 서버 feat/table-frame 브랜치만(push 안 함)** (metrics 표 1-104 기준·1-105 결과, `docs/improvement_plan_1105.md` 8b "할 일 3" 진행 줄 셋)
 
 - **무엇:** 서버 `../mahjong-recognizer-8b` worktree, 브랜치 `feat/table-frame` **b0c9a39**(c4484dd 위: `app/table_frame.py` = 8b-2 로더 그대로 + 구역표 복사본 `app/assets/table_frame_zones.json`, `app/table_locate.py` = 8b-1 기기·패산 찾기 그대로 + 세워 자르기, 사진 전체 자리 검출 공유 `LocalReader.full_raw`(8단계 P1), `WALL_FRAME=axis|rot`, 요청 `frame=`, `/v2/locallast3?sides=`, pytest 193) + **b957432**(`scripts/wall_frame_dora.py` 표시패 서버 단독 채점). 옵션 설명은 서버 README "탁자 기준점 실험 옵션" 절. 분류기는 c4484dd 의 옛 것(7-2a 채택 v2 아님).
