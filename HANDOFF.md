@@ -2,7 +2,7 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
-## 배포 준비(2026-11-07) — 서버 master 를 로컬에서 합쳐 둠, **push·배포는 사용자가** (metrics 표 1-113)
+## 배포 준비(2026-11-07) — **07:30 배포 완료(사용자 지시로 계획 세션이 push, deploy 성공, 운영 git_sha 08e44b0·라우트 22, 확인 측정 표 1-114: 답 동일 32회·434/436·6.22 / 6.89 / 7.20초·rss 최대 1040MB)** — 아래는 준비 때 적은 절차·되돌리기 (metrics 표 1-113)
 
 - **서버 상태:** `C:\Users\jjh7757\dev\mahjong-recognizer` master = **08e44b0**(로컬, origin/master·운영 = f33d632). `feat/table-frame` 을 빨리 감기로 합침 — 들어간 커밋 15개: 6b7c2cb(분류기 2순위 alt·conf2) · c4484dd(불확실성 신호 6종) · b0c9a39(WALL_FRAME axis·rot 실험) · b957432(표시패 채점 스크립트) · 599473e(**v2 분류기 기본**) · ed6b4f3(병합) · bc556f6(rot2) · 3816750(README) · 18a54ca(hybrid) · 1fdb079(로그) · 3a79920(README) · b2b4757(grid_src 없음 → 지금 경로) · cecc67a(**WALL_FRAME 기본 hybrid**) · 87af0d8(locallast3 로그) · 08e44b0(README). 충돌 없음, pytest 213 통과. 라우트는 f33d632 와 같은 22개(새 기능은 질의 인자 `grid_src`·`frame`·`sides` 뿐) — 워크플로의 '라우트 확인' 은 그대로 통과할 것.
 - **검사 결과(표 1-113, 같은 시각 로컬 08e44b0 / f33d632, 환경 변수 없이):** 기본값 = 분류기 v2·신호 두 번째 분류기 alt-v2·`WALL_FRAME` hybrid 확인. **옛 앱 요청(`grid_src` 없음)으로 개발 32회 앱 흐름 장면 32/32 답 같음**(둘 다 패 434/436·경고 없는 틀린 자동 0·표시패 14/18), 회귀 `orig` 26장 서버 단독 3번 모두 같음(343/343·unsafe 0). 예상했던 171245 차이(434 → 433)는 이번엔 안 남 — 두 서버 다 '고르면 맞음'. 한 장 시간 0.73 → 0.79초(+0.06, 운영에선 약 +0.2~0.3초 예상), 앱 흐름 2.1 / 2.2 / 2.6 → 2.1 / 2.2 / 2.4초. `grid_src=none` 한 장(133011) → `wall_frame: rot2`, 없음 → `saved`. 앱 `flutter analyze` 이상 없음·`flutter test` 713 통과.
