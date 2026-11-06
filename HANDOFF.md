@@ -2,6 +2,14 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-06 저녁 추가: 개선 계획 7-2a — 분류기만 합성 사전학습(새 씨드), **채택 — 서버 feat/cls-alt 599473e, push 안 함 = 운영 미반영** (metrics 표 1-99 기준·1-100 결과, `docs/improvement_plan_1105.md` 7-2a 진행 줄)
+
+- **무엇:** 검출기 8회차·역할 모델·규칙 그대로, 분류기만 7-2 와 같은 합성 크롭 사전학습 + 운영과 같은 미세 조정을 새 씨드(10·11)로 — `train.py --synth-pre --tag cls4 --seed-offset 10` → `cls4_*` 8벌(`server_bench/models/`, 커밋 안 함).
+- **결과:** 회귀 21변형 unsafe/unsafe_app fold 26/10 → 22/3·prod 17/11 → 11/5(축소 0.6·흐림 σ3), 개발 32회 앱 흐름 434 → 433/436(171245 화료패 놓침 → 후보 고르기)·경고 없는 틀린 자동 0, 테스트 15장 서버 189/196·앱 198/211·경고 없는 틀린 자동 3, **색 바꾼 15장 서버 145·앱 145 그대로**, 서버 시간 0.82 → 0.82초 → 기준 (a)~(d) 전부 충족. 7-2 의 색 바꾼 하락·F1434 회귀는 검출기 몫이었음. F1400 적5만은 그대로.
+- **(d) 메모:** 첫 측정 prod `orig` 중앙 +0.14초는 바꾸지 않은 검출 단계까지 +86ms 느려진 측정 오염이라, 사용자 결정으로 시간만 전·후 번갈아 3번 다시 재어(78회씩) 판정. 17:13~17:44 첫 측정은 사용자 지시로 멈춰 버렸고 20:01~ 새 TAG `1106b` 로 통째로 다시 잼.
+- **서버:** `feat/cls-alt` **599473e** = `app/assets/tile-cls-mnv3s-v2.onnx`(cls4_all)·`tile-cls-alt-v2.onnx`(cls4_all_s1) + `local_read`·`signals` 기본 경로 v2(옛 파일은 남겨 `LOCAL_CLS_MODEL`·`LOCAL_ALT_CLS_MODEL` 로 되돌림), pytest 169. **배포는 사용자 결정** — feat/cls-alt(4단계 2순위 + 5단계 신호 + v2 분류기)를 master 로 합쳐 push 하면 운영 배포. 서버 작업 트리는 master f33d632 그대로, 측정 worktree `-s9` 는 지웠음.
+- 쓰는 법: `experiments/tile_classifier/README.md` 끝 절(`run_72a.sh`, launch.json `recognizer-fold4-*`·`prod4`). feat/cls-alt 가 이제 v2 기본이라 "전" 은 env 로 옛 파일을 못박는다(`run_72a.sh` 는 반영함).
+
 ## 2026-11-06 오후 추가: 개선 계획 7-2 — 장면 합성 사전학습, 미채택 (metrics 표 1-97 기준·1-98 결과, `docs/improvement_plan_1105.md` 7-2 진행 줄)
 
 - **무엇:** `experiments/tile_classifier/scene_synth.py` 로 실제 패·뒷면 크롭과 펠트 조각을 마작 규칙대로 놓고 카메라로 찍은 것처럼 합성(시험용 색 없음, 나눔마다 홀드아웃 사진 재료를 뺀 풀). 검출기 9회차 `det_r9_*`(캐글 `det_kernel_r9/`, 합성 8,000장 6에폭 → 8회차와 같은 미세 조정)·분류기 `cls3_*`(`train.py --synth-pre`, 합성 크롭 2.3만 2에폭 → 운영과 같은 미세 조정). 모델은 `experiments/tile_classifier/server_bench/models/`(커밋 안 함).

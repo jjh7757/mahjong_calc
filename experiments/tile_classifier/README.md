@@ -322,3 +322,20 @@ U_BCD=8083 U_AM=8084 U_PMA=8085 U_PMB=8087 bash experiments/speed/run_baseline.s
 U_BCD=8093 U_AM=8094 U_PMA=8095 U_PMB=8097 bash experiments/speed/run_baseline.sh dev <TAG>   # 앱 흐름 후: recognizer-fold3-*(--seat-det det_r9 --cls-tag cls3)
 U_FIELD=8086|8096 [RECOLOR=1] bash experiments/speed/run_baseline.sh field <TAG>             # 테스트 15장: recognizer-prod3base / recognizer-prod3
 ```
+
+## 7-2a: 분류기만 합성 사전학습, 새 씨드 (`train.py --synth-pre --tag cls4 --seed-offset 10`, metrics 표 1-99 기준·1-100 결과, 2026-11-06, **채택 — 서버 feat/cls-alt 599473e, 운영 미반영**)
+
+7-2 와 같은 코드·합성 크롭(`data/synth/cls_{nobcd,b,a,all}.npz`)·풀 대응(bcd→nobcd·am→b·pm→a·all→all)·사전학습 2에폭·미세 조정(축 크롭 1,550 + AUG 40에폭)에 **씨드만 새로**(주 10·두 번째 11, 사전학습 난수 1000 + 씨드). 검출기는 8회차 그대로.
+
+- `--tag`(모델 이름 앞, 기본 cls3)·`--seed-offset`(실제 씨드 = 오프셋 + `--seeds` 번호, 이름 꼬리 `_s1` 은 번호로) 만 더함. 결과 `server_bench/models/cls4_*.onnx`(커밋 안 함)·`data/cls4_*.pt`·`data/synth/results_cls4.json`·`log_cls4.txt`. 8벌 1시간 26분(노트북 CPU).
+- 결과(표 1-100): 회귀 21변형 unsafe/unsafe_app fold 26/10 → 22/3·prod 17/11 → 11/5(축소 0.6·흐림 σ3), 개발 앱 흐름 434 → 433/436·경고 없는 틀린 자동 0, 테스트 15장 서버 189·앱 198·색 바꾼 15장 서버 145·앱 145 모두 그대로, 서버 시간 같음 → 채택. 7-2 의 색 바꾼 하락·F1434 회귀는 검출기 몫이었다. F1400 적5만은 그대로.
+- 운영용: `cls4_all.onnx` → 서버 `app/assets/tile-cls-mnv3s-v2.onnx`, `cls4_all_s1.onnx` → `tile-cls-alt-v2.onnx`, `local_read.CLS_MODEL`·`ALT_CLS_MODEL`·`signals.ALT_CLS_MODEL` 기본값 v2(옛 파일은 남김 — `LOCAL_CLS_MODEL`·`LOCAL_ALT_CLS_MODEL` 로 되돌림). push 안 함.
+
+```
+python -I -X utf8 experiments/tile_classifier/train.py --synth-pre --tag cls4 --seed-offset 10      # cls4_* 8벌
+bash experiments/speed/run_72a.sh <TAG>       # 서버 단독: 회귀 fold·prod 전·후 + 테스트 15장·색 바꾼 15장 전·후(서버 feat/cls-alt worktree, RECOGNIZER_REPO)
+U_BCD=8083 U_AM=8084 U_PMA=8085 U_PMB=8087 bash experiments/speed/run_baseline.sh dev <TAG>   # 앱 흐름 전: recognizer-fold3base-*
+U_BCD=8103 U_AM=8104 U_PMA=8105 U_PMB=8107 bash experiments/speed/run_baseline.sh dev <TAG>   # 앱 흐름 후: recognizer-fold4-*(--cls-tag cls4)
+U_FIELD=8086|8106 [RECOLOR=1] bash experiments/speed/run_baseline.sh field <TAG>             # 테스트 15장: recognizer-prod3base / recognizer-prod4
+```
+launch.json 의 `recognizer-fold3*`·`prod3*`·`fold4-*`·`prod4` 는 `--repo C:/Users/jjh7757/dev/mahjong-recognizer-s9`(측정 뒤 지웠음) — 다시 쓰려면 `git -C ../mahjong-recognizer worktree add ../mahjong-recognizer-s9 feat/cls-alt`. feat/cls-alt 가 이제 v2 기본이므로 "전"(운영 분류기)을 재려면 `prod3base` 에 `LOCAL_CLS_MODEL=…/tile-cls-mnv3s.onnx`·`LOCAL_ALT_CLS_MODEL=…/tile-cls-alt.onnx` 를 주거나 c4484dd 로 worktree 를 만든다.
