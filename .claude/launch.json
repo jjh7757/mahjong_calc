@@ -1376,6 +1376,66 @@
       ],
       "port": 8156,
       "autoPort": false
+    },
+    {
+      "name": "recognizer-wf3-bcd",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set WALL_FRAME=hybrid&& set WALL_FRAME_GRID_SRC=saved&& python experiments/yolo/run_local_server.py --port 8163 --repo C:/Users/jjh7757/dev/mahjong-recognizer-8b --local-fold a,bcd --seat-det det_r8 --role-model tile-roles-rot.onnx --cls-tag cls4"
+      ],
+      "port": 8163,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-wf3-am",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set WALL_FRAME=hybrid&& set WALL_FRAME_GRID_SRC=saved&& python experiments/yolo/run_local_server.py --port 8164 --repo C:/Users/jjh7757/dev/mahjong-recognizer-8b --local-fold b,am --seat-det det_r8 --role-model tile-roles-rot_fold_am.onnx --cls-tag cls4"
+      ],
+      "port": 8164,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-wf3-pmA",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set WALL_FRAME=hybrid&& set WALL_FRAME_GRID_SRC=saved&& python experiments/yolo/run_local_server.py --port 8165 --repo C:/Users/jjh7757/dev/mahjong-recognizer-8b --local-fold a,pm --seat-det det_r8 --role-model tile-roles-rot_fold_pmA.onnx --cls-tag cls4"
+      ],
+      "port": 8165,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-wf3-pmB",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set WALL_FRAME=hybrid&& set WALL_FRAME_GRID_SRC=saved&& python experiments/yolo/run_local_server.py --port 8167 --repo C:/Users/jjh7757/dev/mahjong-recognizer-8b --local-fold a,pm --seat-det det_r8 --role-model tile-roles-rot_fold_pmB.onnx --cls-tag cls4"
+      ],
+      "port": 8167,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-wf3-prod",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set WALL_FRAME=hybrid&& set WALL_FRAME_GRID_SRC=saved&& python experiments/yolo/run_local_server.py --port 8166 --repo C:/Users/jjh7757/dev/mahjong-recognizer-8b"
+      ],
+      "port": 8166,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-wf3n-prod",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": [
+        "/c",
+        "set WALL_FRAME=hybrid&& set WALL_FRAME_GRID_SRC=none&& python experiments/yolo/run_local_server.py --port 8168 --repo C:/Users/jjh7757/dev/mahjong-recognizer-8b"
+      ],
+      "port": 8168,
+      "autoPort": false
     }
   ]
 }
