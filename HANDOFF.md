@@ -2,6 +2,14 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-07 아침: 개선 계획 8b-4a — 서버 hybrid 기본 켬 + 앱이 `grid_src` 를 보냄, **미리 적은 기준으로는 미채택(c2 하나), 나머지 충족 — 해석은 계획 세션** (metrics 표 1-111 기준·1-112 결과, `docs/improvement_plan_1105.md` 8b "할 일 4" 진행 줄)
+
+- **서버** `../mahjong-recognizer-8b` `feat/table-frame` b2b4757·cecc67a·87af0d8(push 안 함 = 운영 미반영): hybrid 에서 `grid_src` 없음 → 격자 질의가 없어도 지금 경로, **`WALL_FRAME` 변수가 없으면 hybrid**(끄기 `WALL_FRAME=off` — Windows `set WALL_FRAME=` 는 변수를 지워 기본값이 됨), locallast3 로그 줄. 옛 앱 답 무변경 확인(회귀 `orig`·표시패 개발).
+- **앱** 브랜치 `claude/8b-4a-grid-src-bbecea`(07eab49 위, push 안 함): `GridSource`(lib/table/grid_zones.dart), `readGrid(gridSrc:)`, 거치 화면이 출처를 따라감(UI 무변경), none 이면 강 끝 `/v2/locallast3?sides=` 사진 전체. 측정 흐름 `read_grid_timing_test.dart` 는 개발·펴기 saved, 펴기 없이·색 바꾼 none(`GRID_SRC=` 로 덮기, `off` = 옛 요청).
+- **결과:** 지금 매장(저장 격자) 답 그대로(개발 32/32·펴기 15/15). 펴기 없이 155 → **201**/211·손패 0 → 6/15(펴기 198 보다 높고 3초 빠름), 색 바꾼 145 → 182. 그러나 경고 없는 틀린 자동 0 → 3·0 → 1 — 전부 F1400 `3p…` 오독(펴기 경로의 3 과 같은 장면). 기준 문구 '≤ 전' 그대로면 ✗.
+- **다음:** 계획 세션이 c2 를 '≤ 펴기 경로' 로 읽을지 결정 → 채택이면 4b(기준점 저장·프레임 중앙값 감시·기기 확인 UI·실기기), 미채택이면 `mount_screen.dart` `gridSrc: _gridSrc` 한 줄 빼기. mount_screen 은 본 체크아웃 거치 화면 작업과 겹칠 수 있음(합칠 때 충돌 주의, 바뀐 곳은 공유 노트 `8b-4a_grid_src.md`).
+- **측정 도구:** launch.json(이 브랜치) `recognizer-wf4-{bcd,am,pmA,pmB,prod}`(8173~8177, 변수 없음 = hybrid 기본)·`exp-files-8b4a`(8043, 본 체크아웃 experiments 를 절대 경로로) — 미리보기 서버는 작업 폴더당 5개라 fold 넷 → prod 순서로. `run_baseline.sh` 는 본 체크아웃 것을 `APP_DIR` 로.
+
 ## 2026-11-06 밤 추가(3): 개선 계획 8b-3c — 서버 `WALL_FRAME=hybrid`(앱이 격자를 가졌으면 지금 경로, 아니면 rot2), **채택 — 기본 켬 후보, 서버 feat/table-frame 18a54ca·1fdb079 만(push 안 함 = 운영 미반영)** (metrics 표 1-108 기준·1-109 결과, `docs/improvement_plan_1105.md` 8b "진행(8b-3c)" 줄)
 
 - **무엇:** 경로를 요청 `grid_src`(격자 출처)로 고른다 — `saved|manual|felt` → 지금 경로(답 그대로, 기준점은 잡아 응답에만), `none|default`·격자 질의 없음 → 8b-3b rot2, 기준점 못 잡으면 지금 경로. 응답 `wall_frame: saved|rot2|none`·`wall_frame_src`·`wall_frame_check`(진단). 측정용 강제값 `WALL_FRAME_GRID_SRC`. localdora 에 격자 x1..y2 선택 인자. 서버 로그 줄 앞에 `wall_frame=`. pytest 210.
