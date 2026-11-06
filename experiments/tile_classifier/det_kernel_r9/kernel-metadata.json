@@ -1,0 +1,15 @@
+{
+  "id": "jjh7757/mahjong-tile-det-r9",
+  "title": "mahjong tile det r9",
+  "code_file": "train_det_r9.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": ["jjh7757/mahjong-tile-obb-r8", "jjh7757/mahjong-scene-synth-r9"],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

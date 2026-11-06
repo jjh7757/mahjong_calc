@@ -2,6 +2,12 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-06 오후 추가: 개선 계획 7-2 — 장면 합성 사전학습, 미채택 (metrics 표 1-97 기준·1-98 결과, `docs/improvement_plan_1105.md` 7-2 진행 줄)
+
+- **무엇:** `experiments/tile_classifier/scene_synth.py` 로 실제 패·뒷면 크롭과 펠트 조각을 마작 규칙대로 놓고 카메라로 찍은 것처럼 합성(시험용 색 없음, 나눔마다 홀드아웃 사진 재료를 뺀 풀). 검출기 9회차 `det_r9_*`(캐글 `det_kernel_r9/`, 합성 8,000장 6에폭 → 8회차와 같은 미세 조정)·분류기 `cls3_*`(`train.py --synth-pre`, 합성 크롭 2.3만 2에폭 → 운영과 같은 미세 조정). 모델은 `experiments/tile_classifier/server_bench/models/`(커밋 안 함).
+- **결과:** 개발 32회 앱 흐름 434/436·경고 없는 틀린 자동 0 그대로, 회귀 unsafe fold 26 → 22·prod 17 → 7(축소 0.6·흐림 σ3 가 크게 나아짐), 적5 혼동 0, 시간 같음 — 그런데 테스트 15장 서버 단독 189 → 188/196(F1434 안깡 4s×4 → 8s×4, 검출기 몫)·색 바꾼 15장 145 → 139(앱 136) → **(c) 미충족, 운영 모델 그대로, 서버 변경 없음.** F1400 적5만은 안 고쳐짐. 검출기만 바꾸면 회귀 fold unsafe 50 으로 나빠지고 분류기만은 22 — "분류기만" 은 판정하지 않음(기준 먼저 적고 새 씨드로 한 번이 다음 후보).
+- 쓰는 법: `experiments/tile_classifier/README.md` 끝 절(합성 재료·표본 시트·크롭·학습·캐글 데이터셋 `jjh7757/mahjong-scene-synth-r9`·커널 `jjh7757/mahjong-tile-det-r9`·`run_72.sh`·launch.json `recognizer-fold3base-*`·`fold3-*`·`prod3base`·`prod3`, 서버 worktree `git -C ../mahjong-recognizer worktree add ../mahjong-recognizer-s8 feat/cls-alt` 는 측정 뒤 지웠음).
+
 ## 2026-11-06 새벽 추가: 개선 계획 7-1 — 세운 크롭 재학습, 미채택 (metrics 표 1-95 기준·1-96 결과, `docs/improvement_plan_1105.md` 7-1 진행 줄)
 
 - **무엇:** 분류기를 서버 `upright()` 로 세워 자른 전수 조사 상자 크롭 1,168장(+180°·JPEG q60~95 지터)으로 `cls2_*` 8벌, 역할 라벨을 전수 조사 상자로 다시 만들어(`labels_obb.json`) `tile-roles-rot2*`. 모델은 `experiments/tile_classifier/server_bench/models/`(커밋 안 함).

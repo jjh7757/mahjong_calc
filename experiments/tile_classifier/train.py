@@ -82,8 +82,9 @@ def obb_pil(sat: float = OBB_SAT) -> T.Compose:
 AUG_OBB = T.Compose([obb_pil(), T.ToTensor(), T.Normalize(MEAN, STD)])
 
 
-def train(items: list[dict], images: dict, seed: int, aug=None) -> nn.Module:
-    """aug 없으면 AUG(images = 정사각형 크롭). AUG_OBB 면 images = 원래 크기 크롭."""
+def train(items: list[dict], images: dict, seed: int, aug=None, init: dict | None = None) -> nn.Module:
+    """aug 없으면 AUG(images = 정사각형 크롭). AUG_OBB 면 images = 원래 크기 크롭.
+    init(7-2): 사전학습 가중치. 주면 ImageNet 가중치로 만든 뒤 덮어쓴다(난수 흐름은 init 없을 때와 같다) — 나머지 학습은 그대로."""
     import random
 
     aug = aug or AUG
@@ -92,6 +93,8 @@ def train(items: list[dict], images: dict, seed: int, aug=None) -> nn.Module:
     random.seed(seed)
     net = torchvision.models.mobilenet_v3_small(weights=torchvision.models.MobileNet_V3_Small_Weights.IMAGENET1K_V1)
     net.classifier[3] = nn.Linear(net.classifier[3].in_features, len(CLASSES))
+    if init is not None:
+        net.load_state_dict(init)
     freq = Counter(x["tile"] for x in items)
     prob = np.array([1 / freq[x["tile"]] for x in items])
     prob /= prob.sum()
@@ -286,7 +289,7 @@ def five_confusion(truth: list[str], pred: list[str]) -> dict:
             "칸": {f"{t}→{p}": n for (t, p), n in sorted(c.items()) if t != p}}
 
 
-def holdout_eval() -> dict:
+def holdout_eval(tags=("cls", "cls_s1", "cls2", "cls2_s1")) -> dict:
     """나눔 분류기 전(cls_<part>.onnx, 축 크롭으로 학습) · 후(cls2_<part>{,_s1}.onnx)를 같은 홀드아웃 크롭 두 벌로:
     세운 크롭(harvest_obb, 운영 입력과 같은 모양) part == 나눔, 옛 축 크롭(data/index.json part + review.extra half) == 나눔."""
     sys.path.insert(0, str(HERE))
@@ -299,7 +302,7 @@ def holdout_eval() -> dict:
     old_imgs.update({x["file"]: Image.open(x["path"]).convert("RGB") for x in add})
     res: dict = {}
     for crops in ("obb", "axis"):
-        for tag in ("cls", "cls_s1", "cls2", "cls2_s1"):
+        for tag in tags:
             truth, pred, per = [], [], {}
             for part in ("bcd", "am", "pm"):
                 if crops == "obb":
@@ -368,5 +371,97 @@ def main_obb() -> None:
     print(json.dumps(res["holdout"], ensure_ascii=False, indent=1))
 
 
+# ---------------------------------------------------------------- 7-2(2026-11-06): 장면 합성 사전학습 → 운영과 같은 미세 조정
+SYNTH = DATA / "synth"
+SYN_EPOCHS = 2  # 합성 크롭(풀마다 약 2.4만 장)을 두 번 — 미세 조정(40 에폭 × 1,550장)과 비슷한 걸음 수
+SYN_POOL = {"bcd": "nobcd", "am": "b", "pm": "a", "all": "all"}  # 홀드아웃 사진 재료를 뺀 풀(scene_synth.POOLS)
+
+
+def pretrain_synth(pool: str, seed: int) -> dict:
+    """scene_synth.py cls 크롭(data/synth/cls_<pool>.npz, 128 정사각형)으로 ImageNet 가중치에서 SYN_EPOCHS 에폭. 증강·손실·최적화는 train() 과 같다(종류 균형 뽑기)."""
+    import random
+
+    d = np.load(SYNTH / f"cls_{pool}.npz")
+    X, Y = d["x"], d["y"].astype(int)
+    torch.manual_seed(1000 + seed)
+    np.random.seed(1000 + seed)
+    random.seed(1000 + seed)
+    net = torchvision.models.mobilenet_v3_small(weights=torchvision.models.MobileNet_V3_Small_Weights.IMAGENET1K_V1)
+    net.classifier[3] = nn.Linear(net.classifier[3].in_features, len(CLASSES))
+    freq = Counter(Y.tolist())
+    prob = np.array([1 / freq[y] for y in Y])
+    prob /= prob.sum()
+    opt = torch.optim.AdamW(net.parameters(), lr=5e-4, weight_decay=0.01)
+    steps = SYN_EPOCHS * (len(Y) // 32)
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, steps)
+    loss_fn = nn.CrossEntropyLoss(label_smoothing=0.05)
+    net.train()
+    for _ in range(steps):
+        idx = np.random.choice(len(Y), 32, p=prob)
+        x = torch.stack([AUG(Image.fromarray(X[i])) for i in idx])
+        y = torch.tensor(Y[idx])
+        opt.zero_grad()
+        loss_fn(net(x), y).backward()
+        opt.step()
+        sched.step()
+    return {k: v.clone() for k, v in net.state_dict().items()}
+
+
+def main_synth() -> None:
+    """  python -I -X utf8 experiments/tile_classifier/train.py --synth-pre [--only bcd,am,pm,all] [--seeds 0,1]
+    cls3_<part>{,_s1}: 합성 사전학습 + 운영 cls_<part>(det_eval.classifiers)·cls_all(prep_deploy)·_s1(prep_alt_cls) 과 같은 묶음·씨드·AUG 로 미세 조정.
+    결과 server_bench/models/cls3_*.onnx, data/cls3_*.pt, data/synth/results.json(학습 기록 + 홀드아웃 전 cls·후 cls3)."""
+    import argparse
+
+    sys.path.insert(0, str(HERE))
+    import review as rw
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--synth-pre", action="store_true")
+    ap.add_argument("--only", default="bcd,am,pm,all")
+    ap.add_argument("--seeds", default="0,1")
+    ap.add_argument("--eval-only", action="store_true")
+    a = ap.parse_args()
+    sys.stdout.reconfigure(encoding="utf-8")
+    torch.set_num_threads(12)
+    out_p = SYNTH / "results.json"
+    res = json.loads(out_p.read_text(encoding="utf-8")) if out_p.exists() else {}
+    res.setdefault("train", {})
+    if not a.eval_only:
+        base = json.loads((DATA / "index.json").read_text(encoding="utf-8"))
+        add = rw.extra()
+        images = {x["file"]: square(Image.open(CROPS / x["file"]).convert("RGB")) for x in base}
+        images.update({x["file"]: square(Image.open(x["path"]).convert("RGB")) for x in add})
+        for part in a.only.split(","):
+            if part == "all":
+                pool = base + add
+            else:  # det_eval.classifiers·prep_alt_cls 와 같은 묶음
+                pool = [x for x in base if x["part"] != part] + [x for x in add if x["half"] != part and (part != "bcd" or x["half"] != "other")]
+            for seed in (int(s) for s in a.seeds.split(",")):
+                name = f"cls3_{part}" + (f"_s{seed}" if seed else "")
+                dst = MODELS / f"{name}.onnx"
+                if dst.exists():
+                    print("있음(재학습 안 함)", dst, flush=True)
+                    continue
+                t0 = time.perf_counter()
+                init = pretrain_synth(SYN_POOL[part], seed)
+                t1 = time.perf_counter()
+                net = train(pool, images, seed, init=init)
+                torch.save(net.state_dict(), DATA / f"{name}.pt")
+                export(net, dst)
+                res["train"][name] = dict(n=len(pool), seed=seed, synth_pool=SYN_POOL[part], synth_epochs=SYN_EPOCHS,
+                                          synth_n=int(len(np.load(SYNTH / f"cls_{SYN_POOL[part]}.npz")["y"])), pre_secs=round(t1 - t0),
+                                          secs=round(time.perf_counter() - t1), epochs=EPOCHS, finished=time.strftime("%Y-%m-%d %H:%M:%S"))
+                print(name, res["train"][name], flush=True)
+                out_p.write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+    res["holdout"] = holdout_eval(("cls", "cls_s1", "cls3", "cls3_s1"))
+    res["holdout_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    out_p.write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(json.dumps(res["holdout"], ensure_ascii=False, indent=1))
+
+
 if __name__ == "__main__":
-    main_obb() if "--obb" in sys.argv or "--red-check" in sys.argv else main()
+    if "--synth-pre" in sys.argv:
+        main_synth()
+    else:
+        main_obb() if "--obb" in sys.argv or "--red-check" in sys.argv else main()

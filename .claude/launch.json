@@ -801,6 +801,196 @@
       ],
       "port": 8076,
       "autoPort": false
+    },
+    {
+      "name": "recognizer-fold3base-bcd",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8083",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s8",
+        "--local-fold",
+        "a,bcd",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot.onnx"
+      ],
+      "port": 8083,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-fold3-bcd",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8093",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s8",
+        "--local-fold",
+        "a,bcd",
+        "--seat-det",
+        "det_r9",
+        "--role-model",
+        "tile-roles-rot.onnx",
+        "--cls-tag",
+        "cls3"
+      ],
+      "port": 8093,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-fold3base-am",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8084",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s8",
+        "--local-fold",
+        "b,am",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot_fold_am.onnx"
+      ],
+      "port": 8084,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-fold3-am",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8094",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s8",
+        "--local-fold",
+        "b,am",
+        "--seat-det",
+        "det_r9",
+        "--role-model",
+        "tile-roles-rot_fold_am.onnx",
+        "--cls-tag",
+        "cls3"
+      ],
+      "port": 8094,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-fold3base-pmA",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8085",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s8",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot_fold_pmA.onnx"
+      ],
+      "port": 8085,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-fold3-pmA",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8095",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s8",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r9",
+        "--role-model",
+        "tile-roles-rot_fold_pmA.onnx",
+        "--cls-tag",
+        "cls3"
+      ],
+      "port": 8095,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-fold3base-pmB",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8087",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s8",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--role-model",
+        "tile-roles-rot_fold_pmB.onnx"
+      ],
+      "port": 8087,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-fold3-pmB",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8097",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s8",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r9",
+        "--role-model",
+        "tile-roles-rot_fold_pmB.onnx",
+        "--cls-tag",
+        "cls3"
+      ],
+      "port": 8097,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-prod3base",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8086",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s8"
+      ],
+      "port": 8086,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-prod3",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8096",
+        "--repo",
+        "C:/Users/jjh7757/dev/mahjong-recognizer-s8",
+        "--cls-tag",
+        "cls3",
+        "--seat-model",
+        "det_r9_final.onnx"
+      ],
+      "port": 8096,
+      "autoPort": false
     }
   ]
 }

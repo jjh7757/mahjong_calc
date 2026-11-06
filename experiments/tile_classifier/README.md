@@ -298,3 +298,27 @@ U_BCD=8063 U_AM=8064 U_PMA=8065 U_PMB=8067 bash experiments/speed/run_baseline.s
 U_BCD=8073 U_AM=8074 U_PMA=8075 U_PMB=8077 bash experiments/speed/run_baseline.sh dev <TAG>   # 앱 흐름 후: recognizer-fold2-*(--cls-tag cls2, tile-roles-rot2*)
 U_FIELD=8066|8076 [RECOLOR=1] bash experiments/speed/run_baseline.sh field <TAG>             # 테스트 15장: recognizer-prod1(지금) / recognizer-prod2(새)
 ```
+
+## 7-2: 장면 합성으로 검출기·분류기 사전학습 (`scene_synth.py`·`det_kernel_r9/`·`train.py --synth-pre`, metrics 표 1-97 기준·1-98 결과, 2026-11-06, **미채택**)
+
+실제 패 크롭을 펠트 위에 마작 규칙대로 놓고 카메라로 찍은 것처럼 만든 장면으로 검출기·분류기를 먼저 학습(사전학습)하고, 미세 조정은 운영 모델과 똑같이 했다. 바꾼 것은 사전학습 하나뿐.
+
+- **재료(`scene_synth.py mat` → `data/synth/mat/`):** 앞면 = harvest_obb 1,168장(오전 415·오후 681·B·C·D 72)의 전수 조사 회전 상자를 서버 `upright(pad 0)` 로 몸통만 세워 자름, 뒷면 1,818장(rects.json 뒷면 상자, 긴 변 세로, 색 중앙값), 펠트 조각 429장(zone_points 펠트 사각형 안, 패 상자·살색·밝기 끝을 피한 256px, 사진당 최대 14). 재료마다 사진의 나눔(bcd·am·pm·other)을 적는다.
+- **누수 금지 풀:** a = 오전 + other(앞면 415·뒷면 717·펠트 189, 사진 14) → 검출기 fold_a·분류기 cls_pm, b = 오후 + other(681·999·216, 19) → fold_b·cls_am, nobcd = 오전 + 오후(1,096·1,364·293, 25) → cls_bcd, all(1,168·1,818·429, 35) → final·cls_all. 홀드아웃 사진의 패·뒷면·펠트는 그 나눔 모델의 합성에 하나도 안 들어간다.
+- **장면:** 화료자 손패 줄 13/14(화료패 틈 또는 ±30~60° 떼어 둠), 다른 자리 세운 뒷면 줄 0.6·공개 0.15·없음 0.25, 모서리 울기(퐁·치·명깡·안깡 뒷면 2, 한 장 눕힘), 강 6장 줄(리치 눕힘), 패산(옆면 두께 2배 한 장), 왕패 표시패, 떨어진 낱장, 기계·리치봉·종이(라벨 없음). 카메라 기울기 0~30°(반은 10° 안), 평면 회전, 크기 0.6~1.2, 옆면·그림자, 노출·기울기·비네팅·화이트밸런스 ±13%, 손 가림, 흐림 σ 0.3~3(반), 모션 흐림 10%, 노이즈, JPEG q35~95. 분류기 크롭만 15% "빨강 채도 ×0.3~0.7"(7-1 검토 ⑤). 팔레트에 시험용 색(검정 테두리·파랑 펠트·노랑 뒷면)은 없다(표 1-69). 먼 패부터 그려 이웃 옆면이 앞면을 덮지 않게 하고, 검출기 라벨은 절반 넘게 보이고 손 가림 절반 이하인 패만, 분류기 크롭은 95% 넘게 보이고 가림 5% 안인 앞면만.
+- **표본 시트:** `data/synth/sheet_det.jpg`(12장, 빨강 앞면·파랑 뒷면·노랑 라벨 뺌)·`sheet_cls.jpg`. 노트북 한 프로세스 장면 0.5초·분류기 크롭 장면 1.3초.
+- **검출기 9회차(`det_kernel_r9/train_det_r9.py`, 캐글 T4, ultralytics 8.4.202 고정):** 커널 안에서 풀마다 합성 8,000 + 검증 200(장면당 상자 약 61개) → `yolo26n-obb.pt` 에서 6에폭 사전학습(1280·배치 8·뒤집기·회전 8회차와 같음, close_mosaic 2, last.pt) → 8회차와 같은 데이터(`mahjong-tile-obb-r8`, 이미지 960 바이트 대조 일치)·나눔·설정(60에폭, patience 20)으로 미세 조정. 5시간 21분. 검증 mAP50-95 fold_a 0.928 → 0.934, fold_b 0.936 → 0.942, final 0.978 → 0.980. 받은 ONNX 는 `server_bench/models/det_r9_{fold_a,fold_b,final}.onnx`(커밋 안 함).
+- **분류기(`train.py --synth-pre`):** 풀마다 합성 장면 8,000 × 3장 = 크롭 약 2.3만(37종 모두, 종류당 약 580~600)을 서버 `upright(PAD)` 로 자른 `data/synth/cls_<pool>.npz` → ImageNet MobileNetV3 small 에서 2에폭 사전학습(AdamW 5e-4·코사인·균형 뽑기·AUG) → 운영과 같은 묶음·AUG·40에폭·씨드로 미세 조정 `cls3_{bcd,am,pm,all}{,_s1}`(모델당 약 9분). 홀드아웃 세운 크롭 1,168 → 1,167(3z→1z), 씨드 1 1,167(1s→8p), 적5↔5 0.
+- **결과(표 1-98):** 회귀 21변형 합계 unsafe fold 26 → 22·prod 17 → 7, 축소 0.6·흐림 σ3 가 크게 나아짐(fold 장면 15 → 31·6 → 25). 그런데 테스트 15장(펴기) 서버 단독 189 → 188/196(F1434 안깡 `4s` 4장을 `8s` 4장으로 — 검출기 몫), 색 바꾼 15장 145 → 139(앱 흐름 145 → 136/211) → 기준 (c) 미충족, 운영 모델 그대로. 개발 32회 앱 흐름 434/436·경고 없는 틀린 자동 0, 테스트 앱 흐름 198 → 200/211 은 그대로이거나 나음. 검출기만 바꾸면 회귀 fold unsafe 26 → 50, 분류기만은 22.
+
+```
+python -I -X utf8 experiments/tile_classifier/scene_synth.py mat                                   # data/synth/mat/{faces,backs,felt,index.json}
+python -I -X utf8 experiments/tile_classifier/scene_synth.py sheet                                 # 표본 시트
+OMP_NUM_THREADS=1 python -I -X utf8 experiments/tile_classifier/scene_synth.py cls --pool a --n 8000 --per 3 --workers 14   # b·nobcd·all 도(풀당 약 25분)
+python -I -X utf8 experiments/tile_classifier/train.py --synth-pre [--only bcd] [--eval-only]      # cls3_* → data/cls3_*.pt, server_bench/models/cls3_*.onnx, data/synth/results.json
+# 캐글: data/synth/kaggle_r9/(scene_synth.py + mat/, 데이터셋 jjh7757/mahjong-scene-synth-r9) + det_kernel_r9/ push → kernels output → det_r9_*.onnx
+bash experiments/speed/run_72.sh <TAG>        # 서버 단독: 회귀 fold·prod 전·후·검출기만·분류기만 + 테스트 15장(서버 feat/cls-alt worktree ../mahjong-recognizer-s8)
+U_BCD=8083 U_AM=8084 U_PMA=8085 U_PMB=8087 bash experiments/speed/run_baseline.sh dev <TAG>   # 앱 흐름 전: launch.json recognizer-fold3base-*
+U_BCD=8093 U_AM=8094 U_PMA=8095 U_PMB=8097 bash experiments/speed/run_baseline.sh dev <TAG>   # 앱 흐름 후: recognizer-fold3-*(--seat-det det_r9 --cls-tag cls3)
+U_FIELD=8086|8096 [RECOLOR=1] bash experiments/speed/run_baseline.sh field <TAG>             # 테스트 15장: recognizer-prod3base / recognizer-prod3
+```

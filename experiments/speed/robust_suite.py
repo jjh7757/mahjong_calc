@@ -360,6 +360,7 @@ FOLD_ROLE = {"bcd": "tile-roles-rot.onnx", "am": "tile-roles-rot_fold_am.onnx", 
 # ROBUST_ROLE=tile-roles-rot2(server_bench/models/tile-roles-rot2{,_fold_*}.onnx — bcd 는 전부 학습 모델). prod 는 서버 env LOCAL_CLS_MODEL·LOCAL_ALT_CLS_MODEL·LOCAL_ROLE_MODEL.
 CLS_TAG = os.environ.get("ROBUST_CLS", "cls")
 ROLE_TAG = os.environ.get("ROBUST_ROLE", "tile-roles-rot")
+SEAT_TAG = os.environ.get("ROBUST_SEAT", "det_r8")  # 7-2(2026-11-06): det_r9 = 합성 사전학습 9회차 자리 검출기(server_bench/models/det_r9_fold_<a|b>.onnx)
 
 
 def fold_of(name: str, meta: dict) -> tuple[str, str, str]:
@@ -395,7 +396,7 @@ class Readers:
         det, part, role = fold_of(name, self.meta)
         key = (det, part, role)
         # cls2 = 불확실성 신호 S3 의 두 번째 분류기(같은 나눔·씨드 1, 이 사진을 안 배움 — 개선 계획 5단계, prep_alt_cls.py)
-        files = {"det": f"det_fold_{det}.onnx", "seat": f"det_r8_fold_{det}.onnx", "cls": f"{CLS_TAG}_{part}.onnx", "role": FOLD_ROLE[role].replace("tile-roles-rot", ROLE_TAG, 1),
+        files = {"det": f"det_fold_{det}.onnx", "seat": f"{SEAT_TAG}_fold_{det}.onnx", "cls": f"{CLS_TAG}_{part}.onnx", "role": FOLD_ROLE[role].replace("tile-roles-rot", ROLE_TAG, 1),
                  "cls2": f"{CLS_TAG}_{part}_s1.onnx"}
         if key not in self.cache:
             role_path = MODELS / files["role"] if "_fold_" in files["role"] or (MODELS / files["role"]).exists() else REPO / "app" / "assets" / files["role"]
