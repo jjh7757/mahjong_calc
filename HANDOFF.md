@@ -1,6 +1,6 @@
 # 인수인계 (2026-10-30 기준)
 
-새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
+새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 앱 저장소의 README.md 는 2026-11-09 부터 프로젝트 소개·개발 과정 문서이고, 개발 환경·빌드 명령·화면 기능은 `docs/development.md` 로 옮겼다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
 ## 2026-11-05 추가: 매장 전 운영 앱 흐름 확인·서버 개선 (metrics 표 1-82, 원인 1-84, 고침 1-86·1-87)
 
