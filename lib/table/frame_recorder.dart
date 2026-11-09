@@ -68,7 +68,11 @@ class FrameRecorder {
   final int every;
   final int maxFrames;
 
-  FrameRecorder({this.before = 2, this.after = 2, this.every = 10, this.maxFrames = 150, this.keepAll = false});
+  /// 남긴 JPEG 합이 이만큼 넘어도 꽉 참(null 이면 장수로만). 고화질 프레임(긴 변 2400px, 약 0.6~1MB)일 때
+  /// 150장을 다 채우면 zip 하나가 100MB 를 넘고 묶는 동안 메모리를 두 배로 쓴다(2026-11-09).
+  final int? maxBytes;
+
+  FrameRecorder({this.before = 2, this.after = 2, this.every = 10, this.maxFrames = 150, this.maxBytes, this.keepAll = false});
 
   /// 받은 프레임을 전부 남긴다(변화 프레임은 까닭을 그대로, 나머지는 'all').
   bool keepAll;
@@ -82,8 +86,11 @@ class FrameRecorder {
   int get seen => _count;
   int get keptCount => _kept.length;
 
-  /// [maxFrames] 장이 찼다(쓰는 쪽이 [take] 해서 저장할 때).
-  bool get isFull => _kept.length >= maxFrames;
+  /// 남긴 JPEG 바이트 합.
+  int get keptBytes => _kept.fold(0, (s, f) => s + f.jpeg.length);
+
+  /// [maxFrames] 장이나 [maxBytes] 가 찼다(쓰는 쪽이 [take] 해서 저장할 때).
+  bool get isFull => _kept.length >= maxFrames || (maxBytes != null && keptBytes >= maxBytes!);
 
   /// 프레임 한 장. [why] 가 비어 있지 않으면 변화 프레임. 남겼으면 true.
   bool add(Uint8List jpeg, DateTime at, {List<String> why = const []}) {

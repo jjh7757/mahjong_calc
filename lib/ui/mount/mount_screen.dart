@@ -245,11 +245,18 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   static const double _doraStillDiff = 0.03;
 
   /// 배경 프레임 중 추적 변화 주변만 모아 판마다 `<시각>_track/frames_##.zip` 으로(촬영 기록이 켜졌을 때, 2026-10-29).
-  final FrameRecorder _frames = FrameRecorder();
+  /// zip 하나는 장수(150)나 JPEG 합 40MB 중 먼저 차는 쪽에서 끊는다(고화질 프레임이면 약 50장).
+  final FrameRecorder _frames = FrameRecorder(maxBytes: 40 << 20);
   int _framesPart = 0;
 
   /// 배경 프레임을 전부 남길지(매장 실험 때 녹화 대신, 2026-11-05). 끄면 변화 주변만.
   static const String keepAllFramesPref = 'mount.keepAllFrames';
+
+  /// 남기는 배경 프레임을 긴 변 [_hiResFrameLongSide] 로(기본 켬, 2026-11-09 사용자: 960~1020px 프레임은 패 한 장이
+  /// 20px 안팎이라 학습에 쓰기 애매). 추적·화면은 작은 미리보기 그대로이고, 기록용으로 한 장 더 받는다.
+  static const String hiResFramesPref = 'mount.hiResFrames';
+  static const int _hiResFrameLongSide = 2400;
+  bool _hiResFrames = true;
 
   /// 프레임 투표(개선 계획 6단계, `lib/table/frame_vote.dart`): 자동 반영 직전에 헤드 프레임 1장을 더 읽어 같을 때만 반영.
   /// 기본 끔 — 오프라인 시연이 합격 기준을 못 넘었고(metrics 표 1-94) 실기기 확인 전이다. 카메라 헤드 + 격자일 때만 돈다.
@@ -357,10 +364,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       await _measureCapture(p.bytes, capture: false);
       _maybeAutoSetup();
       await _watchFelt(p.bytes);
+      // 기록용 고화질 사본: 추적·화면은 작은 미리보기 그대로, 남기는 프레임만 긴 변 2400px 로 바꿔 넣는다.
+      final record = await _hiResFrame(cam, p) ?? p.bytes;
+      if (!mounted) return;
       _frameTracked = false;
-      await _trackFrame(p.bytes);
+      await _trackFrame(p.bytes, record: record);
       // 추적이 이 프레임을 안 받았으면(격자 확인 전·편집 중·추적 꺼짐) 전부 남기기일 때만 따로 남긴다.
-      if (!_frameTracked) _recordUntracked(p.bytes);
+      if (!_frameTracked) _recordUntracked(record);
     } on RemoteCameraException catch (e) {
       // 예전 헤드 앱(404)이나 토큰 거절이면 그만 묻는다. 연결 오류는 다음 차례에 다시.
       if (e.unsupported || e.unauthorized) _bgStopped = true;
@@ -375,6 +385,21 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// 이번 배경 프레임을 남길 수 있으면 같은 순간의 긴 변 [_hiResFrameLongSide] 미리보기를 한 장 더 받는다.
+  /// 기록이 꺼졌거나·고화질 끔·헤드 스트림이 작거나·남길 일이 없거나(추적 전이고 전부 남기기도 아님)·화료 촬영 중이면 null.
+  /// 받다 실패해도 null(작은 미리보기를 대신 남긴다) — 배경 루프를 멈추지 않는다.
+  Future<Uint8List?> _hiResFrame(RemoteCamera cam, RemotePreview p) async {
+    if (!_logEnabled || !_hiResFrames || _busy) return null;
+    if ((p.frameLongSide ?? 0) < _hiResFrameLongSide) return null;
+    if (!_frames.keepAll && !(_trackingEnabled && _tableConfirmed)) return null;
+    try {
+      return (await cam.preview(longSide: _hiResFrameLongSide)).bytes;
+    } catch (e) {
+      debugPrint('[frames] 고화질 프레임 실패: $e');
+      return null;
+    }
+  }
+
   /// 저장된 원격 카메라 주소를 읽고, 없으면 이 기기의 카메라를 연다.
   Future<void> _loadSource() async {
     String? url;
@@ -386,6 +411,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _useGrid = p.getBool(useGridPref) ?? true;
       _trackingEnabled = p.getBool(trackingPref) ?? true;
       _frames.keepAll = p.getBool(keepAllFramesPref) ?? false;
+      _hiResFrames = p.getBool(hiResFramesPref) ?? true;
       _frameVote = p.getBool(frameVotePref) ?? false;
       _geminiRead = p.getBool(geminiReadPref) ?? false;
       _autoSetupOnStart = p.getBool(autoSetupPref) ?? true;
@@ -988,8 +1014,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// 배경 미리보기 한 장 → 통계 → 추적기.
-  Future<void> _trackFrame(Uint8List preview) async {
+  /// 배경 미리보기 한 장 → 통계 → 추적기. [record] 는 프레임 기록에 남길 사본(고화질, 없으면 [preview]).
+  Future<void> _trackFrame(Uint8List preview, {Uint8List? record}) async {
     final g = gameStore.current;
     if (!_trackingEnabled || !_useGrid || g == null || _trackBusy || _remoteUrl == null || _gridBeforeEdit != null) return;
     // 이 카메라로 탁자를 확인한 뒤(자동 맞추기 성공 또는 격자 저장)에만 돈다. 패가 없는 장면(천장·책상)에선 흰 면이
@@ -1014,7 +1040,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     }
     tracker.onFrame(stats.corners, now);
     final riverActions = river.onFrame(stats.rivers, stats.strips, now);
-    _recordFrame(preview, now, tracker, river, shifted);
+    _recordFrame(record ?? preview, now, tracker, river, shifted);
     // 도라 표시패: 모서리·강이 다 가만히 있고(손이 안 지나감) 카메라도 안 움직였을 때만 읽는다.
     final still = !shifted && _lastFrameCorners != null && Side.values.every((s) => (stats.corners[s]?.diff(_lastFrameCorners![s] ?? CornerStats.empty) ?? 1) < _doraStillDiff);
     _lastFrameCorners = stats.corners;
@@ -1065,6 +1091,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       'names': g?.names,
       'bottom_seat': g?.settings.bottomSeat,
       'preview_long_side': _previewFrameLongSide,
+      // 남긴 JPEG 의 긴 변 목표(헤드 스트림이 작거나 받다 실패한 장은 작은 미리보기 그대로 — 장마다 크기를 볼 것).
+      'record_long_side': _hiResFrames ? _hiResFrameLongSide : null,
       'grid': _grid.toJson(),
     };
     unawaited(() async {
@@ -2182,6 +2210,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                       final p = await SharedPreferences.getInstance();
                       await p.setBool(keepAllFramesPref, _frames.keepAll);
                     } catch (_) {}
+                  } else if (v == 'hiResFrames') {
+                    setState(() => _hiResFrames = !_hiResFrames);
+                    try {
+                      final p = await SharedPreferences.getInstance();
+                      await p.setBool(hiResFramesPref, _hiResFrames);
+                    } catch (_) {}
                   } else if (v == 'frameVote') {
                     setState(() => _frameVote = !_frameVote);
                     try {
@@ -2309,6 +2343,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     checked: _frames.keepAll,
                     enabled: _logEnabled && _remoteUrl != null,
                     child: Text('배경 프레임 전부 저장 (${_bgInterval.inSeconds}초마다, 녹화 대신)'),
+                  ),
+                  CheckedPopupMenuItem(
+                    key: const ValueKey('mount-hires-frames-menu'),
+                    value: 'hiResFrames',
+                    checked: _hiResFrames,
+                    enabled: _logEnabled && _remoteUrl != null,
+                    child: const Text('배경 프레임 고화질로 저장 (긴 변 $_hiResFrameLongSide px, 학습용)'),
                   ),
                   PopupMenuItem(
                     key: const ValueKey('mount-height-menu'),

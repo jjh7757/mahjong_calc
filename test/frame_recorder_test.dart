@@ -94,6 +94,17 @@ void main() {
       expect(r.take().single.index, 1);
     });
 
+    test('바이트 상한: 장수가 남아도 JPEG 합이 넘으면 isFull', () {
+      final r = FrameRecorder(every: 1, maxBytes: 12);
+      r.add(_jpg(0), _t0); // 5바이트
+      r.add(_jpg(1), _t0); // 10
+      expect(r.isFull, isFalse);
+      r.add(_jpg(2), _t0); // 15
+      expect(r.isFull, isTrue);
+      expect(r.take(), hasLength(3));
+      expect(r.isFull, isFalse);
+    });
+
     test('zip: 프레임 그대로 + frames.json', () {
       final r = FrameRecorder(every: 0);
       final whys = List.generate(4, (_) => <String>[]);
