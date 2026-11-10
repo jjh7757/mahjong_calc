@@ -25,6 +25,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[2]
 VISIT = ROOT / "experiments/visit_20261031/captures"
 KAKAO = ROOT / "experiments/field_20261024/kakao_photos"
+VISIT1107 = ROOT / "experiments/visit_20261107"  # 11-07 매장 원본(정답 label.json 있는 실제 대국 14장), 격자 grids.json(make_grids.py)
 OUT = ROOT / "experiments/speed/results/seat_grow.json"
 URL = "https://mahjong.ai-agent-develop.cloud"
 KEY = (ROOT / ".recognizer_key").read_text().strip()
@@ -50,7 +51,10 @@ OCCLUDED = {"20261031_172424", "20261031_174020", "20261107_151320"}
 # truth 의 "울기 없음" 도 불확실).
 # 2026-11-08 추가(사용자 결정): 20261107_153638 — 화료 직후 왼쪽 아래 모서리(흰 테두리 위)의 울기 두 묶음(치 567삭·123삭)을 손으로
 # 손패 끝까지 끌어와 이어 붙임(3초 프레임 15:36:34 → :37 로 확인, 175951 과 같은 꼴). 합성으로 울기를 모서리에 둔 판은 따로 잰다.
-USER_ERROR = {"20261031_183022", "20261031_142535", "20261031_175951", "20261107_153638"}
+# 2026-11-10 추가(사용자 결정 "F1434, F1240 폐기: 거치 화면으로 부적합", 테스트 15장 → 13장): 20261024_124007(F1240) — 앞 판의
+# 發 3장을 탁자 모서리 테두리 위에 남겨 둔 채 찍음(이 판 손패는 세운 13장이라 남의 것·남은 것). 20261024_143443(F1434) — 4삭 안깡을
+# 손패 줄이 아닌 자리 오른쪽 모서리 테두리 위에 놓음. 둘 다 판독 오류는 있었으나(metrics 표 1-151) 채점에서 뺀다.
+USER_ERROR = {"20261031_183022", "20261031_142535", "20261031_175951", "20261107_153638", "20261024_124007", "20261024_143443"}
 EXCLUDED = OCCLUDED | USER_ERROR  # 채점에서 빼는 전부
 
 
@@ -142,9 +146,47 @@ def scenes() -> list[dict]:
     return rows
 
 
-def eval_scenes() -> list[dict]:
-    """채점용 장면: [scenes] 에서 가림·사용자 문제 사진([EXCLUDED])을 뺀 것."""
-    return [s for s in scenes() if s["name"] not in EXCLUDED]
+def label_truth(d: Path) -> tuple[list[str], list[str]]:
+    """앱이 저장한 정답 label.json → (자리에 실제로 있는 손패(론이면 화료패 뺌), 울기)."""
+    lab = json.loads((d / "label.json").read_text(encoding="utf-8"))
+    closed = list(lab["closed"])
+    if not lab["is_tsumo"]:
+        closed.remove(lab["win_tile"])
+    return closed, [x.strip("[]") for x in lab["melds"]]
+
+
+# 11-07 정답(label.json, 앱이 저장) 중 사진과 다른 것 — 사진을 확대해 고침(2026-11-10 사용자 "사진대로 고쳐", metrics 표 1-153).
+# label.json 자체는 안 고친다(원자료). 값 = (자리 손패, 울기) — 론이면 화료패를 뺀 자리 패.
+LABEL_FIX_1107 = {
+    # 손패 끝 패는 거꾸로 놓인 八萬(8m). label 은 2m 로 적힘(화료패 8m 론, 8m 단기).
+    "20261107_125510": ("3m 4m 5m 4m 5m 6m 5m 6m 7m 7m 0m 6m 8m".split(), []),
+    # 울기 [4s 5s 6s] 의 가운데는 빨간 적5삭(0s). label 은 red_count 1 인데 패 목록에 0 이 없음(울기의 적5를 못 적은 것).
+    "20261107_130623": ("2s 3s 4s 3m 3m 3m 7p".split(), ["6s 7s 8s", "4s 0s 6s"]),
+}
+
+
+def visit1107_scenes() -> list[dict]:
+    """11-07 매장 원본 사진 중 정답(label.json)이 있는 실제 대국(set="visit1107"). 격자는 grids.json — 없으면 빈 목록."""
+    gp = VISIT1107 / "grids.json"
+    if not gp.exists():
+        print("11-07 격자 없음 — experiments/visit_20261107/make_grids.py 먼저")
+        return []
+    grids = json.loads(gp.read_text(encoding="utf-8"))
+    rows = []
+    for name, g in sorted(grids.items()):
+        d = VISIT1107 / "captures" / name
+        side = json.loads((d / "meta.json").read_text(encoding="utf-8"))["winner_side"]
+        hand, melds = LABEL_FIX_1107.get(name) or label_truth(d)
+        rows.append(dict(name=name, set="visit1107", path=d / "original.jpg", side=side, grid=g["grid"], hand=hand, melds=melds))
+    return rows
+
+
+def eval_scenes(with_1107: bool = True) -> list[dict]:
+    """채점용 장면 = 테스트 세트(2026-11-10 사용자 지침: 원본 B·C·D + 10-31 + 11-07 만, 변형도 이 원본으로 만든 것만).
+    [scenes](B·C·D + 10-31) + [visit1107_scenes] 에서 가림·사용자 문제 사진([EXCLUDED])을 뺀 것.
+    with_1107=False 는 11-10 이전 표(26장 /32)와 같은 세트로 다시 잴 때만."""
+    rows = scenes() + (visit1107_scenes() if with_1107 else [])
+    return [s for s in rows if s["name"] not in EXCLUDED]
 
 
 def post(jpg: bytes, frac: float) -> dict:

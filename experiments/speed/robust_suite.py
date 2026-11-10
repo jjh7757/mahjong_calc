@@ -1,6 +1,7 @@
 """흔들기 회귀 세트(개선 계획 3단계, 2026-11-05, 노트북, API 없음). 변형 목록·세기·물리 근거·격자 처리·지표·고정 기록은 experiments/speed/ROBUST.md.
 
-개발 사진 26장(seat_grow.eval_scenes, B·C·D 무게 2 → /32 회)에 고정 씨드 변형을 입혀 서버 코드 app.roles.read_roles(hybrid, /v2/localroles 와 같은 경로)를
+테스트 세트(seat_grow.eval_scenes — 2026-11-10 사용자 지침: 원본 B·C·D + 10-31 + 11-07 만, 변형도 이 원본으로 만든 것만.
+11-10 까지는 B·C·D + 10-31 26장, B·C·D 무게 2 → /32 회. 11-07 14장을 더해 40장 /46 회, 예전 세트로 다시 재려면 ROBUST_NO1107=1)에 고정 씨드 변형을 입혀 서버 코드 app.roles.read_roles(hybrid, /v2/localroles 와 같은 경로)를
 프로세스 안에서 부른다. 모델은 fold(그 사진을 안 배운 조합, experiments/tile_classifier/README.md 끝 절) 또는 prod(서버 assets = 운영).
 맞추는 대상이 아니라 안전망이다 — 변형별 결과로 서버 규칙·문턱을 고치지 않는다.
 세기 고정(2026-11-05, metrics 표 1-91): BASE 에서 jpeg60 대신 STRONG 의 jpeg35(유일하게 판별력이 없던 묶음) — 고정 세트 21개는 ROBUST.md "고정" 줄. 이후 바꾸지 않는다.
@@ -12,7 +13,7 @@
                                                                                → experiments/speed/results/robust_<models>_<TAG>.json
   python -I -X utf8 experiments/speed/robust_suite.py report <결과 JSON> [<결과 JSON> ...]   변형별 표(markdown)
 
---set field: 테스트 15장 편 사진(field_20261024/captures/*/rectified.jpg, 1단계)에 회전·원근을 뺀 같은 변형(make --set field). 채점은 field_bench 와 같은
+--set field: [평가 밖·참고, 11-10 지침] 10-24 매장 편 사진(13장)(field_20261024/captures/*/rectified.jpg, 1단계)에 회전·원근을 뺀 같은 변형(make --set field). 채점은 field_bench 와 같은
 "자리 정답 = 화료패 뺀 13장"·표준 격자, 모델은 prod(= 테스트 사진의 홀드아웃). 기록만 한다.
 """
 from __future__ import annotations
@@ -269,7 +270,8 @@ def field_scenes() -> list[dict]:
 def scenes(which: str) -> list[dict]:
     if which == "field":
         return field_scenes()
-    return [dict(s, w=1 if s["name"].startswith("2026") else 2) for s in sg.eval_scenes()]
+    # 11-07 은 fold 모델이 없어 --models fold 에서도 운영 모델로 읽힌다(Readers.get, 11-07 사진을 학습한 모델이 있으면 홀드아웃 아님).
+    return [dict(s, w=1 if s["name"].startswith("2026") else 2) for s in sg.eval_scenes(with_1107=os.environ.get("ROBUST_NO1107") != "1")]
 
 
 def make(a) -> None:

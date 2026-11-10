@@ -1,4 +1,6 @@
-"""[테스트 세트] 10/24 매장 삼각대 15장(장면 5개)으로 자리 판독을 잰다(2026-11-04, 노트북, API 없음). 8회차 최종 판정용.
+"""[평가 밖·참고 — 2026-11-10 부터] 10/24 매장 삼각대 15장(11-10 부터 13장)으로 자리 판독을 잰다(2026-11-04, 노트북, API 없음).
+**2026-11-10 사용자 지침: 테스트 세트는 원본 B·C·D + 10-31 + 11-07 만(seat_grow.eval_scenes, robust_suite) — 이 스크립트 결과는
+합격 기준·채택 판정에 쓰지 않고 metrics "평가 밖" 표에만 적는다.** (아래는 11-10 전까지의 설명.) 예전: 8회차 최종 판정용.
 
 **이 결과로 규칙·학습을 고치지 않는다.** 합격 기준은 docs/metrics.md 표 1-69 에 미리 적은 것만 쓴다.
 정답·장면: experiments/rectify/recheck_test.py TRUTH(NOTES 30), 격자: read_grid_timing_test.dart `_field`(삼각대 위치별, 0~1000 단위).
@@ -68,6 +70,10 @@ SCENES = {  # 장면: (사진들, 격자) — read_grid_timing_test.dart `_field
     "F1400": (["135912", "140302", "140750", "140918"], GRID_B1),
     "F1434": (["143443"], GRID_B2),
 }
+# 2026-11-10 사용자 결정: 거치 화면으로 부적합한 사진(seat_grow.USER_ERROR — F1240 모서리에 남은 發 3장, F1434 테두리 위 안깡)은 뺀다
+# → 테스트 13장·장면 3개. 예전 값(15장)과 비교할 땐 `FIELD_ALL=1`.
+if os.environ.get("FIELD_ALL") != "1":
+    SCENES = {k: (ps, g) for k, (ps, g) in ((k, ([p for p in ps if f"20261024_{p}" not in sg.EXCLUDED], g)) for k, (ps, g) in SCENES.items()) if ps}
 
 
 def truth() -> dict:
@@ -110,6 +116,7 @@ def tile_extra(hand_t: list[dict], melds: list[dict]) -> dict:
 
 
 def main() -> None:
+    print("[평가 밖·참고] 10-24 매장 사진 — 2026-11-10 지침상 판정에 쓰지 않음(테스트 세트 = B·C·D + 10-31 + 11-07)", flush=True)
     ap = argparse.ArgumentParser()
     ap.add_argument("--det", required=True, help="server_bench/models/<det>.onnx (예: det_final, det_r7_final)")
     ap.add_argument("--obb", action="store_true")

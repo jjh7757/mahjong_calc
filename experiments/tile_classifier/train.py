@@ -31,7 +31,7 @@ sys.path.insert(0, str(HERE.parents[0] / "yolo"))
 sys.path.insert(0, r"C:\Users\jjh7757\dev\mahjong-recognizer")
 
 CLASSES = [f"{n}{s}" for s in "mps" for n in range(1, 10)] + ["0m", "0p", "0s"] + [f"{n}z" for n in range(1, 8)]
-SIZE = 128
+SIZE = int(__import__("os").environ.get("CLS_SIZE", "128"))  # 2026-11-10 해상도 실험: 서버 local_read.CLS_SIZE 와 같게(experiments/speed/imgsz_run.py)
 EPOCHS = 40
 MEAN, STD = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
 SAME_HAND = {"k25": "B", "k28": "B", "k15": "C", "k26": "C", "k12": "D", "k16": "D"}
@@ -221,7 +221,15 @@ RECOGNIZER_S7 = Path(r"C:\Users\jjh7757\dev\mahjong-recognizer-s7")  # feat/cls-
 def obb_index() -> tuple[list[dict], dict]:
     """harvest.py --obb 결과. images = 원래 크기 크롭(AUG_OBB 가 JPEG 지터 뒤 정사각형으로 만든다). part bcd·am·pm(B·C·D·오전·오후)."""
     idx = json.loads((OBB / "index.json").read_text(encoding="utf-8"))
+    # 2026-11-10: index.json 은 11-06 에 만들어 11-08 라벨 고침(review.FIX — 거꾸로 놓인 만수 2m → 3m·1m 4장)이 빠져 있었다.
+    # 라벨은 늘 지금 원본 라벨(data/index.json·review.extra)을 따른다(ref 로 찾음, metrics 표 1-154).
+    sys.path.insert(0, str(HERE))
+    import review as rw
+
+    cur = {x["file"]: x["tile"] for x in json.loads((DATA / "index.json").read_text(encoding="utf-8"))}
+    cur.update({x["file"]: x["tile"] for x in rw.extra()})
     for x in idx:
+        x["tile"] = cur.get(x["ref"], x["tile"])
         x["file"] = "o_" + x["file"]
         x["scene"] = x["photo"]
     return idx, {x["file"]: Image.open(OBB / "crops" / x["file"][2:]).convert("RGB") for x in idx}
@@ -402,7 +410,8 @@ def pretrain_synth(pool: str, seed: int, aug=None) -> dict:
     net.train()
     for _ in range(steps):
         idx = np.random.choice(len(Y), 32, p=prob)
-        x = torch.stack([aug(Image.fromarray(X[i])) for i in idx])
+        # 합성 크롭은 128 정사각형으로 저장돼 있다 — SIZE 가 다르면 그 크기로(128 보다 크면 늘린 것이라 실제 크롭보다 흐림)
+        x = torch.stack([aug(Image.fromarray(X[i]) if SIZE == 128 else Image.fromarray(X[i]).resize((SIZE, SIZE), Image.BILINEAR)) for i in idx])
         y = torch.tensor(Y[idx])
         opt.zero_grad()
         loss_fn(net(x), y).backward()
@@ -429,6 +438,7 @@ def main_synth() -> None:
     ap.add_argument("--tag", default="cls3")
     ap.add_argument("--seed-offset", type=int, default=0)
     ap.add_argument("--rot180", action="store_true", help="사전학습·미세 조정에 180° 뒤집기(AUG_R180, 2026-11-07 cls5)")
+    ap.add_argument("--red5", action="store_true", help="11-06·11-07 매장 5 계열 크롭(red5_harvest.py, data/red5/labels.json 검토 반영)을 모든 묶음에 더함(2026-11-10 cls7)")
     a = ap.parse_args()
     aug = AUG_R180 if a.rot180 else AUG
     sys.stdout.reconfigure(encoding="utf-8")
@@ -441,6 +451,15 @@ def main_synth() -> None:
         add = rw.extra()
         images = {x["file"]: square(Image.open(CROPS / x["file"]).convert("RGB")) for x in base}
         images.update({x["file"]: square(Image.open(x["path"]).convert("RGB")) for x in add})
+        if a.red5:  # 11-06·11-07 사진은 개발(B·C·D·10-31)·테스트(10-24) 어느 나눔에도 없어 모든 묶음에 넣는다
+            rd = DATA / "red5"
+            lab = json.loads((rd / "labels.json").read_text(encoding="utf-8"))
+            red = [dict(file="r_" + r["file"], path=rd / "crops" / r["file"], tile=lab["fix"].get(str(r["id"]), r["pred"]), photo=r["photo"], half="new")
+                   for r in json.loads((rd / "index.json").read_text(encoding="utf-8"))
+                   if str(r["id"]) not in lab["drop"] and lab["fix"].get(str(r["id"]), r["pred"]) in ("5m", "5p", "5s", "0m", "0p", "0s")]
+            images.update({x["file"]: square(Image.open(x["path"]).convert("RGB")) for x in red})
+            add = add + red
+            print("red5 더함", len(red), Counter(x["tile"] for x in red), flush=True)
         for part in a.only.split(","):
             if part == "all":
                 pool = base + add

@@ -2213,6 +2213,174 @@
       ],
       "port": 8266,
       "autoPort": false
+    },
+    {
+      "name": "recognizer-th0-bcd",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8273",
+        "--local-fold",
+        "a,bcd",
+        "--seat-det",
+        "det_r8",
+        "--cls-tag",
+        "cls6",
+        "--role-model",
+        "tile-roles-v3r15d.onnx",
+        "--turned-hand",
+        "0"
+      ],
+      "port": 8273,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-th0-am",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8274",
+        "--local-fold",
+        "b,am",
+        "--seat-det",
+        "det_r8",
+        "--cls-tag",
+        "cls6",
+        "--role-model",
+        "tile-roles-v3r15d_fold_am.onnx",
+        "--turned-hand",
+        "0"
+      ],
+      "port": 8274,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-th0-pmA",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8275",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--cls-tag",
+        "cls6",
+        "--role-model",
+        "tile-roles-v3r15d_fold_pmA.onnx",
+        "--turned-hand",
+        "0"
+      ],
+      "port": 8275,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-th0-pmB",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8277",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--cls-tag",
+        "cls6",
+        "--role-model",
+        "tile-roles-v3r15d_fold_pmB.onnx",
+        "--turned-hand",
+        "0"
+      ],
+      "port": 8277,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-th1-bcd",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8283",
+        "--local-fold",
+        "a,bcd",
+        "--seat-det",
+        "det_r8",
+        "--cls-tag",
+        "cls6",
+        "--role-model",
+        "tile-roles-v3r15d.onnx",
+        "--turned-hand",
+        "1"
+      ],
+      "port": 8283,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-th1-am",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8284",
+        "--local-fold",
+        "b,am",
+        "--seat-det",
+        "det_r8",
+        "--cls-tag",
+        "cls6",
+        "--role-model",
+        "tile-roles-v3r15d_fold_am.onnx",
+        "--turned-hand",
+        "1"
+      ],
+      "port": 8284,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-th1-pmA",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8285",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--cls-tag",
+        "cls6",
+        "--role-model",
+        "tile-roles-v3r15d_fold_pmA.onnx",
+        "--turned-hand",
+        "1"
+      ],
+      "port": 8285,
+      "autoPort": false
+    },
+    {
+      "name": "recognizer-th1-pmB",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/yolo/run_local_server.py",
+        "--port",
+        "8287",
+        "--local-fold",
+        "a,pm",
+        "--seat-det",
+        "det_r8",
+        "--cls-tag",
+        "cls6",
+        "--role-model",
+        "tile-roles-v3r15d_fold_pmB.onnx",
+        "--turned-hand",
+        "1"
+      ],
+      "port": 8287,
+      "autoPort": false
     }
   ]
 }

@@ -29,7 +29,11 @@ ap.add_argument("--cls-tag", default="cls", help="분류기 이름 앞(7-1, 2026
                 "--local-fold 없이 cls2 면 운영 자리에 cls2_all·cls2_all_s1")
 ap.add_argument("--seat-model", default="", help="--local-fold 없이 자리 검출기만 바꿀 때(7-2, 2026-11-06): server_bench/models 안 이름(예: det_r9_final.onnx) → LOCAL_SEAT_MODEL")
 ap.add_argument("--lone-pair", default="", help="서버 규칙 짝은 늘 2장(LONE_PAIR_LOOSE, 2026-11-09 metrics 표 1-145): 0 끔 / 1 켬. 비우면 서버 기본")
+ap.add_argument("--turned-hand", default="", help="서버 규칙 눕힌 손패·떼어 둔 패 돌려 읽기(TURNED_HAND, 2026-11-10 metrics 표 1-159): 0 끔 / 1 켬. 비우면 서버 기본")
 a = ap.parse_args()
+if a.turned_hand:
+    os.environ["TURNED_HAND"] = a.turned_hand
+    print("TURNED_HAND", a.turned_hand, flush=True)
 if a.lone_pair:
     os.environ["LONE_PAIR_LOOSE"] = a.lone_pair
     print("LONE_PAIR_LOOSE", a.lone_pair, flush=True)

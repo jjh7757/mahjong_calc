@@ -22,7 +22,7 @@ TRUTH = {
     "F1229": ("right", 2, "4m 0m 7m 8m 9m 1s 2s 3s 4p 4p 5z 5z 5z 3m", [], "12000"),
     "F1240": ("top", 0, "1s 3s 2s 3s 4s 5p 5p 7z 7z 7z 5z 5z 5z 2s", [], "6700"),
     "F대삼원": ("top", 3, "3s 4s 5p 5p 7z 7z 7z 5z 5z 5z 2s", ["[6z 6z 6z]"], "48000"),
-    "F1400": ("left", 1, "3p 3p 4m 0m 6m 4s 4s 4s 6s 7s 8s 9s 9s 3p", [], None),
+    "F1400": ("left", 1, "3p 3p 4m 5m 6m 4s 4s 4s 6s 7s 8s 9s 9s 3p", [], None),  # 11-10 정정: 0m → 5m(伍 가 검은 보통 5만, 매장 적5만은 伍까지 빨강)
     "F1434": ("left", 1, "3p 3p 5p 5p 4m 5m 6m 6s 7s 8s 3p", ["(4s 4s 4s 4s)"], None),
 }
 
