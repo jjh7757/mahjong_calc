@@ -15,6 +15,7 @@ import 'package:image/image.dart' as img;
 import 'corner_change.dart' show CornerStats, analyzeCorners, cornerStats;
 import 'fixed_layout.dart' show decodeSmall, whiteMask;
 import 'grid_zones.dart';
+import 'stick_slots.dart';
 import 'table_layout.dart';
 
 /// 상자 하나를 블록으로 나눈 스냅샷. 좌표는 모두 상자 안 블록 번호, [box] 는 이미지 기준(0~1000).
@@ -167,7 +168,10 @@ class TableFrameStats {
   final Map<Side, CornerStats> corners;
   final Map<Side, ZoneSnapshot> rivers;
   final Map<Side, ZoneSnapshot> strips;
-  const TableFrameStats({required this.corners, required this.rivers, required this.strips});
+
+  /// 자리별 홈에 리치봉이 보이는지([stickSlotsIn], 색 무관 픽셀 판정, 2026-11-10). 격자에 리치봉 상자가 없으면 빈 맵.
+  final Map<Side, bool> sticksSeen;
+  const TableFrameStats({required this.corners, required this.rivers, required this.strips, this.sticksSeen = const {}});
 }
 
 /// 미리보기 JPEG → 프레임 통계. `compute()` 에 그대로 넘길 수 있다. [analyzeCorners] 의 확장판.
@@ -179,6 +183,8 @@ TableFrameStats analyzeTableFrame((Uint8List, GridZones) args) {
     corners: cornerStats(im, white, grid),
     rivers: {for (final s in Side.values) s: snapshotIn(im, white, grid.riverBand(s))},
     strips: {for (final s in Side.values) s: snapshotIn(im, white, grid.stickStrip(s))},
+    // 리치봉 상자(자동 맞추기·격자 편집)가 있을 때만: 없으면 가운데 칸 70% 라 홈 위치가 맞지 않는다.
+    sticksSeen: grid.sticks == null ? const {} : stickSlotsIn(im, grid.sticksZone),
   );
 }
 

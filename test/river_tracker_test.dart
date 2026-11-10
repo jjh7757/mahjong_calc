@@ -307,6 +307,119 @@ void main() {
     expect(tr.onFrame(rivers(), strips(shift: 40), at(27)), isEmpty);
   });
 
+  // 11-07 실제 대국 리치 추적 0/5 대책(11-10): 장면 전체 변화가 읽기 사이에 끼어도 후보를 이어 가고, 자리별로 확정한다.
+  const bottomOnly = {Side.bottom: true, Side.top: false, Side.left: false, Side.right: false};
+
+  test('읽는 중에 장면 전체 변화가 나도 답을 받고, 다음 읽기와 같으면 확정한다', () {
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
+    tr.onFrame(rivers(), strips(), at(0));
+    tr.onFrame(rivers(), strips(), at(3));
+    tr.onFrame(rivers(), strips(shift: 40), at(6));
+    final a1 = tr.onFrame(rivers(), strips(shift: 40), at(9));
+    tr.cameraMoved(at(12)); // 손·팔: 읽기 답이 오기 전에 장면 변화
+    tr.onFrame(rivers(), strips(shift: 40), at(12)); // 새 기준
+    tr.onSticksRead(a1.single.frame, bottomOnly, at(17));
+    expect(tr.sticks.candidate, {Side.bottom});
+    tr.cameraMoved(at(18)); // 후보가 있는 채로 또 장면 변화
+    tr.onFrame(rivers(), strips(shift: 40), at(18));
+    // 띠가 새 기준과 같아도 후보가 남아 있으니 다시 읽는다.
+    final a2 = tr.onFrame(rivers(), strips(shift: 40), at(21));
+    expect(a2, hasLength(1));
+    tr.onSticksRead(a2.single.frame, bottomOnly, at(28));
+    expect(tr.riichi, {Side.bottom});
+    expect(tr.riichiAt.keys, [Side.bottom]);
+  });
+
+  test('자리별로 확정한다: 다른 자리 답이 엇갈려도 두 번 본 자리는 리치, 한 번 본 자리는 후보로 남는다', () {
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
+    tr.onFrame(rivers(), strips(), at(0));
+    tr.onFrame(rivers(), strips(), at(3));
+    tr.onFrame(rivers(), strips(shift: 40), at(6));
+    final a1 = tr.onFrame(rivers(), strips(shift: 40), at(9));
+    tr.onSticksRead(a1.single.frame, bottomOnly, at(10));
+    final a2 = tr.onFrame(rivers(), strips(shift: 40), at(15));
+    tr.onSticksRead(a2.single.frame, {...bottomOnly, Side.left: true}, at(16));
+    expect(tr.riichi, {Side.bottom});
+    expect(tr.sticks.candidate, {Side.left});
+    final a3 = tr.onFrame(rivers(), strips(shift: 40), at(21));
+    tr.onSticksRead(a3.single.frame, bottomOnly, at(22)); // left 는 한 번뿐 → 후보 없음
+    expect(tr.riichi, {Side.bottom});
+    expect(tr.sticks.candidate, isEmpty);
+  });
+
+  test('한 번 확정한 리치는 나중 읽기가 "없음"(손이 봉을 가림)이어도 판이 끝날 때까지 남는다', () {
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
+    tr.onFrame(rivers(), strips(), at(0));
+    tr.onFrame(rivers(), strips(), at(3));
+    tr.onFrame(rivers(), strips(shift: 40), at(6));
+    tr.onSticksRead(tr.onFrame(rivers(), strips(shift: 40), at(9)).single.frame, bottomOnly, at(10));
+    tr.onSticksRead(tr.onFrame(rivers(), strips(shift: 40), at(15)).single.frame, bottomOnly, at(16));
+    expect(tr.riichi, {Side.bottom});
+    // 띠가 다시 바뀌고(손), 두 읽기 모두 없음.
+    tr.onFrame(rivers(), strips(shift: 90), at(20));
+    const none = {Side.bottom: false, Side.top: false, Side.left: false, Side.right: false};
+    tr.onSticksRead(tr.onFrame(rivers(), strips(shift: 90), at(23)).single.frame, none, at(24));
+    tr.onSticksRead(tr.onFrame(rivers(), strips(shift: 90), at(29)).single.frame, none, at(30));
+    expect(tr.sticks.status, StickStatus.confirmed);
+    expect(tr.riichi, {Side.bottom});
+    expect(tr.riichiAt.keys, [Side.bottom]);
+    tr.reset(at(40));
+    expect(tr.riichi, isEmpty);
+  });
+
+  // 리치봉 픽셀 판정(11-10): 프레임마다 자리별 봉 유무가 들어오면 서버 읽기 없이 연속 프레임으로 확정.
+  Map<Side, bool> seen([Set<Side> s = const {}]) => {for (final x in Side.values) x: s.contains(x)};
+
+  test('픽셀 판정: 같은 자리를 2프레임 이어 보면 리치, 읽기 요청은 없고 리치 시점을 적는다', () {
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
+    for (var i = 0; i < 3; i++) {
+      expect(tr.onFrame(rivers(), strips(), at(i * 3), sticksSeen: seen()), isEmpty);
+    }
+    expect(tr.onFrame(rivers(), strips(shift: 40), at(9), sticksSeen: seen({Side.right})), isEmpty);
+    expect(tr.riichi, isEmpty); // 한 프레임
+    expect(tr.onFrame(rivers(), strips(shift: 40), at(12), sticksSeen: seen({Side.right})), isEmpty);
+    expect(tr.riichi, {Side.right});
+    expect(tr.riichiAt[Side.right]!.at, at(9)); // 처음 본 순간
+    expect(tr.sticks.status, StickStatus.confirmed);
+    // 나중에 손이 홈을 가려 안 보여도 판 끝까지 남는다.
+    tr.onFrame(rivers(), strips(shift: 40), at(15), sticksSeen: seen());
+    tr.onFrame(rivers(), strips(shift: 40), at(18), sticksSeen: seen());
+    expect(tr.riichi, {Side.right});
+    tr.reset(at(30));
+    expect(tr.riichi, isEmpty);
+  });
+
+  test('픽셀 판정: 한 프레임만 보이고 사라지면(헛 잡음) 리치가 아니고, 손이 지나간 프레임은 끊김으로 안 센다', () {
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
+    tr.onFrame(rivers(), strips(), at(0), sticksSeen: seen());
+    tr.onFrame(rivers(), strips(), at(3), sticksSeen: seen());
+    tr.onFrame(rivers(), strips(), at(6), sticksSeen: seen({Side.top}));
+    tr.onFrame(rivers(), strips(), at(9), sticksSeen: seen()); // 띠가 그대로인데 안 보임 → 끊김
+    tr.onFrame(rivers(), strips(), at(12), sticksSeen: seen({Side.top}));
+    expect(tr.riichi, isEmpty);
+    // 손이 지나가는 프레임(띠가 크게 바뀜)에서 안 보이는 것은 가림 — 이어 본 수를 지우지 않는다.
+    tr.onFrame(rivers(), strips(shift: 90), at(15), sticksSeen: seen());
+    tr.onFrame(rivers(), strips(shift: 20), at(18), sticksSeen: seen({Side.top}));
+    expect(tr.riichi, {Side.top});
+  });
+
+  test('픽셀 판정: 판 처음부터 꽂혀 있던 봉(전판 유국 공탁)은 리치로 넣되 시점은 적지 않는다', () {
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
+    tr.onFrame(rivers(), strips(), at(0), sticksSeen: seen({Side.left}));
+    tr.onFrame(rivers(), strips(), at(3), sticksSeen: seen({Side.left}));
+    expect(tr.riichi, {Side.left});
+    expect(tr.riichiAt, isEmpty);
+    expect(tr.riichiExcept({Side.left}), isEmpty); // 공탁 주인으로 알려진 봉은 이번 판 리치에서 뺀다
+  });
+
+  test('픽셀 판정이 없으면(격자에 리치봉 상자 없음) 예전처럼 서버 읽기를 요청한다', () {
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
+    tr.onFrame(rivers(), strips(), at(0), sticksSeen: const {});
+    tr.onFrame(rivers(), strips(), at(3), sticksSeen: const {});
+    tr.onFrame(rivers(), strips(shift: 40), at(6), sticksSeen: const {});
+    expect(tr.onFrame(rivers(), strips(shift: 40), at(9), sticksSeen: const {}), hasLength(1));
+  });
+
   test('reset 은 버림·리치봉을 비우고 기록을 남긴다', () {
     final tr = RiverTracker(tileFrac: frac);
     tr.onFrame(rivers(bottom: {0, 1}), strips(), at(0));

@@ -1039,7 +1039,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       river.cameraMoved(now);
     }
     tracker.onFrame(stats.corners, now);
-    final riverActions = river.onFrame(stats.rivers, stats.strips, now);
+    final riverActions = river.onFrame(stats.rivers, stats.strips, now, sticksSeen: stats.sticksSeen);
     _recordFrame(record ?? preview, now, tracker, river, shifted);
     // 도라 표시패: 모서리·강이 다 가만히 있고(손이 안 지나감) 카메라도 안 움직였을 때만 읽는다.
     final still = !shifted && _lastFrameCorners != null && Side.values.every((s) => (stats.corners[s]?.diff(_lastFrameCorners![s] ?? CornerStats.empty) ?? 1) < _doraStillDiff);

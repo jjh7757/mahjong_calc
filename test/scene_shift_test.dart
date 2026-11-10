@@ -146,7 +146,7 @@ void main() {
       expect(rt.discardCounts[Side.right], 1);
     });
 
-    test('확정한 울기·버림·리치봉은 남기고 읽는 중인 요청은 버린다', () {
+    test('확정한 울기·버림·리치봉은 남기고, 울기 읽기 요청은 버리되 리치봉 읽기는 남긴다', () {
       final mt = MeldTracker(tileFrac: {for (final s in Side.values) s: 0.1});
       final seat = mt.seat(Side.bottom);
       final meld = ObservedMeld([for (final x in ['6m', '7m', '8m']) ReadTile.fromCode(x, 1)!]);
@@ -176,9 +176,11 @@ void main() {
       expect(rt.lastDiscard, d);
       expect(rt.discardCounts[Side.top], 3);
       expect(rt.riichi, {Side.left});
-      expect(rt.sticks.status, StickStatus.confirmed);
-      rt.onSticksRead(7, {Side.right: true}, at(3)); // 늦게 온 답
+      // 리치봉 읽기는 남긴다(11-10): 손·팔로 장면 변화가 잦아 읽기가 끝나기 전에 지우면 리치가 확정되지 않았다.
+      expect(rt.sticks.status, StickStatus.reading);
+      rt.onSticksRead(7, {Side.right: true}, at(3)); // 장면 변화 뒤에 온 답은 후보가 된다(한 번이라 아직 확정 아님)
       expect(rt.riichi, {Side.left});
+      expect(rt.sticks.candidate, {Side.right});
     });
   });
 
