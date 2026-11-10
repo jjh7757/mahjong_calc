@@ -217,8 +217,12 @@ def score() -> None:
         tr.append(dict(name=name, x=x, y=y))
     pre = rs.load_nets(rs.OUT / pre_file)
     assert pre[0].feat == rs.feat_dim(feat), (pre_file, pre[0].feat, feat)
-    nets = [rs.train(tr, 100, seed, pre[seed], 3e-4) for seed in range(len(pre))]
-    print("미세 조정 끝", len(nets), "특징", feat, pre_file, flush=True)
+    bend = int(__import__("os").environ.get("ROLE_BEND", "0"))  # 2026-11-07: 휜 손패 사본 수(role_set.add_bent, role_set.py --bend 와 같은 것)
+    trs = [rs.add_bent(tr, bend, seed, set(getattr(sg, "EXCLUDED", ()))) if bend and feat == "rot" else tr for seed in range(len(pre))]
+    if bend:
+        print("휜 손패 사본 더함", len(trs[0]) - len(tr), flush=True)
+    nets = [rs.train(trs[seed], 100, seed, pre[seed], 3e-4) for seed in range(len(pre))]
+    print("미세 조정 끝", len(nets), "특징", feat, pre_file, "bend", bend, flush=True)
     torch.save([n.state_dict() for n in nets], rs.OUT / f"role_all{'_rot' if feat == 'rot' else ''}{tag}.pt")  # 뒷면 포함·실제 25장 전부 미세 조정
     (OUT / "pred").mkdir(parents=True, exist_ok=True)
     from collections import Counter

@@ -1,0 +1,52 @@
+{
+  "_note": "사람이 프레임(1020)·화료 사진 12MP 강 크롭을 확대해 만든 정답. 자리 = 이미지 기준(bottom_seat 3). 차례 = bottom→right→top→left(반시계). seq = 한 판 전체 버림 순서, '*' = 강에서 빠짐(울기·론으로 가져감). taken 의 by 는 가져간 자리(모르면 null).",
+  "R2": {
+    "track": "../visit_20261107/captures/20261107_153128_track",
+    "t0": "15:30:40", "t1": "15:33:10",
+    "win_photo": "20261107_153311",
+    "_note": "선 = 위(dealer 1). 아래가 위의 西·東 을 퐁(skip 왼쪽), 오른쪽 리치(3p 횡치). 마지막 왼쪽 南 뒤 아래 쯔모. 아래 첫 9p 는 비스듬히 놓였다가 고쳐 놓음.",
+    "seq": ["top 3z*", "bottom 9p", "right 4z", "top 5z",
+            "left 2z", "bottom 5z", "right 3p", "top 1z*",
+            "bottom 6m", "right 8m", "top 9m",
+            "left 1z", "bottom 7s", "right 2p", "top 7s",
+            "left 2p", "bottom 7p", "right 4m", "top 9m",
+            "left 1p", "bottom 5m", "right 1m", "top 7p",
+            "left 2z"],
+    "taken": [{"side": "top", "tile": "3z", "by": "bottom", "note": "15:31:01~07 보임, 15:31:10 사라짐, 아래 [3z 3z 3z] 퐁"},
+              {"side": "top", "tile": "1z", "by": "bottom", "note": "아래 [1z 1z 1z] 퐁"}]
+  },
+  "R4": {
+    "track": "../visit_20261107/captures/20261107_154029_track",
+    "win_photo": "20261107_154417",
+    "_note": "시험 판(규칙 고정 뒤 채점). 선 = 아래(dealer 3). 아래 9번째 白(15:42:49) 을 왼쪽이 퐁(왼쪽 모서리 白 3장, 15:42:55) → 오른쪽·위 건너뜀, 아래 다음 發 이 白 자리에 놓임. 위 리치(9번째 東 횡치). 왼쪽 마지막 8m 을 위가 론(8m 은 강에 남음). 15:39:58~15:40:09 는 패 나누는 중.",
+    "seq": ["bottom 9m", "right 3z", "top 1s", "left 9s",
+            "bottom 3z", "right 7z", "top 1p", "left 7z",
+            "bottom 1s", "right 4z", "top 8s", "left 6z",
+            "bottom 1m", "right 6z", "top 9p", "left 2z",
+            "bottom 2z", "right 5p", "top 9m", "left 1z",
+            "bottom 3z", "right 3m", "top 1p", "left 3s",
+            "bottom 6z", "right 4s", "top 2s", "left 2z",
+            "bottom 7z", "right 4s", "top 2p", "left 4p",
+            "bottom 5z*", "left 2m",
+            "bottom 6z", "right 3p", "top 1z", "left 4z",
+            "bottom 2p", "right 1p", "top 4z", "left 9p",
+            "bottom 3p", "right 9m", "top 8s", "left 8m"],
+    "taken": [{"side": "bottom", "tile": "5z", "by": "left", "note": "15:42:49~51 두 프레임(손에 반쯤 가림), 왼쪽 白 퐁"}]
+  },
+  "R3a": {
+    "track": "../visit_20261107/captures/20261107_153423_track",
+    "t0": "15:33:30", "t1": "15:36:40",
+    "win_photo": "20261107_153638",
+    "seq": ["left 8p", "bottom 9p", "right 5z", "top 2z",
+            "left 3p", "bottom 7m", "right 9p", "top 6z",
+            "left 4p", "bottom 2z", "right 6s", "top 1s*",
+            "left 7m", "bottom 1s", "right 8p", "top 9s",
+            "left 3p", "bottom 1m", "right 6z", "top 4z",
+            "left 0p*", "bottom 1p", "right 9p", "top 9m",
+            "left 8m", "bottom 8s", "right 5z", "top 6s*",
+            "left 4z", "bottom 3z"],
+    "taken": [{"side": "top", "tile": "1s", "by": "left", "note": "15:35:09~13 왼쪽 손이 집어 감(왼쪽 손패에 1s, 울기 패는 사진에 없음)"},
+              {"side": "left", "tile": "0p", "by": "bottom", "note": "15:35:51 한 프레임만 보임, 아래 모서리 0p·5p·5p 퐁(15:35:55)"},
+              {"side": "top", "tile": "6s", "by": "left", "note": "15:36:21~25 두 프레임, 15:36:34 사라짐 — 왼쪽 화료(기록은 쯔모)"}]
+  }
+}

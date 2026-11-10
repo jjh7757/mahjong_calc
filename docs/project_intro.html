@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>마작 점수 자동화</title>
+<style>
+:root{--bg:#10211c;--panel:#182e27;--line:#2d4a40;--ink:#f3f1e8;--sub:#b7c4bb;--mute:#8a9c91;--gold:#e3bf72;--red:#e2574c;--white:#fbfaf4}
+*{box-sizing:border-box;margin:0}
+body{width:1600px;background:var(--bg);color:var(--ink);font-family:"Noto Sans KR","Malgun Gothic",sans-serif;font-size:24px;line-height:1.55;word-break:keep-all}
+section{padding:64px 88px;border-top:1px solid var(--line)}
+h2{font-size:44px;line-height:1.3;font-weight:800;margin-bottom:12px}
+.eyebrow{color:var(--gold);font-size:22px;font-weight:700;letter-spacing:.08em;margin-bottom:10px}
+.lead{color:var(--sub);margin-bottom:36px}
+.hero{padding:88px 88px 72px;border:0}
+.hero .eyebrow{font-size:24px}
+h1{font-size:84px;line-height:1.18;font-weight:900;margin:10px 0 24px}
+h1 em{font-style:normal;color:var(--gold)}
+.hero p{font-size:29px;color:var(--sub);max-width:1240px}
+.tiles{display:flex;gap:7px;margin-top:44px;align-items:flex-end}
+.tiles img{width:68px;height:auto;display:block;border-radius:6px;background:var(--white);padding:5px 4px}
+.tiles .win{margin-left:24px;outline:4px solid var(--gold);outline-offset:2px}
+.shot{display:block;width:100%;border-radius:14px;border:1px solid var(--line)}
+.crop{position:relative;overflow:hidden;border-radius:14px;border:1px solid var(--line);height:821px}
+.crop img{display:block;width:100%;margin-top:-42px}.crop::after{content:"";position:absolute;right:0;bottom:0;width:420px;height:64px;background:#141c33}
+.flow{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:36px}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 24px}
+.step b{display:block;font-size:28px;margin:4px 0 8px}
+.step span{color:var(--sub);font-size:22px;display:block;line-height:1.5}
+.step i{font-style:normal;color:var(--gold);font-weight:800;font-size:22px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.cap{color:var(--mute);font-size:20px;margin-top:10px}
+.bars{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:36px;margin-bottom:24px}
+.bars h3{font-size:30px;margin-bottom:24px}
+.bar{display:grid;grid-template-columns:230px 1fr;align-items:center;gap:18px;margin-bottom:14px}
+.bar label{color:var(--sub)}
+.track{display:flex;align-items:center;gap:16px}
+.fill{height:44px;border-radius:0 4px 4px 0}
+.track strong{font-size:32px;white-space:nowrap}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px}
+.stat strong{display:block;font-size:56px;line-height:1.15;font-weight:900}
+.stat b{display:block;font-size:25px;margin:8px 0 4px}
+.stat span{color:var(--sub);font-size:21px;display:block;line-height:1.5}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px}
+.card b{display:block;font-size:27px;margin-bottom:6px}
+.card span{color:var(--sub);font-size:22px;display:block;line-height:1.5}
+.time{display:grid;grid-template-columns:repeat(6,1fr);border-top:3px solid var(--gold);margin-top:18px}
+.time div{padding:18px 18px 0 0;position:relative}
+.time div::before{content:"";position:absolute;top:-10px;left:0;width:17px;height:17px;border-radius:50%;background:var(--gold)}
+.time b{display:block;color:var(--gold);font-size:24px}
+.time span{font-size:22px;color:var(--ink);display:block;line-height:1.45}
+.limits{display:grid;grid-template-columns:1fr 1fr;gap:12px 48px;padding:0;list-style:none}
+.limits li{padding-left:24px;position:relative;color:var(--sub);font-size:23px}
+.limits li::before{content:"";position:absolute;left:0;top:15px;width:11px;height:11px;background:var(--red);border-radius:2px}
+.limits b{color:var(--ink)}
+footer{padding:30px 88px 40px;border-top:1px solid var(--line);color:var(--mute);font-size:20px}
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="eyebrow">리치마작 점수 자동화 · 1인 프로젝트</div>
+  <h1>화료 장면 한 장으로<br><em>점수와 대국 기록</em>까지</h1>
+  <p>탁자 위 고정 카메라가 손패·울기·도라·방총자·리치를 읽고, 기기 안 엔진이 점수를 계산해 대국 기록에 넣는 Android 앱입니다.</p>
+  <div class="tiles">
+    <img src="../assets/tiles/2m.png" alt=""><img src="../assets/tiles/3m.png" alt=""><img src="../assets/tiles/4m.png" alt=""><img src="../assets/tiles/4p.png" alt=""><img src="../assets/tiles/5p.png" alt=""><img src="../assets/tiles/6p.png" alt=""><img src="../assets/tiles/6s.png" alt=""><img src="../assets/tiles/7s.png" alt=""><img src="../assets/tiles/8s.png" alt=""><img src="../assets/tiles/7z.png" alt=""><img src="../assets/tiles/7z.png" alt=""><img src="../assets/tiles/7z.png" alt=""><img src="../assets/tiles/5z.png" alt=""><img class="win" src="../assets/tiles/5z.png" alt="">
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">문제</div>
+  <h2>한 장만 틀려도 점수가 틀립니다</h2>
+  <p class="lead">오프라인 대국에서는 판·부 계산과 점수 기록을 사람이 합니다. 손패 사진을 읽는 앱은 이미 많지만, 조사한 범위에서 탁자 전체를 읽어 기록까지 잇는 상용 제품은 없었습니다. 점수가 맞으려면 손패 13~14장, 울기, 도라 표시패, 방총자, 리치 여부가 모두 맞아야 합니다.</p>
+  <div class="crop"><img src="../build/result_kiosk.png" alt="키오스크 결과 화면"></div>
+  <p class="cap">태블릿 결과 화면. 역과 판·부, 등급, 점수를 한 화면에 보여 줍니다. 패 그림은 CC0 세트입니다.</p>
+</section>
+
+<section>
+  <div class="eyebrow">동작 방식</div>
+  <h2>AI는 사진만 읽고, 점수는 엔진이 계산합니다</h2>
+  <p class="lead">판독과 계산을 나눠, 점수 규칙은 언제나 검증 가능한 코드가 맡습니다.</p>
+  <div class="flow">
+    <div class="step"><i>1</i><b>촬영</b><span>폰을 탁자 위 카메라로 거치하고, 태블릿에서 원격으로 찍습니다</span></div>
+    <div class="step"><i>2</i><b>구역 판독</b><span>사진을 구역으로 나눠 자체 학습 YOLO26으로 패를 읽습니다</span></div>
+    <div class="step"><i>3</i><b>점수 계산</b><span>기기 안 Dart 엔진이 역·부·점수를 계산합니다</span></div>
+    <div class="step"><i>4</i><b>대국 반영</b><span>점수판에 기록합니다. 틀리면 되돌리거나 정정합니다</span></div>
+  </div>
+  <img class="shot" src="grid_zones_k16.jpg" alt="탁자 사진을 자리와 가운데 구역으로 나눈 그림">
+  <p class="cap">구역 나누기 예시. 네 자리와 가운데, 강 끝, 리치봉을 따로 봅니다. (평가 사진 D, 연출 장면)</p>
+</section>
+
+<section>
+  <div class="eyebrow">결과</div>
+  <h2>사진 한 장 처리 시간을 약 15초에서 6초로</h2>
+  <p class="lead">외부 AI(Gemini) 판독을 자체 모델로 바꿔 Gemini 호출 없이 화료를 읽습니다.</p>
+  <div class="bars">
+    <h3>촬영 → 결과, 운영 서버 앱 흐름 전체 중앙값</h3>
+    <div class="bar"><label>Gemini 판독</label><div class="track"><div class="fill" style="width:880px;background:#7f978b"></div><strong>15.1초</strong></div></div>
+    <div class="bar"><label>자체 모델</label><div class="track"><div class="fill" style="width:339px;background:var(--gold)"></div><strong>5.82초</strong></div></div>
+    <p class="cap">최대 시간은 66.8초 → 7.30초. 2026-11-02 측정, 두 값의 측정 시각은 다릅니다.</p>
+  </div>
+  <div class="stats">
+    <div class="stat"><strong>30/34</strong><b>손패·울기·화료패 정답</b><span>그 사진을 학습하지 않은 모델 기준. 로컬 서버, 평가 세트 + 매장 사진</span></div>
+    <div class="stat"><strong>30만 건</strong><b>점수 교차 검증 차이 0</b><span>공개 라이브러리 mahjong 2.1.0과 화료 여부·지불액 비교</span></div>
+    <div class="stat"><strong>697개</strong><b>단위 테스트</b><span>앱 565개, 서버 132개. push마다 CI가 실행합니다</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">기능</div>
+  <h2>판독이 아니어도 쓸 수 있는 대국 도구</h2>
+  <p class="lead">직접 입력 계산기에서 시작해 대국 한 판 전체를 관리하는 앱이 되었습니다.</p>
+  <div class="grid3">
+    <div class="card"><b>점수 계산기</b><span>손패 입력, 역·부수 내역, 대기패 판정, 룰 설정</span></div>
+    <div class="card"><b>대국 기록</b><span>리치·유국·본장·공탁·친 교체, 정산, 되돌리기</span></div>
+    <div class="card"><b>거치 촬영</b><span>카메라 헤드 QR 연결, 탁자 판독, 판독 수정</span></div>
+    <div class="card"><b>태블릿 화면</b><span>테이블 점수판, 화료 연출, 대국 종료 화면</span></div>
+    <div class="card"><b>대국 규칙</b><span>토비, 서입, 아가리야메, 도중 유국, 파오</span></div>
+    <div class="card"><b>학습 도구</b><span>점수표, 점수 계산 연습 퀴즈, 결과 음성</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">진행 과정</div>
+  <h2>실제 패 사진 0장에서 시작</h2>
+  <div class="time">
+    <div><b>10-22</b><span>직접 입력 계산기</span></div>
+    <div><b>10-24</b><span>첫 매장 촬영·실험</span></div>
+    <div><b>10-26</b><span>판독 서버 운영 배포</span></div>
+    <div><b>10-31</b><span>매장 2차 촬영</span></div>
+    <div><b>11-01</b><span>라벨 1,550장 자체 학습</span></div>
+    <div><b>11-02</b><span>자체 모델 운영 서버 배포</span></div>
+  </div>
+  <p class="cap" style="margin-top:28px">2026년. 앱 Flutter/Dart · 서버 Python FastAPI · 판독 YOLO26 · 배포 GitHub Actions, AWS EC2 t4g.small(CPU)</p>
+</section>
+
+<section>
+  <div class="eyebrow">남은 과제</div>
+  <h2>아직 증명하지 못한 것</h2>
+  <p class="lead">숫자를 그대로 믿으면 안 되는 부분도 함께 기록합니다.</p>
+  <ul class="limits">
+    <li><b>일반화 미확인.</b> 평가 사진은 같은 매장·같은 패 세트입니다</li>
+    <li><b>30/34는 최종 시험이 아닙니다.</b> 규칙을 정할 때 본 사진을 포함합니다</li>
+    <li><b>자동 반영은 기본 끔.</b> 리치 놓침으로 점수가 틀린 사례가 있었습니다</li>
+    <li><b>다음 매장 방문이 첫 테스트.</b> 새 사진으로 한 번 재서 검증합니다</li>
+  </ul>
+</section>
+
+<footer>2026-11-03 기준. 수치 출처: docs/metrics.md 표 1-37·1-47, docs/problem_log.md 32. 손·팔이 패를 가린 사진은 정확도 분모에서 제외.</footer>
+</body>
+</html>

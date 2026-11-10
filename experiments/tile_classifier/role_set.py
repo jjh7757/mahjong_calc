@@ -40,8 +40,11 @@ import seat_grow as sg  # noqa: E402
 OUT = HERE / "data" / "role"
 BACKS = HERE / "data" / "det" / "backs" / "boxes.json"
 TRUTH = json.loads((HERE.parents[1] / "experiments/visit_20261031/truth.json").read_text(encoding="utf-8"))["scenes"]
-ROLES = ["hand", "meld", "river", "wall", "pair", "loose"]
-COLORS = {"hand": "blue", "meld": "cyan", "river": "orange", "wall": "red", "pair": "magenta", "loose": "yellow", "other": "gray"}
+# 2026-11-09 사용자 "none 으로 학습시켜야 될 거 같애"(표 1-142): ROLE_NONE=1 이면 7번째 역할 none = 역할 없는 앞면(실제 other, 생성기 외톨이 앞면 -2).
+# 서버 roles.ROLES 도 끝에 "none" 을 더해야 7칸 ONNX 를 읽는다(6칸 ONNX 는 그대로 읽힘).
+NONE = __import__("os").environ.get("ROLE_NONE") == "1"
+ROLES = ["hand", "meld", "river", "wall", "pair", "loose"] + (["none"] if NONE else [])
+COLORS = {"hand": "blue", "meld": "cyan", "river": "orange", "wall": "red", "pair": "magenta", "loose": "yellow", "other": "gray", "none": "white"}
 FEAT = 9  # 예전 특징(--feat old). 회전 상자 특징은 FEAT_ROT
 FEAT_ROT = 11
 RECTS = HERE / "data" / "det" / "obb" / "rects.json"
@@ -160,17 +163,53 @@ def scene_tokens(rec: dict, grid: dict, backs: list, use_backs: bool, feat: str 
     return np.array(rows, np.float32).reshape(-1, feat_dim(feat)), labels
 
 
+REL = 7  # 상대 위치 특징 칸 수(rel_feats)
+
+
+def rel_feats(x: torch.Tensor) -> torch.Tensor:
+    """상자 쌍 (i 가 j 를 볼 때) 상대 특징 [B, N, N, REL] (2026-11-08 `--relbias`). 거리는 i 의 패 크기로 나눔 = 패 몇 장 떨어졌나.
+    0 du/s · 1 dv/s(±8 로 자르고 /4) · 2 log(1 + 거리/s) · 3 j 눕힘 · 4 j 뒷면 · 5 눕힘 같음 · 6 패 크기 비 log(s_j/s_i)."""
+    u, v = x[..., 0], x[..., 1]
+    s = ((x[..., 2] + x[..., 3]) / 20).clamp_min(1e-3)  # 패 폭·높이 평균(특징은 ×10)
+    lie, back = x[..., 5], x[..., 4]
+    du = (u[:, None, :] - u[:, :, None]) / s[:, :, None]
+    dv = (v[:, None, :] - v[:, :, None]) / s[:, :, None]
+    dist = torch.sqrt(du ** 2 + dv ** 2)
+    n = x.shape[1]
+    return torch.stack([du.clamp(-8, 8) / 4, dv.clamp(-8, 8) / 4, torch.log1p(dist),
+                        lie[:, None, :].expand(-1, n, -1), back[:, None, :].expand(-1, n, -1),
+                        (lie[:, None, :] == lie[:, :, None]).float(), torch.log(s[:, None, :] / s[:, :, None])], -1)
+
+
 class SetNet(nn.Module):
-    def __init__(self, d: int = 64, layers: int = 3, feat: int = FEAT):
+    def __init__(self, d: int = 64, layers: int = 3, feat: int = FEAT, relbias: bool = False):
         super().__init__()
         self.feat = feat
+        self.heads, self.layers, self.relbias = 4, layers, relbias
         self.inp = nn.Sequential(nn.Linear(feat, d), nn.GELU(), nn.Linear(d, d))
         enc = nn.TransformerEncoderLayer(d, 4, d * 2, dropout=0.1, batch_first=True, norm_first=True)
-        self.enc = nn.TransformerEncoder(enc, layers)
+        self.enc = nn.TransformerEncoder(enc, layers, enable_nested_tensor=False)
         self.head = nn.Linear(d, len(ROLES))
+        if relbias:  # 상자 쌍 상대 위치 → 층·머리마다 어텐션 점수에 더할 값. 0 으로 시작 = 처음엔 예전 모델과 같음
+            self.rel = nn.Sequential(nn.Linear(REL, 32), nn.GELU(), nn.Linear(32, self.heads * layers))
+            nn.init.zeros_(self.rel[2].weight)
+            nn.init.zeros_(self.rel[2].bias)
 
     def forward(self, x: torch.Tensor, pad: torch.Tensor) -> torch.Tensor:
-        return self.head(self.enc(self.inp(x), src_key_padding_mask=pad))
+        if not self.relbias:
+            return self.head(self.enc(self.inp(x), src_key_padding_mask=pad))
+        B, N, _ = x.shape
+        bias = self.rel(rel_feats(x)).permute(0, 3, 1, 2)  # [B, 층×머리, N, N]
+        bias = bias.masked_fill(pad[:, None, None, :], -1e9)  # 패딩 상자는 안 봄
+        h = self.inp(x)
+        fast = torch.backends.mha.get_fastpath_enabled()
+        torch.backends.mha.set_fastpath_enabled(False)  # 평가 모드 빠른 경로는 머리별 3차원 마스크에서 NaN(2026-11-08 확인)
+        try:
+            for l, layer in enumerate(self.enc.layers):
+                h = layer(h, src_mask=bias[:, l * self.heads:(l + 1) * self.heads].reshape(B * self.heads, N, N))
+        finally:
+            torch.backends.mha.set_fastpath_enabled(fast)
+        return self.head(h)
 
 
 def crop_mask(x: np.ndarray, rng: np.random.Generator | None = None) -> np.ndarray:
@@ -184,12 +223,21 @@ def crop_filter(x: np.ndarray, y, rng: np.random.Generator | None = None):
     return x[keep], [l for l, k in zip(y, keep) if k]
 
 
+DROP_SAFE = __import__("os").environ.get("ROLE_DROP_SAFE") == "1"
+# 2026-11-09 사용자 결정 (a): 역할 없는 앞면(라벨 -2, 실제 other·생성기 v3 의 외톨이 앞면)은 교차 엔트로피에선 빼고
+# "손패·울기·떼어 둔 패가 아니다" 손실 −log(1 − p_hand − p_meld − p_loose) 로 가르친다(표 1-138). 출력 6칸·서버는 그대로.
+OTHER_NEG = __import__("os").environ.get("ROLE_OTHER_NEG") == "1"
+WIN_IDX = [0, 1, 5]
+
+
 def batch(scenes: list[dict], rng: np.random.Generator | None):
     xs, ys = [], []
     for s in scenes:
         x, y = s["x"], np.array(s["y"])
         if rng is not None:
             keep = rng.random(len(x)) > 0.08
+            if DROP_SAFE:  # 2026-11-09 사용자: 무작위로 빠져도 되는 건 강·뒷면(산)뿐 — 손패·울기·떼어 둔 패·표시패·짝은 남김(외톨이 울기 1장 방지, 표 1-136)
+                keep |= (y != 2) & (y != -1)
             if keep.sum() >= 3:
                 x, y = x[keep], y[keep]
             x = x.copy()
@@ -214,12 +262,12 @@ def batch(scenes: list[dict], rng: np.random.Generator | None):
     return X, Y, pad
 
 
-def train(scenes: list[dict], epochs: int, seed: int, net: nn.Module | None = None, lr: float = 1e-3) -> nn.Module:
-    """net 을 주면 그 가중치에서 이어서(미세 조정)."""
+def train(scenes: list[dict], epochs: int, seed: int, net: nn.Module | None = None, lr: float = 1e-3, relbias: bool = False) -> nn.Module:
+    """net 을 주면 그 가중치에서 이어서(미세 조정). relbias 는 새로 만들 때만."""
     torch.manual_seed(seed)
     rng = np.random.default_rng(seed)
-    net = SetNet(feat=scenes[0]["x"].shape[1]) if net is None else copy.deepcopy(net)
-    freq = Counter(r for s in scenes for r in s["y"] if r >= 0)
+    net = SetNet(feat=scenes[0]["x"].shape[1], relbias=relbias) if net is None else copy.deepcopy(net)
+    freq = Counter((6 if (NONE and r == -2) else r) for s in scenes for r in s["y"] if r >= 0 or (NONE and r == -2))
     w = torch.tensor([1 / np.sqrt(max(freq[i], 1)) for i in range(len(ROLES))], dtype=torch.float32)
     w = w / w.mean()
     opt = torch.optim.AdamW(net.parameters(), lr=lr, weight_decay=0.01)
@@ -231,17 +279,46 @@ def train(scenes: list[dict], epochs: int, seed: int, net: nn.Module | None = No
         for k in range(0, len(order), 8):
             X, Y, pad = batch([scenes[i] for i in order[k:k + 8]], rng)
             opt.zero_grad()
-            loss_fn(net(X, pad).reshape(-1, len(ROLES)), Y.reshape(-1)).backward()
+            logits = net(X, pad).reshape(-1, len(ROLES))
+            Yf = Y.reshape(-1)
+            if NONE:  # 역할 없는 앞면(-2) → none(6)
+                Yf = torch.where(Yf == -2, torch.full_like(Yf, 6), Yf)
+            loss = loss_fn(logits, Yf.clamp(min=-1))
+            neg = Yf == -2
+            if OTHER_NEG and neg.any():
+                pw = torch.softmax(logits[neg], 1)[:, WIN_IDX].sum(1)
+                loss = loss - torch.log((1 - pw).clamp_min(1e-4)).mean()
+            loss.backward()
             opt.step()
         sched.step()
     return net.eval()
+
+
+def add_bent(scenes: list[dict], k: int, seed: int, exclude=()) -> list[dict]:
+    """학습 장면에 휜 손패 사본을 장면마다 k 개 더한다(2026-11-07, role_bend.py — 11-07 매장 153638 처럼 손패 줄이 계단·끝 흐름으로 휘어
+    끝 패를 loose 로 보던 문제. 독립 검토 2회 data/role/bend_check/review_bend{,_v2}.json). 라벨은 그대로, 시험 장면에는 쓰지 않는다.
+    exclude(평가 제외 사진)는 재료에서 뺀다. 손패 8장 미만이거나 겹침 검사에 계속 걸리면 그 사본은 건너뛴다."""
+    if k <= 0:
+        return scenes
+    import role_bend as rb
+
+    rng = np.random.default_rng(10_000 + seed)
+    out = list(scenes)
+    for s in scenes:
+        if s["name"] in exclude:
+            continue
+        for j in range(k):
+            xb, info = rb.bend(s["x"], s["y"], rng)
+            if info["mode"] is not None:
+                out.append(dict(name=f"{s['name']}#bend{j}", x=xb, y=list(s["y"]), n_face=s.get("n_face", len(s["x"]))))
+    return out
 
 
 def load_nets(path: Path) -> list[nn.Module]:
     """저장한 씨드별 가중치 → SetNet 목록(특징 수는 첫 층 모양에서)."""
     nets = []
     for sd in torch.load(path):
-        net = SetNet(feat=sd["inp.0.weight"].shape[1])
+        net = SetNet(feat=sd["inp.0.weight"].shape[1], relbias=any(k.startswith("rel.") for k in sd))
         net.load_state_dict(sd)
         nets.append(net.eval())
     return nets
@@ -298,6 +375,8 @@ def main() -> None:
     ap.add_argument("--pre-file", default="", help="합성 사전학습 가중치를 여기 저장/있으면 읽음(data/role/ 아래 이름)")
     ap.add_argument("--feat", default="old", choices=["old", "rot"], help="rot = 회전 상자 특징 11칸(패 크기·기울기), old = 예전 9칸")
     ap.add_argument("--save-folds", action="store_true", help="fold 별 씨드 가중치를 data/role/role_fold_<am|pmA|pmB><tag>.pt 로 저장(role_export.py 로 fold 별 ONNX, 개선 계획 2단계)")
+    ap.add_argument("--bend", type=int, default=0, help="미세 조정 학습 장면마다 휜 손패 사본 수(add_bent, role_bend.py, 2026-11-07). 시험 장면엔 안 씀")
+    ap.add_argument("--relbias", action="store_true", help="상자 쌍 상대 위치를 어텐션 점수에 더함(rel_feats, 2026-11-08). 사전학습도 이 구조로 새로 해야 함")
     a = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
     torch.set_num_threads(8)
@@ -339,6 +418,8 @@ def main() -> None:
             pre = load_nets(pf)
             if pre[0].feat != feat_dim(a.feat):
                 raise SystemExit(f"{pf}: 특징 {pre[0].feat}칸 가중치인데 --feat {a.feat} 는 {feat_dim(a.feat)}칸")
+            if pre[0].relbias != a.relbias:
+                raise SystemExit(f"{pf}: relbias={pre[0].relbias} 가중치인데 --relbias={a.relbias}")
             print("사전학습 가중치 읽음", pf, len(pre), flush=True)
         else:
             import role_synth
@@ -352,19 +433,24 @@ def main() -> None:
                     crng = np.random.default_rng(seed)
                     syn = [dict(s, **dict(zip(("x", "y"), crop_filter(s["x"], s["y"], crng)))) for s in syn]
                     syn = [s for s in syn if len(s["x"]) >= 3]
-                pre.append(train(syn, a.synth_epochs, seed))
+                pre.append(train(syn, a.synth_epochs, seed, relbias=a.relbias))
                 print(f"합성 {a.synth}장 사전학습 씨드 {seed} {round(time.time() - t0)}초", flush=True)
             if pf:
                 torch.save([n.state_dict() for n in pre], pf)
     for fold, names in fs.items():
         tr = [s for s in scenes if s["name"] not in names]
         te = [s for s in scenes if s["name"] in names]
+        if a.bend and a.feat == "rot":  # 씨드마다 다른 사본(같은 씨드면 같은 사본 = 다시 돌려도 같음)
+            trs = [add_bent(tr, a.bend, seed, occl) for seed in range(a.seeds)]
+            print(fold, "휜 손패 사본 더함", len(trs[0]) - len(tr), flush=True)
+        else:
+            trs = [tr] * a.seeds
         if a.no_ft:
             nets = pre
         elif pre:
-            nets = [train(tr, a.epochs, seed, pre[seed], a.ft_lr) for seed in range(a.seeds)]
+            nets = [train(trs[seed], a.epochs, seed, pre[seed], a.ft_lr) for seed in range(a.seeds)]
         else:
-            nets = [train(tr, a.epochs, seed) for seed in range(a.seeds)]
+            nets = [train(trs[seed], a.epochs, seed, relbias=a.relbias) for seed in range(a.seeds)]
         if a.save_folds:  # 이 fold 의 사진(names)을 안 배운 가중치
             fk = {"오전": "am", "오후A": "pmA", "오후B": "pmB"}[fold]
             torch.save([net.state_dict() for net in nets], OUT / f"role_fold_{fk}{a.tag}.pt")

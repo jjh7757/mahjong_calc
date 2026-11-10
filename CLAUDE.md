@@ -15,6 +15,15 @@
 - 같은 시각에 나란히 돌린 비교만 전·후로 적는다. 시각이 다르면 메모에 적는다.
 - 손·팔 가림 사진과 사용자 문제 사진(손패를 흩어 놓는 등 사용 규칙 위반)은 채점에서 뺀다. 목록은 `experiments/speed/seat_grow.py` 의 `OCCLUDED`·`USER_ERROR`(합쳐서 `EXCLUDED`), 채점 스크립트는 `sg.eval_scenes()`(또는 `EXCLUDED` 로 거르기)를 쓴다. 앱 흐름 `integration_test/read_grid_timing_test.dart` 의 `_visit` 목록에서도 뺀다. 새 사진은 채점 전에 사진만 보고 판단해 목록에 더한다.
 
+## 실패 원인을 찾고 해결책을 정했으면 `docs/problem_log.md` 를 고친다
+
+시험·측정에서 실패가 나와 원인을 분석하고, 해결책을 골라 다시 잰 흐름이 한 바퀴 끝나면(채택이든 미채택이든) **같은 턴 안에** `docs/problem_log.md` 를 고친다. metrics.md 는 숫자, problem_log 는 "왜 실패했고 왜 그 방법을 골랐나" 를 남기는 곳이다.
+
+- 같은 문제를 이어서 푼 것이면 기존 항목에 덧붙이고, 새 문제면 마지막 번호 + 1 로 새 항목을 만든다(쓰기 전 `grep -n "^## [0-9]" docs/problem_log.md` 로 번호 확인 — 세션끼리 번호가 겹친 적 있음).
+- 칸: 문제와 제약 / 검토한 대안 / 선택과 근거 / 평가 방법 / 발견한 오류 → 개선 / 변화 / 운영·남은 것. 숫자는 metrics.md 그대로 옮기고 "(metrics 표 1-xx)" 로 근거를 단다.
+- 원인을 처음에 잘못 짚었다가 바로잡았으면(사용자 지적 포함) 그것도 적는다. 미채택 실험도 ❌·🗑 로 남긴다.
+- 상태가 바뀌면 "정확도 변천" 표와 "지금 남은 문제" 목록도 고친다.
+
 ## 저장소
 
 - 앱: 이 폴더(GitHub `jjh7757/mahjong_calc`, 비공개). push 마다 `.github/workflows/ci.yml` 이 analyze·test, master 엔 APK. `**.md`·`docs/`·`experiments/` 만 바뀌면 안 돈다.

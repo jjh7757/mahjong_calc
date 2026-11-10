@@ -124,6 +124,45 @@ python -I -X utf8 experiments/tile_classifier/role_set.py --synth 8000 --synth-e
 python -I -X utf8 experiments/tile_classifier/role_set.py --synth 8000 --seeds 3 --pre-file pre_synth8k.pt --no-ft --tag _synth_only
 ```
 
+**합성 분포 점검(`role_synth_audit.py`, 2026-11-08, 사용자가 그림을 보고 지적):** 합성 300장(feat rot) 대 실제 25장 — 누운 강 48% 대 48%, 누운 뒷면 39% 대 51%, 장면 안 패 폭 변동계수 0.057 대 0.060 은 비슷하다. 다르다: 5° 넘게 기운 앞면 35% 대 14%, 다른 상자와 IoU>0.15 로 겹친 상자 11.7% 대 2.7%(중복 검출 흉내 1.6% 포함). 겹침의 절반(강+강 6.3%)은 **결함**이다. 네 자리를 `rot()` 로 펠트 가운데(0.5, 0.5) 기준으로 돌리는데 강은 기기 중심(su 0.5·sv 0.47 ± 0.02)에 붙여 놓아 옆 자리 강과 포개진다. 기기 중심을 0.5·0.5 로 두면 강+강 1.9%·전체 7.9%. 나머지는 뒷면·남의 패끼리 3.4%(모서리). 고쳐서 다시 학습한 효과는 안 쟀다.
+
+**생성기 v2(같은 날, `role_synth.py` 머리말, 예전 = `ROLE_SYNTH_V1=1` — 200장 대조로 고치기 전 출력과 똑같음 확인):** 강을 기기 중심 기준으로 돌림, 기기 중심 0.5 ± 0.035·정사각형, 네 자리 강을 먼저 놓고 역할 없는 상자가 포개지면 버림, 패산 상자를 실제 뒷면 상자 모양으로(실제 아래 패산 폭/패폭 중앙 1.07·높이 1.69 — v1 은 높이가 폭보다 작았음)·길이 1~14 묶음, 사진 큰 회전 25 → 10%·작은 회전 σ 3 → 1.5°. 결과(실제 / v1 / v2): 5° 넘게 기운 앞면 14.4 / 34.5 / 12.0%, 누운 뒷면 51 / 39 / 58%, 누운 강 48 / 48 / 50%, 겹침 2.7 / 11.7 / 5.9% — 중복 검출 흉내(2%, 쌍마다 2상자 → 약 3.7%p)를 빼면 v1 7.3% → v2 2.1%. 예시 `data/role/synth_v1_v2.png`.
+
+**v2 이어서(같은 날):** ① 패산 위 표시패를 한 패산에만(v1 은 패산마다 60% 따로 → 2,000장 중 2곳 이상 1,735장, 장면당 3.98장. 11-03 에 효과 없음으로 미채택한 보강이 코드에 남아 있었음). 리치 아닌 화료 90%·리치 화료 30% 장면, 20% 는 떨어진 왕패 조각 위. ② 역할 모델 실제 입력(`role_set.scene_tokens`, 서버 `roles.tokens` 와 같은 11칸)을 같은 축척으로 그려 합성과 나란히 보니(사용자 "실제 입력과 많이 달라 보인다") 위치가 달랐다. 실제 / v2 수정 전 / 후: 강 첫 줄 기기에서 거리 0.17 / 0.13 / 0.15, 화료자 울기 u 중앙 1.26 / 0.98 / 1.25·v 1.17 / 1.06 / 1.17, 표시패 거리 0.47 / 0.40 / 0.46, 뒷면 거리 0.60 / 0.50 / 0.57, 격자 네모 안 뒷면 24 / 47 / 39%. 기기 0.21 → 0.27, 패산 v 0.88 → 0.96, 다른 자리 손패·울기 0.08 바깥, 화료자 울기 u ≥ 1.0·v +0.1, 손패는 자기 패산 바깥. 패 폭·높이(손패 0.047×0.064 대 0.048×0.066)·자리당 강 줄 수(중앙 3.2 대 3.2)는 원래 비슷했다. 최종 v2: 기운 앞면 16.1%, 겹침 4.8%(중복 흉내 포함). 그림 `data/role/real_vs_synth_v2.png`(위 실제 4장, 아래 합성 4장). 지금 운영 역할 모델(`tile-roles-rot.onnx`, `pre_synth8k_rot.pt`)은 v1 로 사전학습했다. v2 로 다시 학습할지는 사용자 허락 뒤.
+
+## 역할 모델 변형용 기본 입력 v2 (`role_v2_draft.py`·`role_v2_review.json`·`role_v2_apply.py`, 2026-11-08, 학습 전)
+
+사용자 결정: 합성 생성기 대신 실제 입력을 변형한다. 그 기본 입력 42장의 학습용 정답을 만들었다(`data/role/v2/labels_v2.json`, 커밋 안 함).
+
+- 10-31 쓰기 10장: 기존 `labels.json`(검토 끝난 라벨) 그대로 `role_set.scene_tokens` 로.
+- 나머지 32장: 운영 서버(641681b) `app.roles.read_roles` 를 그대로 돌려 검출 상자(앞면 = 자리 크롭 + 사진 전체, 뒷면)·서버 토큰 11칸·운영 역할 모델 역할을 초안으로(`role_v2_draft.py` → `draft.json`, 검토 그림 `v2/overlay/`), Claude 가 사진 위 그림을 보고 고침(`role_v2_review.json`) → `role_v2_apply.py`.
+  - 합성으로 살린 7장(`v2/images/`, 손·팔 가림 172424·174020·151320 은 추적 프레임으로, 뒷도라를 안 뒤집은 124654·125839·130743·132239 는 같은 사진의 앞면 패를 표시패 옆 묶음에 붙임 — 뒷도라 0판이 되는 종류), 라벨만 고친 10-31 3장(170105 짝 상자 나뉨, 164501·171245 흰 테두리 白 퐁이 이번 검출에선 잡힘), 11-07 쓰기 22장.
+  - 고친 것: 탁자 위 짝을 패산 표시패·강으로 본 것 8장, 다른 자리 모서리 울기를 손패·표시패로 본 것 6장(→ other), 뒷면 묶음을 앞면으로 잡은 상자 7개(→ 뒷면 토큰, 붙인 뒷도라 옆에서 생김 — 검출기 약점), 점봉·테두리 조각 2개 삭제, 흐린 프레임 패가 둘로 쪼개진 상자 합침 1개.
+  - 정답(10-31 truth·11-07 label.json)이 있는 32장은 손패 + 울기 + 떼어 둔 패 장수가 모두 맞음. 151320 은 정답이 없어 손패 끝 3장(울기로 둠)은 확인 필요.
+- 역할 합계(42장): 손패 475·울기 75·강 1,799·패산 표시패 33·짝 34·떼어 둔 패 7. 그림 `data/role/base_review/v2_inputs_{1..4}.jpg`.
+- **학습 전에 다른 세션의 독립 검토를 받는다**(라벨 검토 규칙). 변형·재학습은 그 뒤 사용자 허락으로.
+- 독립 검토(`data/role/v2/independent_review.json`, 12장 18건: 확실 8·애매 10) — 아직 반영 안 함. 151320 은 화료자 9통 퐁(3장, 다른 자리 울기·깡 없음)이라 리치가 아니고 표시패 1장 → 붙인 뒷도라 中 은 빼야 함.
+- **사용자 눈 검토(11-08, 사진·입력 쌍 `base_review/pairs_*.jpg`)** 반영: 151320 폐기(41장), 리치 화료 124654·130743·132239 는 표시패를 패산에서 빼 뒷도라와 화료자 쪽 펠트 짝으로 다시 합성(`role_v2_pair_synth.py`, 132239 짝은 검출이 반쪽 상자라 `fix_box` 로 넓힘), 171505·154904 손패 끝 쯔모패 → loose, 154417 아래 白 → other, 앞면과 겹친 뒷면 상자 버림(133826), 독립 검토 '확실' 중 132954 단추 삭제·143104·183627 뒷면 되돌림. 학습 사용 여부 검토가 필요한 장면은 `role_v2_review.json` `_flags`(연출 8장·134815 잘림·165614·181209 깡·170105 쯔모/론).
+- **깡은 역할을 따로 만들지 않고 울기 + 깡 묶음 표시(11-08 사용자 결정)**: `role_v2_review.json` `_kan` → 라벨 `kan_groups`(type·owner·face_index·back_index), 앞면 상자에 `kan` 번호. 165614·181209 다른 자리 안깡(뒷면-앞면-앞면-뒷면). 표시패 장수 검사 = (1 + 깡 수) × (리치면 2): 정답 있는 32장 중 30장 맞음, 165614·181209 는 리치 + 깡 1 이라 4장이어야 하는데 패산 2장(도라·깡도라)뿐 — 뒷도라 2장을 안 뒤집고 찍음.
+- **다른 사람 울기도 `meld`(11-08 사용자 결정)**: 지금까지 other(학습 제외)였던 다른 자리 울기 67장을 `meld` 로(원래 other 였던 모서리 묶음 + 빠졌던 白 퐁 6장 추가: 165614 오른쪽 위·134815 왼쪽 아래). 누구 것인지는 상자의 `owner`(winner/other)로만 남김. 근거: 서버 `frame_from_roles` 는 화료자 자리 크롭 안 역할만 쓰고, 새 라벨 32장의 다른 사람 울기 35장은 모두 크롭 밖(크롭 안 0) — 울기 예시 75 → 142. 남은 일: `role_set.truth_check` 등 장수 검사는 탁자 전체 손패·울기를 세므로 화료자 자리 쪽만 세게 고칠 것, 예전 labels.json 25장·합성 생성기(다른 자리 울기 -1)도 같은 뜻으로 맞출 것. 격자 없는 rot2 경로(자리 크롭이 이웃과 겹침)를 쓰게 되면 다시 볼 것.
+- **v2 라벨 학습 결과(`role_v2_train.py`, metrics 표 1-124 기준·1-125 결과, 11-08 저녁) → 미채택.**
+  - 학습 설정: 4겹(날짜 × 오전·오후)으로 나눴다. 사전학습 `pre_synth8k_rot_base2.pt`, 실제 입력 변형 사본은 장면당 3개다(탁자 회전·반쪽 상자 쪼개기·뒷면 빠짐).
+  - 채점: 실제 대국 28장에서 화료자 쪽 손패·울기 수가 맞은 장면은 운영 23 · 연출 넣음 20 · 연출 뺌 22였다. 테스트 15장은 셋 다 705/706이다.
+  - 새 오류: 화료자 쪽 외톨이 패(패산 끝 표시패·떼어 둔 화료패)를 meld 로 본다.
+  - 다음 후보: 다른 사람 울기만 -1 로 학습한다.
+  - **사전학습 없이 실제 사진 기반 합성 5,000장면으로 학습(`cv nostaged --synth 5000 --epochs 15`, 표 1-126·1-127) → 미채택.**
+    - 합성 방법(`synth_set`): fold 마다 그 학습 사진만으로 만든다. 다른 사진의 화료자 묶음 바꿔 끼우기, 강 패 빼기, 회전·반쪽 상자·뒷면 빠짐·크기 흔들기를 넣었다. 예시 그림은 `--sample` → `v2/synth_samples.jpg`.
+    - 결과: 화료자 쪽 장면 18/28, 상자 1,569/1,604, 테스트 15장 705/706.
+  - **생성기 v3 사전학습 + 연출 뺀 33장(`role_synth_v3.py`, 캐글 `role_kernel_v3/`, 표 1-128·1-129) → 1단계 통과, 2단계 대기.**
+    - 생성기 v3: 사용자 규칙(강 장수 차 3~4장·울기 붙임·패산은 고리에서 한 방향으로만 줄어듦) + 실제 측정(손패-패산 간격·떼어 둔 패 위치·깡 30%).
+    - 결과: 화료자 쪽 장면 23/28(운영 23), 상자 1,585/1,604(운영 1,582), 테스트 15장 705/706.
+    - 캐글 실행: `role_kernel_v3/build.py` → `kaggle kernels push -p experiments/tile_classifier/role_kernel_v3`, 출력은 `v2/kaggle_v3/out/`.
+
+```
+python -I -X utf8 experiments/tile_classifier/role_v2_train.py base            # 운영 ONNX 로 같은 채점 → v2/cv_base.json
+python -I -X utf8 experiments/tile_classifier/role_v2_train.py cv staged|nostaged
+```
+
 ## 테스트 세트 비교 (`role_field.py`, metrics 표 1-59, 2026-11-04)
 
 10-24 삼각대 15장(기울고 원근 있음)으로 역할 모델 대 규칙을 한 번 쟀다. `build` 가 검출기·펠트 모서리·뒷면·규칙 라벨을 만들고(`data/role/field/`), 독립 검토를 `review.json` 으로 반영(`review`), `score` 가 `pre_synth8k.pt` 를 개발 25장 전부로 미세 조정해 채점한다(좌표는 펠트 네 모서리 호모그래피). 결과 모델 703/706(99.6%), 규칙 645/706(91.4%). 규칙은 대삼원 장면의 손패 줄 전부와 다른 자리 퐁에서 틀린다.
@@ -339,3 +378,33 @@ U_BCD=8103 U_AM=8104 U_PMA=8105 U_PMB=8107 bash experiments/speed/run_baseline.s
 U_FIELD=8086|8106 [RECOLOR=1] bash experiments/speed/run_baseline.sh field <TAG>             # 테스트 15장: recognizer-prod3base / recognizer-prod4
 ```
 launch.json 의 `recognizer-fold3*`·`prod3*`·`fold4-*`·`prod4` 는 `--repo C:/Users/jjh7757/dev/mahjong-recognizer-s9`(측정 뒤 지웠음) — 다시 쓰려면 `git -C ../mahjong-recognizer worktree add ../mahjong-recognizer-s9 feat/cls-alt`. feat/cls-alt 가 이제 v2 기본이므로 "전"(운영 분류기)을 재려면 `prod3base` 에 `LOCAL_CLS_MODEL=…/tile-cls-mnv3s.onnx`·`LOCAL_ALT_CLS_MODEL=…/tile-cls-alt.onnx` 를 주거나 c4484dd 로 worktree 를 만든다.
+
+## 분류기 v3: 180° 뒤집기 + 학습 라벨 고침 (`train.py --synth-pre --rot180 --tag cls6 --seed-offset 10`, metrics 표 1-116·1-118, 2026-11-07~08, **채택 — 운영 641681b**)
+
+11-07 매장 143234 강 끝 三萬을 운영 v2(cls4)가 2m 으로 읽음 → 바로 세우면 3m 0.95 인데 서버 `read_any`(강 끝·떼어 둔 패, 0°·180° 중 확신 높은 쪽)가 180° 쪽 2m 0.978 을 고름.
+
+- **원인 둘:** ① cls4(7-2a `main_synth`)는 사전학습·미세 조정 모두 `AUG`(±8°)만이라 뒤집힌 만수를 거의 2m 으로 확신(`flip_check.py`: 나눔 모델 뒤집은 입력 916/1,168, 바로 놓인 3m 을 2m 으로 고름 19/37). ② `review.extra()` 수확 크롭 라벨은 예전 분류기 예측이라 뒤집힌 三萬 3장·一萬 1장이 2m 이었음.
+- **라벨 전수조사(1,550장, Opus 하위 에이전트 5개, `label_sheet.py`, `data/label_audit/full_*_review.json`):** 틀림은 그 4장뿐 → `review.py` FIX(1959·2290·2424 → 3m, 2156 → 1m), 잘린 적5통 조각 2778·2777 DROP(사용자 결정). 크기·비율로 걸러 본 잘린 크롭 13장 중 나머지는 라벨대로 알아볼 수 있어 둠(`cut_suspects.json`). `data/harvest_obb` 는 다시 만들지 않아 옛 라벨 — 세운 크롭 홀드아웃은 이 4장을 계속 틀림으로 셈.
+- **학습:** `--rot180` = 사전학습·미세 조정 모두 정사각형 크롭을 p 0.5 로 180° 돌린 뒤 AUG(`AUG_R180`), 나머지는 cls4 와 같은 설정·씨드. cls5 = 라벨 고치기 전(fold 회귀 unsafe_app 3 → 11, 미채택), cls6 = 고친 뒤.
+- **결과(표 1-118):** 나눔 3m 오독 0/37, 축 크롭 홀드아웃 1,328/1,329, 매장 시험 2장(143234·130338) 3m, 테스트 15장·색 바꾼 15장·prod 회귀 그대로, fold 회귀 unsafe_app 3 → 5(60% 축소 k28 의 작게 찍힌 누운 發 한 장면 — 나눔 모델이 어느 방향이든 發 0.2~0.3, 원본 크기·전체 모델은 0.95+) → 사용자 결정으로 채택.
+- **운영:** `cls6_all.onnx` → 서버 `app/assets/tile-cls-mnv3s-v3.onnx`, `cls6_all_s1.onnx` → `tile-cls-alt-v3.onnx`, `local_read.CLS_MODEL`·`ALT_CLS_MODEL`·`signals.ALT_CLS_MODEL` 기본값 v3(641681b). 되돌리기: `LOCAL_CLS_MODEL=/srv/app/app/assets/tile-cls-mnv3s-v2.onnx`·`LOCAL_ALT_CLS_MODEL=…/tile-cls-alt-v2.onnx`. 신호 온도 `LOCAL_CLS_TEMP` 0.5 는 v1 기준 그대로(argmax 는 안 바뀜).
+
+```
+python -I -X utf8 experiments/tile_classifier/train.py --synth-pre --rot180 --tag cls6 --seed-offset 10   # cls6_* 8벌, 약 1시간 20분
+python -I -X utf8 experiments/tile_classifier/flip_check.py --model <onnx>                                 # 뒤집기 혼동표
+bash experiments/speed/run_cls6.sh <TAG>                                                                   # 회귀 fold·prod + 테스트 15장 전(cls4)·후(cls6)
+```
+
+## 역할 모델 상대 위치 바이어스 (`role_set.py --relbias`·`run_relbias.sh`, metrics 표 1-120·1-121 기준·1-122 결과, 2026-11-08, **미채택**)
+
+모델 계열(Set Transformer)은 그대로 두고, 상자 쌍의 상대 위치(du·dv 를 패 크기로 나눔·거리·눕힘·뒷면·크기 비, `rel_feats`)를 작은 MLP 로 층·머리마다 어텐션 점수에 더한다. 마지막 층 0 초기화라 시작은 기준선과 같고 파라미터 +652. 사전학습도 이 구조로 새로 해야 한다(`--pre-file` 의 relbias 여부를 검사). 같은 시각 나란히: 교차 검증 1,032 → **1,046**/1,060, truth 손패 장수 13 → 14/18, 테스트 15장 704 → 705/706. 차이는 사실상 130743(예전 설정 다섯 벌이 모두 강 첫 줄을 wall 로 보던 사진) 한 장을 통째로 고친 것이고 표시패 계열 틀림은 그대로.
+
+- 평가 모드 PyTorch MHA 빠른 경로가 머리별 3차원 float 마스크에서 NaN 을 내므로 바이어스 경로에선 빠른 경로를 끈다(`SetNet.forward`).
+- **판정(표 1-122):** 나눔 개발 32회 앱 흐름은 전·후 답이 같고(31/32·435/436), 실제 테스트 15장은 앱 흐름 손패 6 → 9·점수 5 → 8/10 으로 좋아졌지만, 색 바꾼 15장 서버 단독 패 145 → 138·틀린 자동 0 → 4(헛 패를 걸러 적5 오독이 장수 검사를 통과)·앱 흐름 145 → 132, prod 회귀 unsafe 11 → 12·패 −9 로 기준 b·c 미충족 → 운영 그대로. fold 별 ONNX `server_bench/models/tile-roles-{rel2,base2}{,_fold_*}.onnx`, 서버 단독 `bash experiments/speed/run_relbias.sh <TAG>`, 앱 흐름 launch.json `recognizer-rb{0,1}-*`.
+- `role_export.py` 의 수동 계산에도 바이어스를 넣었다(torch 와 최대 차 5e-7) — 서버 `app/roles.py` 는 그대로 두고 ONNX 만 바꾸면 된다.
+
+```
+bash experiments/tile_classifier/run_relbias.sh base2              # 기준선(사전학습부터) → data/role/log_role_base2.txt
+bash experiments/tile_classifier/run_relbias.sh rel2 --relbias     # 바이어스
+FIELD_ONLY=1 bash experiments/tile_classifier/run_relbias.sh rel2  # 테스트 15장만
+```

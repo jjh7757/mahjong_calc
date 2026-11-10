@@ -103,6 +103,8 @@ const _bcdTilt = {
 // experiments/speed/flow_visit.py 가 만든다). 정답은 visit_20261031/truth.json·label.json.
 // 손·팔이 패를 가린 172424·174020(사용자 결정 2026-11-02), 손패를 흩어 놓은 183022(사용자 문제, 2026-11-04),
 // 화료패를 2장 떼어 놓은 142535·울기패를 손패 쪽으로 끌어와 섞은 175951(사용자 문제, 2026-11-05)은 뺀다(seat_grow.py EXCLUDED).
+// 171025 는 떼어 둔 화료패 4통을 팔이 가린 원본 대신 합성본 original_synth.jpg 를 쓴다(2026-11-08 사용자 결정: 3초 전 프레임으로
+// 팔을 지우고 같은 날 171245 의 4통을 붙임, experiments/visit_20261031/synth_171025_wintile.py, metrics 표 6 11-08 줄).
 const _visit = {
   'V': (
     [
@@ -133,9 +135,10 @@ const _signals = bool.fromEnvironment('SIGNALS', defaultValue: true);
 const _photoMin = String.fromEnvironment('PHOTO_MIN');
 const _photoMax = String.fromEnvironment('PHOTO_MAX');
 const _scenes = _set == 'field' ? _field : (_set == 'bcdtilt' ? _bcdTilt : (_set == 'visit' ? _visit : _bcd));
+const _visitSynth = {'171025': 'original_synth.jpg'};
 String _photoPath(String p) => _set == 'field'
     ? '20261024_$p/original.jpg'
-    : (_set == 'visit' ? '20261031_$p/original.jpg' : '$p.jpg');
+    : (_set == 'visit' ? '20261031_$p/${_visitSynth[p] ?? 'original.jpg'}' : '$p.jpg');
 
 // DUMP_DIR: 판독에 보낸 화료자 자리 크롭(seat.jpg)·리치봉 크롭(sticks.jpg)을 <DUMP_DIR>/<사진>/ 에 저장(추가 판독 실험용).
 const _dumpDir = String.fromEnvironment('DUMP_DIR');

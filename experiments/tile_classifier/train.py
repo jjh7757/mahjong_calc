@@ -80,6 +80,9 @@ def obb_pil(sat: float = OBB_SAT) -> T.Compose:
 
 
 AUG_OBB = T.Compose([obb_pil(), T.ToTensor(), T.Normalize(MEAN, STD)])
+# 2026-11-07(metrics 표 6 11-07 저녁 줄): 운영 cls4 는 AUG 만이라 180° 뒤집은 만수를 2m 으로 확신 → 서버 read_any(강 끝)가 바로 놓인 3만을
+# 2만으로 고름. --synth-pre --rot180 = 사전학습·미세 조정 모두 정사각형 크롭을 확률 OBB_P_ROT180 로 180° 돌린 뒤 AUG(같은 라벨).
+AUG_R180 = T.Compose([T.Lambda(_rot180), *AUG.transforms])
 
 
 def train(items: list[dict], images: dict, seed: int, aug=None, init: dict | None = None) -> nn.Module:
@@ -377,10 +380,11 @@ SYN_EPOCHS = 2  # 합성 크롭(풀마다 약 2.4만 장)을 두 번 — 미세 
 SYN_POOL = {"bcd": "nobcd", "am": "b", "pm": "a", "all": "all"}  # 홀드아웃 사진 재료를 뺀 풀(scene_synth.POOLS)
 
 
-def pretrain_synth(pool: str, seed: int) -> dict:
+def pretrain_synth(pool: str, seed: int, aug=None) -> dict:
     """scene_synth.py cls 크롭(data/synth/cls_<pool>.npz, 128 정사각형)으로 ImageNet 가중치에서 SYN_EPOCHS 에폭. 증강·손실·최적화는 train() 과 같다(종류 균형 뽑기)."""
     import random
 
+    aug = aug or AUG
     d = np.load(SYNTH / f"cls_{pool}.npz")
     X, Y = d["x"], d["y"].astype(int)
     torch.manual_seed(1000 + seed)
@@ -398,7 +402,7 @@ def pretrain_synth(pool: str, seed: int) -> dict:
     net.train()
     for _ in range(steps):
         idx = np.random.choice(len(Y), 32, p=prob)
-        x = torch.stack([AUG(Image.fromarray(X[i])) for i in idx])
+        x = torch.stack([aug(Image.fromarray(X[i])) for i in idx])
         y = torch.tensor(Y[idx])
         opt.zero_grad()
         loss_fn(net(x), y).backward()
@@ -424,7 +428,9 @@ def main_synth() -> None:
     ap.add_argument("--eval-only", action="store_true")
     ap.add_argument("--tag", default="cls3")
     ap.add_argument("--seed-offset", type=int, default=0)
+    ap.add_argument("--rot180", action="store_true", help="사전학습·미세 조정에 180° 뒤집기(AUG_R180, 2026-11-07 cls5)")
     a = ap.parse_args()
+    aug = AUG_R180 if a.rot180 else AUG
     sys.stdout.reconfigure(encoding="utf-8")
     torch.set_num_threads(12)
     out_p = SYNTH / ("results.json" if a.tag == "cls3" else f"results_{a.tag}.json")
@@ -448,14 +454,14 @@ def main_synth() -> None:
                     print("있음(재학습 안 함)", dst, flush=True)
                     continue
                 t0 = time.perf_counter()
-                init = pretrain_synth(SYN_POOL[part], seed)
+                init = pretrain_synth(SYN_POOL[part], seed, aug)
                 t1 = time.perf_counter()
-                net = train(pool, images, seed, init=init)
+                net = train(pool, images, seed, aug, init=init)
                 torch.save(net.state_dict(), DATA / f"{name}.pt")
                 export(net, dst)
                 res["train"][name] = dict(n=len(pool), seed=seed, synth_pool=SYN_POOL[part], synth_epochs=SYN_EPOCHS,
                                           synth_n=int(len(np.load(SYNTH / f"cls_{SYN_POOL[part]}.npz")["y"])), pre_secs=round(t1 - t0),
-                                          secs=round(time.perf_counter() - t1), epochs=EPOCHS, finished=time.strftime("%Y-%m-%d %H:%M:%S"))
+                                          secs=round(time.perf_counter() - t1), epochs=EPOCHS, rot180=a.rot180, finished=time.strftime("%Y-%m-%d %H:%M:%S"))
                 print(name, res["train"][name], flush=True)
                 out_p.write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
     res["holdout"] = holdout_eval(("cls", "cls_s1", a.tag, f"{a.tag}_s1"))

@@ -28,7 +28,11 @@ ap.add_argument("--role-model", default="", help="역할 모델(/v2/localroles):
 ap.add_argument("--cls-tag", default="cls", help="분류기 이름 앞(7-1, 2026-11-06): cls2 = 세운 크롭 재학습(server_bench/models/cls2_<나눔>{,_s1}.onnx). "
                 "--local-fold 없이 cls2 면 운영 자리에 cls2_all·cls2_all_s1")
 ap.add_argument("--seat-model", default="", help="--local-fold 없이 자리 검출기만 바꿀 때(7-2, 2026-11-06): server_bench/models 안 이름(예: det_r9_final.onnx) → LOCAL_SEAT_MODEL")
+ap.add_argument("--lone-pair", default="", help="서버 규칙 짝은 늘 2장(LONE_PAIR_LOOSE, 2026-11-09 metrics 표 1-145): 0 끔 / 1 켬. 비우면 서버 기본")
 a = ap.parse_args()
+if a.lone_pair:
+    os.environ["LONE_PAIR_LOOSE"] = a.lone_pair
+    print("LONE_PAIR_LOOSE", a.lone_pair, flush=True)
 if a.seat_model:
     os.environ["LOCAL_SEAT_MODEL"] = f"C:/Users/jjh7757/dev/mahjong_calc/experiments/tile_classifier/server_bench/models/{a.seat_model}"
     if not os.path.exists(os.environ["LOCAL_SEAT_MODEL"]):

@@ -21,7 +21,8 @@ import role_set as rs  # noqa: E402
 def manual_forward(net: rs.SetNet, x: torch.Tensor) -> torch.Tensor:
     """nn.TransformerEncoder 와 같은 계산을 평범한 행렬곱으로(ONNX 가 길이 N 을 고정해 버리는 빠른 경로를 피한다). norm_first·relu·패딩 없음."""
     h = net.inp(x)
-    for layer in net.enc.layers:
+    bias = net.rel(rs.rel_feats(x)).permute(0, 3, 1, 2) if getattr(net, "relbias", False) else None  # [B, 층×머리, N, N] (2026-11-08 --relbias)
+    for li, layer in enumerate(net.enc.layers):
         a = layer.self_attn
         B, N, D = h.shape
         H = a.num_heads
@@ -31,7 +32,10 @@ def manual_forward(net: rs.SetNet, x: torch.Tensor) -> torch.Tensor:
         q = q.reshape(B, -1, H, D // H).transpose(1, 2)
         k = k.reshape(B, -1, H, D // H).transpose(1, 2)
         v = v.reshape(B, -1, H, D // H).transpose(1, 2)
-        att = torch.softmax(q @ k.transpose(-1, -2) / (D // H) ** 0.5, -1)
+        logit = q @ k.transpose(-1, -2) / (D // H) ** 0.5
+        if bias is not None:
+            logit = logit + bias[:, li * H:(li + 1) * H]
+        att = torch.softmax(logit, -1)
         o = (att @ v).transpose(1, 2).reshape(B, -1, D)
         h = h + a.out_proj(o)
         y = layer.norm2(h)
