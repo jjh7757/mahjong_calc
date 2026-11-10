@@ -55,7 +55,7 @@ const _bcd = {
   'D': (['k12', 'k16'], {'x1': 280, 'x2': 745, 'y1': 173, 'y2': 713}),
 };
 
-// SET=field: [참고·평가 밖] 10/24 매장 카메라 헤드 사진(captures/20261024_<시각>/original.jpg, PHOTO_URL 은 captures 폴더).
+// SET=field: [참고·평가 밖 — 2026-11-10 지침: 테스트 세트는 원본 B·C·D + 10-31 + 11-07 만, 이 세트는 판정에 안 씀] 10/24 매장 카메라 헤드 사진(captures/20261024_<시각>/original.jpg, PHOTO_URL 은 captures 폴더).
 // 화료가 사진에 다 있는 장면만. 정답은 NOTES "촬영별".
 // 13:18(131823)은 폰 EXIF 회전값이 바뀐 사진이라 뺌(앱은 헤드 사진 EXIF 를 무시하지만 여기선 원본 그대로 디코딩).
 // 격자: 기본값(GridZones.initial = 손으로 찍은 갤러리 사진 D 에 그은 선)은 삼각대 사진(탁자가 약 25° 기움)에 안 맞아
@@ -64,9 +64,7 @@ const _bcd = {
 const _initialGrid = {'x1': 280, 'x2': 745, 'y1': 173, 'y2': 713};
 const _useInitial = String.fromEnvironment('FIELD_GRID') == 'initial';
 const _gridA = _useInitial ? _initialGrid : {'x1': 300, 'x2': 690, 'y1': 150, 'y2': 830}; // 12:29~13:51
-const _gridA2 = _useInitial ? _initialGrid : {'x1': 300, 'x2': 720, 'y1': 150, 'y2': 830}; // 12:40(조금 움직임)
 const _gridB1 = _useInitial ? _initialGrid : {'x1': 315, 'x2': 760, 'y1': 200, 'y2': 740}; // 13:59~14:09
-const _gridB2 = _useInitial ? _initialGrid : {'x1': 355, 'x2': 760, 'y1': 200, 'y2': 740}; // 14:34
 // FIELD_GRIDS="사진=x1,x2,y1,y2;…" 면 사진마다 그 격자(YOLO 자동 격자 비교용, experiments/yolo/auto_grid.py --set field).
 const _fieldGrids = String.fromEnvironment('FIELD_GRIDS');
 // BASE_GRIDS: 같은 형식. PAIR_GRID 의 "plain" 쪽 격자를 사진마다 정한다(매장 저장 격자 vs 사진에 맞춘 격자).
@@ -82,12 +80,12 @@ Map<String, Object>? _gridOverride(String photo, [String grids = _fieldGrids]) {
   return null;
 }
 
+// F1240(124007)·F1434(143443)은 거치 화면으로 부적합해 뺀다(2026-11-10 사용자 결정, seat_grow.py USER_ERROR — 모서리 테두리 위에
+// 남겨 둔 發 3장·테두리 위 안깡). 테스트 13장.
 const _field = {
   'F1229': (['122922'], _gridA),
-  'F1240': (['124007'], _gridA2),
   'F대삼원': (['125053', '130533', '131210', '132647', '133011', '133620', '134323', '135148'], _gridA),
   'F1400': (['135912', '140302', '140750', '140918'], _gridB1),
-  'F1434': (['143443'], _gridB2),
 };
 // 매장 장면의 대국 상황(촬영 기록 meta.json): 친 자리·본장.
 const _fieldGame = {'F1229': (1, 0), 'F1240': (1, 1), 'F대삼원': (2, 0), 'F1400': (2, 0), 'F1434': (2, 0)};
