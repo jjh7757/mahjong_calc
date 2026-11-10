@@ -1,6 +1,12 @@
-# 인수인계 (2026-10-30 기준)
+# 인수인계 (2026-11-11 기준)
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 앱 저장소의 README.md 는 2026-11-09 부터 프로젝트 소개·개발 과정 문서이고, 개발 환경·빌드 명령·화면 기능은 `docs/development.md` 로 옮겼다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
+
+## 2026-11-11: 정리 커밋 + 헤드 끊김 원인(사용자 결론)
+
+- **커밋 정리:** 11-09~11-10 에 쌓인 문서(metrics·problem_log·CLAUDE.md)·실험 스크립트·launch.json·테스트 세트 13장 반영을 `fix/seat-read-grow` 에 커밋했다. 아래 절들의 "커밋 안 함" 은 이 커밋으로 해소됐다(결과물 `experiments/**/results/`·`experiments/tablet_20261103/` 은 규칙대로 안 넣음).
+- **헤드 끊김(사용자 결론):** 매장 Wi-Fi 탓이다 — 손님이 들어올 때마다 연결이 불안정해졌다. **휴대폰 핫스팟 내부망에 태블릿을 붙여 해결.** 11-06 절의 "태블릿 화면 켜 두기 누락" 가설은 원인이 아니다(화면이 꺼지면 미리보기가 멈추는 것은 별개의 작은 개선거리). 핫스팟을 다시 켜면 헤드 주소가 바뀔 수 있다(11-07 세 번) → 8b-4b ②.
+- **남은 책상 일:** ① 리치봉 픽셀 판정 APK 빌드·`adb install -r`(코드는 fbed22e 로 커밋됨) ② `fix/seat-read-grow`(origin/master 보다 앞섬) ↔ master(개발일지·README 12커밋) 합치기 ③ 서버 장수 제약 규칙(problem_log 49번 ①). 매장 몫: 리치 추적 실기기·노랑/빨강 봉, 새 개발/테스트 사진, 8b-4b, 다른 탁자.
 
 ## 2026-11-10: 리치 추적 고침(앱만) — 실제 대국 재생 0/4 → 2/4 → 픽셀 판정 4/4 (metrics 표 11·11-1, problem_log 51번)
 
@@ -9,7 +15,7 @@
 - 측정: `experiments/tracking/replay_visit_riichi.dart <풀어 둔 폴더> [지연=8] [확정 읽기=2]` — 11-07 2차 `*_track/frames_##.zip` 4판을 풀어 넣음. 고치기 전 0/4(실측 재현), 고친 뒤 2/4, 확정 1번 변형 3/4(미채택).
 - 이어서 리치봉 픽셀 판정(색 무관, 파랑·노랑·빨강) 오프라인 시험: `experiments/tracking/stick_color_free.py` — 11-07 크롭 292장 봉 있음 105/109·헛 잡음 0, 노랑·빨강 합성 같음(metrics 표 11-1). 놓침은 가림·크롭 어긋남뿐. 다음: Dart 로 옮겨 추적기(연속 프레임 확정)에 넣고 표 11 재생으로 재기. 매장에서 노란·빨간 봉 실제 촬영.
 - **추적기에 넣음:** `lib/table/stick_slots.dart`(색 무관 판정, 길이/두께 4~9) → `TableFrameStats.sticksSeen` → `RiverTracker` 자리별 2프레임 연속 확정(`localSticks` 기본 켬, 격자에 리치봉 상자 없으면 Gemini 읽기). 2차 대국 재생 4/4, 하루 프레임 2,549장 헛 리치 0. 점검 스크립트 `stick_slots_check.dart`·`scan_local_sticks.dart`·`stick_slots_frame.dart`(experiments/tracking). 테스트 726 통과.
-- 커밋·APK 설치(`adb install -r`)·실제 대국 확인은 아직. 남은 확인: 태블릿에서 프레임당 판정 시간, 실제 빨간 봉, 다른 기기·회전된 리치봉 상자, 리치 시점(일발·더블리치) 정답.
+- 커밋은 fbed22e(11-10). APK 설치(`adb install -r`)·실제 대국 확인은 아직. 남은 확인: 태블릿에서 프레임당 판정 시간, 실제 빨간 봉, 다른 기기·회전된 리치봉 상자, 리치 시점(일발·더블리치) 정답.
 
 ## 2026-11-09 20시: 운영 596101e 배포 — 역할 모델 v3r15d + "짝은 늘 2장" (metrics 표 1-147, "지금 기준값" 갱신)
 
@@ -17,7 +23,9 @@
 - 확인 측정(운영, 32회): 손패 32/32·패 436/436·경고 없는 틀린 자동 0·6.2 / 6.8 / 7.6초·rss 935MB.
 - 되돌리기: 운영 `.env` 에 `LOCAL_ROLE_MODEL=/srv/app/app/assets/tile-roles-rot.onnx` / 규칙만 끄기 `LONE_PAIR_LOOSE=0`.
 - 태블릿 APK 는 바꿀 필요 없음(서버만 바뀜). 앱 저장소의 실험 스크립트·docs·launch.json 은 커밋 안 함.
-- 남은 역할 문제: 손패 끝 hand ↔ loose(171505·153311), 짝 → hand(154417) → 서버 장수 제약 규칙(problem_log 49번 ①) 후보. none 역할은 접음(표 1-143).
+- 남은 역할 문제: 손패 끝 떨어진 화료패 → hand(171505), 짝 → hand(154417). 153311 은 라벨 오류였다(눕힌 쯔모 화료패, 11-10 loose 로 고침, metrics 표 1-156). 고친 라벨로 다시 학습한 v3r15dfix 는 2단계 unsafe_app 5 → 6(`rot_m25` 123721)으로 미채택(표 1-158), 운영 v3r15d 그대로. 고친 라벨은 다음 학습에 들어간다
+- 11-10 오후: 153311 4p → 2p 의 근본 원인은 서버가 눕힌 손패·떼어 둔 패를 돌리지 않고 읽는 것이었다(problem_log 49번). 서버 `feat/turned-hand`(커밋 안 함, 작업 트리 `app/roles.py`)에서 가로 상자는 90°·270° 로 읽게 고쳤다(`TURNED_HAND`, 기본 켬). 표 1-159 a·b·c 모두 통과 → 채택 후보(표 1-160): 회귀 패 +5·장면 +6·unsafe 같음, 개발 32회 같음. 측정 서버 launch.json `recognizer-th{0,1}-*`(8273~8287), `run_local_server.py --turned-hand`
+- **11-10 16:47 운영 f71464a 배포**(사용자 "커밋하고 배포해", deploy 성공, git_sha·라우트 22 확인). 확인 측정(표 1-161): 32/32·436/436·경고 없는 틀린 자동 0·6.4 / 6.9 / 8.1초·rss 1,026MB. 되돌리기 운영 `.env` `TURNED_HAND=0`. 서버 브랜치 `feat/turned-hand` 는 머지 뒤 지움. 태블릿 APK 는 바꿀 필요 없음. 앱 저장소의 실험 스크립트·docs·launch.json 은 커밋 안 함 → 서버 장수 제약 규칙(problem_log 49번 ①) 후보. none 역할은 접음(표 1-143).
 
 ## 2026-11-09 밤(2): 잡음 측정 + 서버 규칙 "짝은 늘 2장" 측정 중지 (metrics 표 1-144·1-145·1-146)
 
@@ -136,7 +144,7 @@
 
 - **메모리:** 로컬 Windows 측정이라 리눅스 값과 같지 않다(WSL 에 pip 이 없어 못 잼). 조건 맞춘 프로세스 안 26장에서 +7~10MB(alt-v2 5.9MB 몫). 운영 f33d632 응답 `rss_mb` 최대 1045MB(표 1-87) → **약 1.06GB 예상**, 2GB 인스턴스를 다른 앱들과 나눠 씀(아래). 새 앱이 `grid_src=none` 을 보내면 rot2 크롭이 커서 한 장에 +50MB 쯤 더. 배포 뒤 2번 재측정에서 응답 `rss_mb` 를 보고, 늘었으면 `LOCAL_SIGNALS=0`(두 번째 분류기 안 올림)이 첫 손.
 - **답이 바뀌는 곳:** 옛 앱 요청에서는 이번 검사로 0(32/32·26장). 7-2a 에서 v2 분류기로 달라졌던 171245(434 → 433, 경고 있는 후보 고르기)는 지금 앱에서는 옛 서버도 같은 후보 고르기라 차이가 안 남. 새 APK 가 `grid_src=none`(갤러리·기본값 격자·펴기 없이)을 보낼 때만 rot2 로 답이 달라진다(표 1-112: 펴기 없이 155 → 201).
-- **F1400 적5만 → 5만 오독은 그대로**(테스트 15장 경고 없는 틀린 자동 3, 1단계부터 — 이번 배포와 무관, 7단계 몫). 8b-4a 조건부 채택의 최종 확정도 다음 매장 사진 몫.
+- ~~**F1400 적5만 → 5만 오독은 그대로**(테스트 15장 경고 없는 틀린 자동 3, 1단계부터 — 이번 배포와 무관, 7단계 몫).~~ → **11-10 정정: 정답 오류였다**(F1400 은 보통 5만, metrics 표 1-151·problem_log 52번). 8b-4a 조건부 채택의 최종 확정도 다음 매장 사진 몫.
 - 시간: 서버 단독 한 장 +0.06초(신호 S3 두 번째 분류기 + 기준점 잡기). 운영은 노트북보다 약 4배 느려 localroles 한 번에 약 +0.2~0.3초 예상 — 2번 재측정에서 표 1-87(5.88 / 6.26 / 9.08초)과 비교.
 - 운영 인스턴스(t4g.small 2GB)는 rag-agent-practice(상한 900MB)·kic-alerts(768MB)·virtual-financial-services·공용 Postgres·Redis·Caddy 와 같이 쓴다(TIL `환경정보.md`). mahjong-recognizer 컨테이너의 메모리 상한은 이 저장소들에 기록이 없다 — `/srv/mahjong-recognizer/docker-compose.yml` 의 `limits.memory` 를 배포 전에 한 번 보면 좋다.
 - 측정용으로 만든 것: launch.json `recognizer-deploy-new`(8186, 합친 master, 환경 변수 없음)·`recognizer-deploy-old`(8187, f33d632 worktree `../mahjong-recognizer-deploy-old` — 측정 뒤 지움, 다시 쓰려면 `git -C ../mahjong-recognizer worktree add --detach ../mahjong-recognizer-deploy-old f33d632`). 서버 worktree `../mahjong-recognizer-8b`(`feat/table-frame` 08e44b0)는 그대로 둠 — master 와 같은 커밋.
@@ -160,7 +168,7 @@
 ## 2026-11-06 밤: 태블릿 → 헤드 끊김 오래 지켜보기 — 재현 안 됨
 
 - 사용자: 오프라인 실험 때 폰 헤드 연결이 여러 번 끊겨 1시간 연결 시험. 새 도구 `experiments/supervise/head_link_watch.py`(용법·결과는 `docs/visit_supervision.md` "오래 지켜보기"). 20:35~22:07(65분 + 27분에서 사용자 중지) 1,110회 끊김 0, ARP·MAC·BSSID·주파수 변화 없음. 결과 `experiments/visit_20261106/link/`(커밋 안 함).
-- 찾은 것: 태블릿 테이블 화면(`MountScreen`)은 화면 켜 두기를 안 켠다(헤드 화면만 `ScreenWake.keepOn`). 21:08 화면이 꺼지자 앱이 뒤로 가 미리보기가 멈춤 — 오프라인 실험의 "끊김" 이 이것이었을 수 있다(그때 태블릿 화면이 꺼졌는지 확인 필요). 앱은 안 고침.
+- 찾은 것: 태블릿 테이블 화면(`MountScreen`)은 화면 켜 두기를 안 켠다(헤드 화면만 `ScreenWake.keepOn`). 21:08 화면이 꺼지자 앱이 뒤로 가 미리보기가 멈춤 — 오프라인 실험의 "끊김" 이 이것이었을 수 있다(그때 태블릿 화면이 꺼졌는지 확인 필요). 앱은 안 고침. → **11-11 사용자 결론: 끊김은 매장 Wi-Fi 탓(손님이 들어올 때마다 불안정), 폰 핫스팟 내부망으로 해결.** 화면 켜 두기는 원인이 아님.
 
 ## 2026-11-06 밤 추가(2): 개선 계획 8b-3b — 서버 `WALL_FRAME=rot2`(rot 의 크롭 정의 손실 세 가지를 고친 후보), **미채택 — 기본 끔, 서버 feat/table-frame bc556f6 만(push 안 함)** (metrics 표 1-106 기준·1-107 결과, `docs/improvement_plan_1105.md` 8b "진행(8b-3b)" 줄)
 
