@@ -2,6 +2,16 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 앱 저장소의 README.md 는 2026-11-09 부터 프로젝트 소개·개발 과정 문서이고, 개발 환경·빌드 명령·화면 기능은 `docs/development.md` 로 옮겼다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-11 저녁: 판 중 프레임 오독 원인 + 프레임 이어 학습 clsF (실험만, metrics 표 12-1~12-5, problem_log 56번, 브랜치 `exp/on-device-read`)
+
+- **원인:** 1020 프레임 오독(한 프레임 93.0%, 통수 83%)은 해상도가 아니라 헤드(`HeadCamera.kt subsample`)가 12MP 에서 4픽셀마다 한 픽셀만 뽑아 줄이는 탓. 4×4 평균으로 줄이면 운영 모델이 4080 과 거의 같게 읽음(흉내 93/94). 앱은 안 바꿈.
+- **이어 학습:** 화료 사진 판독을 라벨로 프레임 크롭 수집(15판 616칸, 정리 뒤 19,900장) → 운영 분류기에서 이어 학습한 `clsF_A`(10-31 프레임 254칸만)가 11-07 오후 실제 프레임 한 프레임 99.5%(오독 166 → 12), 12MP 강 94/94 유지. 패보 규칙 뒤 헛 울어 감 1(확신도 문턱이 안 맞음)로 기준 한 항목 미달. 모델 `experiments/tile_classifier/server_bench/models/clsF_{A,B}.onnx`·`clsFA_all{,_s1}.onnx`(커밋 안 함), 자료 `experiments/tile_classifier/data/frames{,_eval}/`.
+- **중단된 것:** `clsF_A` 화료 판독 회귀(표 12-4 기준) — 21변형 중 17까지 전·후 같음(패 9,404 → 9,406·unsafe 11 → 11), `hand`·`rc_*` 넷과 앱 흐름 32회는 안 잼. 이어서 재려면 `robust_suite.py run --models prod --tag clsF{pre,post}_1111 --resume`(env `LOCAL_CLS_MODEL`·`LOCAL_ALT_CLS_MODEL`)와 `run_local_server.py --cls-tag cls6|clsFA` 로 `run_baseline.sh dev`.
+- **정답 고침:** `experiments/paifu_frames/truth.json` R3a 왼쪽 셋째 버림 4p → 6p(화료 사진 확인).
+- **헤드 카메라 검토:** 프레임 학습은 패 23px → 18px 한 단계 여유, 15×19px 아래(30만 화소 웹캠)는 안 됨(표 12-3a). 사용자 고민은 "선 없이 오래 쓰기" → 단독 카메라(전원선 필요)는 답이 아니고 휴대폰 + 보조배터리·헤드 앱 절전을 권함. 결정 전 — 휴대폰이 헤드로 몇 시간 버티는지 물어 둔 상태.
+- **사용자 결정 거리:** 헤드 줄이기를 평균으로 바꿀지 / `clsF_A` 회귀를 마저 잴지 / 검출기도 프레임으로 학습할지.
+- 작업 방식(사용자 지시): 학습·평가 자료 만들기는 Opus 5.5 중간 에이전트 여러 대 병렬, 이 세션은 검토만.
+
 ## 2026-11-11 11시: 운영 348f0f9 배포 — 울기 덩어리 읽고 나서 나누기 + 가드레일 (metrics 표 1-162~1-165, problem_log 53번, "지금 기준값" 갱신)
 
 - 계기: 11-07 연출 135420(왼쪽 아래 모서리에 울기 셋 3×3)·115802(오른쪽 위 퐁 + 명깡 위아래)가 운영에서도 틀림 — 검출·역할은 맞고 **붙은 울기 덩어리(9·7장)를 나누는 규칙이 없어 버리던 것.**
