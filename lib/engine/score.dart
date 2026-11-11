@@ -58,12 +58,22 @@ class Payment {
   /// 화료자가 받는 총액.
   final int total;
 
+  /// 이 지불액에 더한 본장 수.
+  final int honba;
+
   const Payment({
     required this.ron,
     required this.tsumoFromDealer,
     required this.tsumoFromNonDealer,
     required this.total,
+    this.honba = 0,
   });
+
+  /// 총액 가운데 본장으로 더해진 몫(론·쯔모 모두 본장당 300).
+  int get honbaBonus => honba * 300;
+
+  /// 화면 표시용 본장 설명. 본장이 없으면 빈 문자열. 예: `본장 2 · +600점`
+  String get honbaNote => honba > 0 ? '본장 $honba · +$honbaBonus점' : '';
 
   /// 화면 표시용. 예: `8000`, `2000 / 4000`, `4000 올`
   String get display {
@@ -80,7 +90,7 @@ Payment payment(int base, Situation sit) {
   if (!sit.isTsumo) {
     final ron = _ceil100(base * (sit.isDealer ? 6 : 4)) + honba * 300;
     return Payment(
-        ron: ron, tsumoFromDealer: 0, tsumoFromNonDealer: 0, total: ron);
+        ron: ron, tsumoFromDealer: 0, tsumoFromNonDealer: 0, total: ron, honba: honba);
   }
   if (sit.isDealer) {
     final each = _ceil100(base * 2) + honba * 100;
@@ -88,7 +98,8 @@ Payment payment(int base, Situation sit) {
         ron: 0,
         tsumoFromDealer: 0,
         tsumoFromNonDealer: each,
-        total: each * 3);
+        total: each * 3,
+        honba: honba);
   }
   final fromDealer = _ceil100(base * 2) + honba * 100;
   final fromOthers = _ceil100(base) + honba * 100;
@@ -96,5 +107,6 @@ Payment payment(int base, Situation sit) {
       ron: 0,
       tsumoFromDealer: fromDealer,
       tsumoFromNonDealer: fromOthers,
-      total: fromDealer + fromOthers * 2);
+      total: fromDealer + fromOthers * 2,
+      honba: honba);
 }

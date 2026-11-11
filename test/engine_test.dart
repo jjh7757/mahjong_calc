@@ -138,6 +138,15 @@ void main() {
     test('본장은 론 300, 쯔모 각 100', () {
       final r = calculate(Hand.parse('123m456p789s23m55p 4m'), ron(honba: 2));
       expect(r.payment.ron, 1600);
+      expect(r.payment.honba, 2);
+      expect(r.payment.honbaBonus, 600);
+      expect(r.payment.honbaNote, '본장 2 · +600점');
+    });
+
+    test('본장 없으면 본장 설명은 빈 문자열', () {
+      final r = calculate(Hand.parse('123m456p789s23m55p 4m'), ron());
+      expect(r.payment.honbaBonus, 0);
+      expect(r.payment.honbaNote, '');
     });
 
     test('쿠이탄 금지면 울고 탕야오는 역 없음', () {

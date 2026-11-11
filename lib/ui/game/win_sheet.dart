@@ -423,7 +423,7 @@ class _WinSheetState extends State<_WinSheet> {
               ? '  · 파오 ${g.names[paoS]} 가 ${_paoPayment().total} 전액'
               : '  · 파오 ${g.names[paoS]} 가 ${_paoPayment().ron ~/ 2} (절반)';
       return '지불: ${p.display}'
-          '${g.honba > 0 ? '  (본장 ${g.honba} 포함)' : ''}'
+          '${p.honba > 0 ? '  (${p.honbaNote} 포함)' : ''}'
           '${sticks > 0 ? '  +공탁 ${sticks * 1000}' : ''}'
           '$paoText';
     }
@@ -433,7 +433,7 @@ class _WinSheetState extends State<_WinSheet> {
     return [
       for (final w in order)
         '${g.names[w]} ${pays[w]!.ron + (w == head ? g.honba * 300 : 0)}'
-            '${w == head && g.honba > 0 ? '(본장 포함)' : ''}'
+            '${w == head && g.honba > 0 ? '(본장 ${g.honba} · +${g.honba * 300}점 포함)' : ''}'
             '${w == head && sticks > 0 ? ' +공탁 ${sticks * 1000}' : ''}',
     ].join('  /  ');
   }

@@ -1035,9 +1035,10 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
   }
 
   String _paymentLine(Payment p) {
-    if (p.ron > 0) return '론: 방총자 ${p.ron}점';
-    if (p.tsumoFromDealer == 0) return '쯔모: 각 ${p.tsumoFromNonDealer}점';
-    return '쯔모: 자 ${p.tsumoFromNonDealer}점 / 친 ${p.tsumoFromDealer}점';
+    final note = p.honba > 0 ? '  (${p.honbaNote})' : '';
+    if (p.ron > 0) return '론: 방총자 ${p.ron}점$note';
+    if (p.tsumoFromDealer == 0) return '쯔모: 각 ${p.tsumoFromNonDealer}점$note';
+    return '쯔모: 자 ${p.tsumoFromNonDealer}점 / 친 ${p.tsumoFromDealer}점$note';
   }
 
   String _hanLabel(YakuHan y) {
