@@ -2,6 +2,14 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 앱 저장소의 README.md 는 2026-11-09 부터 프로젝트 소개·개발 과정 문서이고, 개발 환경·빌드 명령·화면 기능은 `docs/development.md` 로 옮겼다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-11 11시: 운영 348f0f9 배포 — 울기 덩어리 읽고 나서 나누기 + 가드레일 (metrics 표 1-162~1-165, problem_log 53번, "지금 기준값" 갱신)
+
+- 계기: 11-07 연출 135420(왼쪽 아래 모서리에 울기 셋 3×3)·115802(오른쪽 위 퐁 + 명깡 위아래)가 운영에서도 틀림 — 검출·역할은 맞고 **붙은 울기 덩어리(9·7장)를 나누는 규칙이 없어 버리던 것.**
+- 서버(`app/seat.py` `split_meld_group`·`meld_parts`·`choose_melds`, `app/local_read.py` `resplit_melds`): 틀을 잡은 뒤 울기 덩어리 패를 모두 읽고 울기 모양(퐁·치·깡)이 되는 나눔을 고름. 가드레일 disagree·alt·fallback 이면 울기 확신 0.5 → 앱 울기 확인 경고(앱 변경 없음). 임시 나눔은 model 경로에만(규칙 경로에 넣으면 robust 124654 회귀).
+- 확인: 모서리 울기 13장 맞는 장수, 정답 32장·robust 21변형 합계 그대로, 운영 앱 흐름 32/32·436/436·경고 없는 틀린 자동 0·6.0 / 6.9 / 7.6초. 서버 master = 348f0f9(브랜치 `fix/stacked-meld-rows` 는 같은 커밋). 태블릿 APK 는 바꿀 필요 없음.
+- 실험 스크립트: `experiments/visit_20261107/{stack_meld_check,meld_partition,meld_partition_timing}.py`. 원본 사진 붙은 울기 빈도: 실제 28장 중 6~7장면, 전부 6장(울기 둘), 한 줄 7장 0.
+- 남은 것: 치 끝 패 오독(같은 패 5장 이상 검사 후보), 뒷면 있는 안깡, 한 줄 12장 깡 셋. 매장에서 모서리 울기 실제 확인.
+
 ## 2026-11-11: 정리 커밋 + 헤드 끊김 원인(사용자 결론)
 
 - **커밋 정리:** 11-09~11-10 에 쌓인 문서(metrics·problem_log·CLAUDE.md)·실험 스크립트·launch.json·테스트 세트 13장 반영을 `fix/seat-read-grow` 에 커밋했다. 아래 절들의 "커밋 안 함" 은 이 커밋으로 해소됐다(결과물 `experiments/**/results/`·`experiments/tablet_20261103/` 은 규칙대로 안 넣음).
