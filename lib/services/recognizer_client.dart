@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../table/table_layout.dart';
+import 'on_device_reader.dart';
 import '../table/table_reading.dart';
 
 /// 인식 서버 설정. 키는 빌드 시 `--dart-define=RECOGNIZER_API_KEY=...` 로 넣는다.
@@ -47,6 +48,9 @@ class RecognizerException implements Exception {
 /// - [locate]: 줄인 전경 → [TableLayout]
 /// - [readTable]: 중앙 크롭 → [CenterReading]
 class RecognizerClient {
+  /// 자체 판독(이 기기) 모드에서 서버 호출을 막았을 때의 오류 문구 앞부분.
+  static const String serverBlocked = '자체 판독(이 기기) 모드라 서버를 부르지 않습니다';
+
   final String baseUrl;
   final String apiKey;
   final Duration timeout;
@@ -103,13 +107,26 @@ class RecognizerClient {
   /// 관찰 전용 판독 `/v2/{kind}` (hand · river · center). 응답 JSON 그대로.
   /// [query] 는 URL 쿼리(예: 손패 전용의 `melds` — 추적이 확정한 울기 수).
   Future<Map<String, dynamic>> observe(String kind, Uint8List bytes, {String? filename, Map<String, String>? query}) =>
-      _post('/v2/$kind${query == null || query.isEmpty ? '' : '?${Uri(queryParameters: query).query}'}', bytes,
-          filename ?? '$kind.jpg');
+      OnDeviceReader.handles(kind)
+          ? _onDevice(kind, [bytes], query)
+          : _post('/v2/$kind${query == null || query.isEmpty ? '' : '?${Uri(queryParameters: query).query}'}', bytes,
+              filename ?? '$kind.jpg');
+
+  /// 기기 판독 실험(exp/on-device-read): 서버 대신 앱 안 Python. 실패는 서버 오류처럼 [RecognizerException].
+  Future<Map<String, dynamic>> _onDevice(String kind, List<Uint8List> images, Map<String, String>? query) async {
+    try {
+      return await OnDeviceReader.observe(kind, images, query).timeout(timeout);
+    } catch (e) {
+      throw RecognizerException('기기 판독 실패($kind): $e');
+    }
+  }
 
   /// 강 끝 여러 자리를 한 번에 `/v2/last3`(multipart `images` 여러 개, 1~4장). 응답 `rivers` 는 보낸 순서.
   /// [query] 는 URL 쿼리(예: `/v2/locallast3?sides=right,top,left` 면 images 는 사진 전체 한 장, 응답 rivers 는 sides 순서 — 8b-4a).
   Future<Map<String, dynamic>> observeLasts(List<(Uint8List, String)> images, {String path = '/v2/last3', Map<String, String>? query}) =>
-      _postFiles('$path${query == null || query.isEmpty ? '' : '?${Uri(queryParameters: query).query}'}', [
+      OnDeviceReader.handles(path.replaceFirst('/v2/', ''))
+          ? _onDevice(path.replaceFirst('/v2/', ''), [for (final (b, _) in images) b], query)
+          : _postFiles('$path${query == null || query.isEmpty ? '' : '?${Uri(queryParameters: query).query}'}', [
         for (final (bytes, filename) in images) http.MultipartFile.fromBytes('images', bytes, filename: filename),
       ]);
 
@@ -117,6 +134,7 @@ class RecognizerClient {
       _postFiles(path, [http.MultipartFile.fromBytes('image', bytes, filename: filename)]);
 
   Future<Map<String, dynamic>> _postFiles(String path, List<http.MultipartFile> files) async {
+    if (OnDeviceReader.blocksServer) throw RecognizerException('$serverBlocked ($path)');
     final req = http.MultipartRequest('POST', Uri.parse('$baseUrl$path'))
       ..headers['X-Api-Key'] = apiKey
       ..files.addAll(files);

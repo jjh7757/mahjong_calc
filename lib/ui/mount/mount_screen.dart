@@ -14,7 +14,11 @@ import '../../game/game.dart';
 import '../../game/game_store.dart';
 import '../../services/camera_head.dart';
 import '../../services/capture_log.dart';
+import '../../services/head_camera.dart';
+import '../../services/on_device_reader.dart';
 import '../../services/recognizer_client.dart';
+import '../../services/record_puller.dart';
+import '../../services/server_backoff.dart';
 import '../../services/volume_keys.dart';
 import '../../table/auto_record.dart';
 import '../../table/corner_change.dart';
@@ -60,6 +64,22 @@ Future<Uint8List> _shrinkInIsolate(Uint8List o) => compute(shrinkForLocate, o);
 Future<List<Uint8List>> _cropInIsolate(Uint8List o, List<CropSpec> s) => compute(cropMany, (o, s));
 Future<ShotAnalysis> _analyzeInIsolate(Uint8List small, FixedTable f) => compute(analyzeShot, (small, f));
 Future<ShotAnalysis> _analyzeGridInIsolate(Uint8List small, GridZones g) => compute(analyzeGridShot, (small, g));
+
+/// JPEG 머리(SOF)에서 긴 변만 읽는다(디코딩 없음). 못 읽으면 null.
+int? jpegLongSide(Uint8List b) {
+  var i = 2;
+  while (i + 9 < b.length) {
+    if (b[i] != 0xFF) return null;
+    final m = b[i + 1];
+    final len = (b[i + 2] << 8) | b[i + 3];
+    if (m >= 0xC0 && m <= 0xCF && m != 0xC4 && m != 0xC8 && m != 0xCC) {
+      final h = (b[i + 5] << 8) | b[i + 6], w = (b[i + 7] << 8) | b[i + 8];
+      return w > h ? w : h;
+    }
+    i += 2 + len;
+  }
+  return null;
+}
 
 /// 격자 판독은 원본을 isolate 하나에서 한 번만 디코딩한다(웹은 isolate 를 띄워 둘 수 없어 같은 스레드).
 Future<ShotImage> _openShot(Uint8List o) async => kIsWeb ? DirectShotImage(o) : await IsolateShotImage.open(o);
@@ -231,6 +251,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   String? _trackDir;
   /// 진행 중인 추적 읽기(모서리·리치봉) 수. bool 하나였을 땐 둘이 겹치면 먼저 끝난 쪽이 풀어 버렸다(2026-10-30 점검).
   int _trackCalls = 0;
+
+  /// 리치봉 서버 읽기: 연결 실패면 2분 쉼, 한 번 기다림은 10초까지(전엔 90초 — 그동안 버림 추적이 멈춤, 11-12 점검).
+  final ServerBackoff _sticksServer = ServerBackoff();
+  static const Duration _sticksTimeout = Duration(seconds: 10);
   bool get _trackBusy => _trackCalls > 0;
   int _trackSeq = 0;
 
@@ -260,6 +284,28 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
   /// 프레임 투표(개선 계획 6단계, `lib/table/frame_vote.dart`): 자동 반영 직전에 헤드 프레임 1장을 더 읽어 같을 때만 반영.
   /// 기본 끔 — 오프라인 시연이 합격 기준을 못 넘었고(metrics 표 1-94) 실기기 확인 전이다. 카메라 헤드 + 격자일 때만 돈다.
+  /// 판 중 패 인식 겹쳐 보기(실험, 2026-11-11, 기기 판독 브랜치): 고화질 프레임을 앱 안 Python 으로 읽어(검출·분류·역할) 미리보기 위에
+  /// 패마다 상자·종류·역할을 그린다. 표시용 — 판독·추적 답에는 안 쓴다. 화료 판독 중엔 새로 읽지 않는다.
+  static const String tileOverlayPref = 'mount.tileOverlay';
+  bool _tileOverlay = false;
+
+  /// 겹쳐 보기를 켰을 때 가운데 점수판을 숨길지(2026-11-12 사용자 "on/off 가능하게"). 기본은 숨김(강 패를 가려서).
+  static const String overlayHideScorePref = 'mount.overlayHideScore';
+  bool _overlayHideScore = true;
+  TileOverlay? _overlay;
+  bool _overlayBusy = false;
+
+  /// 마지막으로 받은 3초 미리보기의 스트림 원래 크기(`X-Frame-Size`). 실시간 보기 중엔 미리보기를 안 받아 이 값을 쓴다.
+  int? _previewFrameW;
+  int? _previewFrameH;
+
+  /// 겹쳐 보기를 마지막으로 시작한 때. 장면이 안 바뀌어도 이만큼 지나면 다시 읽는다(패산·도라처럼 추적이 안 보는 곳).
+  DateTime? _overlayAt;
+  static const Duration _overlayEvery = Duration(seconds: 15);
+
+  /// 이번 배경 차례에 추적이 변화(울기·강 사건, 장면 이동)를 봤나 — 겹쳐 보기를 다시 읽을 때.
+  bool _tickChanged = false;
+
   static const String frameVotePref = 'mount.frameVote';
   bool _frameVote = false;
 
@@ -301,8 +347,84 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   static const autoRecordCautionDelay = Duration(seconds: 20);
   bool _autoRecord = false;
 
+  /// 헤드 녹화 받기(시험용, 기본 꺼짐, 설정에 저장 안 함). 화료 판독 중([_busy])에는 쉰다.
+  /// 둘 중 하나만: "실시간 보기"([RecordPuller.save] 거짓 — 최신 한 장만, 저장 안 함) / "받아 저장"(빠짐없이 이어 받아 저장).
+  RecordPuller? _recPull;
+
+  /// 받기가 쓰는 헤드 연결(요청마다 새로 붙지 않게). 주소·토큰이 바뀌면 새로.
+  RemoteCamera? _recCam;
+  String? _recCamKey;
+  String? _recPullShownStop;
+
+  /// 받기가 따라잡은 상태에서 받은 최신 녹화 프레임(배경에 실시간으로). 화면 전체를 다시 그리지 않게 따로 알린다.
+  final ValueNotifier<({Uint8List jpeg, DateTime at})?> _liveShot = ValueNotifier(null);
+  static const Duration _liveStale = Duration(seconds: 2);
+
+  /// 추적이 받은 프레임을 쓰던 중 받기가 끊겼을 때 1020 으로 바꾸지 않고 기다리는 한도. 넘으면 1020 으로(기준 다시 잡음).
+  static const Duration _liveHold = Duration(seconds: 30);
+
+  RecordPuller _makeRecPull({required bool save}) => RecordPuller(
+        save: save,
+        // 보기만은 0.1초마다 최신 한 장(헤드 저장이 초당 10장).
+        idle: Duration(milliseconds: save ? 300 : 100),
+        fetch: (after, max, newest) async {
+          final url = _remoteUrl;
+          if (url == null) throw const RemoteCameraException('카메라 헤드가 연결되지 않았습니다');
+          final key = '$url|$_remoteToken';
+          if (_recCamKey != key) {
+            _recCam?.close();
+            _recCam = RemoteCamera(url, token: _remoteToken, timeout: const Duration(seconds: 20));
+            _recCamKey = key;
+          }
+          return _recCam!.recordFrames(after: after, max: max, newest: newest);
+        },
+        storage: HeadCamera.filesDir,
+        paused: () => _busy,
+        onFrame: (f) => _liveShot.value = (jpeg: f.jpeg, at: DateTime.now()),
+        onChanged: () {
+          if (!mounted) return;
+          setState(() {});
+          final p = _recPull;
+          final msg = p?.stopMessage;
+          if (p != null && !p.running && msg != null && msg != _recPullShownStop) {
+            _recPullShownStop = msg;
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('녹화 받기 멈춤: $msg')));
+          }
+        },
+      );
+
+  String _recPullLabel({required bool save}) {
+    final name = save ? '헤드 녹화 받아 태블릿에 저장' : '헤드 녹화 실시간 보기';
+    final idle = save ? '$name (시험용, 2040·빠짐없이, 시간당 약 16GB)' : '$name (저장 안 함, 2040·최신 한 장씩)';
+    final p = _recPull;
+    if (p == null || p.save != save || (!p.running && p.stopMessage == null)) return idle;
+    if (!p.running) return '$name — 멈춤: ${p.stopMessage}';
+    if (p.dir == null) return '$name — 헤드 녹화 기다리는 중';
+    final mb = (p.bytes / (1 << 20)).toStringAsFixed(0);
+    final lag = p.headRecording
+        ? ' · 지연 ${(p.lagMs / 1000).toStringAsFixed(1)}초'
+        : (save ? ' · 헤드 녹화 꺼짐(남은 ${p.remaining}장)' : ' · 헤드 녹화 꺼짐');
+    return '$name — ${p.received}장 ${mb}MB$lag${p.error == null ? '' : ' · 오류'}';
+  }
+
+  /// 받기 켜기·끄기. 다른 방식이 돌고 있으면 그것을 끄고 바꾼다.
+  Future<void> _toggleRecPull({required bool save}) async {
+    final cur = _recPull;
+    final wasThis = cur != null && cur.running && cur.save == save;
+    if (cur != null && cur.running) await cur.stop();
+    if (wasThis) {
+      _liveShot.value = null;
+    } else {
+      _recPullShownStop = null;
+      (_recPull = _makeRecPull(save: save)).start();
+    }
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
+    unawaited(_recPull?.stop().whenComplete(() => _recCam?.close()));
+    _liveShot.dispose();
     _flushFrames('dispose');
     _bgTimer?.cancel();
     _autoSetupTimer?.cancel();
@@ -354,7 +476,22 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     _bgFetching = true;
     final cam = RemoteCamera(url, token: _remoteToken, timeout: const Duration(seconds: 4));
     try {
-      final p = await cam.preview();
+      // 실시간 보기·받기가 2040 녹화 프레임을 들고 오고 있으면 3초 미리보기(1020)를 따로 받지 않고 그것을 쓴다(배경·펠트 감시·
+      // 추적이 모두 같은 프레임). 펠트 감시는 1020 / 2040 에서 같은 답(테스트 세트 38/38, 격자 선 차 ≤ 1/1000, metrics 표 12-9).
+      // 스트림 원래 크기(겹쳐 보기·고화질 판단용)는 마지막으로 받은 미리보기 값을 그대로 쓴다. 받기가 끊기면 미리보기로 돌아온다.
+      final live = _liveShot.value;
+      final liveAge = live == null ? null : DateTime.now().difference(live.at);
+      final pulling = _recPull?.running == true;
+      final liveFresh = live != null && pulling && liveAge! < _liveStale;
+      final fw = _previewFrameW, fh = _previewFrameH;
+      final RemotePreview p;
+      if (liveFresh && fw != null && fh != null) {
+        p = RemotePreview(live.jpeg, frameWidth: fw, frameHeight: fh);
+      } else {
+        p = await cam.preview();
+        _previewFrameW = p.frameWidth;
+        _previewFrameH = p.frameHeight;
+      }
       if (!mounted || _busy) return;
       _previewFrameLongSide = p.frameLongSide;
       setState(() {
@@ -364,13 +501,54 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       await _measureCapture(p.bytes, capture: false);
       _maybeAutoSetup();
       await _watchFelt(p.bytes);
-      // 기록용 고화질 사본: 추적·화면은 작은 미리보기 그대로, 남기는 프레임만 긴 변 2400px 로 바꿔 넣는다.
-      final record = await _hiResFrame(cam, p) ?? p.bytes;
-      if (!mounted) return;
+      // 기록용 고화질(긴 변 2400 요청 — 실제 헤드는 4080 원본, 약 2MB)은 3초마다 받지 않고 **남길 프레임일 때만** 받는다
+      // (변화·뒤 2장·10장마다 샘플·전부 남기기). 버퍼에만 들어가는 프레임(다음 변화의 'before')은 싼 프레임(받은 2040 또는 1020).
+      // 이번 차례 안에서는 한 번만 받아 기록·겹쳐 보기가 나눠 쓴다(2026-11-12 사용자 "줄여줘").
+      Uint8List? hiBytes;
+      var hiTried = false;
+      Future<Uint8List?> hi() async {
+        if (!hiTried) {
+          hiTried = true;
+          hiBytes = await _hiResFrame(cam, p);
+        }
+        return hiBytes;
+      }
+
       _frameTracked = false;
-      await _trackFrame(p.bytes, record: record);
+      _tickChanged = false;
+      // 헤드 녹화 받기가 따라잡아 있으면 추적 입력을 받은 2040 프레임(2×2 평균)으로: 같은 장면에서 리치봉 홈 9/9(1020 은 6/9),
+      // 태블릿 분석 장당 0.62초(metrics 표 12-9). 받기를 끄면 3초 미리보기(1020)로.
+      // 받기가 잠깐 끊기면(2초 넘게 새 프레임 없음) 1020 으로 바로 돌아가지 않고 [_liveHold] 까지 추적을 쉰다 — 입력 해상도가
+      // 바뀌면 기준을 다시 잡아 그 3초 안의 버림이 사라지기 때문(metrics 표 12-9 재생). 다시 오면 쌓인 변화를 한 번에 본다.
+      final cheap = liveFresh ? live.jpeg : p.bytes;
+      if (liveFresh) {
+        await _trackFrame(live.jpeg, cheap: cheap, hi: hi, src: 'live');
+      } else if (_trackSrc == 'live' && pulling && liveAge != null && liveAge < _liveHold) {
+        // 쉼: 이번 차례는 추적하지 않는다(아래에서 전부 남기기면 프레임만 남김).
+      } else {
+        await _trackFrame(p.bytes, cheap: cheap, hi: hi, src: 'preview');
+      }
+      if (!mounted) return;
       // 추적이 이 프레임을 안 받았으면(격자 확인 전·편집 중·추적 꺼짐) 전부 남기기일 때만 따로 남긴다.
-      if (!_frameTracked) _recordUntracked(record);
+      if (!_frameTracked && _logEnabled && _frames.keepAll) _recordUntracked(await hi() ?? cheap);
+      // 패 인식 겹쳐 보기: 프레임 원래 크기(헤드 스트림 긴 변, S25 Ultra 4080)로 기기에서 읽는다. 기다리지 않는다.
+      // 2040·2400 처럼 줄인 사진은 만수 한자를 틀린다(metrics 표 4-8: 장면 32 → 10/40) → 원본이어야 한다.
+      // 3초마다가 아니라 장면이 바뀐 차례(추적 변화·장면 이동)이거나 [_overlayEvery] 가 지났을 때만 다시 읽는다 — 그 사이엔 결과가 같다.
+      // 이번 차례에 받은 기록용 사본이 원래 크기면 그대로 쓰고, 아니면 원래 크기로 따로 받는다. 스트림이 1600 미만이면 안 한다.
+      final fullSide = p.frameLongSide ?? 0;
+      final overlayDue = _tickChanged || _overlayAt == null || DateTime.now().difference(_overlayAt!) >= _overlayEvery;
+      if (_tileOverlay && overlayDue && OnDeviceReader.supported && !_busy && !_overlayBusy && fullSide >= _trackPreviewMinLongSide) {
+        Uint8List? full = hiBytes != null && (jpegLongSide(hiBytes!) ?? 0) >= fullSide ? hiBytes : null;
+        if (full == null) {
+          try {
+            full = (await cam.preview(longSide: fullSide)).bytes;
+          } catch (_) {}
+        }
+        if (full != null) {
+          _overlayAt = DateTime.now();
+          unawaited(_runOverlay(full));
+        }
+      }
     } on RemoteCameraException catch (e) {
       // 예전 헤드 앱(404)이나 토큰 거절이면 그만 묻는다. 연결 오류는 다음 차례에 다시.
       if (e.unsupported || e.unauthorized) _bgStopped = true;
@@ -413,7 +591,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _frames.keepAll = p.getBool(keepAllFramesPref) ?? false;
       _hiResFrames = p.getBool(hiResFramesPref) ?? true;
       _frameVote = p.getBool(frameVotePref) ?? false;
+      _tileOverlay = p.getBool(tileOverlayPref) ?? false;
+      _overlayHideScore = p.getBool(overlayHideScorePref) ?? true;
       _geminiRead = p.getBool(geminiReadPref) ?? false;
+      await OnDeviceReader.load();
+      if (OnDeviceReader.enabled && OnDeviceReader.supported) unawaited(_warmOnDevice());
       _autoSetupOnStart = p.getBool(autoSetupPref) ?? true;
       _gridSource = p.getString(gridSourcePref);
       _rectify = p.getBool(rectifyPref) ?? false;
@@ -928,6 +1110,39 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// 카메라가 움직이거나 조명이 한꺼번에 바뀐 프레임이면 두 추적기가 사건 대신 기준만 다시 잡게 한다.
   final SceneShiftGate _shiftGate = SceneShiftGate();
 
+  /// 패 인식 겹쳐 보기 한 장면(기기 안 Python). 실패는 로그만.
+  Future<void> _runOverlay(Uint8List frame) async {
+    _overlayBusy = true;
+    try {
+      final o = await OnDeviceReader.overlay(frame, {
+        'x1': '${_grid.x1}',
+        'x2': '${_grid.x2}',
+        'y1': '${_grid.y1}',
+        'y2': '${_grid.y2}',
+      });
+      debugPrint('[overlay] ${o.tiles.length}장 ${o.ms}');
+      if (mounted && _tileOverlay && !_busy) setState(() => _overlay = o);
+    } catch (e) {
+      debugPrint('[overlay] 실패: $e');
+    } finally {
+      _overlayBusy = false;
+    }
+  }
+
+  /// 기기 판독 실험: Python·모델을 미리 올린다(첫 판독이 늦지 않게). 실패하면 알리고 끈다(서버로 되돌림).
+  Future<void> _warmOnDevice() async {
+    try {
+      final r = await OnDeviceReader.warmup();
+      debugPrint('[ondevice] warmup $r');
+    } catch (e) {
+      await OnDeviceReader.setEnabled(false);
+      if (mounted) {
+        setState(() {});
+        _toast('기기 판독을 켤 수 없어 서버로 되돌렸습니다: $e', long: true);
+      }
+    }
+  }
+
   /// 화료 판독에 넘길 힌트: 게임 중 확정한 리치봉 자리, 가장 최근 버림(방총자 후보·론 패 위치).
   /// 전판 유국으로 남은 봉은 이번 판 리치가 아니다([RiverTracker.riichiExcept]).
   Set<Side> _trackedRiichi() {
@@ -1015,7 +1230,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   }
 
   /// 배경 미리보기 한 장 → 통계 → 추적기. [record] 는 프레임 기록에 남길 사본(고화질, 없으면 [preview]).
-  Future<void> _trackFrame(Uint8List preview, {Uint8List? record}) async {
+  /// 추적 입력이 어디서 왔나('preview' 1020 · 'live' 받은 녹화 2040). 바뀌면 해상도가 달라 기준을 다시 잡는다.
+  String? _trackSrc;
+
+  /// [cheap] 은 버퍼에만 들어가는 프레임에 남길 것, [hi] 는 남길 프레임일 때만 부르는 고화질(없거나 못 받으면 [cheap]).
+  Future<void> _trackFrame(Uint8List preview, {required Uint8List cheap, Future<Uint8List?> Function()? hi, String src = 'preview'}) async {
     final g = gameStore.current;
     if (!_trackingEnabled || !_useGrid || g == null || _trackBusy || _remoteUrl == null || _gridBeforeEdit != null) return;
     // 이 카메라로 탁자를 확인한 뒤(자동 맞추기 성공 또는 격자 저장)에만 돈다. 패가 없는 장면(천장·책상)에선 흰 면이
@@ -1033,6 +1252,14 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     // 분석 중에 화료 촬영이 시작됐으면 이 프레임은 버린다 — 리치봉 호출이 화료 판독과 겹치지 않게(2026-10-30 점검).
     if (!mounted || _busy || _trackBusy) return;
     final now = DateTime.now();
+    // 입력 해상도가 바뀌면(받기 켬·끔) 강 띠 블록 수와 흰 면 비율이 달라져 "다 바뀜" 으로 보인다 → 이벤트 없이 기준만 다시.
+    if (_trackSrc != null && _trackSrc != src) {
+      _shiftGate.reset();
+      tracker.cameraMoved(now);
+      river.cameraMoved(now);
+      _lastFrameCorners = null;
+    }
+    _trackSrc = src;
     final shifted = _shiftGate.check(stats);
     if (shifted) {
       tracker.cameraMoved(now);
@@ -1040,7 +1267,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     }
     tracker.onFrame(stats.corners, now);
     final riverActions = river.onFrame(stats.rivers, stats.strips, now, sticksSeen: stats.sticksSeen);
-    _recordFrame(record ?? preview, now, tracker, river, shifted);
+    final why = _frameWhy(tracker, river, shifted);
     // 도라 표시패: 모서리·강이 다 가만히 있고(손이 안 지나감) 카메라도 안 움직였을 때만 읽는다.
     final still = !shifted && _lastFrameCorners != null && Side.values.every((s) => (stats.corners[s]?.diff(_lastFrameCorners![s] ?? CornerStats.empty) ?? 1) < _doraStillDiff);
     _lastFrameCorners = stats.corners;
@@ -1048,6 +1275,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     setState(() {});
     for (final a in riverActions) {
       unawaited(_readSticks(a, g));
+    }
+    // 기록은 맨 뒤에: 남길 프레임이면 고화질을 받느라 0.3초쯤 걸려도 리치봉·도라 읽기를 막지 않게.
+    if (_logEnabled) {
+      final jpeg = _frames.wouldKeep(why: why) ? (await hi?.call() ?? cheap) : cheap;
+      if (!mounted) return;
+      _frames.add(jpeg, now, why: why);
+      if (_frames.isFull) _flushFrames('full');
     }
   }
 
@@ -1058,9 +1292,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   }
 
   /// 배경 프레임 한 장을 [_frames] 에 넣는다(변화 주변·10장마다 한 장만 남음, 전부 남기기면 다). 꽉 차면 그만큼 저장한다.
-  void _recordFrame(Uint8List jpeg, DateTime now, MeldTracker tracker, RiverTracker river, bool shifted) {
+  /// 이번 프레임의 변화 까닭(울기·강 사건, 장면 이동). 기록·겹쳐 보기 다시 읽기에 쓴다. 이 프레임을 추적이 받았다고 표시한다.
+  List<String> _frameWhy(MeldTracker tracker, RiverTracker river, bool shifted) {
     _frameTracked = true;
-    if (!_logEnabled) return;
     final why = frameChanges(
       melds: tracker,
       river: river,
@@ -1070,8 +1304,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     );
     _meldEventsSeen = tracker.events.length;
     _riverEventsSeen = river.events.length;
-    _frames.add(jpeg, now, why: why);
-    if (_frames.isFull) _flushFrames('full');
+    if (why.isNotEmpty) _tickChanged = true;
+    return why;
   }
 
   /// 모은 프레임을 판 기록 폴더에 `frames_##.zip` 으로(판이 바뀔 때·꽉 찼을 때·화료 촬영 직전·화면을 닫을 때).
@@ -1269,18 +1503,31 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     final url = _remoteUrl;
     final river = _riverTracker;
     if (url == null || river == null) return;
+    // 자체 판독(이 기기) 모드면 서버를 안 부르니 4080 도 받지 않는다. 리치는 픽셀 확정이 잡는다.
+    if (OnDeviceReader.blocksServer) {
+      river.onSticksReadFailed(a.frame, DateTime.now(), '자체 판독 모드 — 서버 안 부름');
+      return;
+    }
+    // 인터넷이 없으면(매장 핫스팟) 서버 읽기를 쉰다 — 기다리는 동안 버림 추적이 멈추기 때문. 리치는 픽셀 확정이 잡는다.
+    if (!_sticksServer.ready(DateTime.now())) {
+      river.onSticksReadFailed(a.frame, DateTime.now(), '서버 쉼(연결 실패 뒤)');
+      return;
+    }
     _trackCalls++;
     final cam = RemoteCamera(url, token: _remoteToken, timeout: const Duration(seconds: 20));
-    final client = RecognizerClient();
+    final client = RecognizerClient(timeout: _sticksTimeout);
     final seq = ++_trackSeq;
     try {
       final src = await _trackSource(cam);
       final crop = (await _cropInIsolate(src, [CropSpec(_grid.sticksZone)])).first;
       final j = await client.observe('sticks', crop, filename: 'sticks.jpg');
+      _sticksServer.succeeded();
       if (!mounted) return;
       river.onSticksRead(a.frame, parseCenterV2(j).sticks, DateTime.now());
       unawaited(_saveTrackSticks(g, seq, crop, j));
     } catch (e) {
+      _sticksServer.failed(e, DateTime.now());
+      debugPrint('[sticks] 서버 읽기 실패: $e');
       if (mounted) river.onSticksReadFailed(a.frame, DateTime.now(), '$e');
     } finally {
       cam.close();
@@ -2204,6 +2451,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     final next = !_logEnabled;
                     await CaptureLog.setEnabled(next);
                     if (mounted) setState(() => _logEnabled = next);
+                  } else if (v == 'recView' || v == 'recPull') {
+                    await _toggleRecPull(save: v == 'recPull');
                   } else if (v == 'keepAllFrames') {
                     setState(() => _frames.keepAll = !_frames.keepAll);
                     try {
@@ -2231,6 +2480,31 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     _toast(_geminiRead
                         ? '화료 판독을 Gemini 로 합니다 — 느리고(약 15초) 호출마다 비용이 듭니다'
                         : '화료 판독을 자체 모델로 합니다');
+                  } else if (v == 'tileOverlay') {
+                    setState(() {
+                      _tileOverlay = !_tileOverlay;
+                      if (!_tileOverlay) _overlay = null;
+                    });
+                    try {
+                      final p = await SharedPreferences.getInstance();
+                      await p.setBool(tileOverlayPref, _tileOverlay);
+                    } catch (_) {}
+                    if (_tileOverlay) _toast('3초마다 패 인식을 겹쳐 보여 줍니다(실험, 이 기기에서 계산)');
+                  } else if (v == 'overlayHideScore') {
+                    setState(() => _overlayHideScore = !_overlayHideScore);
+                    try {
+                      final p = await SharedPreferences.getInstance();
+                      await p.setBool(overlayHideScorePref, _overlayHideScore);
+                    } catch (_) {}
+                  } else if (v == 'onDevice') {
+                    await OnDeviceReader.setEnabled(!OnDeviceReader.enabled);
+                    if (mounted) setState(() {});
+                    if (OnDeviceReader.enabled) {
+                      _toast('자체 판독을 이 기기에서 합니다(실험) — 모델을 올리는 중');
+                      unawaited(_warmOnDevice());
+                    } else {
+                      _toast('자체 판독을 서버에서 합니다');
+                    }
                   } else if (v == 'auto') {
                     setState(() => _autoRecord = !_autoRecord);
                     await AutoRecordStore.save(_autoRecord);
@@ -2332,6 +2606,28 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     enabled: _useGrid,
                     child: const Text('화료 판독을 Gemini 로 (예전 방식, 느림·유료)'),
                   ),
+                  if (OnDeviceReader.supported)
+                    CheckedPopupMenuItem(
+                      value: 'tileOverlay',
+                      checked: _tileOverlay,
+                      enabled: _remoteUrl != null,
+                      child: const Text('패 인식 겹쳐 보기 (실험, 종류·역할)'),
+                    ),
+                  if (OnDeviceReader.supported)
+                    CheckedPopupMenuItem(
+                      key: const ValueKey('mount-overlay-hide-score-menu'),
+                      value: 'overlayHideScore',
+                      checked: _overlayHideScore,
+                      enabled: _tileOverlay,
+                      child: const Text('겹쳐 볼 때 가운데 점수판 숨기기'),
+                    ),
+                  if (OnDeviceReader.supported)
+                    CheckedPopupMenuItem(
+                      value: 'onDevice',
+                      checked: OnDeviceReader.enabled,
+                      enabled: !_geminiRead,
+                      child: const Text('자체 판독을 이 기기에서 (실험, 서버 호출 안 함)'),
+                    ),
                   CheckedPopupMenuItem(
                     value: 'log',
                     checked: _logEnabled,
@@ -2343,6 +2639,20 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     checked: _frames.keepAll,
                     enabled: _logEnabled && _remoteUrl != null,
                     child: Text('배경 프레임 전부 저장 (${_bgInterval.inSeconds}초마다, 녹화 대신)'),
+                  ),
+                  CheckedPopupMenuItem(
+                    key: const ValueKey('mount-rec-view-menu'),
+                    value: 'recView',
+                    checked: _recPull?.running == true && _recPull?.save == false,
+                    enabled: _remoteUrl != null || _recPull?.running == true,
+                    child: Text(_recPullLabel(save: false)),
+                  ),
+                  CheckedPopupMenuItem(
+                    key: const ValueKey('mount-rec-pull-menu'),
+                    value: 'recPull',
+                    checked: _recPull?.running == true && _recPull?.save == true,
+                    enabled: _remoteUrl != null || _recPull?.running == true,
+                    child: Text(_recPullLabel(save: true)),
                   ),
                   CheckedPopupMenuItem(
                     key: const ValueKey('mount-hires-frames-menu'),
@@ -2900,7 +3210,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               _gridSrc = GridSource.manual; // 사용자가 끌어 맞춤(8b-4a)
             }),
           ),
-        if (!editing)
+        if (!editing && _tileOverlay && _overlay != null)
+          IgnorePointer(child: CustomPaint(painter: _TileOverlayPainter(_overlay!), child: const SizedBox.expand())),
+        // 패 인식 겹쳐 보기를 켜면 가운데 점수판을 숨긴다(강 패를 가려서, 2026-11-11 사용자). 점수는 오른쪽 칸·점수표에서 본다.
+        // 숨길지는 메뉴에서 끄고 켠다(2026-11-12 사용자).
+        if (!editing && !(_tileOverlay && _overlayHideScore))
           LayoutBuilder(
             builder: (context, c) => Center(
               child: TableScorePanel(
@@ -2947,7 +3261,15 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.memory(shot, fit: BoxFit.cover, cacheWidth: 1200, gaplessPlayback: true),
+              // 헤드 녹화 받기가 켜져 따라잡았으면 받은 최신 프레임(초당 10장)을, 아니면(2초 넘게 안 오면) 3초 미리보기를.
+              ValueListenableBuilder<({Uint8List jpeg, DateTime at})?>(
+                valueListenable: _liveShot,
+                builder: (context, live, _) {
+                  final img = live != null && DateTime.now().difference(live.at) < _liveStale ? live.jpeg : shot;
+                  return Image.memory(img,
+                      fit: BoxFit.cover, cacheWidth: 1200, gaplessPlayback: true);
+                },
+              ),
               overlay,
             ],
           ),
@@ -2988,6 +3310,51 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
 /// 직전 locate 결과를 미리보기 위에 겹쳐 그린다(손패 빨강, 강 노랑, 중앙 흰색).
 /// 패 최소 크기 상자는 뺐다(거치가 고정이라 손으로 맞출 일이 없음, 2026-10-27 사용자).
+/// 패 인식 겹쳐 보기: 상자 색 = 역할, 글자 = 패 종류(확신 낮으면 ?).
+class _TileOverlayPainter extends CustomPainter {
+  final TileOverlay o;
+  _TileOverlayPainter(this.o);
+
+  static const _roleColor = {
+    'hand': Color(0xFFFFDC00),
+    'meld': Color(0xFFFF50C8),
+    'river': Color(0xFF50C8FF),
+    'wall': Color(0xFFB0B0B0),
+    'pair': Color(0xFFFF8C00),
+    'loose': Color(0xFF00FF78),
+  };
+  static const _roleName = {'hand': '손', 'meld': '울', 'river': '강', 'wall': '산', 'pair': '짝', 'loose': '뗀'};
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (final t in o.tiles) {
+      final color = _roleColor[t.role] ?? Colors.white;
+      final r = Rect.fromLTWH(t.x * size.width, t.y * size.height, t.w * size.width, t.h * size.height);
+      canvas.drawRect(r, Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = color);
+      final label = '${t.tile}${t.tileConf < 0.6 ? '?' : ''}${_roleName[t.role] ?? ''}';
+      final tp = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: TextStyle(
+            color: color,
+            fontSize: (r.shortestSide * 0.45).clamp(8.0, 14.0),
+            fontWeight: FontWeight.w700,
+            shadows: const [Shadow(blurRadius: 2, color: Colors.black)],
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      tp.paint(canvas, Offset(r.left, r.top - tp.height));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TileOverlayPainter old) => !identical(old.o, o);
+}
+
 class _LayoutPainter extends CustomPainter {
   final TableLayout? layout;
   final Game game;

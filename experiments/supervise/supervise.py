@@ -14,6 +14,8 @@
   python supervise.py pull                   새 촬영 기록을 받음
   python supervise.py report [--since 시각]  받은 화료별 표와 요약
   python supervise.py watch [--since 시각]   새 화료·이상이 생길 때까지 기다렸다 이유를 찍고 끝남
+  python supervise.py track [--all]          가장 최근 판 추적(track.json)만 바로 읽어 버림·리치·이벤트 요약
+                                             (frames zip 은 안 받음. track.json 은 도라·리치봉 읽기 때 갱신 — 15초쯤 기다렸다 볼 것)
 """
 from __future__ import annotations
 
@@ -383,6 +385,82 @@ def cmd_watch(a) -> None:
     print('TIMEOUT 새 일 없음')
 
 
+SIDES = ['bottom', 'right', 'top', 'left']
+SIDE_KO = {'bottom': '아래', 'right': '오른쪽', 'top': '위', 'left': '왼쪽'}
+
+
+def summarize_track(j: dict, show_all: bool = False) -> list[str]:
+    """track.json 한 개를 사람이 읽을 몇 줄로. 자리 이름은 bottom_seat·names 로 붙인다."""
+    names = j.get('names') or []
+    bottom = j.get('bottom_seat') or 0
+
+    def who(side: str) -> str:
+        if side not in SIDES:
+            return side
+        seat = (bottom + SIDES.index(side)) % 4
+        n = names[seat] if seat < len(names) else ''
+        return f'{SIDE_KO[side]}({n})' if n else SIDE_KO[side]
+
+    rv = j.get('rivers') or {}
+    per = rv.get('rivers') or {}
+    lines = [f"판 {j.get('round', '?')} · 입력 긴 변 {j.get('preview_long_side')}"]
+    lines.append('버림 수: ' + ' · '.join(f"{who(s)} {per.get(s, {}).get('discards', 0)}" for s in SIDES))
+    last = next((per[s]['last'] for s in SIDES if per.get(s, {}).get('last')), None)
+    riichi = rv.get('riichi') or []
+    lines.append('리치: ' + (', '.join(who(s) for s in riichi) if riichi else '없음'))
+    melds = {s: len(v.get('melds') or []) for s, v in (j.get('seats') or {}).items()}
+    if any(melds.values()):
+        lines.append('울기: ' + ' · '.join(f'{who(s)} {n}' for s, n in melds.items() if n))
+    # rebase 는 울기·강 추적기가 같이 남겨 두 번씩 찍힌다 → 강 쪽만 센다. 평소 대국에도 손이 지나가면 판당 수십 번 나와(11-07 매장
+    # 판당 20~70) 그 자체로는 이상이 아니다.
+    ev = [(e, 'river') for e in rv.get('events') or []] + [(e, 'meld') for e in j.get('events') or [] if e.get('kind') != 'rebase']
+    ev.sort(key=lambda x: x[0].get('at', ''))
+    counts: dict[str, int] = {}
+    for e, _ in ev:
+        counts[e['kind']] = counts.get(e['kind'], 0) + 1
+    lines.append('이벤트 수: ' + (', '.join(f'{k} {v}' for k, v in sorted(counts.items())) or '없음'))
+    pixel = sum(1 for e, _ in ev if e['kind'] == 'sticks_confirmed' and e.get('detail', '').startswith('픽셀'))
+    lines.append(f"리치봉: 픽셀 확정 {pixel} · 서버 읽기 {counts.get('sticks_candidate', 0) + counts.get('sticks_failed', 0)}번"
+                 f"(실패 {counts.get('sticks_failed', 0)} — 자체 판독 모드면 서버를 안 불러 실패가 정상, 리치는 픽셀 확정)")
+    if not counts.get('discard'):
+        lines.append('⚠ 버림 이벤트 0 — 추적이 안 돌거나 강 칸이 어긋남(더보기 "판 상태 추적" 문구에 "(격자를 맞추면 시작)" 있는지)')
+    else:
+        lines.append(f"✓ 버림 이벤트 {counts['discard']}개 잡힘")
+    shown = ev if show_all else ev[-12:]
+    if shown:
+        lines.append(f"최근 이벤트 {len(shown)}/{len(ev)}:")
+        for e, _ in shown:
+            k, d = e['kind'], e.get('detail', '')
+            # 리치봉 서버 읽기·장면 이벤트는 자리 없이 bottom 으로 남는다 — 자리를 붙이지 않는다
+            seated = k in ('discard', 'cleared', 'taken', 'changed', 'confirmed', 'sticks_seen') or (k == 'sticks_confirmed' and d.startswith('픽셀'))
+            if k in ('sticks_confirmed', 'sticks_candidate') and not d.startswith('픽셀'):
+                d = ' '.join(who(x) for x in d.split()) if d != '없음' else d
+            t = e.get('at', '')[11:19]
+            lines.append(f"  {t} {who(e.get('side', '')) if seated else '-'} {k} {d}".rstrip())
+    return lines
+
+
+def cmd_track(a) -> None:
+    serial = devices().get('tablet')
+    if not serial:
+        raise SystemExit('tablet 안 붙음')
+    tracks = [d for d in remote_folders(serial) if d.endswith('_track')]
+    for d in reversed(tracks):
+        r = subprocess.run([ADB, '-s', serial, 'exec-out', 'cat', f'{DEVICE_DIR}/{d}/track.json'],
+                           capture_output=True, timeout=30, env=dict(os.environ, MSYS_NO_PATHCONV='1'))
+        if r.returncode == 0 and r.stdout.strip().startswith(b'{'):
+            out = VISIT / 'track' / f'{d}_{now_stamp()}.json'
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_bytes(r.stdout)
+            print(f'{d}/track.json ({out})')
+            print('\n'.join(summarize_track(json.loads(r.stdout.decode('utf-8')), a.all)))
+            return
+        if not a.all:
+            print(f'{d}: track.json 아직 없음(도라·리치봉 읽기 전) — 15초쯤 뒤 다시')
+            return
+    print('추적 폴더 없음 — 추적이 한 번도 안 돌았음')
+
+
 def main() -> None:
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
@@ -411,6 +489,9 @@ def main() -> None:
     s.add_argument('--every', type=float, default=15)
     s.add_argument('--max-minutes', type=float, default=30)
     s.set_defaults(fn=cmd_watch)
+    s = sub.add_parser('track')
+    s.add_argument('--all', action='store_true', help='이벤트 전부, track.json 없으면 이전 판까지')
+    s.set_defaults(fn=cmd_track)
     a = p.parse_args()
     a.fn(a)
 

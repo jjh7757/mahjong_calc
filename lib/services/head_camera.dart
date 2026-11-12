@@ -63,6 +63,154 @@ class HeadCamera {
       frameHeight: (m['frameHeight'] as num).toInt(),
     );
   }
+
+  /// 녹화 모드(시험용, 기본 꺼짐) 시작: 스트림 프레임을 초당 [fps] 장까지 2×2 평균으로 줄인 JPEG 로 이 기기 저장소에 계속 쓴다.
+  /// 판독(`jpeg`)은 그대로다. 카메라가 안 돌거나 남은 용량이 2GB 아래면 [PlatformException].
+  /// Android 밖이면 [HeadRecordStatus.unsupported].
+  Future<HeadRecordStatus> recordStart({int fps = 10, int quality = 85}) =>
+      _record('recordStart', {'fps': fps, 'quality': quality});
+
+  /// 녹화를 끝낸다(녹화 중이 아니면 아무것도 안 함). 결과는 끝난 뒤 상태.
+  Future<HeadRecordStatus> recordStop() => _record('recordStop');
+
+  /// 녹화 상태. 녹화 중이 아니어도 스트림 속도·남은 용량은 들어 있다.
+  Future<HeadRecordStatus> recordStatus() => _record('recordStatus');
+
+  /// 태블릿 이어 받기: 마지막(또는 지금) 녹화에서 [after] ms 보다 늦게 다 쓴 프레임 시각들(오름차순, [max] 개까지).
+  /// 파일은 `<dir>/f_<ms>.jpg`. Android 밖이면 빈 결과.
+  Future<HeadRecordFrames> recordFrames({required int after, int max = 10}) async {
+    try {
+      final m = await _channel.invokeMapMethod<String, dynamic>('recordFrames', {'after': after, 'max': max});
+      return HeadRecordFrames.fromMap(m);
+    } on MissingPluginException {
+      return const HeadRecordFrames();
+    }
+  }
+
+  /// 이 기기의 앱 전용 외부 저장소 경로와 남은 용량(태블릿이 받은 녹화를 둔다). Android 밖이면 null.
+  static Future<({String path, int freeBytes})?> filesDir() async {
+    try {
+      final m = await _channel.invokeMapMethod<String, dynamic>('filesDir');
+      final p = m?['path'] as String?;
+      if (p == null) return null;
+      return (path: p, freeBytes: (m?['freeBytes'] as num?)?.toInt() ?? -1);
+    } on MissingPluginException {
+      return null;
+    }
+  }
+
+  Future<HeadRecordStatus> _record(String method, [Map<String, Object?>? args]) async {
+    try {
+      final m = await _channel.invokeMapMethod<String, dynamic>(method, args);
+      return HeadRecordStatus.fromMap(m);
+    } on MissingPluginException {
+      return HeadRecordStatus.unsupported;
+    }
+  }
+}
+
+/// 녹화 모드 상태(`HeadCamera.kt recordStatus`). 숫자는 없으면 0, 남은 용량을 모르면 -1.
+class HeadRecordStatus {
+  /// 이 기기에서 녹화를 쓸 수 있나(Android 밖이면 false).
+  final bool supported;
+  final bool recording;
+
+  /// 마지막(또는 지금) 녹화 폴더 전체 경로. 녹화한 적이 없으면 null.
+  final String? dir;
+  final int saved;
+  final int dropped;
+  final int bytes;
+
+  /// 분석 콜백이 불린 속도(장/초). 최근 1초 창, 2초 넘게 프레임이 없으면 0.
+  final double streamFps;
+
+  /// 카메라를 연 뒤 전체 평균 스트림 속도(장/초).
+  final double streamFpsAvg;
+
+  /// 최근 5초 저장 속도(장/초).
+  final double savedFps;
+  final int freeBytes;
+
+  /// 멈춘 까닭: user · camera_stop · low_storage · error. 녹화 중이거나 녹화한 적이 없으면 null.
+  final String? stopReason;
+  final String? stopDetail;
+
+  const HeadRecordStatus({
+    this.supported = true,
+    this.recording = false,
+    this.dir,
+    this.saved = 0,
+    this.dropped = 0,
+    this.bytes = 0,
+    this.streamFps = 0,
+    this.streamFpsAvg = 0,
+    this.savedFps = 0,
+    this.freeBytes = -1,
+    this.stopReason,
+    this.stopDetail,
+  });
+
+  static const HeadRecordStatus unsupported = HeadRecordStatus(supported: false);
+
+  factory HeadRecordStatus.fromMap(Map<String, dynamic>? m) {
+    if (m == null) return const HeadRecordStatus();
+    int i(String k, [int d = 0]) => (m[k] as num?)?.toInt() ?? d;
+    double f(String k) => (m[k] as num?)?.toDouble() ?? 0;
+    return HeadRecordStatus(
+      recording: m['recording'] == true,
+      dir: m['dir'] as String?,
+      saved: i('saved'),
+      dropped: i('dropped'),
+      bytes: i('bytes'),
+      streamFps: f('streamFps'),
+      streamFpsAvg: f('streamFpsAvg'),
+      savedFps: f('savedFps'),
+      freeBytes: i('freeBytes', -1),
+      stopReason: m['stopReason'] as String?,
+      stopDetail: m['stopDetail'] as String?,
+    );
+  }
+
+  /// 사용자가 끄지 않았는데 멈췄나(용량 부족·오류·카메라 정지).
+  bool get stoppedBySelf => !recording && stopReason != null && stopReason != 'user';
+
+  /// 멈춘 까닭을 화면에 보일 문장으로. 사용자가 끈 것·녹화 중이면 null.
+  String? get stopMessage {
+    if (!stoppedBySelf) return null;
+    final why = switch (stopReason) {
+      'low_storage' => '남은 용량이 2GB 아래라 스스로 멈췄습니다',
+      'camera_stop' => '카메라가 꺼져 멈췄습니다',
+      'error' => '저장 중 오류로 멈췄습니다',
+      _ => '멈췄습니다($stopReason)',
+    };
+    final d = stopDetail;
+    return d == null || d.isEmpty ? why : '$why: $d';
+  }
+
+  /// 바이트 → "12.3GB"(1024³ 기준, 네이티브의 2GB 기준과 같은 단위).
+  static String gb(int bytes) => '${(bytes / (1 << 30)).toStringAsFixed(1)}GB';
+}
+
+/// [HeadCamera.recordFrames] 결과.
+class HeadRecordFrames {
+  /// 녹화 폴더 전체 경로. 녹화한 적이 없으면 null.
+  final String? dir;
+  final bool recording;
+  final int? latest;
+  final int remaining;
+  final List<int> ms;
+  const HeadRecordFrames({this.dir, this.recording = false, this.latest, this.remaining = 0, this.ms = const []});
+
+  factory HeadRecordFrames.fromMap(Map<String, dynamic>? m) {
+    if (m == null) return const HeadRecordFrames();
+    return HeadRecordFrames(
+      dir: m['dir'] as String?,
+      recording: m['recording'] == true,
+      latest: (m['latest'] as num?)?.toInt(),
+      remaining: (m['remaining'] as num?)?.toInt() ?? 0,
+      ms: [for (final x in (m['ms'] as List? ?? const [])) (x as num).toInt()],
+    );
+  }
 }
 
 class HeadJpeg {

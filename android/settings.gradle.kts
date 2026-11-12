@@ -21,6 +21,8 @@ plugins {
     id("dev.flutter.flutter-plugin-loader") version "1.0.0"
     id("com.android.application") version "9.1.0" apply false
     id("org.jetbrains.kotlin.android") version "2.4.0" apply false
+    // 기기 판독 실험(exp/on-device-read): 서버 자체 판독 Python 을 앱 안에서
+    id("com.chaquo.python") version "17.2.0" apply false
 }
 
 include(":app")

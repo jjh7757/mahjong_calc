@@ -77,3 +77,9 @@ app.*.map.json
 # 흔들기 회귀 세트 변형 사진·격자(experiments/speed/robust_suite.py make 로 다시 만듦)와 결과
 /experiments/speed/robust/
 /experiments/speed/results/robust_*.json
+# 기기 안 ONNX 시험: 받은 onnxruntime AAR·빌드 결과물(experiments/ondevice/README 로 다시 만듦)
+/experiments/ondevice/ort/
+/experiments/ondevice/build/
+/experiments/ondevice/results/
+# 태블릿 정리 전 받아 둔 사진·기록(2026-11-11, 커밋 안 함)
+/experiments/tablet_backup_*/

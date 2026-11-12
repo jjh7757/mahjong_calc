@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:usesCleartextTraffic="true"
-        android:label="mahjong_calc"
+        android:label="${appLabel}"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -33,6 +33,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- 기기 판독 실험(exp/on-device-read) 측정 입구: adb 셸만(DUMP 권한) -->
+        <receiver
+            android:name=".OnDeviceBenchReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

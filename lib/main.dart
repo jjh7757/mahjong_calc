@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'game/game_store.dart';
+import 'services/on_device_bench.dart';
 import 'ui/game/settlement_screen.dart';
 import 'ui/hand_editor.dart';
 import 'ui/kiosk.dart';
@@ -9,6 +10,9 @@ import 'ui/mount/mount_screen.dart';
 import 'ui/settings_screen.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  // 기기 판독 실험(exp/on-device-read): adb 측정 입구(OnDeviceBenchReceiver --es flow)가 부르는 앱 흐름 측정.
+  OnDeviceBench.register();
   runApp(const MahjongApp());
 }
 

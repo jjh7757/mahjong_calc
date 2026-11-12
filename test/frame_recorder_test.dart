@@ -37,6 +37,23 @@ void main() {
       expect(_keep(r, whys), [2, 3, 4, 5, 6, 7, 8]);
     });
 
+    test('wouldKeep 은 다음 add 가 바로 남길지(변화·뒤·샘플·전부)와 같다', () {
+      for (final keepAll in [false, true]) {
+        final r = FrameRecorder(every: 4, keepAll: keepAll);
+        final whys = List.generate(14, (_) => <String>[]);
+        whys[2] = ['a'];
+        whys[9] = ['b'];
+        for (var i = 0; i < whys.length; i++) {
+          final predicted = r.wouldKeep(why: whys[i]);
+          final before = r.keptCount;
+          r.add(_jpg(i), _t0, why: whys[i]);
+          // 변화 프레임은 앞 버퍼까지 같이 남기므로 "이 프레임이 남았나" 는 마지막 남긴 것의 번호로 본다.
+          final kept = r.keptCount > before && r.take().last.index == i + 1;
+          expect(predicted, kept, reason: 'keepAll=$keepAll i=$i');
+        }
+      }
+    });
+
     test('아무 일 없어도 10장마다 한 장', () {
       final r = FrameRecorder();
       expect(_keep(r, List.generate(25, (_) => <String>[])), [10, 20]);

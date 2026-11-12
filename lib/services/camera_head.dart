@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
 import 'package:image/image.dart' as img;
 
@@ -20,6 +21,11 @@ import 'package:image/image.dart' as img;
 /// - `GET /status`  → 토큰 없이(또는 틀리면) `{"ok":true,"auth":false,"head":"mahjongcam","pair":bool}` 만
 ///   (살아 있는지·버튼 연결을 받는지 확인용, [discoverCameraHeads] 가 이걸로 헤드를 찾는다).
 ///   맞는 토큰이면 `{"ok":true,"auth":true,"head":"mahjongcam","pair":bool,"captures":N,"last_capture":"<iso>"|null}`.
+/// - `GET /rec/frames?after=<ms>&max=<n>` → 녹화 모드(시험용) 프레임 이어 받기. [after] ms 보다 늦게 다 쓴 프레임을
+///   오름차순으로 [n] 장까지(기본 10, 최대 [maxRecordBatch]) 한 응답에 묶는다(본문 형식은 [RecordBatch]).
+///   헤더 `X-Rec-Dir`(녹화 폴더 이름, 녹화한 적 없으면 없음)·`X-Rec-Recording`(1/0)·`X-Rec-Latest`(다 쓴 마지막 ms)·
+///   `X-Rec-Remaining`(이 묶음 뒤에 남은 장수). 헤드가 녹화를 못 하면 404.
+///   `&newest=1` 이면 밀린 것은 건너뛰고 가장 최근 프레임 한 장만(after 보다 늦을 때) — 태블릿 "보기만" 모드.
 /// - `GET /pair` → [allowPair] 가 켜져 있으면 `{"ok":true,"token":"..."}`, 꺼져 있으면 403 `{"ok":false,"error":"pair"}`.
 ///   QR 없이 버튼으로 연결할 때(테스트용). 같은 Wi-Fi 의 누구나 토큰을 받아 가므로 헤드 화면 토글로만 켠다.
 class CameraHeadServer {
@@ -35,6 +41,14 @@ class CameraHeadServer {
 
   /// 작은 미리보기를 주는 함수(`/preview`). [longSide] 는 요청한 긴 변(없으면 기본). 없으면 404.
   final Future<PreviewFrame> Function(int? longSide)? preview;
+
+  /// 녹화 프레임 묶음(`/rec/frames`). 없으면 404.
+  final Future<RecordBatch> Function(int after, int max)? recordFrames;
+
+  static const int maxRecordBatch = 30;
+
+  /// `newest=1` 에서 마지막 ms 만 알아낼 때 넘기는 after(어떤 프레임보다 늦음).
+  static const int newestProbe = 1 << 62;
 
   /// 촬영 수·시각이 바뀔 때 알린다(화면 갱신용).
   final void Function()? onChanged;
@@ -59,6 +73,7 @@ class CameraHeadServer {
     required this.capture,
     required this.token,
     this.preview,
+    this.recordFrames,
     this.onChanged,
     this.headers,
     this.allowPair = false,
@@ -140,6 +155,36 @@ class CameraHeadServer {
             res.headers.set(frameSizeHeader, '${frame.frameWidth}x${frame.frameHeight}');
             res.contentLength = frame.jpeg.length;
             res.add(frame.jpeg);
+          case '/rec/frames':
+            if (!_authorized(req)) {
+              res.statusCode = HttpStatus.unauthorized;
+              res.headers.contentType = ContentType.json;
+              res.write(jsonEncode({'ok': false, 'error': 'token'}));
+              break;
+            }
+            final rf = recordFrames;
+            if (rf == null) {
+              res.statusCode = HttpStatus.notFound;
+              res.headers.contentType = ContentType.json;
+              res.write(jsonEncode({'ok': false, 'error': 'no record'}));
+              break;
+            }
+            final after = int.tryParse(req.uri.queryParameters['after'] ?? '') ?? 0;
+            final max = (int.tryParse(req.uri.queryParameters['max'] ?? '') ?? 10).clamp(0, maxRecordBatch);
+            final RecordBatch b;
+            if (req.uri.queryParameters['newest'] == '1') {
+              // 보기만: 밀린 것은 건너뛰고 가장 최근 프레임 한 장만(after 보다 늦을 때). 먼저 0장으로 마지막 ms 만 알아낸다.
+              final head = await rf(newestProbe, 0);
+              final latest = head.latest;
+              b = latest != null && latest > after && max > 0 ? await rf(latest - 1, 1) : head;
+            } else {
+              b = await rf(after, max);
+            }
+            res.headers.contentType = ContentType('application', 'octet-stream');
+            b.headers().forEach(res.headers.set);
+            final body = b.encodeBody();
+            res.contentLength = body.length;
+            res.add(body);
           case '/pair':
             res.headers.contentType = ContentType.json;
             if (!allowPair) {
@@ -463,6 +508,8 @@ class RemoteCamera {
   /// 미리보기 한 장. 기본은 작게(테이블 화면 배경용), [longSide] 를 주면 그 긴 변까지(울기 모서리 읽기용).
   /// 헤드가 미리보기를 못 주면 `unsupported`.
   Future<RemotePreview> preview({int? longSide}) async {
+    // 요청 수를 기기 로그로 세려고(logcat `flutter` 태그, 2026-11-12 4080·1020 요청 줄이기 확인).
+    debugPrint('[head-req] preview w=${longSide ?? 'default'}');
     final r = await _get(longSide == null ? '/preview' : '/preview?w=$longSide');
     if (!(r.headers['content-type'] ?? '').startsWith('image/')) {
       throw const RemoteCameraException('카메라 기기가 사진이 아닌 응답을 보냈습니다.');
@@ -471,6 +518,16 @@ class RemoteCamera {
     final fw = size.length == 2 ? int.tryParse(size[0]) : null;
     final fh = size.length == 2 ? int.tryParse(size[1]) : null;
     return RemotePreview(r.bodyBytes, frameWidth: fw, frameHeight: fh);
+  }
+
+  /// 녹화 프레임 이어 받기(`/rec/frames`). [after] ms 보다 늦은 프레임을 [max] 장까지. 헤드가 녹화를 못 하면 `unsupported`.
+  Future<RecordBatch> recordFrames({required int after, int max = 10, bool newest = false}) async {
+    final r = await _get('/rec/frames?after=$after&max=$max${newest ? '&newest=1' : ''}');
+    try {
+      return RecordBatch.decode(r.headers, r.bodyBytes);
+    } on FormatException catch (e) {
+      throw RemoteCameraException('녹화 묶음을 읽을 수 없습니다: ${e.message}');
+    }
   }
 
   /// EXIF 회전값을 1(그대로)로 바꾼다. 픽셀은 다시 인코딩하지 않는다.
@@ -570,4 +627,76 @@ class RemoteCamera {
   }
 
   void close() => _http.close();
+}
+
+/// 녹화 프레임 하나(헤드 파일 `f_<ms>.jpg`).
+class RecordFrame {
+  final int ms;
+  final Uint8List jpeg;
+  const RecordFrame(this.ms, this.jpeg);
+}
+
+/// `/rec/frames` 응답 한 묶음. 본문은 프레임마다 `[ms: int64 BE][길이: uint32 BE][JPEG]` 를 이어 붙인 것.
+class RecordBatch {
+  /// 녹화 폴더 이름(`rec_<시각>`). 녹화한 적이 없으면 null.
+  final String? dir;
+  final bool recording;
+
+  /// 헤드가 다 쓴 마지막 프레임 ms. 없으면 null.
+  final int? latest;
+
+  /// 이 묶음 뒤에 남은 장수.
+  final int remaining;
+  final List<RecordFrame> frames;
+
+  const RecordBatch({this.dir, this.recording = false, this.latest, this.remaining = 0, this.frames = const []});
+
+  static const String dirHeader = 'X-Rec-Dir';
+  static const String recordingHeader = 'X-Rec-Recording';
+  static const String latestHeader = 'X-Rec-Latest';
+  static const String remainingHeader = 'X-Rec-Remaining';
+
+  Map<String, String> headers() => {
+        dirHeader: ?dir,
+        recordingHeader: recording ? '1' : '0',
+        if (latest != null) latestHeader: '$latest',
+        remainingHeader: '$remaining',
+      };
+
+  Uint8List encodeBody() {
+    final out = BytesBuilder(copy: false);
+    for (final f in frames) {
+      final h = ByteData(12)
+        ..setInt64(0, f.ms)
+        ..setUint32(8, f.jpeg.length);
+      out.add(h.buffer.asUint8List());
+      out.add(f.jpeg);
+    }
+    return out.toBytes();
+  }
+
+  /// [headers] 는 소문자 키(http 패키지 응답 헤더).
+  static RecordBatch decode(Map<String, String> headers, Uint8List body) {
+    String? h(String k) => headers[k.toLowerCase()];
+    final frames = <RecordFrame>[];
+    final bd = ByteData.sublistView(body);
+    var i = 0;
+    while (i < body.length) {
+      if (body.length - i < 12) throw const FormatException('머리가 잘림');
+      final ms = bd.getInt64(i);
+      final len = bd.getUint32(i + 8);
+      i += 12;
+      if (body.length - i < len) throw const FormatException('사진이 잘림');
+      frames.add(RecordFrame(ms, Uint8List.sublistView(body, i, i + len)));
+      i += len;
+    }
+    final d = h(dirHeader);
+    return RecordBatch(
+      dir: d == null || d.isEmpty ? null : d,
+      recording: h(recordingHeader) == '1',
+      latest: int.tryParse(h(latestHeader) ?? ''),
+      remaining: int.tryParse(h(remainingHeader) ?? '') ?? 0,
+      frames: frames,
+    );
+  }
 }

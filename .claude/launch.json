@@ -2381,6 +2381,19 @@
       ],
       "port": 8287,
       "autoPort": false
+    },
+    {
+      "name": "fake-head-ondevice",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "experiments/tracking/fake_head.py",
+        "experiments/ondevice/build/fakehead_seq",
+        "8777",
+        "--seq",
+        "--hold",
+        "20,20,20,20,20,20"
+      ],
+      "port": 8777
     }
   ]
 }

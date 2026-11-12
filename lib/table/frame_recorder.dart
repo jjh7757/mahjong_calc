@@ -92,6 +92,11 @@ class FrameRecorder {
   /// [maxFrames] 장이나 [maxBytes] 가 찼다(쓰는 쪽이 [take] 해서 저장할 때).
   bool get isFull => _kept.length >= maxFrames || (maxBytes != null && keptBytes >= maxBytes!);
 
+  /// 다음 [add] 가 이 프레임을 바로 남기나(변화·전부 남기기·뒤 프레임·샘플). 거짓이면 앞 프레임 버퍼에만 들어간다(다음 변화의
+  /// 'before' 로 남을 수는 있음). 쓰는 쪽이 남길 프레임에만 고화질을 받으려고 쓴다.
+  bool wouldKeep({List<String> why = const []}) =>
+      why.isNotEmpty || keepAll || _afterLeft > 0 || (every > 0 && (_count + 1) % every == 0);
+
   /// 프레임 한 장. [why] 가 비어 있지 않으면 변화 프레임. 남겼으면 true.
   bool add(Uint8List jpeg, DateTime at, {List<String> why = const []}) {
     _count++;

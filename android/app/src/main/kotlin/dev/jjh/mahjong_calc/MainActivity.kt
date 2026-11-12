@@ -15,11 +15,13 @@ import io.flutter.plugin.common.MethodChannel
 ///    Flutter 쪽이 setCapture(true) 를 보낸 동안만 가로채고, 아니면 평소처럼 볼륨이 바뀐다.
 /// 2) 파일 저장: 촬영 기록을 Download/mahjong_calc/... 에 MediaStore 로 쓴다(권한 불필요, API 29+).
 /// 3) 화면 켜 두기: 카메라 헤드 모드에서 화면이 꺼지지 않게 FLAG_KEEP_SCREEN_ON 을 켠다.
-/// 4) 카메라 헤드 카메라(HeadCamera): 셔터 없이 미리보기 + 12MP YUV 스트림. start/stop/setZoom/jpeg.
+/// 4) 카메라 헤드 카메라(HeadCamera): 셔터 없이 미리보기 + 12MP YUV 스트림. start/stop/setZoom/jpeg,
+///    시험용 녹화 recordStart/recordStop/recordStatus, 태블릿 이어 받기 recordFrames·filesDir.
 class MainActivity : FlutterActivity() {
     private var volumeChannel: MethodChannel? = null
     private var capture = false
     private var headCamera: HeadCamera? = null
+    private var onDevice: OnDeviceReader? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -42,6 +44,26 @@ class MainActivity : FlutterActivity() {
                     call.argument<Boolean>("fresh") ?: false,
                     ::reply,
                 )
+                // 녹화 모드(시험용): 결과는 상태 맵(HeadCamera.recordStatus).
+                "recordStart" -> try {
+                    result.success(head.recordStart(
+                        call.argument<Int>("fps") ?: 10,
+                        call.argument<Int>("quality") ?: 85,
+                    ))
+                } catch (e: Exception) {
+                    result.error("HEAD", e.message ?: e.toString(), null)
+                }
+                "recordStop" -> result.success(head.recordStop())
+                "recordStatus" -> result.success(head.recordStatus())
+                // 태블릿 이어 받기(시험용): 헤드 쪽은 다 쓴 프레임 시각 목록, 태블릿 쪽은 저장할 앱 전용 폴더·남은 용량.
+                "recordFrames" -> result.success(head.recordFrames(
+                    (call.argument<Number>("after") ?: 0L).toLong(),
+                    call.argument<Int>("max") ?: 10,
+                ))
+                "filesDir" -> {
+                    val d = getExternalFilesDir(null)
+                    result.success(mapOf("path" to d?.absolutePath, "freeBytes" to (d?.usableSpace ?: -1L)))
+                }
                 else -> result.notImplemented()
             }
         }
@@ -56,12 +78,45 @@ class MainActivity : FlutterActivity() {
                 }
             }
         }
+        // 기기 판독 실험(exp/on-device-read): 앱 흐름 측정 입구(Dart OnDeviceBench). OnDeviceBenchReceiver 가 부른다.
+        benchChannel = MethodChannel(messenger, ONDEVICE_BENCH_CHANNEL)
+        // 기기 판독 실험(exp/on-device-read): 서버 자체 판독을 앱 안 Python 으로.
+        MethodChannel(messenger, ONDEVICE_CHANNEL).setMethodCallHandler { call, result ->
+            val reader = onDevice ?: OnDeviceReader(applicationContext).also { onDevice = it }
+            fun reply(r: Result<String>) = runOnUiThread {
+                r.fold({ result.success(it) }, { result.error("ONDEVICE", it.toString(), null) })
+            }
+            when (call.method) {
+                "observe" -> reader.observe(
+                    call.argument<String>("kind") ?: "",
+                    call.argument<List<ByteArray>>("images") ?: emptyList(),
+                    call.argument<Map<String, String>>("query") ?: emptyMap(),
+                    ::reply,
+                )
+                "warmup" -> reader.warmup(::reply)
+                "setPrep" -> reader.setPrep(call.arguments as? String ?: "server", ::reply)
+                "overlay" -> {
+                    val img = call.argument<ByteArray>("image")
+                    if (img == null) result.error("ARG", "image 필요", null)
+                    else reader.overlay(img, call.argument<Map<String, String>>("query") ?: emptyMap(), ::reply)
+                }
+                else -> result.notImplemented()
+            }
+        }
         MethodChannel(messenger, SCREEN_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
                 "keepOn" -> {
                     val on = call.arguments as? Boolean ?: false
                     if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                    result.success(null)
+                }
+                // 이 창만의 밝기(0~1). 음수면 시스템 밝기로 되돌린다. 폰 설정은 바꾸지 않는다(헤드 어두운 화면, 2026-11-12).
+                "brightness" -> {
+                    val v = (call.arguments as? Number)?.toFloat() ?: -1f
+                    val lp = window.attributes
+                    lp.screenBrightness = if (v < 0f) WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE else v.coerceIn(0f, 1f)
+                    window.attributes = lp
                     result.success(null)
                 }
                 else -> result.notImplemented()
@@ -172,5 +227,11 @@ class MainActivity : FlutterActivity() {
         const val VOLUME_CHANNEL = "dev.jjh.mahjong_calc/volume"
         const val FILES_CHANNEL = "dev.jjh.mahjong_calc/files"
         const val SCREEN_CHANNEL = "dev.jjh.mahjong_calc/screen"
+        const val ONDEVICE_CHANNEL = "dev.jjh.mahjong_calc/ondevice"
+        const val ONDEVICE_BENCH_CHANNEL = "dev.jjh.mahjong_calc/ondevice_bench"
+
+        /// 지금 엔진의 앱 흐름 측정 채널(앱이 떠 있을 때만).
+        @Volatile
+        var benchChannel: MethodChannel? = null
     }
 }
