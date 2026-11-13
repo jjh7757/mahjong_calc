@@ -43,6 +43,7 @@ import '../../table/river_tracker.dart';
 import '../../table/scene_shift.dart';
 import '../../table/tracker.dart';
 import '../../table/dora_tracker.dart';
+import '../../table/draw_reveal.dart';
 import '../game/game_screen.dart';
 import '../game/record_edit.dart';
 import '../game/settlement_screen.dart';
@@ -1153,9 +1154,53 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   }
 
   /// 유국 창: 추적이 본 리치를 켜 둔다(점수판을 안 눌러도 남은 봉의 주인이 기록에 남게).
-  Future<void> _showDraw(Game g) {
+  /// 헤드가 이 탁자를 확인한 상태면 새 프레임 한 장으로 손패를 앞면으로 공개한 자리를 찾아 텐파이로 미리 켠다
+  /// ([findDrawReveal], 합성 207/216 — metrics 표 5-1). 창은 기다리지 않고 바로 연다.
+  Future<void> _showDraw(Game g) async {
     final seats = SeatMap(g.settings.bottomSeat);
-    return showDrawDialog(context, g, trackedRiichi: {for (final s in _trackedRiichi()) seats.seatOf(s)});
+    final url = _remoteUrl;
+    final revealed = url != null && _useGrid && _tableConfirmed ? _drawReveal(g, url, seats) : null;
+    final chosen = await showDrawDialog(context, g, trackedRiichi: {for (final s in _trackedRiichi()) seats.seatOf(s)}, revealed: revealed);
+    if (revealed != null && _logEnabled) {
+      final dir = _drawLogDir;
+      if (dir != null) {
+        unawaited(CaptureLog.saveFile(dir, 'chosen.json', CaptureLog.jsonBytes({'tenpai_seats': chosen?.toList()?..sort(), 'canceled_or_abortive': chosen == null}), 'application/json'));
+      }
+    }
+  }
+
+  /// 마지막 유국 사진 기록 폴더(실제 유국 사진을 모아 나중에 채점하려고 남긴다).
+  String? _drawLogDir;
+
+  Future<Set<int>?> _drawReveal(Game g, String url, SeatMap seats) async {
+    _drawLogDir = null;
+    final grid = _grid;
+    final cam = RemoteCamera(url, token: _remoteToken, timeout: const Duration(seconds: 4));
+    Uint8List? frame;
+    try {
+      frame = (await cam.preview()).bytes;
+    } catch (e) {
+      debugPrint('[draw] 프레임 받기 실패, 마지막 배경 사진으로: $e');
+      frame = _lastShot;
+    } finally {
+      cam.close();
+    }
+    if (frame == null) return null;
+    final sw = Stopwatch()..start();
+    final DrawReveal d;
+    try {
+      d = await compute(findDrawReveal, (frame, grid));
+    } catch (e) {
+      debugPrint('[draw] 공개 손패 판정 실패: $e');
+      return null;
+    }
+    sw.stop();
+    if (_logEnabled) {
+      final dir = _drawLogDir = '${CaptureLog.newDir()}_draw';
+      unawaited(CaptureLog.saveFile(dir, 'frame.jpg', frame, 'image/jpeg'));
+      unawaited(CaptureLog.saveFile(dir, 'reveal.json', CaptureLog.jsonBytes({'round': g.roundLabel, 'honba': g.honba, 'grid': grid.toJson(), 'ms': sw.elapsedMilliseconds, ...d.toJson()}), 'application/json'));
+    }
+    return {for (final s in d.revealed) seats.seatOf(s)};
   }
 
   Set<Side> _trackedDoubleRiichi() =>

@@ -654,7 +654,10 @@ Future<void> _pickSeat(BuildContext context, Game g, String title, void Function
 /// 도중 유국(구종구패·사풍연타·사깡산료·사가리치)을 고르면 텐파이와 관계없이 점수 이동 없이 친 유지·본장 +1.
 /// [trackedRiichi] 는 판 상태 추적이 본 리치 자리. 점수판에 없으면 리치로 켜 둔다 — 남은 봉의 주인을 기록해야
 /// 다음 판에서 그 봉을 새 리치로 착각하지 않는다.
-Future<void> showDrawDialog(BuildContext context, Game g, {Set<int> trackedRiichi = const {}}) async {
+/// [revealed] 는 헤드 사진에서 손패를 앞면으로 공개한 자리(거치 화면, [findDrawReveal]). 창은 바로 열고, 답이 오면
+/// 사람이 아직 안 누른 자리만 텐파이로 켠다(끄지는 않는다 — 리치 자리는 그대로). 확정은 사람이 한다.
+/// 확인하면 기록한 텐파이 자리를 돌려준다(취소·도중 유국은 null).
+Future<Set<int>?> showDrawDialog(BuildContext context, Game g, {Set<int> trackedRiichi = const {}, Future<Set<int>?>? revealed}) async {
   final newRiichi = <int>{
     for (final s in trackedRiichi)
       if (!g.riichiSeats.contains(s) && g.scores[s] >= 1000) s,
@@ -663,10 +666,30 @@ Future<void> showDrawDialog(BuildContext context, Game g, {Set<int> trackedRiich
   final nagashi = <int>{};
   String? abortive;
   final kiosk = isKioskLayout(context);
+  // 사진 판정: null = 확인 중(또는 사진 없음), 답이 오면 공개 자리. 사람이 누른 자리는 덮어쓰지 않는다.
+  final touched = <int>{};
+  Set<int>? photo;
+  var photoDone = revealed == null;
+  void Function(void Function())? refresh;
+  var closed = false;
+  revealed?.then((r) {
+    if (closed) return; // 창을 닫은 뒤 온 답은 버린다(기록한 텐파이 집합을 바꾸지 않게)
+    photo = r;
+    photoDone = true;
+    void apply() => tenpai.addAll((r ?? const <int>{}).where((s) => !touched.contains(s)));
+    final f = refresh;
+    f == null ? apply() : f(apply);
+  }, onError: (_) {
+    if (closed) return;
+    photoDone = true;
+    refresh?.call(() {});
+  });
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => kioskWrap(ctx, StatefulBuilder(
-      builder: (ctx, setState) => AlertDialog(
+      builder: (ctx, setState) {
+        refresh = setState;
+        return AlertDialog(
         scrollable: true, // 리치 칩이 보이면 줄이 높아져 낮은 화면에서 넘친다
         title: Text(abortive == null ? '유국 — 텐파이한 사람' : '도중 유국 — $abortive'),
         content: SizedBox(
@@ -717,6 +740,7 @@ Future<void> showDrawDialog(BuildContext context, Game g, {Set<int> trackedRiich
                   title: Text(g.names[s]),
                   value: tenpai.contains(s),
                   onChanged: (v) => setState(() {
+                    touched.add(s);
                     if (v == true) {
                       tenpai.add(s);
                     } else {
@@ -735,6 +759,21 @@ Future<void> showDrawDialog(BuildContext context, Game g, {Set<int> trackedRiich
                               : (on) => setState(() => on ? newRiichi.add(s) : newRiichi.remove(s)),
                         )
                       : null,
+                ),
+              if (revealed != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    !photoDone
+                        ? '사진에서 공개한 손패를 확인하는 중…'
+                        : photo == null
+                            ? '사진을 확인하지 못했습니다 — 직접 골라 주세요'
+                            : photo!.isEmpty
+                                ? '사진: 앞면으로 공개한 손패 없음'
+                                : '사진: ${(photo!.toList()..sort()).map((s) => g.names[s]).join('·')} 손패 공개 → 텐파이로 켜 둠',
+                    key: const ValueKey('draw-photo-note'),
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ),
               const SizedBox(height: 4),
               Text(
@@ -777,10 +816,13 @@ Future<void> showDrawDialog(BuildContext context, Game g, {Set<int> trackedRiich
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('취소')),
           FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('확인')),
         ],
-      ),
+      );
+      },
     )),
   );
-  if (ok != true) return;
+  refresh = null;
+  closed = true;
+  if (ok != true) return null;
   final reason = abortive;
   gameStore.mutate((g) {
     if (reason == '사가리치') {
@@ -800,6 +842,7 @@ Future<void> showDrawDialog(BuildContext context, Game g, {Set<int> trackedRiich
     }
   });
   if (context.mounted) notifyIfOver(context);
+  return reason == null ? tenpai : null;
 }
 
 /// 대국이 끝났으면(토비·아가리야메·텐파이야메) 알린다. 화료·유국을 기록한 직후 부른다.
