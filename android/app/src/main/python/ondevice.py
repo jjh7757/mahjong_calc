@@ -3,6 +3,7 @@
 서버 코드(`app/` 패키지, 빌드 때 mahjong-recognizer 에서 복사)를 그대로 부르고, 요청 처리(쿼리 해석·prepare_image)만 여기서 서버와 같게 한다.
   /v2/localroles  → roles.read_roles(reader, prepare_image(4080), side, grid, mode, None, frame, grid_src)
   /v2/localdora   → reader.read_wall(prepare_image(4080), frame, grid, grid_src)
+  localsetup      → table_locate.frame_for + grid_from_frame(서버에 없는 종류 — 서버 없는 자동 맞추기용, 격자 x1·x2·y1·y2·sticks)
   /v2/locallast3  → sides 가 있으면 reader.read_rivers_full(prepare_image(4080), sides, grid, frame, grid_src), 없으면 read_rivers_app([prepare_image(3072)…])
 응답은 서버와 같은 JSON 문자열 + `ondevice`(기기 시간 ms: prep·work·total). 오류는 예외 그대로(Kotlin → Dart 에서 RecognizerException).
 """
@@ -170,6 +171,18 @@ def observe(kind: str, images, query) -> str:
                 jpegs = [_prepare(b, 3072) for b in imgs]
                 t1 = time.perf_counter()
                 out = reader.read_rivers_app(jpegs)
+        elif kind == "localsetup":
+            # 서버 없는 자동 맞추기(2026-11-13 사용자 "자체 판독일 때 서버 없이 맞추기"): 서버 `/v2/setup` 은 Gemini 라 기기로 못 옮긴다.
+            # 대신 사진 전체 검출로 탁자 기준점(가운데 기기 → 없으면 패산, table_locate.frame_for)을 잡고 같은 뜻의 축 평행 격자로
+            # (grid_from_frame — 서버 WALL_FRAME=axis 와 같은 격자). 못 잡으면 grid None + frame_error.
+            from app import local_read as lr
+            from app import table_locate as tl
+
+            jpeg = _prepare(imgs[0], 4080)
+            t1 = time.perf_counter()
+            rgb = lr.decode_rgb(jpeg)
+            tz, meta = tl.frame_for(reader, jpeg, rgb)
+            out = {"grid": tl.grid_from_frame(tz) if tz is not None else None, **meta}
         else:
             raise ValueError(f"기기 판독에 없는 종류: {kind}")
         t2 = time.perf_counter()

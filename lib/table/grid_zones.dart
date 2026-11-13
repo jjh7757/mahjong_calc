@@ -400,6 +400,25 @@ GridZones? proposeGrid(Map<String, dynamic> setup, {GridZones? keep}) {
   );
 }
 
+/// 기기 판독 `localsetup` 응답(서버 없는 자동 맞추기, `ondevice.py`) → 격자. 응답 `grid` = 탁자 기준점(가운데 기기 → 없으면 패산)에서
+/// 만든 축 평행 격자(서버 `table_locate.grid_from_frame`, `WALL_FRAME=axis` 와 같은 격자 — 화료 사진 회귀 orig 에서 저장 격자 32 → 28/32,
+/// metrics 표 1-105). 리치봉 상자가 없으면 [keep] 것, 도라 구역 모양은 [keep] 것. 못 잡았거나 선이 엇갈리면 null.
+GridZones? gridFromLocalSetup(Map<String, dynamic> setup, {GridZones? keep}) {
+  final g = setup['grid'];
+  if (g is! Map) return null;
+  int? v(String k) => (g[k] as num?)?.round();
+  final x1 = v('x1'), x2 = v('x2'), y1 = v('y1'), y2 = v('y2');
+  if (x1 == null || x2 == null || y1 == null || y2 == null) return null;
+  NormBox? sticks = keep?.sticks;
+  final s = g['sticks'];
+  if (s is List && s.length == 4) {
+    final b = [for (final e in s) (e as num).round().clamp(0, 1000)];
+    if (b[0] < b[2] && b[1] < b[3]) sticks = NormBox(b[0], b[1], b[2], b[3]);
+  }
+  final out = GridZones(x1: x1, x2: x2, y1: y1, y2: y2, doraRel: keep?.doraRel ?? doraRelDefault, sticks: sticks);
+  return out.valid ? out : null;
+}
+
 /// 자리 구역 픽셀 판정: 앞면으로 눕힌 손패 자리. locate 축소본(JPEG) + 격자. `compute()` 에 넘길 수 있다. API 호출 없음.
 /// 도라 표시패는 픽셀로 찾지 않는다(펠트 위 흰 덩어리 찾기가 손으로 찍은 사진 10장에서 0장).
 ShotAnalysis analyzeGridShot((Uint8List, GridZones) args) {

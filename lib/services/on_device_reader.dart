@@ -10,7 +10,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// + `ondevice` 기기 시간). 끄면 서버 그대로 — 되돌리기는 거치 화면 더보기 스위치.
 class OnDeviceReader {
   static const String pref = 'mount.onDeviceRead';
-  static const Set<String> kinds = {'localroles', 'localdora', 'locallast3'};
+  /// `localsetup` 은 서버에 없는 종류(서버 없는 자동 맞추기 — 탁자 기준점으로 격자, [gridFromLocalSetup]).
+  static const Set<String> kinds = {'localroles', 'localdora', 'locallast3', 'localsetup'};
   static const MethodChannel _ch = MethodChannel('dev.jjh.mahjong_calc/ondevice');
 
   /// 지금 켜져 있는지(안드로이드에서만 의미). [load]·[setEnabled] 가 정한다.

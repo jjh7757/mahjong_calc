@@ -1435,10 +1435,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         _toast(auto ? '격자 자동 맞추기 ($secs초, 이 카메라로 처음): 펠트로 맞췄습니다. $hint' : '펠트로 맞췄습니다. $hint ($secs초)', long: auto);
         return true;
       }
+      // 자체 판독(이 기기) 모드면 서버 `/v2/setup`(Gemini) 대신 기기에서 탁자 기준점으로 맞춘다(2026-11-13 사용자 "서버 없이 맞추기").
+      final local = OnDeviceReader.handles('localsetup');
       final small = await _shrinkInIsolate(src);
-      final setup = await client.observe('setup', small, filename: 'setup.jpg');
+      final setup = local ? await client.observe('localsetup', src) : await client.observe('setup', small, filename: 'setup.jpg');
       if (!mounted) return false;
-      final proposed = proposeGrid(setup, keep: _grid);
+      final proposed = local ? gridFromLocalSetup(setup, keep: _grid) : proposeGrid(setup, keep: _grid);
       setState(() {
         if (proposed != null) {
           _grid = proposed;
@@ -1447,13 +1449,15 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       });
       if (auto && proposed != null) await _saveGrid();
       if (gallery == null) {
-        unawaited(_saveSetup(small, setup, proposed, auto: auto, ms: sw.elapsedMilliseconds));
+        unawaited(_saveSetup(small, local ? {'method': 'localsetup', ...setup} : setup, proposed, auto: auto, ms: sw.elapsedMilliseconds));
       }
       final secs = (sw.elapsedMilliseconds / 1000).toStringAsFixed(1);
-      debugPrint('[setup] auto=$auto try=$_autoSetupTries ${sw.elapsedMilliseconds}ms grid=${proposed != null}');
+      debugPrint('[setup] auto=$auto local=$local try=$_autoSetupTries ${sw.elapsedMilliseconds}ms grid=${proposed != null}');
       if (!auto || proposed != null || lastTry) {
         final body = [
-          proposed == null ? '네 자리 손패를 다 찾지 못해 격자는 그대로입니다' : '손패+울기 띠와 리치봉 상자를 맞췄습니다',
+          local
+              ? (proposed == null ? '이 기기에서 탁자 가운데(기기·패산)를 찾지 못해 격자는 그대로입니다' : '이 기기에서 탁자 가운데로 격자를 맞췄습니다')
+              : (proposed == null ? '네 자리 손패를 다 찾지 못해 격자는 그대로입니다' : '손패+울기 띠와 리치봉 상자를 맞췄습니다'),
           auto ? '틀렸으면 더보기 "구역 격자 맞추기" 에서 고치세요' : '틀렸으면 끌어 고치세요',
         ].join('. ');
         _toast(auto ? '격자 자동 맞추기 ($secs초, 이 카메라로 처음): $body' : '$body ($secs초)', long: auto);
