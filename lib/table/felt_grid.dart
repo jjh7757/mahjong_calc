@@ -331,8 +331,25 @@ math.Point<double>? _meet(_Line l, _Line m) {
   return math.Point((l.c * m.b - m.c * l.b) / den, (l.a * m.c - m.a * l.c) / den);
 }
 
+/// 펠트 색 덩어리가 사진을 덮은 정도. 거치 점검(`mount_check.dart`)이 "탁자가 사진 밖으로 잘렸나" 를 볼 때 쓴다 —
+/// 변이 사진 밖이면 [readFelt] 는 그 변을 못 믿어 거절만 하고 어느 쪽이 잘렸는지는 말해 주지 않는다.
+class FeltCoverage {
+  /// 가장 큰 펠트 색 덩어리의 넓이(사진 비율).
+  final double area;
+
+  /// 사진의 위·오른쪽·아래·왼쪽 변(끝 3픽셀 띠)에 그 덩어리가 닿은 길이 비율.
+  final List<double> touch;
+
+  const FeltCoverage(this.area, this.touch);
+}
+
+/// [readFelt] 판독과 [FeltCoverage] 를 한 번의 색 판정으로. 펠트 색을 못 잡으면 둘 다 null.
+typedef FeltProbe = ({FeltReading? reading, FeltCoverage? coverage});
+
 /// 긴 변 [feltLongSide] 이하로 줄인 사진에서 펠트를 읽는다. 펠트 색 덩어리가 사진의 8% 미만이면 null.
-FeltReading? readFelt(img.Image src) {
+FeltReading? readFelt(img.Image src) => probeFelt(src).reading;
+
+FeltProbe probeFelt(img.Image src) {
   final long = math.max(src.width, src.height);
   final im = long > feltLongSide
       ? img.copyResize(src,
@@ -342,12 +359,42 @@ FeltReading? readFelt(img.Image src) {
       : src;
   final w = im.width, h = im.height;
   final color = _measureFelt(im);
-  if (color == null) return null;
+  if (color == null) return (reading: null, coverage: null);
   final raw = Uint8List(w * h);
   for (final p in im) {
     if (color.has(p.r, p.g, p.b)) raw[p.y * w + p.x] = 1;
   }
   final (felt, area) = _largest(_open3(raw, w, h), w, h);
+  return (reading: _readingOf(im, color, felt, area), coverage: FeltCoverage(area / (w * h), _borderTouch(felt, w, h)));
+}
+
+/// 사진 네 변(위·오른쪽·아래·왼쪽)의 끝 3픽셀 띠에 덩어리가 닿은 길이 비율.
+List<double> _borderTouch(Uint8List m, int w, int h) {
+  const band = 3;
+  var top = 0, bottom = 0, left = 0, right = 0;
+  for (var x = 0; x < w; x++) {
+    var t = false, b = false;
+    for (var k = 0; k < band && k < h; k++) {
+      t = t || m[k * w + x] == 1;
+      b = b || m[(h - 1 - k) * w + x] == 1;
+    }
+    if (t) top++;
+    if (b) bottom++;
+  }
+  for (var y = 0; y < h; y++) {
+    var l = false, r = false;
+    for (var k = 0; k < band && k < w; k++) {
+      l = l || m[y * w + k] == 1;
+      r = r || m[y * w + w - 1 - k] == 1;
+    }
+    if (l) left++;
+    if (r) right++;
+  }
+  return [top / w, right / h, bottom / w, left / h];
+}
+
+FeltReading? _readingOf(img.Image im, _FeltColor color, Uint8List felt, int area) {
+  final w = im.width, h = im.height;
   if (area < 0.08 * w * h) return null;
   final pts = _outline(felt, w, h);
   if (pts.length < 100) return null;

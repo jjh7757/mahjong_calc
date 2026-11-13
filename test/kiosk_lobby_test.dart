@@ -116,7 +116,7 @@ void main() {
       gameStore.mutate((g) => g.declareRiichi(0));
       await tester.pumpWidget(const MahjongApp(loadSavedRules: false));
       await tester.pump();
-      for (final k in ['mount-shoot', 'table-calc', 'mount-gallery', 'table-end', 'table-home', 'table-undo', 'table-event-0']) {
+      for (final k in ['mount-shoot', 'table-calc', 'mount-gallery', 'table-end', 'table-home', 'table-undo', 'table-event-0', 'table-mount-check']) {
         expect(find.byKey(ValueKey(k)), findsOneWidget, reason: k);
       }
       expect(find.text('리치'), findsOneWidget);
@@ -147,6 +147,7 @@ void main() {
     await tester.pumpWidget(const MahjongApp(loadSavedRules: false));
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('table-home')), findsOneWidget);
+    expect(find.byKey(const ValueKey('table-mount-check')), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('table-home')));
     await tester.pumpAndSettle();

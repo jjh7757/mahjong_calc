@@ -30,6 +30,7 @@ import '../../table/frame_vote.dart';
 import '../../table/grid_zones.dart';
 import '../../table/hand_rules.dart';
 import '../../table/merge.dart';
+import '../../table/mount_check.dart';
 import '../../table/read_signals.dart';
 import '../../table/observation.dart';
 import '../../table/rectify.dart' show FeltQuad;
@@ -57,6 +58,7 @@ import '../settings_screen.dart';
 import '../tile_view.dart';
 import 'capture_label.dart';
 import 'grid_editor.dart';
+import 'mount_check_dialog.dart';
 import 'qr_scan_screen.dart';
 import 'read_progress_dialog.dart';
 import 'score_panel.dart';
@@ -232,6 +234,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// 지금 격자를 잡은 펠트 위치(없으면 손으로 맞춘 격자라 다음 안정된 위치를 기준으로만 삼는다).
   static const String gridFeltPref = 'mount.gridFelt';
   final FeltWatch _feltWatch = FeltWatch();
+
+  /// 마지막 거치 점검(자동 맞추기·카메라 이동 때 조용히 한 번, 또는 점검 창을 닫을 때). 테이블 화면 "거치 점검" 버튼 색.
+  MountCheck? _mountCheck;
   int _feltTick = 0;
 
   /// 배경 프레임 이만큼마다 펠트를 읽는다(3초 간격이라 6초). 매장 프레임을 순서대로 넣으면 판정 8회가 실제 설치 8곳과 같고,
@@ -966,14 +971,89 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     });
     await _saveGrid(felt: moved);
     debugPrint('[felt] 카메라 이동, 격자 ${grid.toJson()}');
-    if (mounted) _toast('카메라가 움직여 격자를 다시 맞췄습니다. 틀렸으면 더보기 "구역 격자 맞추기" 에서 고치세요', long: true);
+    final note = _mountNote(await _quietMountCheck(preview, long: _previewFrameLongSide ?? _captureLongSide));
+    if (mounted) _toast('카메라가 움직여 격자를 다시 맞췄습니다. 틀렸으면 더보기 "구역 격자 맞추기" 에서 고치세요$note', long: true);
+  }
+
+  /// 거치 점검을 조용히 한 번(자동 맞추기·카메라 이동 때). 결과는 "거치 점검" 버튼 색으로 남고, 나쁨일 때만 안내 글에 덧붙는다([_mountNote]).
+  /// [long] = 촬영 사진 긴 변(모르면 null — 사진 자체가 촬영 크기일 때만 패 크기를 본다).
+  Future<MountCheck?> _quietMountCheck(Uint8List src, {int? long}) async {
+    try {
+      final r = await compute(mountCheckOfJpeg, (src, long));
+      if (mounted) setState(() => _mountCheck = r);
+      debugPrint('[mount] ${r.toJson()}');
+      return r;
+    } catch (e) {
+      debugPrint('[mount] 점검 실패: $e');
+      return null;
+    }
+  }
+
+  /// 안내 글 끝에 붙일 거치 점검 한 줄. 나쁨일 때만(주의는 버튼 색·점검 창에서만 — 매번 알리면 안 읽게 된다).
+  String _mountNote(MountCheck? r) =>
+      r == null || r.level != MountLevel.bad || r.advice.isEmpty ? '' : ' · 거치 점검: ${r.advice.first}';
+
+  /// 거치 점검 창. 카메라 헤드면 떠 있는 동안 3초마다 다시 잰다 — 셔터 없는 작은 미리보기(긴 변 약 1020, 촬영과 같은 스트림·같은 화각)라
+  /// 태블릿 장당 약 0.2초. 패 크기는 미리보기 머리글의 스트림 긴 변으로 환산한다. 이 기기 카메라·갤러리 사진은 누를 때만.
+  Future<void> _openMountCheck() async {
+    if (_busy || _setupBusy) return;
+    final gallery = _galleryShot;
+    final url = gallery == null ? _remoteUrl : null;
+    var long = gallery != null ? null : (_previewFrameLongSide ?? _captureLongSide);
+    Future<Uint8List?> fetch() async {
+      if (gallery != null) return gallery;
+      if (url == null) return _currentPhoto();
+      final cam = RemoteCamera(url, token: _remoteToken, timeout: const Duration(seconds: 20));
+      try {
+        final p = await cam.preview();
+        long = p.frameLongSide ?? long;
+        return p.bytes;
+      } finally {
+        cam.close();
+      }
+    }
+
+    MountCheck? last;
+    await showMountCheck(
+      context,
+      fetch: fetch,
+      live: url != null,
+      check: (b, _) async {
+        final r = await compute(mountCheckOfJpeg, (b, long));
+        last = r;
+        return r;
+      },
+    );
+    if (mounted && last != null) setState(() => _mountCheck = last);
+  }
+
+  /// 테이블 화면 "거치 점검" 버튼: 마지막 점검이 나쁨·주의면 그 색, 아니면 보통 색. 누르면 점검 창.
+  Widget _mountCheckButton() {
+    final level = _mountCheck?.level;
+    final warn = level == MountLevel.bad || level == MountLevel.caution;
+    return TextButton.icon(
+      key: const ValueKey('table-mount-check'),
+      style: warn ? TextButton.styleFrom(foregroundColor: mountLevelColor(level!)) : null,
+      onPressed: _busy || _setupBusy || (_cam == null && _remoteUrl == null && _galleryShot == null) ? null : _openMountCheck,
+      icon: Icon(warn ? mountLevelIcon(level!) : Icons.straighten, size: 16),
+      label: const Text('거치 점검'),
+    );
   }
 
   /// 사진에서 펠트 위치를 읽는다. 카메라 헤드면 몇 장 더 받아 중앙값을 내고, 절반 이상이 그 값과 맞을 때만 믿는다.
   /// 이 기기 카메라·갤러리는 셔터·사진 한 장뿐이라 그 한 장으로.
-  Future<FeltQuad?> _readFeltOf(Uint8List first, {required bool more}) async {
+  /// [onFirst] 를 주면 첫 사진의 거치 점검도 같이 낸다 — 같은 색 판정이라 한 번에 한다(12MP 디코딩을 두 번 하지 않게,
+  /// 그 점검의 `quad` 는 [feltQuadOfJpeg] 와 같은 값).
+  Future<FeltQuad?> _readFeltOf(Uint8List first, {required bool more, void Function(MountCheck)? onFirst}) async {
     final quads = <FeltQuad>[];
-    final one = await compute(feltQuadOfJpeg, first);
+    final FeltQuad? one;
+    if (onFirst != null) {
+      final mc = await compute(mountCheckOfJpeg, (first, _previewFrameLongSide ?? _captureLongSide));
+      onFirst(mc);
+      one = mc.quad;
+    } else {
+      one = await compute(feltQuadOfJpeg, first);
+    }
     if (one != null) quads.add(one);
     if (!more || _remoteUrl == null) return one;
     for (var i = 1; i < _feltPhotos; i++) {
@@ -1416,8 +1496,15 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         if (!auto) _toast('사진이 없습니다. 카메라가 준비되면 다시 누르세요.');
         return false;
       }
-      final felt = await _readFeltOf(src, more: gallery == null);
+      // 거치 점검도 같은 사진으로 한 번(갤러리 사진은 거치가 아니라 건너뜀). 결과는 버튼 색·setup 기록·나쁨이면 안내 글에.
+      MountCheck? mount;
+      final felt = await _readFeltOf(src, more: gallery == null, onFirst: gallery == null ? (m) => mount = m : null);
       if (!mounted) return false;
+      if (mount != null) {
+        setState(() => _mountCheck = mount);
+        debugPrint('[mount] ${mount!.toJson()}');
+      }
+      final mountNote = _mountNote(mount);
       final fromFelt = felt == null ? null : gridFromFelt(felt, keep: _grid);
       if (fromFelt != null) {
         setState(() {
@@ -1427,12 +1514,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         if (auto) await _saveGrid(felt: felt);
         if (gallery == null) {
           final shrunk = await _shrinkInIsolate(src);
-          unawaited(_saveSetup(shrunk, {'method': 'felt', 'felt': felt!.toJson()}, fromFelt, auto: auto, ms: sw.elapsedMilliseconds));
+          unawaited(_saveSetup(shrunk, {'method': 'felt', 'felt': felt!.toJson(), 'mount': mount?.toJson()}, fromFelt, auto: auto, ms: sw.elapsedMilliseconds));
         }
         final secs = (sw.elapsedMilliseconds / 1000).toStringAsFixed(1);
         debugPrint('[setup] felt auto=$auto ${sw.elapsedMilliseconds}ms');
         final hint = auto ? '틀렸으면 더보기 "구역 격자 맞추기" 에서 고치세요' : '틀렸으면 끌어 고치세요';
-        _toast(auto ? '격자 자동 맞추기 ($secs초, 이 카메라로 처음): 펠트로 맞췄습니다. $hint' : '펠트로 맞췄습니다. $hint ($secs초)', long: auto);
+        _toast(auto ? '격자 자동 맞추기 ($secs초, 이 카메라로 처음): 펠트로 맞췄습니다. $hint$mountNote' : '펠트로 맞췄습니다. $hint ($secs초)$mountNote',
+            long: auto || mountNote.isNotEmpty);
         return true;
       }
       // 자체 판독(이 기기) 모드면 서버 `/v2/setup`(Gemini) 대신 기기에서 탁자 기준점으로 맞춘다(2026-11-13 사용자 "서버 없이 맞추기").
@@ -1449,7 +1537,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       });
       if (auto && proposed != null) await _saveGrid();
       if (gallery == null) {
-        unawaited(_saveSetup(small, local ? {'method': 'localsetup', ...setup} : setup, proposed, auto: auto, ms: sw.elapsedMilliseconds));
+        unawaited(_saveSetup(small, {if (local) 'method': 'localsetup', ...setup, 'mount': mount?.toJson()}, proposed, auto: auto, ms: sw.elapsedMilliseconds));
       }
       final secs = (sw.elapsedMilliseconds / 1000).toStringAsFixed(1);
       debugPrint('[setup] auto=$auto local=$local try=$_autoSetupTries ${sw.elapsedMilliseconds}ms grid=${proposed != null}');
@@ -1460,7 +1548,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               : (proposed == null ? '네 자리 손패를 다 찾지 못해 격자는 그대로입니다' : '손패+울기 띠와 리치봉 상자를 맞췄습니다'),
           auto ? '틀렸으면 더보기 "구역 격자 맞추기" 에서 고치세요' : '틀렸으면 끌어 고치세요',
         ].join('. ');
-        _toast(auto ? '격자 자동 맞추기 ($secs초, 이 카메라로 처음): $body' : '$body ($secs초)', long: auto);
+        _toast(auto ? '격자 자동 맞추기 ($secs초, 이 카메라로 처음): $body$mountNote' : '$body ($secs초)$mountNote', long: auto || mountNote.isNotEmpty);
       }
       return proposed != null;
     } catch (e) {
@@ -2579,6 +2667,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     if (_autoSetupOnStart) _maybeAutoSetup();
                   } else if (v == 'gridEdit') {
                     _beginGridEdit();
+                  } else if (v == 'mountCheck') {
+                    await _openMountCheck();
                   } else if (v == 'rectify') {
                     setState(() => _rectify = !_rectify);
                     try {
@@ -2611,6 +2701,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     key: ValueKey('mount-grid-edit-menu'),
                     value: 'gridEdit',
                     child: Text('구역 격자 맞추기…'),
+                  ),
+                  const PopupMenuItem(
+                    key: ValueKey('mount-check-menu'),
+                    value: 'mountCheck',
+                    child: Text('거치 점검… (탁자 전체·기울기·패 크기)'),
                   ),
                   CheckedPopupMenuItem(
                     key: const ValueKey('mount-fullscreen-menu'),
@@ -2979,6 +3074,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               label: const Text('격자 편집'),
             ),
             _headButton(),
+            _mountCheckButton(),
           ],
         ),
       ],
@@ -3155,6 +3251,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     label: const Text('격자 편집'),
                   ),
                         _headButton(),
+                        _mountCheckButton(),
                 ],
               ),
             ],
