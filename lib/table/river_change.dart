@@ -189,11 +189,13 @@ TableFrameStats analyzeTableFrame((Uint8List, GridZones) args) {
 }
 
 /// 패 한 장의 앞면이 [side] 강 띠에서 차지하는 비율 어림([tileFracOf] 와 같은 기준: 긴 변 4000 사진에서 앞면 폭 100px).
-double riverTileFracOf(GridZones grid, Side side, {double tileW = 0.025, double tileH = 0.044}) {
+/// [aspect] = 프레임 가로/세로([tileFracOf] 와 같은 보정, 헤드 1:1 이면 1).
+double riverTileFracOf(GridZones grid, Side side, {double tileW = 0.025, double tileH = 0.044, double aspect = 4 / 3}) {
   final b = grid.riverBand(side);
   final w = b.width / 1000, h = b.height / 1000;
-  if (w <= 0 || h <= 0) return 0;
-  return (tileW * tileH) / (w * h);
+  if (w <= 0 || h <= 0 || aspect <= 0) return 0;
+  return (tileW * (4 / 3) / aspect * tileH) / (w * h);
 }
 
-Map<Side, double> riverTileFracsOf(GridZones grid) => {for (final s in Side.values) s: riverTileFracOf(grid, s)};
+Map<Side, double> riverTileFracsOf(GridZones grid, {double aspect = 4 / 3}) =>
+    {for (final s in Side.values) s: riverTileFracOf(grid, s, aspect: aspect)};

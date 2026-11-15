@@ -412,6 +412,37 @@ void main() {
     expect(tr.riichiExcept({Side.left}), isEmpty); // 공탁 주인으로 알려진 봉은 이번 판 리치에서 뺀다
   });
 
+  test('픽셀 판정: 유국을 먼저 누르고 봉을 가운데로 옮긴 뒤 같은 사람이 다시 리치하면 새 리치로 잡는다(2026-11-13)', () {
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
+    // 새 판 시작: 전판 봉이 아직 왼쪽 홈에.
+    tr.onFrame(rivers(), strips(), at(0), sticksSeen: seen({Side.left}));
+    tr.onFrame(rivers(), strips(), at(3), sticksSeen: seen({Side.left}));
+    expect(tr.riichi, {Side.left});
+    expect(tr.riichiExcept({Side.left}), isEmpty);
+    // 가운데로 옮김: 홈이 2프레임 빔 → 리치 풂.
+    tr.onFrame(rivers(), strips(), at(6), sticksSeen: seen());
+    tr.onFrame(rivers(), strips(), at(9), sticksSeen: seen());
+    expect(tr.riichi, isEmpty);
+    // 같은 사람이 다시 리치.
+    tr.onFrame(rivers(), strips(), at(30), sticksSeen: seen({Side.left}));
+    tr.onFrame(rivers(), strips(), at(33), sticksSeen: seen({Side.left}));
+    expect(tr.riichi, {Side.left});
+    expect(tr.riichiAt.keys, [Side.left]);
+    expect(tr.riichiExcept({Side.left}), {Side.left});
+  });
+
+  test('픽셀 판정: 시점을 아는 리치봉은 홈이 비어 보여도 판 끝까지 유지', () {
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
+    tr.onFrame(rivers(), strips(), at(0), sticksSeen: seen());
+    tr.onFrame(rivers(), strips(), at(3), sticksSeen: seen());
+    tr.onFrame(rivers(), strips(), at(6), sticksSeen: seen({Side.top}));
+    tr.onFrame(rivers(), strips(), at(9), sticksSeen: seen({Side.top}));
+    expect(tr.riichiAt.keys, [Side.top]);
+    tr.onFrame(rivers(), strips(), at(12), sticksSeen: seen());
+    tr.onFrame(rivers(), strips(), at(15), sticksSeen: seen());
+    expect(tr.riichi, {Side.top});
+  });
+
   test('픽셀 판정이 없으면(격자에 리치봉 상자 없음) 예전처럼 서버 읽기를 요청한다', () {
     final tr = RiverTracker(tileFrac: frac, config: withSticks);
     tr.onFrame(rivers(), strips(), at(0), sticksSeen: const {});

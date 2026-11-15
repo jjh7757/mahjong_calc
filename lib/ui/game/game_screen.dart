@@ -649,7 +649,7 @@ Future<void> _pickSeat(BuildContext context, Game g, String title, void Function
   if (seat != null) onPick(seat);
 }
 
-/// 유국: 텐파이한 자리를 고르고, 텐파이한 자리는 리치 여부도 고른다. 유국만관도 여기서 고른다.
+/// 유국: 자리마다 텐파이·노텐을 고르고, 텐파이한 자리는 리치 여부도 고른다. 유국만관도 여기서 고른다.
 /// 점수판에서 이미 리치한 자리는 텐파이·리치를 켜 둔다. 점수판에 없던 리치는 1000점씩 공탁에 넣는다.
 /// 도중 유국(구종구패·사풍연타·사깡산료·사가리치)을 고르면 텐파이와 관계없이 점수 이동 없이 친 유지·본장 +1.
 /// [trackedRiichi] 는 판 상태 추적이 본 리치 자리. 점수판에 없으면 리치로 켜 둔다 — 남은 봉의 주인을 기록해야
@@ -691,7 +691,7 @@ Future<Set<int>?> showDrawDialog(BuildContext context, Game g, {Set<int> tracked
         refresh = setState;
         return AlertDialog(
         scrollable: true, // 리치 칩이 보이면 줄이 높아져 낮은 화면에서 넘친다
-        title: Text(abortive == null ? '유국 — 텐파이한 사람' : '도중 유국 — $abortive'),
+        title: Text(abortive == null ? '유국 — 텐파이·노텐' : '도중 유국 — $abortive'),
         content: SizedBox(
           width: kiosk ? 620 : 340,
           child: Column(
@@ -732,33 +732,53 @@ Future<Set<int>?> showDrawDialog(BuildContext context, Game g, {Set<int> tracked
                 ),
               ] else ...[
               const Divider(height: 20),
+              // 자리마다 텐파이·노텐을 골라 누른다(2026-11-13 사용자 "노텐도 선택할 수 있게"). 처음엔 리치 자리 텐파이, 나머지 노텐.
               for (var s = 0; s < 4; s++)
-                CheckboxListTile(
-                  key: ValueKey('draw-tenpai-$s'),
-                  dense: true,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  title: Text(g.names[s]),
-                  value: tenpai.contains(s),
-                  onChanged: (v) => setState(() {
-                    touched.add(s);
-                    if (v == true) {
-                      tenpai.add(s);
-                    } else {
-                      tenpai.remove(s);
-                      newRiichi.remove(s);
-                    }
-                  }),
-                  secondary: tenpai.contains(s)
-                      ? FilterChip(
-                          key: ValueKey('draw-riichi-$s'),
-                          label: const Text('리치'),
-                          selected: g.riichiSeats.contains(s) || newRiichi.contains(s),
-                          // 점수판에 있는 리치는 이미 공탁에 들어가 있어 끌 수 없다.
-                          onSelected: g.riichiSeats.contains(s) || g.scores[s] < 1000
-                              ? null
-                              : (on) => setState(() => on ? newRiichi.add(s) : newRiichi.remove(s)),
-                        )
-                      : null,
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(g.names[s], overflow: TextOverflow.ellipsis)),
+                      ChoiceChip(
+                        key: ValueKey('draw-tenpai-$s'),
+                        visualDensity: VisualDensity.compact,
+                        label: const Text('텐파이'),
+                        selected: tenpai.contains(s),
+                        onSelected: (_) => setState(() {
+                          touched.add(s);
+                          tenpai.add(s);
+                        }),
+                      ),
+                      const SizedBox(width: 4),
+                      ChoiceChip(
+                        key: ValueKey('draw-noten-$s'),
+                        visualDensity: VisualDensity.compact,
+                        label: const Text('노텐'),
+                        selected: !tenpai.contains(s),
+                        onSelected: (_) => setState(() {
+                          touched.add(s);
+                          tenpai.remove(s);
+                          newRiichi.remove(s);
+                        }),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 72,
+                        child: tenpai.contains(s)
+                            ? FilterChip(
+                                key: ValueKey('draw-riichi-$s'),
+                                visualDensity: VisualDensity.compact,
+                                label: const Text('리치'),
+                                selected: g.riichiSeats.contains(s) || newRiichi.contains(s),
+                                // 점수판에 있는 리치는 이미 공탁에 들어가 있어 끌 수 없다.
+                                onSelected: g.riichiSeats.contains(s) || g.scores[s] < 1000
+                                    ? null
+                                    : (on) => setState(() => on ? newRiichi.add(s) : newRiichi.remove(s)),
+                              )
+                            : null,
+                      ),
+                    ],
+                  ),
                 ),
               if (revealed != null)
                 Padding(

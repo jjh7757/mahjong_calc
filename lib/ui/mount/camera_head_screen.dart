@@ -53,6 +53,7 @@ class _CameraHeadScreenState extends State<CameraHeadScreen> {
   static const String tokenPref = 'cameraHead.token';
   static const String allowPairPref = 'cameraHead.allowPair';
   static const String dimPref = 'cameraHead.dim';
+  static const String squarePref = 'cameraHead.square';
   static const List<double> zoomSteps = [1, 1.5, 2, 3, 4];
 
   /// 이만큼 화면을 안 만지면 어두운 화면으로.
@@ -78,6 +79,11 @@ class _CameraHeadScreenState extends State<CameraHeadScreen> {
   List<String> _addresses = const [];
   double _zoom = 1;
   double _maxZoom = 1;
+
+  /// 정사각형(1:1)으로 찍기(2026-11-13, 기본 끔). 양옆 사람 몸이 덜 나온다. 탁자 중심을 화면 중심에 맞추고
+  /// 네 모서리(울기 자리)까지 화면 안에 들어오게 거치해야 한다(metrics 표 1-167). 바꾸면 카메라를 다시 연다.
+  bool _square = false;
+  bool _squareBusy = false;
   bool _showInfo = true;
   int _frameW = 0;
   int _frameH = 0;
@@ -112,7 +118,7 @@ class _CameraHeadScreenState extends State<CameraHeadScreen> {
       headers: () => {'X-Zoom': _zoom.toStringAsFixed(2)},
     );
     ScreenWake.keepOn(true);
-    _loadZoom().then((_) => _initCamera());
+    _loadZoom().then((_) => _loadSquare()).then((_) => _initCamera());
     _loadToken().then((_) => _startServer());
     _loadDim();
     _dimTimer = Timer.periodic(const Duration(seconds: 1), (_) => _tickDim());
@@ -152,6 +158,47 @@ class _CameraHeadScreenState extends State<CameraHeadScreen> {
       }
       _server.allowPair = p.getBool(allowPairPref) ?? false;
     } catch (_) {}
+  }
+
+  Future<void> _loadSquare() async {
+    try {
+      final v = (await SharedPreferences.getInstance()).getBool(squarePref);
+      if (v != null) _square = v;
+    } catch (_) {}
+  }
+
+  /// 1:1 켜기·끄기. 녹화 중에는 못 바꾼다(녹화 폴더 안에서 프레임 크기가 바뀌지 않게). 카메라를 닫았다 다시 연다.
+  Future<void> _toggleSquare() async {
+    if (_squareBusy || _recording) return;
+    final next = !_square;
+    setState(() {
+      _square = next;
+      _squareBusy = true;
+    });
+    _lastTouchAt = DateTime.now();
+    try {
+      await (await SharedPreferences.getInstance()).setBool(squarePref, next);
+    } catch (_) {}
+    _recTimer?.cancel();
+    final old = _cam;
+    if (mounted) setState(() => _cam = null);
+    await old?.stop();
+    await _initCamera();
+    if (!mounted) return;
+    setState(() => _squareBusy = false);
+    final c = _cam;
+    final got = c == null ? '' : ' (${c.streamWidth}×${c.streamHeight})';
+    final unsupported = next && c != null && c.streamWidth != c.streamHeight;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        duration: const Duration(seconds: 6),
+        content: Text(unsupported
+            ? '이 기기는 정사각형 크기를 주지 않아 원래 비율로 열었습니다$got'
+            : next
+                ? '1:1 켬$got: 탁자 중심을 화면 중심에, 네 모서리까지 화면 안에 들어오게 거치하세요. 태블릿에서 격자를 다시 맞추세요'
+                : '1:1 끔$got: 원래 4:3 으로 찍습니다. 태블릿에서 격자를 다시 맞추세요'),
+      ));
   }
 
   Future<void> _loadDim() async {
@@ -276,7 +323,7 @@ class _CameraHeadScreenState extends State<CameraHeadScreen> {
   Future<void> _initCamera() async {
     final c = HeadCamera();
     try {
-      await c.start(zoom: _zoom);
+      await c.start(zoom: _zoom, square: _square);
     } on MissingPluginException {
       if (mounted) setState(() => _camError = '이 기기에서는 카메라 헤드를 쓸 수 없습니다(Android 전용)');
       return;
@@ -546,6 +593,17 @@ class _CameraHeadScreenState extends State<CameraHeadScreen> {
             icon: Icon(_recording ? Icons.fiber_manual_record : Icons.fiber_manual_record_outlined),
             color: _recording ? Colors.redAccent : null,
             onPressed: c != null && !_recBusy ? _toggleRecord : null,
+          ),
+          IconButton(
+            key: const ValueKey('head-square-toggle'),
+            tooltip: _recording
+                ? '녹화 중에는 비율을 바꿀 수 없습니다'
+                : _square
+                    ? '1:1 로 찍는 중 (4:3 으로)'
+                    : '4:3 으로 찍는 중 (1:1 로)',
+            icon: Icon(_square ? Icons.crop_square : Icons.crop_landscape),
+            color: _square ? Colors.lightGreenAccent : null,
+            onPressed: !_squareBusy && !_recording ? _toggleSquare : null,
           ),
           IconButton(
             key: const ValueKey('head-dim-toggle'),

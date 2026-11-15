@@ -231,7 +231,26 @@ class RiverTracker {
       final cur = strips[s], prev = _localLast[s];
       final moving = cur != null && prev != null && cur.diff(prev) > config.moveThreshold;
       if (cur != null) _localLast[s] = cur;
-      if (riichi.contains(s)) continue;
+      // 처음부터 꽂혀 있던 봉(시점 모름)은 계속 본다: 홈에서 빠지면(유국 공탁을 가운데로 옮김) 리치를 풀어 그 자리의
+      // 새 리치를 다시 잡는다(2026-11-13 — 유국을 먼저 누르고 봉을 나중에 옮기면 봉 주인의 새 리치를 못 잡았다).
+      final stale = riichi.contains(s) && !riichiAt.containsKey(s);
+      if (riichi.contains(s) && !stale) continue;
+      if (stale) {
+        if (seen[s] ?? false) {
+          _emptyRun[s] = 0;
+        } else if (!moving) {
+          final e = (_emptyRun[s] ?? 0) + 1;
+          _emptyRun[s] = e;
+          if (e >= config.localEmptyFrames) {
+            riichi = {...riichi}..remove(s);
+            _seenRun[s] = 0;
+            _firstSeen.remove(s);
+            _slotWasEmpty.add(s);
+            _log(now, s, 'sticks_left', '처음부터 꽂혀 있던 봉이 빠짐 — 리치 풂');
+          }
+        }
+        continue;
+      }
       if (seen[s] ?? false) {
         _emptyRun[s] = 0;
         final run = (_seenRun[s] ?? 0) + 1;
@@ -430,8 +449,10 @@ class RiverTracker {
     st.status = st.reads >= config.stickMaxReads ? StickStatus.unconfirmed : StickStatus.changed;
   }
 
-  /// [riichi] 에서 전판 유국으로 남은 봉([carried], 대국 기록이 아는 주인)을 뺀 것. 그 자리는 이번 판에 띠가 바뀐 것을
-  /// 봤을 때([riichiAt])만 남긴다. 기록에 없는데 처음부터 꽂혀 있던 봉은 추적 전에 한 리치로 보고 그대로 둔다.
+  /// [riichi] 에서 전판 유국으로 남은 봉([carried], 대국 기록이 아는 주인) 중 이번 판에 홈이 비었다가 들어온 것을
+  /// 못 본([riichiAt] 없음) 자리를 뺀 것. 매장은 남은 봉을 가운데로 모으지만, 유국을 먼저 누르고 봉을 나중에 옮기면
+  /// 새 판 추적이 홈에 남아 있던 전판 봉을 리치로 잡는다(10-31 170310 프레임 재생, 2026-11-13). 봉 주인의 새 리치는
+  /// 홈이 비었다가 들어오므로 시점이 있어 남는다. 기록에 없는데 처음부터 꽂혀 있던 봉은 추적 전에 한 리치로 보고 그대로 둔다.
   Set<Side> riichiExcept(Set<Side> carried) => {
         for (final s in riichi)
           if (!carried.contains(s) || riichiAt.containsKey(s)) s,

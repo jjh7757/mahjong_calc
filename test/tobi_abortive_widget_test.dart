@@ -24,12 +24,12 @@ void main() {
     ));
     await tester.tap(find.text('유국'));
     await tester.pumpAndSettle();
-    expect(find.text('유국 — 텐파이한 사람'), findsOneWidget);
+    expect(find.text('유국 — 텐파이·노텐'), findsOneWidget);
 
     await tester.tap(find.byKey(const ValueKey('draw-abortive-구종구패')));
     await tester.pumpAndSettle();
     expect(find.text('도중 유국 — 구종구패'), findsOneWidget);
-    // 텐파이 체크박스는 숨는다.
+    // 텐파이·노텐 고르기는 숨는다.
     expect(find.byKey(const ValueKey('draw-tenpai-0')), findsNothing);
 
     await tester.tap(find.text('확인'));

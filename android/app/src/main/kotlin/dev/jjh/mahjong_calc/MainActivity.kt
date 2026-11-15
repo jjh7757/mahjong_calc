@@ -32,7 +32,7 @@ class MainActivity : FlutterActivity() {
                 r.fold({ result.success(it) }, { result.error("HEAD", it.toString(), null) })
             }
             when (call.method) {
-                "start" -> head.start(call.argument<Double>("zoom") ?: 1.0, ::reply)
+                "start" -> head.start(call.argument<Double>("zoom") ?: 1.0, call.argument<Boolean>("square") ?: false, ::reply)
                 "stop" -> {
                     head.stop()
                     result.success(null)

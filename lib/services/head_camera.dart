@@ -20,8 +20,10 @@ class HeadCamera {
 
   bool get isRunning => textureId != null;
 
-  Future<void> start({double zoom = 1}) async {
-    final m = await _channel.invokeMapMethod<String, dynamic>('start', {'zoom': zoom});
+  /// [square] 면 정사각형(1:1)으로 받는다 — 카메라가 센서 가운데를 잘라 주므로 양옆이 처음부터 없다(S25 Ultra 2992×2992).
+  /// 정사각형 크기가 없는 기기면 원래 크기로 열린다([streamWidth]·[streamHeight] 로 확인).
+  Future<void> start({double zoom = 1, bool square = false}) async {
+    final m = await _channel.invokeMapMethod<String, dynamic>('start', {'zoom': zoom, 'square': square});
     if (m == null) throw StateError('start 응답 없음');
     textureId = (m['textureId'] as num).toInt();
     previewWidth = (m['previewWidth'] as num?)?.toInt() ?? 0;

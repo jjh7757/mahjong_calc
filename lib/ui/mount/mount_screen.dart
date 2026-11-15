@@ -298,6 +298,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// 겹쳐 보기를 켰을 때 가운데 점수판을 숨길지(2026-11-12 사용자 "on/off 가능하게"). 기본은 숨김(강 패를 가려서).
   static const String overlayHideScorePref = 'mount.overlayHideScore';
   bool _overlayHideScore = true;
+
+  /// 편집 중이 아닐 때도 격자 선·상자를 그릴지(2026-11-13 사용자 "토글로"). 기본 끔 — 펠트 감시가 카메라 이동을 알아서 고치고
+  /// 강 패·기기를 덜 가리게. 끄더라도 펠트 감시가 격자를 다시 맞춘 직후엔 [_gridFlashFor] 동안 잠깐 보여 준다.
+  static const String showGridPref = 'mount.showGrid';
+  bool _showGrid = false;
+  Timer? _gridFlash;
+  static const Duration _gridFlashFor = Duration(seconds: 8);
   TileOverlay? _overlay;
   bool _overlayBusy = false;
 
@@ -429,6 +436,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _gridFlash?.cancel();
     unawaited(_recPull?.stop().whenComplete(() => _recCam?.close()));
     _liveShot.dispose();
     _flushFrames('dispose');
@@ -599,6 +607,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _frameVote = p.getBool(frameVotePref) ?? false;
       _tileOverlay = p.getBool(tileOverlayPref) ?? false;
       _overlayHideScore = p.getBool(overlayHideScorePref) ?? true;
+      _showGrid = p.getBool(showGridPref) ?? false;
       _geminiRead = p.getBool(geminiReadPref) ?? false;
       await OnDeviceReader.load();
       if (OnDeviceReader.enabled && OnDeviceReader.supported) unawaited(_warmOnDevice());
@@ -969,6 +978,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _grid = grid;
       _gridSrc = GridSource.felt;
     });
+    _flashGrid();
     await _saveGrid(felt: moved);
     debugPrint('[felt] 카메라 이동, 격자 ${grid.toJson()}');
     final note = _mountNote(await _quietMountCheck(preview, long: _previewFrameLongSide ?? _captureLongSide));
@@ -1038,6 +1048,17 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       icon: Icon(warn ? mountLevelIcon(level!) : Icons.straighten, size: 16),
       label: const Text('거치 점검'),
     );
+  }
+
+  /// 격자 보기를 꺼 둬도 자동으로 다시 맞춘 격자를 [_gridFlashFor] 동안 보여 준다(맞았는지 눈으로 보게).
+  void _flashGrid() {
+    if (_showGrid) return;
+    _gridFlash?.cancel();
+    setState(() {});
+    _gridFlash = Timer(_gridFlashFor, () {
+      _gridFlash = null;
+      if (mounted) setState(() {});
+    });
   }
 
   /// 사진에서 펠트 위치를 읽는다. 카메라 헤드면 몇 장 더 받아 중앙값을 내고, 절반 이상이 그 값과 맞을 때만 믿는다.
@@ -1167,9 +1188,16 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   List<TrackerEvent> _carryMeldEvents = const [];
   List<TrackerEvent> _carryRiverEvents = const [];
 
-  MeldTracker _trackerFor(GridZones grid) => _tracker ??= _newTracker(MeldTracker(tileFrac: tileFracsOf(grid), config: const TrackerConfig(pixelOnly: true)));
+  /// 추적 프레임 가로/세로(헤드 스트림 크기, 모르면 4:3). 헤드 1:1 이면 1 — 패 장수 어림을 맞춘다(2026-11-13).
+  double get _frameAspect {
+    final w = _previewFrameW ?? _captureW, h = _previewFrameH ?? _captureH;
+    return w != null && h != null && w > 0 && h > 0 ? w / h : 4 / 3;
+  }
+
+  MeldTracker _trackerFor(GridZones grid) => _tracker ??=
+      _newTracker(MeldTracker(tileFrac: tileFracsOf(grid, aspect: _frameAspect), config: const TrackerConfig(pixelOnly: true)));
   RiverTracker _riverTrackerFor(GridZones grid) =>
-      _riverTracker ??= RiverTracker(tileFrac: riverTileFracsOf(grid))..events.addAll(_takeCarry(river: true));
+      _riverTracker ??= RiverTracker(tileFrac: riverTileFracsOf(grid, aspect: _frameAspect))..events.addAll(_takeCarry(river: true));
 
   MeldTracker _newTracker(MeldTracker t) {
     final carried = _takeCarry(river: false);
@@ -1225,7 +1253,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   }
 
   /// 화료 판독에 넘길 힌트: 게임 중 확정한 리치봉 자리, 가장 최근 버림(방총자 후보·론 패 위치).
-  /// 전판 유국으로 남은 봉은 이번 판 리치가 아니다([RiverTracker.riichiExcept]).
+  /// 전판 유국으로 남은 봉은 매장에서 가운데로 모으지만, 유국을 누른 뒤 옮기기 전까지 홈에 있던 봉은 빼야 한다
+  /// ([RiverTracker.riichiExcept]). 봉 주인의 새 리치는 홈이 비었다가 들어와 시점이 있으므로 남는다.
   Set<Side> _trackedRiichi() {
     final g = gameStore.current;
     if (!_trackingEnabled || !_useGrid || g == null) return const {};
@@ -1756,6 +1785,18 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     if (mounted) setState(() => _heightCm = cm);
   }
 
+  /// 헤드 프레임 비율이 바뀜(4:3 ↔ 1:1). 격자는 0~1000 분율이라 비율이 바뀌면 탁자와 어긋난다 → 다시 맞추라고 알린다.
+  void _notifyAspectChanged(int w, int h) {
+    if (!mounted) return;
+    final square = (w / h - 1).abs() < 0.05;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        duration: const Duration(seconds: 8),
+        content: Text('헤드 화면 비율이 ${square ? '1:1' : '$w×$h'} 로 바뀌었습니다. 격자를 다시 맞추세요'),
+      ));
+  }
+
   /// 사진 크기를 잰다(플랫폼 디코더라 빠르다). 촬영 사진이면 촬영 기록용 긴 변과 격자 기준 비율도 갱신한다.
   /// 웹은 ImageDescriptor 가 안 되므로 그때는 통째로 디코딩해 잰다.
   Future<void> _measureCapture(Uint8List bytes, {bool capture = true}) async {
@@ -1776,7 +1817,16 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         im.dispose();
       }
       if (mounted && w > 0 && h > 0) {
+        // 헤드 비율이 바뀌었으면(헤드 화면 1:1 토글, 2026-11-13) 예전 촬영 비율을 버려 미리보기 비율 그대로 그린다.
+        // 미리보기와 촬영은 같은 스트림이라 평소엔 비율이 같다(건너뛰기 반올림 차이만).
+        final pw = _photoW, ph = _photoH;
+        final aspectChanged = !capture && pw != null && ph != null && (pw / ph - w / h).abs() > 0.05;
+        if (aspectChanged) _notifyAspectChanged(w, h);
         setState(() {
+          if (aspectChanged) {
+            _photoW = null;
+            _photoH = null;
+          }
           _captureW = w;
           _captureH = h;
           if (capture) {
@@ -2006,7 +2056,6 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             doubleRiichiHint: r.trackedDoubleRiichi.contains(r.winnerSide!),
             ippatsuHint: r.trackedIppatsu.contains(r.winnerSide!),
             trackedRiichi: r.trackedRiichi,
-            riverSideways: r.riverSideways,
             trackedDora: r.trackedDora,
           ),
       ];
@@ -2046,7 +2095,6 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               trackedRiichi: _trackedRiichi(),
               trackedDoubleRiichi: _trackedDoubleRiichi(),
               trackedIppatsu: _trackedIppatsu(),
-              carriedSticks: {for (final s in g.carriedStickSeats) seats.sideOf(s)},
               trackedDiscard: _trackedDiscard(),
               trackedDora: _trackedDora(),
               trace: trace,
@@ -2627,6 +2675,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                       await p.setBool(tileOverlayPref, _tileOverlay);
                     } catch (_) {}
                     if (_tileOverlay) _toast('3초마다 패 인식을 겹쳐 보여 줍니다(실험, 이 기기에서 계산)');
+                  } else if (v == 'showGrid') {
+                    setState(() => _showGrid = !_showGrid);
+                    try {
+                      final p = await SharedPreferences.getInstance();
+                      await p.setBool(showGridPref, _showGrid);
+                    } catch (_) {}
                   } else if (v == 'overlayHideScore') {
                     setState(() => _overlayHideScore = !_overlayHideScore);
                     try {
@@ -2706,6 +2760,13 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                     key: ValueKey('mount-check-menu'),
                     value: 'mountCheck',
                     child: Text('거치 점검… (탁자 전체·기울기·패 크기)'),
+                  ),
+                  CheckedPopupMenuItem(
+                    key: const ValueKey('mount-show-grid-menu'),
+                    value: 'showGrid',
+                    checked: _showGrid,
+                    enabled: _useGrid,
+                    child: const Text('화면에 격자 보기'),
                   ),
                   CheckedPopupMenuItem(
                     key: const ValueKey('mount-fullscreen-menu'),
@@ -3346,7 +3407,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           painter: _LayoutPainter(editing ? null : _lastLayout, g, seats),
           child: const SizedBox.expand(),
         ),
-        if (_useGrid)
+        // 편집 중엔 늘, 아니면 "화면에 격자 보기" 를 켰거나 펠트 감시가 막 다시 맞췄을 때만(2026-11-13).
+        if (_useGrid && (editing || _showGrid || _gridFlash != null))
           GridOverlay(
             grid: _grid,
             editing: editing,

@@ -19,6 +19,7 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.ResolutionFilter
 import androidx.camera.core.resolutionselector.ResolutionSelector
 import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -72,6 +73,7 @@ class HeadCamera(private val activity: FlutterActivity, private val textures: Te
     @Volatile private var wantFresh = false
     private var pendingStart: ((Result<Map<String, Any?>>) -> Unit)? = null
     private var pendingZoom = 1.0
+    private var pendingSquare = false
 
     /// 스트림 목표 초당 장수(2026-11-12 발열 시험). 제한이 없으면 12MP 를 초당 30장 만들어 녹화를 꺼도 발열 단계가 3~4 까지
     /// 오른다(metrics 표 12-7·12-10). 판독은 3초마다 한 장, 녹화는 초당 10장이라 15장이면 충분하다(S25 Ultra 고정 범위 최저 15).
@@ -96,14 +98,17 @@ class HeadCamera(private val activity: FlutterActivity, private val textures: Te
     val isRunning get() = camera != null
 
     /// 카메라를 열고 묶는다. 권한이 없으면 묻고, 허락되면 이어서 연다. 결과: textureId·미리보기 크기·센서 방향·최대 줌.
-    fun start(zoom: Double, cb: (Result<Map<String, Any?>>) -> Unit) {
+    /// [square] 면 미리보기·스트림 모두 정사각형 크기만 고른다(2026-11-13, 양옆 사람 몸 줄이기). ISP 가 센서 가운데를 잘라 주므로
+    /// 앱에는 처음부터 양옆이 없다. S25 Ultra 후면은 YUV 1:1 이 2992·2736·1088(3060 없음). 정사각형이 없는 기기면 원래 크기 그대로.
+    fun start(zoom: Double, square: Boolean, cb: (Result<Map<String, Any?>>) -> Unit) {
         pendingZoom = zoom
+        pendingSquare = square
         if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             pendingStart = cb
             ActivityCompat.requestPermissions(activity, arrayOf(Manifest.permission.CAMERA), PERMISSION_REQUEST)
             return
         }
-        open(zoom, cb)
+        open(zoom, square, cb)
     }
 
     /// MainActivity.onRequestPermissionsResult 가 넘겨 준다.
@@ -111,10 +116,10 @@ class HeadCamera(private val activity: FlutterActivity, private val textures: Te
         if (requestCode != PERMISSION_REQUEST) return
         val cb = pendingStart ?: return
         pendingStart = null
-        if (granted) open(pendingZoom, cb) else cb(Result.failure(IllegalStateException("카메라 권한이 없습니다")))
+        if (granted) open(pendingZoom, pendingSquare, cb) else cb(Result.failure(IllegalStateException("카메라 권한이 없습니다")))
     }
 
-    private fun open(zoom: Double, cb: (Result<Map<String, Any?>>) -> Unit) {
+    private fun open(zoom: Double, square: Boolean, cb: (Result<Map<String, Any?>>) -> Unit) {
         val future = ProcessCameraProvider.getInstance(activity)
         future.addListener({
             try {
@@ -122,7 +127,9 @@ class HeadCamera(private val activity: FlutterActivity, private val textures: Te
                 provider = p
                 p.unbindAll()
                 val e = entry ?: textures.createSurfaceTexture().also { entry = it }
-                val pv = Preview.Builder().build()
+                val pv = Preview.Builder().apply {
+                    if (square) setResolutionSelector(ResolutionSelector.Builder().setResolutionFilter(SQUARE_FIRST).build())
+                }.build()
                 val mainExecutor = ContextCompat.getMainExecutor(activity)
                 pv.setSurfaceProvider { request ->
                     val st = e.surfaceTexture()
@@ -133,6 +140,7 @@ class HeadCamera(private val activity: FlutterActivity, private val textures: Te
                 val selector = ResolutionSelector.Builder()
                     .setResolutionStrategy(ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY)
                     .setAllowedResolutionMode(ResolutionSelector.PREFER_HIGHER_RESOLUTION_OVER_CAPTURE_RATE)
+                    .apply { if (square) setResolutionFilter(SQUARE_FIRST) }
                     .build()
                 val anBuilder = ImageAnalysis.Builder()
                     .setResolutionSelector(selector)
@@ -169,6 +177,7 @@ class HeadCamera(private val activity: FlutterActivity, private val textures: Te
                     "sensorOrientation" to cam.cameraInfo.sensorRotationDegrees,
                     "maxZoom" to maxZoom.toDouble(),
                     "fpsRange" to fpsRange?.let { "${it.lower}-${it.upper}" },
+                    "squareRequested" to square,
                 )))
             } catch (ex: Exception) {
                 cb(Result.failure(ex))
@@ -751,6 +760,12 @@ class HeadCamera(private val activity: FlutterActivity, private val textures: Te
     }
 
     companion object {
+        /// 정사각형 크기만 큰 것부터(없으면 받은 목록 그대로 — 빈 목록이면 묶기가 실패하므로).
+        val SQUARE_FIRST = ResolutionFilter { sizes, _ ->
+            val sq = sizes.filter { it.width == it.height }.sortedByDescending { it.width }
+            sq.ifEmpty { sizes }
+        }
+
         const val PERMISSION_REQUEST = 7311
         const val COPY_INTERVAL_MS = 300L
         const val FRESH_WAIT_MS = 3000L

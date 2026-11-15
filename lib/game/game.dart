@@ -224,12 +224,10 @@ class Game {
   /// 이번 국에 리치를 선언한 자리. 국이 끝나면 비운다.
   final Set<int> riichiSeats;
 
-  /// 유국으로 공탁에 남은 리치봉의 주인. 봉은 그 자리 홈에 그대로 있어 사진으로는 이번 판 리치와 구분되지 않는다
-  /// (2026-10-30 사용자 지적). 다음 화료로 공탁이 넘어가면 비운다.
+  /// 유국으로 공탁에 남은 리치봉의 주인. 매장에서는 남은 봉을 가운데(주사위 창 위)로 모으므로 화료 사진 판정에는 쓰지 않고
+  /// (2026-11-13 사용자 결정), 판 중 추적에서 유국 직후 홈에 아직 남은 봉을 거르는 데만 쓴다([RiverTracker.riichiExcept]).
+  /// 다음 화료로 공탁이 넘어가면 비운다.
   final Set<int> carriedStickSeats;
-
-  /// 공탁인데 주인을 모르는 리치봉 수(중간부터 기록·공탁 정정 등).
-  int get unknownSticks => (riichiSticks - riichiSeats.length - carriedStickSeats.length).clamp(0, riichiSticks);
   final List<GameEvent> events;
 
   /// 되돌리기 지점(기록마다 하나, 오래된 것부터). [GameStore.mutate] 가 사건이 늘어난 변경마다 넣는다.

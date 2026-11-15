@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,11 +6,8 @@ import 'package:mahjong_calc/engine/calculator.dart';
 import 'package:mahjong_calc/game/game.dart';
 import 'package:mahjong_calc/game/game_store.dart';
 import 'package:mahjong_calc/table/auto_record.dart';
-import 'package:mahjong_calc/table/grid_zones.dart';
 import 'package:mahjong_calc/table/merge.dart';
 import 'package:mahjong_calc/table/observation.dart';
-import 'package:mahjong_calc/table/river_change.dart';
-import 'package:mahjong_calc/table/river_tracker.dart';
 import 'package:mahjong_calc/table/seat_map.dart';
 import 'package:mahjong_calc/table/table_layout.dart';
 import 'package:mahjong_calc/table/table_reading.dart';
@@ -36,14 +32,6 @@ HandReading _pinfu() => HandReading.fromJson({
       'win_tile': {'tile': '4m', 'conf': 0.99},
     });
 
-/// 간짱 대기 멘젠 론이라 리치 없이는 역이 없다.
-HandReading _noYaku() => HandReading.fromJson({
-      'tiles': [
-        for (final c in '1m 3m 2p 3p 4p 5s 6s 7s 7p 8p 9p 9s 9s'.split(' ')) {'tile': c, 'conf': 0.99}
-      ],
-      'win_tile': {'tile': '2m', 'conf': 0.99},
-    });
-
 CenterReading _center(Set<Side> sticks, {Map<String, String?> last = const {}}) => CenterReading.fromJson({
       'dora_indicators': [
         {'tile': '1z', 'conf': 0.99},
@@ -57,8 +45,7 @@ CenterReading _center(Set<Side> sticks, {Map<String, String?> last = const {}}) 
 TableMerge _merge(Game g, HandReading hand, Set<Side> sticks,
         {Side winner = Side.right,
         Set<Side> tracked = const {},
-        Map<String, String?> last = const {},
-        Map<Side, bool?> sideways = const {}}) =>
+        Map<String, String?> last = const {}}) =>
     mergeReading(
       hand: hand,
       center: _center(sticks, last: last),
@@ -66,7 +53,6 @@ TableMerge _merge(Game g, HandReading hand, Set<Side> sticks,
       game: g,
       seats: _seats,
       trackedRiichi: tracked,
-      riverSideways: sideways,
     );
 
 /// 자동 반영을 막는 이유(화료 형태·표시패 등 다른 조건은 통과시킨다).
@@ -90,7 +76,6 @@ void main() {
       expect(g.carriedStickSeats, {1});
       expect(g.riichiSeats, isEmpty);
       expect(g.riichiSticks, 1);
-      expect(g.unknownSticks, 0);
 
       g.declareRiichi(2);
       g.abortiveDraw('구종구패');
@@ -117,124 +102,90 @@ void main() {
       final old = g.toJson()..remove('carriedStickSeats');
       expect(Game.fromJson(jsonDecode(jsonEncode(old)) as Map<String, dynamic>).carriedStickSeats, isEmpty);
     });
-
-    test('주인을 모르는 공탁', () {
-      expect(Game(id: 'g', startedAt: DateTime(2026), settings: const GameSettings(), names: const ['A', 'B', 'C', 'D'], riichiSticks: 2).unknownSticks, 2);
-    });
   });
 
-  group('병합: 남은 봉은 이번 판 리치의 증거가 아니다', () {
+  group('병합: 유국 공탁은 가운데에 모으므로 홈의 봉은 이번 판 리치(2026-11-13)', () {
     late Game g;
     setUp(() {
       g = _game()..declareRiichi(1);
       g.draw({1});
     });
 
-    test('봉 주인이 리치 없이 화료: 리치로 치지 않고 확인을 묻는다', () {
+    test('전판 봉 주인이 홈에 봉을 두고 화료: 리치로 계산하고 리치봉을 자동 반영', () {
       final m = _merge(g, _pinfu(), {Side.right});
-      expect(m.situation.riichi, isFalse);
-      expect(m.hasFlag(MergeIssue.riichiCarried), isTrue);
-      expect(m.hasFlag(MergeIssue.riichiMismatch), isFalse);
-      expect(m.photoRiichiSeats, isEmpty);
-      expect(_blocker(m), contains('riichiCarried'));
-    });
-
-    test('강에 눕힌 패가 없으면 묻지 않고 리치 없이 자동 반영', () {
-      final m = _merge(g, _pinfu(), {Side.right}, sideways: {Side.right: false});
-      expect(m.situation.riichi, isFalse);
-      expect(m.hasFlag(MergeIssue.riichiFromRiver), isTrue);
-      expect(m.hasFlag(MergeIssue.riichiCarried), isFalse);
+      expect(m.situation.riichi, isTrue);
+      expect(m.hasFlag(MergeIssue.riichiMismatch), isTrue); // 점수판엔 없음 → 반영 때 리치봉을 넣는다
+      expect(m.photoRiichiSeats, {1});
       expect(_blocker(m), isNull);
     });
 
-    test('강에 눕힌 패가 있으면 묻지 않고 리치로 자동 반영', () {
-      final m = _merge(g, _pinfu(), {Side.right}, sideways: {Side.right: true});
-      expect(m.situation.riichi, isTrue);
-      expect(m.hasFlag(MergeIssue.riichiFromRiver), isTrue);
-      expect(m.hasFlag(MergeIssue.riichiCarried), isFalse);
-      expect(_blocker(m), isNull);
-    });
-
-    test('눕힌 패가 없는데 리치 없이는 역이 없으면 앞뒤가 안 맞아 묻는다', () {
-      final m = _merge(g, _noYaku(), {Side.right}, last: const {'top': '2m'}, sideways: {Side.right: false});
-      expect(m.situation.riichi, isTrue);
-      expect(m.hasFlag(MergeIssue.riichiCarried), isTrue);
-    });
-
-    test('봉 주인이 다른 사람 화료 때: 눕힌 패가 있어야 1000점을 걷는다', () {
-      final yes = _merge(g, _pinfu(), {Side.right}, winner: Side.bottom, sideways: {Side.right: true});
-      expect(yes.photoRiichiSeats, {1});
-      expect(_blocker(yes), isNull);
-      final no = _merge(g, _pinfu(), {Side.right}, winner: Side.bottom, sideways: {Side.right: false});
-      expect(no.photoRiichiSeats, isEmpty);
-      expect(_blocker(no), isNull);
-    });
-
-    test('추적이 봉 변화를 봤어도 강에 눕힌 패가 없으면 리치 아님, 묻지 않는다', () {
-      final m = _merge(g, _pinfu(), {Side.right}, tracked: {Side.right}, sideways: {Side.right: false});
+    test('전판 봉 주인이 홈이 빈 채 화료: 리치 아님', () {
+      final m = _merge(g, _pinfu(), const {});
       expect(m.situation.riichi, isFalse);
       expect(m.photoRiichiSeats, isEmpty);
-      expect(m.hasFlag(MergeIssue.riichiCarried), isFalse);
     });
 
-    test('울린 손패는 눕힌 패와 상관없이 리치 불가', () {
+    test('다른 사람 화료 때 홈의 봉은 모두 이번 판 리치', () {
+      final m = _merge(g, _pinfu(), {Side.right, Side.top}, winner: Side.bottom);
+      expect(m.photoRiichiSeats, {1, 2});
+      expect(g.autoRiichiCandidates(m.photoRiichiSeats, winner: 0, winnerRiichi: false), {1, 2});
+    });
+
+    test('울린 손패는 홈에 봉이 보여도 리치 불가', () {
       final open = HandReading(
         tiles: [for (final c in '1m 2m 3m 4m 5m 6m 7m 8m 9m 2z'.split(' ')) ReadTile.fromCode(c, 0.99)!],
         melds: [ReadMeld(ReadMeldType.chi, [for (final c in ['6m', '7m', '8m']) ReadTile.fromCode(c, 1)!], conf: 0.9)],
         winTile: ReadTile.fromCode('2z', 0.99),
       );
-      final m = _merge(g, open, {Side.right}, sideways: {Side.right: true});
+      final m = _merge(g, open, {Side.right});
       expect(m.situation.riichi, isFalse);
       expect(m.hasFlag(MergeIssue.riichiImpossible), isTrue);
-      expect(m.hasFlag(MergeIssue.riichiFromRiver), isFalse);
     });
 
-    test('봉 주인인데 리치 없이는 역이 없으면 리치로 본다', () {
-      final m = _merge(g, _noYaku(), {Side.right}, last: const {'top': '2m'}); // 쯔모면 멘젠 쯔모 역이 있다
-      expect(m.situation.riichi, isTrue);
-      expect(m.hasFlag(MergeIssue.riichiCarried), isTrue);
-    });
-
-    test('다른 사람 화료: 봉 주인에게 1000점을 또 걷지 않는다', () {
-      final m = _merge(g, _pinfu(), {Side.right}, winner: Side.bottom);
-      expect(m.situation.riichi, isFalse);
-      expect(m.photoRiichiSeats, isEmpty);
-      expect(g.autoRiichiCandidates(m.photoRiichiSeats, winner: 0, winnerRiichi: false), isEmpty);
-      expect(m.hasFlag(MergeIssue.riichiCarried), isFalse);
-    });
-
-    test('다른 자리의 새 리치봉은 그대로 리치', () {
-      final m = _merge(g, _pinfu(), {Side.right, Side.top}, winner: Side.bottom);
-      expect(m.photoRiichiSeats, {2});
-      expect(g.autoRiichiCandidates(m.photoRiichiSeats, winner: 0, winnerRiichi: false), {2});
-    });
-
-    test('봉 주인이 점수판에 다시 리치: 리치, 확인 없음', () {
+    test('점수판에 다시 리치한 봉 주인: 리치, 어긋남 없음', () {
       g.declareRiichi(1);
       final m = _merge(g, _pinfu(), {Side.right});
       expect(m.situation.riichi, isTrue);
-      expect(m.hasFlag(MergeIssue.riichiCarried), isFalse);
+      expect(m.hasFlag(MergeIssue.riichiMismatch), isFalse);
     });
 
-    test('봉 주인 자리에서 추적이 변화를 봄: 리치로 보되 확인을 묻는다', () {
-      final m = _merge(g, _pinfu(), {Side.right}, tracked: {Side.right});
+    test('유국 때 리치한 사람이 다음 판 다시 리치하고 화료: 공탁 2개 + 본장을 가져간다', () {
+      // setUp: B(1) 리치 → 유국(B 혼자 텐파이). 공탁 1, 본장 1.
+      expect(g.riichiSticks, 1);
+      expect(g.honba, 1);
+      final before = [...g.scores];
+      final m = _merge(g, _pinfu(), {Side.right}); // 다음 판: B 홈에 새 봉(전판 봉은 가운데)
       expect(m.situation.riichi, isTrue);
-      expect(m.photoRiichiSeats, {1});
-      expect(m.hasFlag(MergeIssue.riichiCarried), isTrue);
+      expect(_blocker(m), isNull);
+      // 앱의 반영: 사진 리치 자리 중 점수판에 없는 것을 리치봉으로 넣고 화료. 지불액은 본장 포함(1300 + 300).
+      for (final s in g.autoRiichiCandidates(m.photoRiichiSeats, winner: 1, winnerRiichi: m.situation.riichi)) {
+        g.declareRiichi(s);
+      }
+      expect(g.riichiSticks, 2);
+      g.win(winner: 1, payment: const Payment(ron: 1600, tsumoFromDealer: 0, tsumoFromNonDealer: 0, total: 1600), isTsumo: false, loser: 3);
+      // B: −1000(새 리치봉) + 1300 + 본장 300 + 공탁 2000(전판 1 + 이번 판 1). D: −1300 − 300.
+      expect(g.scores[1] - before[1], -1000 + 1300 + 300 + 2000);
+      expect(g.scores[3] - before[3], -1300 - 300);
+      expect(g.riichiSticks, 0);
+      expect(g.carriedStickSeats, isEmpty);
     });
 
-    test('남은 봉 없는 평소 리치는 그대로', () {
-      final m = _merge(_game(), _pinfu(), {Side.right});
-      expect(m.situation.riichi, isTrue);
-      expect(m.hasFlag(MergeIssue.riichiCarried), isFalse);
-      expect(m.hasFlag(MergeIssue.riichiMismatch), isTrue);
+    test('유국 때 리치한 사람이 다음 판 다시 리치하고 다른 사람이 화료: 그 사람 리치봉도 걷는다', () {
+      final before = [...g.scores];
+      final m = _merge(g, _pinfu(), {Side.right}, winner: Side.bottom);
+      for (final s in g.autoRiichiCandidates(m.photoRiichiSeats, winner: 0, winnerRiichi: m.situation.riichi)) {
+        g.declareRiichi(s);
+      }
+      g.win(winner: 0, payment: const Payment(ron: 1600, tsumoFromDealer: 0, tsumoFromNonDealer: 0, total: 1600), isTsumo: false, loser: 3);
+      expect(g.scores[1] - before[1], -1000);
+      expect(g.scores[0] - before[0], 1300 + 300 + 2000);
     });
 
-    test('공탁 주인을 모르면 사진 리치를 쓰되 확인을 묻는다', () {
+    test('주인을 모르는 공탁이 있어도 홈의 봉은 그대로 리치, 묻지 않는다', () {
       final resumed = Game(id: 'g', startedAt: DateTime(2026), settings: const GameSettings(), names: const ['A', 'B', 'C', 'D'], riichiSticks: 1);
       final m = _merge(resumed, _pinfu(), {Side.right});
       expect(m.situation.riichi, isTrue);
-      expect(m.hasFlag(MergeIssue.riichiCarried), isTrue);
+      expect(_blocker(m), isNull);
     });
   });
 
@@ -260,7 +211,8 @@ void main() {
       ));
       await tester.tap(find.text('유국'));
       await tester.pumpAndSettle();
-      expect(tester.widget<CheckboxListTile>(find.byKey(const ValueKey('draw-tenpai-2'))).value, isTrue);
+      expect(tester.widget<ChoiceChip>(find.byKey(const ValueKey('draw-tenpai-2'))).selected, isTrue);
+      expect(tester.widget<ChoiceChip>(find.byKey(const ValueKey('draw-noten-2'))).selected, isFalse);
       expect(tester.widget<FilterChip>(find.byKey(const ValueKey('draw-riichi-2'))).selected, isTrue);
 
       await tester.tap(find.text('확인'));
@@ -269,6 +221,40 @@ void main() {
       expect(g.riichiSticks, 1);
       expect(g.carriedStickSeats, {2});
       expect(g.scores[2], 25000 - 1000 + 3000);
+    });
+
+    testWidgets('유국 창: 자리마다 텐파이·노텐을 골라 누른다', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (c) => TextButton(
+              onPressed: () => showDrawDialog(c, gameStore.current!),
+              child: const Text('유국'),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('유국'));
+      await tester.pumpAndSettle();
+      // 처음엔 리치 없는 자리 모두 노텐.
+      for (var s = 0; s < 4; s++) {
+        expect(tester.widget<ChoiceChip>(find.byKey(ValueKey('draw-noten-$s'))).selected, isTrue);
+      }
+      // 0·1 을 텐파이로 골랐다가 1 을 다시 노텐으로.
+      await tester.tap(find.byKey(const ValueKey('draw-tenpai-0')));
+      await tester.tap(find.byKey(const ValueKey('draw-tenpai-1')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('draw-riichi-1')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('draw-noten-1')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('draw-riichi-1')), findsNothing);
+      expect(tester.widget<ChoiceChip>(find.byKey(const ValueKey('draw-tenpai-0'))).selected, isTrue);
+
+      await tester.tap(find.text('확인'));
+      await tester.pumpAndSettle();
+      final g = gameStore.current!;
+      // 0 혼자 텐파이: 노텐 셋이 1000씩.
+      expect(g.scores, [28000, 24000, 24000, 24000]);
     });
   });
 
@@ -319,45 +305,6 @@ void main() {
       expect(g.riichiSticks, 0);
       expect(g.carriedStickSeats, isEmpty);
       expect(g.scores, [25000, 25000, 25000, 25000]);
-    });
-  });
-
-  group('추적기: 전판 봉', () {
-    const grid = GridZones.initial;
-    const cols = 8, rows = 4;
-    final frac = {for (final s in Side.values) s: 2 / (cols * rows)};
-    final t0 = DateTime(2026, 10, 30, 12);
-    DateTime at(int sec) => t0.add(Duration(seconds: sec));
-
-    ZoneSnapshot snap(Side side, int shift) {
-      final gray = Uint8List(cols * rows)..fillRange(0, cols * rows, 80 + shift);
-      return ZoneSnapshot(box: grid.riverBand(side), cols: cols, rows: rows, gray: gray, white: Uint8List(cols * rows), whiteFrac: 0);
-    }
-
-    Map<Side, ZoneSnapshot> rivers() => {for (final s in Side.values) s: snap(s, 0)};
-    Map<Side, ZoneSnapshot> strips(Set<Side> sticks) => {for (final s in Side.values) s: snap(s, sticks.contains(s) ? 40 : 0)};
-
-    test('기록이 아는 남은 봉은 다른 자리 리치를 확정할 때 끼지 않고, 그 자리 띠가 바뀌면 남는다', () {
-      final tr = RiverTracker(tileFrac: frac);
-      // 아래 자리 봉이 꽂힌 채 시작.
-      tr.onFrame(rivers(), strips({Side.bottom}), at(0));
-      tr.onFrame(rivers(), strips({Side.bottom}), at(3));
-      expect(tr.riichi, isEmpty);
-      // 위 자리 새 리치. 서버는 보이는 봉을 모두 답한다.
-      const read = {Side.bottom: true, Side.top: true, Side.left: false, Side.right: false};
-      tr.onFrame(rivers(), strips({Side.bottom, Side.top}), at(6));
-      final a1 = tr.onFrame(rivers(), strips({Side.bottom, Side.top}), at(9));
-      expect(a1.length, 1);
-      tr.onSticksRead(a1.single.frame, read, at(10));
-      final a2 = tr.onFrame(rivers(), strips({Side.bottom, Side.top}), at(15));
-      expect(a2.length, 1);
-      tr.onSticksRead(a2.single.frame, read, at(16));
-      expect(tr.riichiAt.keys, [Side.top]);
-      expect(tr.riichiExcept({Side.bottom}), {Side.top});
-      // 기록에 없는 봉은 추적 전에 한 리치로 본다(추적을 판 도중에 켠 경우).
-      expect(tr.riichiExcept(const {}), {Side.bottom, Side.top});
-      // 띠가 바뀌어 확정한 자리는 남은 봉 주인이어도 남는다(병합이 확인을 묻는다).
-      expect(tr.riichiExcept({Side.bottom, Side.top}), {Side.top});
     });
   });
 

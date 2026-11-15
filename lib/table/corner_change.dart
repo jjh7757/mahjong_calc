@@ -82,11 +82,14 @@ Map<Side, CornerStats> analyzeCorners((Uint8List, GridZones) args) {
 /// 패 한 장의 앞면이 [side] 모서리 칸에서 차지하는 비율 어림.
 /// 기준은 앱의 촬영 가이드(긴 변 4000 사진에서 앞면 폭 100px): 사진 가로의 [tileW], 세로의 [tileH](4:3 사진, 패 비율 3:4).
 /// 거치 높이가 가이드와 다르면 실제 장수와 비례해 어긋나지만, 추적은 "변화가 패 1장 이상인가" 만 보므로 2배 안이면 된다.
-double tileFracOf(GridZones grid, Side side, {double tileW = 0.025, double tileH = 0.044}) {
+/// [aspect] = 프레임 가로/세로. 헤드 1:1(2026-11-13)이면 같은 센서 높이를 짧은 가로에 담아 패가 가로의 4/3 배를 차지한다 → [tileW] 를 그만큼 키운다
+/// (안 고치면 장수가 4/3 배로 부풀어 버림·울기 문턱이 예민해짐, metrics 표 12-12).
+double tileFracOf(GridZones grid, Side side, {double tileW = 0.025, double tileH = 0.044, double aspect = 4 / 3}) {
   final b = grid.cornerCell(side);
   final w = b.width / 1000, h = b.height / 1000;
-  if (w <= 0 || h <= 0) return 0;
-  return (tileW * tileH) / (w * h);
+  if (w <= 0 || h <= 0 || aspect <= 0) return 0;
+  return (tileW * (4 / 3) / aspect * tileH) / (w * h);
 }
 
-Map<Side, double> tileFracsOf(GridZones grid) => {for (final s in Side.values) s: tileFracOf(grid, s)};
+Map<Side, double> tileFracsOf(GridZones grid, {double aspect = 4 / 3}) =>
+    {for (final s in Side.values) s: tileFracOf(grid, s, aspect: aspect)};
