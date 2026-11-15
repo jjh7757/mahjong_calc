@@ -5,9 +5,13 @@
   det/<q>/{train,dev}/images/<판>__<그림>.jpg   하드링크(안 되면 복사) — data/v1114/images/<q> 의 그림 그대로
   det/<q>/{train,dev}/labels/<판>__<그림>.txt   YOLO OBB: "종류 x1 y1 x2 y2 x3 y3 x4 y4"(0~1, 그림 밖은 0~1 로 자름)
   det/<q>/data.yaml                              ultralytics 꼴(names 0 face 1 back)
-  det/build_input/                               기존 det_build.py --obb --backs 입력 꼴(q2992): boxes_final.json {이름: {path, boxes}}(앞면 축 상자),
-                                                 boxes_r2fb.json {이름: {backs}}, rects.json {이름: {path, items[{cls, box, key, status, rect}]}}(모든 상자 status fixed =
-                                                 회전 상자를 그대로 씀), split.json. det_build 의 토막 크기(2040×1530)는 2992 그림에 맞아 그대로 돈다.
+  det/build_input/                               기존 det_build.py --obb --backs 입력 꼴(q2992), det_build 의 OUT(= data/det) 과 같은 배치:
+                                                   boxes_final.json            {이름: {path, boxes}}(앞면 축 상자)
+                                                   backs/r2/boxes_r2fb.json    {이름: {backs}}
+                                                   obb/rects.json              {이름: {path, items[{cls, box, key, status, rect}]}}(모든 상자 status fixed = 회전 상자를 그대로 씀)
+                                                   split.json                  {이름: train|dev}(det_build 는 안 읽음 — 나눔용)
+                                                 det_build 의 OUT 을 이 폴더로 바꾸면(DS 도 이 아래·scratch 로) 그대로 읽는다(2026-11-15 확인, v1114_load.det_build_input).
+                                                 det_build 의 토막 크기(2040×1530)는 2992 그림에 맞아 그대로 돈다.
   det/edge_list.json                             사진 가장자리에서 절반 미만만 보이는(사진 안 면적 / 상자 면적 < 0.5) 상자·넓이 거의 0(짧은 변 < 8px) 상자 — 지우지 않고 목록만
   python -X utf8 experiments/tile_classifier/v1114_dr_det.py
 """
@@ -111,7 +115,9 @@ def main():
         (OUT / q / "data.yaml").write_text(f"path: {(OUT / q).as_posix()}\ntrain: train/images\nval: dev/images\nnames:\n  0: face\n  1: back\n", encoding="utf-8")
     bi = OUT / "build_input"
     bi.mkdir(parents=True, exist_ok=True)
-    for n, obj in (("boxes_final.json", bi_faces), ("boxes_r2fb.json", bi_backs), ("rects.json", bi_rects), ("split.json", bi_split)):
+    # det_build.py 가 OUT 아래에서 읽는 자리 그대로(OUT/boxes_final.json, OUT/backs/r2/boxes_r2fb.json, OUT/obb/rects.json)
+    for n, obj in (("boxes_final.json", bi_faces), ("backs/r2/boxes_r2fb.json", bi_backs), ("obb/rects.json", bi_rects), ("split.json", bi_split)):
+        (bi / n).parent.mkdir(parents=True, exist_ok=True)
         (bi / n).write_text(json.dumps(obj, ensure_ascii=False, indent=0), encoding="utf-8")
     (OUT / "list.json").write_text(json.dumps({"_note": "검출 세트 그림 목록. use=false 는 뺀 그림(이유 why). v1114_dr_det.py", "images": lst}, ensure_ascii=False, indent=1), encoding="utf-8")
     (OUT / "edge_list.json").write_text(json.dumps({"_note": "지우지 않은 의심 상자: inside_frac < 0.5(사진 가장자리에서 절반 미만만 보임) 또는 short_side < 8px", "boxes": edge},
