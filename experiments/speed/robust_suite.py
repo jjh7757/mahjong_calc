@@ -55,6 +55,10 @@ EV = {"ev_p1": 1.0, "ev_m1": -1.0}
 WB = {"wb_tung": (1.25, 1.0, 0.62), "wb_fluo": (0.90, 1.10, 0.95)}  # 선형 RGB 배율(휘도 보존으로 정규화)
 JPEG = {"jpeg60": 60}
 HAND = {"hand": (1, 2)}  # 타원 개수 범위
+# 정사각형 자르기(2026-11-13, 사용자 "헤드를 1:1 로 찍으면 정확도가 떨어지나", 제대로 거치 = 탁자 중심에 맞춤): 짧은 변 정사각형, 중심 = 저장 격자 중심. 고정 세트 밖(--only sq).
+# sqfit: 탁자 전체(sq_extent.py 가 잰 패 상자 범위 + 여백)가 들어가게 정사각형을 넓혀 자르고(사진 밖은 어두운 30) 짧은 변으로 줄임 = 1:1 로 찍으려고 카메라를 올린 거치.
+# sqfit2992: sqfit 을 S25 Ultra 의 1:1 YUV 크기 2992 로 한 번 더 줄임(짧은 변 3060 기준 0.978, B·C·D 3000 은 0.997) — 2026-11-13 기기 확인, 3060×3060 은 없음.
+CROP = {"sq": "grid_center", "sqfit": "fit_tiles", "sqfit2992": "fit_tiles_2992"}
 RECOLOR = {"rc_gray": ("felt", (175, 175, 175)), "rc_dgreen": ("felt", (30, 80, 35)), "rc_redframe": ("frame", (20, 20, 225))}  # BGR
 # 세기 고정 규칙(ROBUST.md): 묶음 전체가 추가 실패 0 이면 아래 한 단계 센 수준을 한 번만 더한다. --strong 으로 만들고 돌린다.
 STRONG = {"rot_p35": ("rot", 35), "rot_m35": ("rot", -35), "scale045": ("scale", 0.45), "blur3": ("blur", 5.0), "ev_p15": ("ev", 1.5), "ev_m15": ("ev", -1.5),
@@ -62,6 +66,7 @@ STRONG = {"rot_p35": ("rot", 35), "rot_m35": ("rot", -35), "scale045": ("scale",
 GEOM = set(ROT) | {k for k, v in STRONG.items() if v[0] == "rot"}
 FELT_GRID = GEOM | {"felt0"}  # 앱 펠트 격자로 다시 잡는 변형
 BASE = ["orig", "felt0", *ROT, *SCALE, *BLUR, *EV, *WB, *JPEG, *HAND, *RECOLOR]
+EXTRA = [*CROP]  # 고정 세트·BASE 밖, --only 로만
 FIXED = [("jpeg35" if v == "jpeg60" else v) for v in BASE]  # 고정 세트(2026-11-05, 표 1-91): jpeg60 → jpeg35, 나머지 첫 세기
 GROUP = {**{k: "회전" for k in ROT}, **{k: "축소" for k in SCALE}, **{k: "흐림" for k in BLUR}, **{k: "노출" for k in EV}, **{k: "화이트밸런스" for k in WB},
          **{k: "JPEG" for k in JPEG}, **{k: "가림" for k in HAND}, **{k: "재색칠" for k in RECOLOR}, "orig": "기준", "felt0": "대조",
@@ -155,6 +160,62 @@ def move_grid(g: dict, M: np.ndarray, src: tuple[int, int], dst: tuple[int, int]
     return out
 
 
+def crop_square(rgb: np.ndarray, g: dict) -> tuple[np.ndarray, dict, dict]:
+    """짧은 변 길이 정사각형을 저장 격자 중심에 맞춰 자른다(사진 밖으로 나가면 안쪽으로 밀어 넣음). (그림, 옮긴 격자, 정보)."""
+    h, w = rgb.shape[:2]
+    side = min(w, h)
+    cx, cy = (g["x1"] + g["x2"]) / 2000 * w, (g["y1"] + g["y2"]) / 2000 * h
+    x0 = int(round(min(max(cx - side / 2, 0), w - side)))
+    y0 = int(round(min(max(cy - side / 2, 0), h - side)))
+    out = rgb[y0:y0 + side, x0:x0 + side]
+
+    def mx(x):
+        return min(999, max(1, int(round((x * w / 1000 - x0) * 1000 / side))))
+
+    def my(y):
+        return min(999, max(1, int(round((y * h / 1000 - y0) * 1000 / side))))
+
+    ng = {"x1": mx(g["x1"]), "x2": mx(g["x2"]), "y1": my(g["y1"]), "y2": my(g["y2"])}
+    if g.get("sticks"):
+        y0s, x0s, y1s, x1s = g["sticks"]
+        ng["sticks"] = [my(y0s), mx(x0s), my(y1s), mx(x1s)]
+    want_x0 = cx - side / 2 if w > h else cy - side / 2
+    return out, ng, {"x0": x0, "y0": y0, "side": side, "pushed": round(abs((x0 if w > h else y0) - want_x0))}
+
+
+def crop_square_fit(rgb: np.ndarray, g: dict, bbox, margin: float = 0.02) -> tuple[np.ndarray, dict, dict]:
+    """격자 중심에 맞춘 정사각형을, 패 상자 범위 bbox(원본 px) + 짧은 변의 margin 이 다 들어가게 넓힌 뒤 짧은 변 크기로 줄인다."""
+    h, w = rgb.shape[:2]
+    short = min(w, h)
+    cx, cy = (g["x1"] + g["x2"]) / 2000 * w, (g["y1"] + g["y2"]) / 2000 * h
+    m = margin * short
+    half = max(short / 2, cx - bbox[0] + m, bbox[2] - cx + m, cy - bbox[1] + m, bbox[3] - cy + m)
+    side = int(math.ceil(2 * half))
+    x0, y0 = int(round(cx - side / 2)), int(round(cy - side / 2))
+    # 사진 안에 들어가는 축은 안쪽으로 밀어 넣는다(sq 와 같음). 그래도 모자라는 축만 어두운 색(30)으로 채운다 —
+    # 회색 114 로 채우면 울기 옆 띠를 白 채우기가 흰 패로 봐 5z 를 더한다(2026-11-13 첫 시도에서 3건).
+    if side <= w:
+        x0 = min(max(x0, 0), w - side)
+    if side <= h:
+        y0 = min(max(y0, 0), h - side)
+    canvas = np.full((side, side, 3), 30, np.uint8)
+    sx0, sy0, sx1, sy1 = max(0, x0), max(0, y0), min(w, x0 + side), min(h, y0 + side)
+    canvas[sy0 - y0:sy1 - y0, sx0 - x0:sx1 - x0] = rgb[sy0:sy1, sx0:sx1]
+    out = cv2.resize(canvas, (short, short), interpolation=cv2.INTER_AREA) if side != short else canvas
+
+    def mx(x):
+        return min(999, max(1, int(round((x * w / 1000 - x0) * 1000 / side))))
+
+    def my(y):
+        return min(999, max(1, int(round((y * h / 1000 - y0) * 1000 / side))))
+
+    ng = {"x1": mx(g["x1"]), "x2": mx(g["x2"]), "y1": my(g["y1"]), "y2": my(g["y2"])}
+    if g.get("sticks"):
+        a0, b0, a1, b1 = g["sticks"]
+        ng["sticks"] = [my(a0), mx(b0), my(a1), mx(b1)]
+    return out, ng, {"x0": x0, "y0": y0, "side": side, "scale": round(short / side, 3)}
+
+
 def hands(rgb: np.ndarray, g: dict, side: str, n_range, rng: random.Random) -> tuple[np.ndarray, list]:
     """살색 타원 1~2개(n_range), 화료자 자리 크롭(roles.seat_box) 밖에만. 반지름 = 안쪽 칸 폭의 0.11 × 0.21."""
     from app import roles
@@ -245,7 +306,7 @@ def recolor(rgb: np.ndarray, masks: dict, part: str, bgr_color) -> tuple[np.ndar
 def spec_of(v: str):
     if v in STRONG:
         return STRONG[v]
-    for kind, table in (("rot", ROT), ("scale", SCALE), ("blur", BLUR), ("ev", EV), ("wb", WB), ("jpeg", JPEG), ("hand", HAND), ("recolor", RECOLOR)):
+    for kind, table in (("rot", ROT), ("scale", SCALE), ("blur", BLUR), ("ev", EV), ("wb", WB), ("jpeg", JPEG), ("hand", HAND), ("recolor", RECOLOR), ("crop", CROP)):
         if v in table:
             return kind, table[v]
     return v, None  # orig·felt0
@@ -279,6 +340,7 @@ def make(a) -> None:
     check_colors()
     names = [*FIXED, *([v for v in [*BASE, *STRONG] if v not in FIXED] if a.strong else [])]  # --strong: 기록용 jpeg60·센 수준까지
     if a.only:
+        names += [v for v in EXTRA if v in a.only.split(",")]
         names = [v for v in names if v in a.only.split(",")]
     if a.set == "field":
         names = [v for v in names if v not in FELT_GRID]
@@ -316,6 +378,13 @@ def make(a) -> None:
                     out, q = rgb, arg
                 elif kind == "hand":
                     out, info["hands"] = hands(rgb, s["grid"], s["side"], arg, rng)
+                elif kind == "crop" and arg in ("fit_tiles", "fit_tiles_2992"):
+                    ext = json.loads((root / "sq_extent.json").read_text(encoding="utf-8"))
+                    out, info["grid_c"], info["crop"] = crop_square_fit(rgb, s["grid"], ext[s["name"]]["tiles_bbox"])
+                    if arg == "fit_tiles_2992" and out.shape[0] != 2992:  # 격자는 0~1000 분율이라 줄여도 그대로
+                        out = cv2.resize(out, (2992, 2992), interpolation=cv2.INTER_AREA)
+                elif kind == "crop":
+                    out, info["grid_c"], info["crop"] = crop_square(rgb, s["grid"])
                 elif kind == "recolor":
                     if masks is None:
                         masks = recolor_masks(cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
@@ -452,7 +521,7 @@ def run(a) -> None:
     root = RB if a.set == "dev" else RB / "field"
     meta = json.loads((root / "meta.json").read_text(encoding="utf-8"))
     felt = felt_grids(root)
-    names = [v for v in ([*BASE, *STRONG] if a.only else FIXED) if v in meta]  # 기본은 고정 세트만
+    names = [v for v in ([*BASE, *STRONG, *EXTRA] if a.only else FIXED) if v in meta]  # 기본은 고정 세트만
     if a.only:
         names = [v for v in names if v in a.only.split(",")]
     rd = Readers(a.models, a.threads)
@@ -470,6 +539,8 @@ def run(a) -> None:
             if info is None:
                 continue
             grid, src = s["grid"], "saved"
+            if "grid_c" in info:
+                grid, src = info["grid_c"], "crop"
             if v in FELT_GRID:
                 fg = felt.get(f"{v}/{s['name']}")
                 if fg and fg.get("grid"):

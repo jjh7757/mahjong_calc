@@ -8,6 +8,9 @@
   --raw-full: /preview?w= 가 원본 긴 변 이상이면 다시 저장하지 않고 원본 바이트(기본은 늘 q80 으로 다시 저장 = 실제 헤드 YUV→JPEG 흉내)
 --seq: 첫 요청 시각부터 hold 초씩 f0, f1, … 을 보여 주고 마지막 프레임은 계속. /preview 는 긴 변 w(기본 960)로 줄이고
 X-Frame-Size 에 원 크기를 적는다. /capture 는 현재 프레임 원본.
+--lan: 0.0.0.0 에 열고 실제 헤드처럼 /status 에 head·pair 를 주며 /pair 로 토큰을 내준다(태블릿 "카메라 헤드 찾기" 로 붙기).
+  --any-token 이면 어떤 토큰이든 받아 준다(태블릿에 저장된 진짜 헤드 토큰 그대로 붙음). 포트는 헤드 기본 8765 를 쓴다.
+--real-time: 파일 이름 f####_hhmmss.jpg 의 시각 차이대로 재생(매장 배경 프레임 묶음 frames_##.zip 을 푼 폴더, 2026-11-13).
 """
 import io, sys, os, json, time, itertools
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -23,6 +26,16 @@ HOLD = [float(x) for x in (sys.argv[sys.argv.index("--hold") + 1].split(",") if 
 photos = sorted(f for f in os.listdir(folder) if f.lower().endswith((".jpg", ".jpeg")) and "thumb" not in f)
 cycle = itertools.cycle(photos)
 TOKEN = "local"
+LAN = "--lan" in sys.argv
+ANY_TOKEN = "--any-token" in sys.argv
+REAL_TIME = "--real-time" in sys.argv
+if REAL_TIME:
+    import re
+    def _sec(name):
+        m = re.search(r"_(\d{2})(\d{2})(\d{2})\.jpe?g$", name)
+        return int(m[1]) * 3600 + int(m[2]) * 60 + int(m[3])
+    _s0 = _sec(photos[0])
+    OFFSETS = [_sec(n) - _s0 for n in photos]
 count = {"cap": 0, "prev": 0}
 t0 = {"t": None}
 
@@ -30,6 +43,12 @@ t0 = {"t": None}
 def current() -> str:
     if AFTER_CAPTURE:
         return photos[min(count["cap"], len(photos) - 1)]
+    if REAL_TIME:
+        if t0["t"] is None:
+            t0["t"] = time.time()
+        el = time.time() - t0["t"]
+        i = max(k for k, o in enumerate(OFFSETS) if o <= el)
+        return photos[i]
     if not SEQ:
         return next(cycle)
     if t0["t"] is None:
@@ -56,6 +75,8 @@ class H(BaseHTTPRequestHandler):
         self.end_headers()
 
     def _auth(self, q):
+        if ANY_TOKEN and (self.headers.get("X-Head-Token") or q.get("t", [None])[0]):
+            return True
         return self.headers.get("X-Head-Token") == TOKEN or q.get("t", [None])[0] == TOKEN
 
     def do_GET(self):
@@ -63,9 +84,18 @@ class H(BaseHTTPRequestHandler):
         q = parse_qs(u.query)
         path = u.path
         if path in ("/", "/status"):
-            body = json.dumps({"ok": True, "auth": self._auth(q), "captures": count["cap"]}).encode()
+            st = {"ok": True, "auth": self._auth(q), "captures": count["cap"]}
+            if LAN:
+                st.update(head="mahjongcam", pair=True)
+            body = json.dumps(st).encode()
             self.send_response(200); self._cors()
             self.send_header("Content-Type", "application/json"); self.end_headers(); self.wfile.write(body); return
+        if LAN and path == "/pair":
+            body = json.dumps({"ok": True, "token": TOKEN}).encode()
+            self.send_response(200); self._cors()
+            self.send_header("Content-Type", "application/json"); self.end_headers(); self.wfile.write(body)
+            print(f"{time.strftime('%H:%M:%S')} /pair", flush=True)
+            return
         if path in ("/preview", "/capture"):
             if not self._auth(q):
                 self.send_response(401); self._cors(); self.end_headers(); return
@@ -98,4 +128,4 @@ class H(BaseHTTPRequestHandler):
 
 
 print("photos", photos, "after-capture" if AFTER_CAPTURE else "seq" if SEQ else "cycle", HOLD, flush=True)
-ThreadingHTTPServer(("127.0.0.1", port), H).serve_forever()
+ThreadingHTTPServer(("0.0.0.0" if LAN else "127.0.0.1", port), H).serve_forever()
