@@ -374,17 +374,26 @@ PairZone pairZoneOf(GridZones g, Side winner, (int u, int v) at) {
 /// 격자·화료자를 알고 서버가 위치를 주면 구역으로 고른다(2026-11-03, metrics 표 1-54): 구역 밖 짝이 하나면 그것, 여럿이면 판 중 확정한
 /// 도라 [trackedDora] 가 든 하나, 밖에 없으면 화료자 자리 띠의 짝이 하나일 때만 그것. 다른 자리·강·리치봉 상자의 짝은 쓰지 않는다
 /// (181209: 다른 자리 쪽 5s 짝을 표시패로 잡았다). 격자나 위치가 없으면 예전처럼 짝이 하나일 때만.
-List<ReadTile> localPairIndicators(Map<String, dynamic>? j, {GridZones? grid, Side? winner, ReadTile? trackedDora}) {
+/// [winners]: 동시 론의 화료자 전부 — 탁자 위 표시패는 한 벌이라, 그중 누구의 자리 띠에 놓였어도 화료자 자리로 친다
+/// (2026-11-14 매장 r05: 더블 론에서 짝이 첫 화료자 손패 옆에 있었다).
+List<ReadTile> localPairIndicators(Map<String, dynamic>? j,
+    {GridZones? grid, Side? winner, Iterable<Side>? winners, ReadTile? trackedDora}) {
   final pairs = parseLocalPairs(j);
   final centers = localPairCenters(j);
   final good = [
     for (final (i, p) in pairs.indexed)
       if (p.every((t) => t.conf >= localPairMinConf)) (tiles: p, at: i < centers.length ? centers[i] : null),
   ];
-  if (grid == null || winner == null || good.any((p) => p.at == null)) {
+  final who = {?winner, ...?winners};
+  if (grid == null || who.isEmpty || good.any((p) => p.at == null)) {
     return good.length == 1 ? good.single.tiles : const [];
   }
-  final zones = {for (final p in good) p: pairZoneOf(grid, winner, p.at!)};
+  PairZone zoneOf((int, int) at) {
+    final zs = [for (final w in who) pairZoneOf(grid, w, at)];
+    return zs.contains(PairZone.winnerSeat) ? PairZone.winnerSeat : zs.first;
+  }
+
+  final zones = {for (final p in good) p: zoneOf(p.at!)};
   List<List<ReadTile>> of(PairZone z) => [for (final p in good) if (zones[p] == z) p.tiles];
   final outside = of(PairZone.outside);
   if (outside.length == 1) return outside.single;

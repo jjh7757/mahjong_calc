@@ -740,6 +740,15 @@ class TableReader {
         ? DoraFrom.dealerZone
         : (centerDora.isNotEmpty ? DoraFrom.center : null);
 
+    // 동시 론(화료자가 여럿): 화료자를 읽고 나서야 알아서 위의 짝 찾기([known] 일 때만)를 안 거친다. 탁자 위 표시패 짝은 한 벌뿐이라
+    // 리치한 화료자끼리 같이 쓴다 — 누구 손패 옆에 놓였든(2026-11-14 매장 r05: 더블 론 기록에 뒷도라 표시패가 빠졌다).
+    // 리치가 아닌 화료자에게는 주지 않는다(뒷도라는 리치한 사람만 — 그 자리는 판 중 확정한 도라·패산 위 표시패로).
+    List<ReadTile> sharedPair(Side side) {
+      if (!localOnly || sides.length < 2) return const [];
+      if (!((sticks[side] ?? false) || trackedRiichi.contains(side))) return const [];
+      return localPairIndicators(localDoraJ, grid: grid, winners: sides, trackedDora: trackedDora);
+    }
+
     /// 화료자 [side] 하나의 판독. 강 끝·리치봉·도라는 같은 사진 것을 나눠 쓴다.
     TableReading build(Side side) {
       final h = seats[side]!;
@@ -784,7 +793,7 @@ class TableReader {
         // 가운데(왕패)와 화료자 손패 옆을 따로 넘기고, 어느 쪽을 쓸지는 merge 가 리치 여부로 정한다.
         doraIndicators: dora,
         doraFrom: doraFrom,
-        handSideIndicators: h.loose.isNotEmpty ? h.loose : (stray.isNotEmpty ? stray : (side == known ? wideDora : const [])),
+        handSideIndicators: h.loose.isNotEmpty ? h.loose : (stray.isNotEmpty ? stray : (side == known ? wideDora : sharedPair(side))),
         usage: usage,
       );
       if (side == sides.first) trace?.observation = observation;

@@ -56,6 +56,30 @@ void main() {
     expect(localPairIndicators(j, grid: grid, winner: Side.top), isEmpty);
   });
 
+  test('동시 론(winners): 화료자 중 누구의 자리 띠에 있어도 화료자 자리의 짝으로 친다', () {
+    final j = resp([
+      [('1z', 0.9, 675, 460), ('5z', 0.9, 675, 490)],
+    ]);
+    expect(localPairIndicators(j, grid: grid, winner: Side.top), isEmpty, reason: '오른쪽 자리 띠 — 위 화료자 혼자면 다른 자리');
+    expect(codes(localPairIndicators(j, grid: grid, winners: [Side.top, Side.right])), ['1z', '5z']);
+    expect(localPairIndicators(j, grid: grid, winners: [Side.top, Side.left]), isEmpty);
+  });
+
+  test('11-14 매장 r05(121902) 실제 응답: 더블 론(위·왼쪽) 화료자로 부르면 8통·동 짝이 나온다', () {
+    // 서버 read_wall 이 그 사진에서 돌려준 pairs·size 와 그때 격자(펠트 자동, 리치봉 상자 없음) 그대로.
+    const g = GridZones(x1: 265, x2: 782, y1: 246, y2: 763);
+    final j = {
+      'size': [2992, 2992],
+      'pairs': [
+        [
+          {'tile': '8p', 'conf': 0.955, 'box': [857, 744, 109, 121]},
+          {'tile': '1z', 'conf': 0.968, 'box': [783, 787, 107, 117]},
+        ],
+      ],
+    };
+    expect(codes(localPairIndicators(j, grid: g, winners: [Side.top, Side.left])), ['8p', '1z']);
+  });
+
   test('밖에 여럿이면 판 중 확정한 도라가 든 하나, 없으면 고르지 않는다', () {
     final j = resp([
       [('5p', 0.98, 355, 667), ('5s', 0.98, 368, 687)],
