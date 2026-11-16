@@ -1,0 +1,884 @@
+{
+ "_설명": "0단계 장면 목록·표시패 정답 고정(2026-11-16, `docs/role_pair_plan_1116.md` 5절 0단계 1). 학습·판독 없음.",
+ "made": "2026-11-16 11:13:10",
+ "counts": {
+  "E2": 20,
+  "E4": 20
+ },
+ "user_check": [
+  "k15",
+  "k26",
+  "20261107_122315",
+  "20261107_153029",
+  "20261107_153939"
+ ],
+ "scenes": [
+  {
+   "name": "k25",
+   "set_src": "bcd",
+   "winner": "right",
+   "riichi": false,
+   "table_pair": [
+    "1z",
+    "7m"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "1z",
+    "7m"
+   ],
+   "stored_src": "experiments/speed/dora_group_locate.py TRUTH · flow_riichi.py BCD_YES",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "연출(사용자가 도라를 왕패 밖으로 옮김, dora_locate.WALL_DORA 주석). 왼쪽 위 펠트에 東·七萬 2장 붙여 둠. 화료자(오른쪽)는 리치 아님",
+   "user_check": null
+  },
+  {
+   "name": "k28",
+   "set_src": "bcd",
+   "winner": "right",
+   "riichi": false,
+   "table_pair": [
+    "1z",
+    "7m"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "1z",
+    "7m"
+   ],
+   "stored_src": "experiments/speed/dora_group_locate.py TRUTH · flow_riichi.py BCD_YES",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "k25 와 같은 배치",
+   "user_check": null
+  },
+  {
+   "name": "k15",
+   "set_src": "bcd",
+   "winner": "left",
+   "riichi": true,
+   "table_pair": [
+    "7m",
+    "6s"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "7m",
+    "6s"
+   ],
+   "stored_src": "experiments/speed/dora_group_locate.py TRUTH · flow_riichi.py BCD_YES",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "七萬·6삭 2장을 왼쪽 아래 패산 끝(뒷면 줄) 바로 옆 펠트 위에 세로로 붙여 둠. dora_locate.WALL_DORA 는 '왕패 옆 원래' 로 적었고 서버 read_wall 주석은 '진짜 짝(k15·k26)' 으로 적음 — 탁자 위 짝으로 적음",
+   "user_check": "패산 끝에 붙은 2장이라 '탁자 위 짝' 인지 '패산 위' 인지 위치 판단이 갈릴 수 있음",
+   "user_confirmed": {
+    "date": "2026-11-16",
+    "by": "사용자가 그림을 보고 답함",
+    "note": "탁자 위 짝이 맞음",
+    "before": [
+     "7m",
+     "6s"
+    ],
+    "changed": false
+   }
+  },
+  {
+   "name": "k26",
+   "set_src": "bcd",
+   "winner": "left",
+   "riichi": true,
+   "table_pair": [
+    "7m",
+    "6s"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "7m",
+    "6s"
+   ],
+   "stored_src": "experiments/speed/dora_group_locate.py TRUTH · flow_riichi.py BCD_YES",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "k15 와 같은 배치",
+   "user_check": "k15 와 같음",
+   "user_confirmed": {
+    "date": "2026-11-16",
+    "by": "사용자가 그림을 보고 답함",
+    "note": "k15 와 같은 배치 — 탁자 위 짝",
+    "before": [
+     "7m",
+     "6s"
+    ],
+    "changed": false
+   }
+  },
+  {
+   "name": "k12",
+   "set_src": "bcd",
+   "winner": "bottom",
+   "riichi": true,
+   "table_pair": [
+    "4p",
+    "4p",
+    "7m"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "4p",
+    "4p",
+    "7m"
+   ],
+   "stored_src": "experiments/speed/dora_group_locate.py TRUTH · flow_riichi.py BCD_YES",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "연출. 오른쪽 아래 펠트에 4통·4통·七萬 3장 나란히(짝 2장이 아니라 3장)",
+   "user_check": null
+  },
+  {
+   "name": "k16",
+   "set_src": "bcd",
+   "winner": "bottom",
+   "riichi": true,
+   "table_pair": [
+    "4p",
+    "4p",
+    "7m"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "4p",
+    "4p",
+    "7m"
+   ],
+   "stored_src": "experiments/speed/dora_group_locate.py TRUTH · flow_riichi.py BCD_YES",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "k12 와 같은 배치",
+   "user_check": null
+  },
+  {
+   "name": "20261031_123140",
+   "set_src": "visit",
+   "winner": "right",
+   "riichi": false,
+   "table_pair": [],
+   "wall": [
+    "5s"
+   ],
+   "eval": "E4",
+   "stored": [
+    "5s"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "아래 패산 위 5삭",
+   "user_check": null
+  },
+  {
+   "name": "20261031_124654",
+   "set_src": "visit",
+   "winner": "right",
+   "riichi": true,
+   "table_pair": [],
+   "wall": [
+    "7m"
+   ],
+   "eval": "E4",
+   "stored": [
+    "7m"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "리치 화료지만 뒷도라를 안 뒤집음, 왼쪽 패산 위 七萬 1장",
+   "user_check": null
+  },
+  {
+   "name": "20261031_125839",
+   "set_src": "visit",
+   "winner": "top",
+   "riichi": true,
+   "table_pair": [],
+   "wall": [
+    "5m"
+   ],
+   "eval": "E4",
+   "stored": [
+    "5m"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "왼쪽 패산 위 伍萬(검은 伍 — 적5 아님). label.json 의 4m 은 틀림(truth.json 이 이미 고침)",
+   "user_check": null
+  },
+  {
+   "name": "20261031_130743",
+   "set_src": "visit",
+   "winner": "bottom",
+   "riichi": true,
+   "table_pair": [],
+   "wall": [
+    "4z"
+   ],
+   "eval": "E4",
+   "stored": [
+    "4z"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "위 패산 위 北",
+   "user_check": null
+  },
+  {
+   "name": "20261031_131411",
+   "set_src": "visit",
+   "winner": "bottom",
+   "riichi": true,
+   "table_pair": [],
+   "wall": [
+    "4z"
+   ],
+   "eval": "E4",
+   "stored": [
+    "4z"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "위 패산 위 北. 오른쪽 위 펠트의 낱장 萬子 1장은 짝 아님(낱장)",
+   "user_check": null
+  },
+  {
+   "name": "20261031_132239",
+   "set_src": "visit",
+   "winner": "right",
+   "riichi": true,
+   "table_pair": [],
+   "wall": [
+    "3p"
+   ],
+   "eval": "E4",
+   "stored": [
+    "3p"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "위 패산 위 3통",
+   "user_check": null
+  },
+  {
+   "name": "20261031_132954",
+   "set_src": "visit",
+   "winner": "top",
+   "riichi": false,
+   "table_pair": [],
+   "wall": [
+    "7s"
+   ],
+   "eval": "E4",
+   "stored": [
+    "7s"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "위 패산 위 7삭",
+   "user_check": null
+  },
+  {
+   "name": "20261031_133030",
+   "set_src": "visit",
+   "winner": "top",
+   "riichi": false,
+   "table_pair": [],
+   "wall": [
+    "7s"
+   ],
+   "eval": "E4",
+   "stored": [
+    "7s"
+   ],
+   "stored_src": "experiments/visit_20261031/captures/20261031_133030/label.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "132954 와 같은 탁자, 위 패산 위 7삭",
+   "user_check": null
+  },
+  {
+   "name": "20261031_133826",
+   "set_src": "visit",
+   "winner": "left",
+   "riichi": true,
+   "table_pair": [
+    "8m",
+    "8p"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "8m",
+    "4p"
+   ],
+   "stored_src": "experiments/visit_20261031/captures/20261031_133826/label.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "왼쪽 아래 펠트에 八萬·4통 세로로 붙여 둠",
+   "user_check": null,
+   "user_confirmed": {
+    "date": "2026-11-16",
+    "by": "사용자가 그림을 보고 답함",
+    "note": "둘째 패는 8통(저장 정답 4p 는 틀림)",
+    "before": [
+     "8m",
+     "4p"
+    ],
+    "changed": true
+   }
+  },
+  {
+   "name": "20261031_134815",
+   "set_src": "visit",
+   "winner": "bottom",
+   "riichi": false,
+   "table_pair": [],
+   "wall": [
+    "1z"
+   ],
+   "eval": "E4",
+   "stored": [
+    "1z"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "왼쪽 아래 패산 위 東",
+   "user_check": null
+  },
+  {
+   "name": "20261031_143104",
+   "set_src": "visit",
+   "winner": "bottom",
+   "riichi": true,
+   "table_pair": [
+    "6p",
+    "3s"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "6p",
+    "3s"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "오른쪽 아래 펠트에 6통·3삭. 손패 앞 낱장 7삭은 떼어 둔 화료패",
+   "user_check": null
+  },
+  {
+   "name": "20261031_164501",
+   "set_src": "visit",
+   "winner": "left",
+   "riichi": false,
+   "table_pair": [],
+   "wall": [
+    "5p"
+   ],
+   "eval": "E4",
+   "stored": [
+    "5p"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "오른쪽 패산 위 5통(적5 아님)",
+   "user_check": null
+  },
+  {
+   "name": "20261031_165043",
+   "set_src": "visit",
+   "winner": "right",
+   "riichi": false,
+   "table_pair": [],
+   "wall": [
+    "9p"
+   ],
+   "eval": "E4",
+   "stored": [
+    "9p"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "오른쪽 위 패산 위 9통",
+   "user_check": null
+  },
+  {
+   "name": "20261031_165614",
+   "set_src": "visit",
+   "winner": "top",
+   "riichi": true,
+   "table_pair": [],
+   "wall": [
+    "1z",
+    "5z"
+   ],
+   "eval": "E4",
+   "stored": [
+    "1z",
+    "5z"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "리치 화료, 오른쪽 패산 위 東·白 2장 나란히(도라 + 깡도라로 보임). 왼쪽 위 낱장 8통은 떼어 둔 화료패",
+   "user_check": null
+  },
+  {
+   "name": "20261031_170105",
+   "set_src": "visit",
+   "winner": "left",
+   "riichi": true,
+   "table_pair": [
+    "5s",
+    "5p"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "5s",
+    "5p"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "손패 앞 펠트에 5삭·5통 비스듬히 붙여 둠(적5 아님)",
+   "user_check": null
+  },
+  {
+   "name": "20261031_171025",
+   "set_src": "visit",
+   "winner": "left",
+   "riichi": true,
+   "table_pair": [
+    "7s",
+    "6z"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "7s",
+    "6z"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "손패 아래쪽 펠트에 7삭·發 비스듬히",
+   "user_check": null
+  },
+  {
+   "name": "20261031_171245",
+   "set_src": "visit",
+   "winner": "left",
+   "riichi": false,
+   "table_pair": [],
+   "wall": [
+    "7z"
+   ],
+   "eval": "E4",
+   "stored": [
+    "7z"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "오른쪽 아래 패산 위 中(손이 가까이 지나가며 흐림, 읽을 수 있음)",
+   "user_check": null
+  },
+  {
+   "name": "20261031_171505",
+   "set_src": "visit",
+   "winner": "left",
+   "riichi": false,
+   "table_pair": [],
+   "wall": [
+    "4m"
+   ],
+   "eval": "E4",
+   "stored": [
+    "4m"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "아래 패산 위 四萬. 손패 끝 낱장 三萬은 떼어 둔 화료패",
+   "user_check": null
+  },
+  {
+   "name": "20261031_181209",
+   "set_src": "visit",
+   "winner": "left",
+   "riichi": true,
+   "table_pair": [],
+   "wall": [
+    "7m",
+    "4s"
+   ],
+   "eval": "E4",
+   "stored": [
+    "7m",
+    "4s"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "리치 화료, 왼쪽 패산 줄 안에 七萬·4삭 2장이 나란히 앞면(펠트 위로 내놓지 않음). 왼쪽 아래 낱장 8삭은 떼어 둔 화료패",
+   "user_check": null
+  },
+  {
+   "name": "20261031_183627",
+   "set_src": "visit",
+   "winner": "right",
+   "riichi": true,
+   "table_pair": [
+    "7s",
+    "4m"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "4m",
+    "7s"
+   ],
+   "stored_src": "experiments/visit_20261031/truth.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "가운데 오른쪽 위 펠트에 7삭·四萬 세로로. 오른쪽 위 낱장 四萬은 떼어 둔 화료패",
+   "user_check": null
+  },
+  {
+   "name": "20261107_121515",
+   "set_src": "visit1107",
+   "winner": "bottom",
+   "riichi": true,
+   "table_pair": [
+    "8s",
+    "9s"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "9s",
+    "8s"
+   ],
+   "stored_src": "experiments/visit_20261107/captures/20261107_121515/label.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "아래 펠트에 8삭·9삭",
+   "user_check": null
+  },
+  {
+   "name": "20261107_122315",
+   "set_src": "visit1107",
+   "winner": "bottom",
+   "riichi": true,
+   "table_pair": [
+    "7s",
+    "2s"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "7s"
+   ],
+   "stored_src": "experiments/visit_20261107/captures/20261107_122315/label.json",
+   "stored_same": false,
+   "truth_src": "사진 확대(2026-11-16) — 저장 정답과 다름",
+   "memo": "아래 펠트에 7삭(거꾸로)·2삭 2장. label.json 은 7s 1장만(뒷도라 2s 를 앱 기록에 안 넣음)",
+   "user_check": "label.json [7s] 와 다름 — 사진은 2장",
+   "user_confirmed": {
+    "date": "2026-11-16",
+    "by": "사용자가 그림을 보고 답함",
+    "note": "7삭·2삭 2장",
+    "before": [
+     "7s",
+     "2s"
+    ],
+    "changed": false
+   }
+  },
+  {
+   "name": "20261107_123102",
+   "set_src": "visit1107",
+   "winner": "left",
+   "riichi": false,
+   "table_pair": [],
+   "wall": [
+    "2z"
+   ],
+   "eval": "E4",
+   "stored": [
+    "2z"
+   ],
+   "stored_src": "experiments/visit_20261107/captures/20261107_123102/label.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "위 패산 위 南",
+   "user_check": null
+  },
+  {
+   "name": "20261107_123721",
+   "set_src": "visit1107",
+   "winner": "left",
+   "riichi": true,
+   "table_pair": [
+    "4z",
+    "3m"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "4z",
+    "3m"
+   ],
+   "stored_src": "experiments/visit_20261107/captures/20261107_123721/label.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "왼쪽 아래 펠트에 北·三萬",
+   "user_check": null
+  },
+  {
+   "name": "20261107_124650",
+   "set_src": "visit1107",
+   "winner": "left",
+   "riichi": true,
+   "table_pair": [
+    "9m",
+    "4m"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "9m",
+    "4m"
+   ],
+   "stored_src": "experiments/visit_20261107/captures/20261107_124650/label.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "왼쪽 펠트에 九萬·四萬",
+   "user_check": null
+  },
+  {
+   "name": "20261107_125510",
+   "set_src": "visit1107",
+   "winner": "top",
+   "riichi": true,
+   "table_pair": [
+    "5p",
+    "8m"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "8m",
+    "5p"
+   ],
+   "stored_src": "experiments/visit_20261107/captures/20261107_125510/label.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "왼쪽 위 펠트에 5통·八萬(거꾸로)",
+   "user_check": null
+  },
+  {
+   "name": "20261107_130623",
+   "set_src": "visit1107",
+   "winner": "bottom",
+   "riichi": false,
+   "table_pair": [],
+   "wall": [
+    "4p"
+   ],
+   "eval": "E4",
+   "stored": [
+    "4p"
+   ],
+   "stored_src": "experiments/visit_20261107/captures/20261107_130623/label.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "위 패산 위 4통",
+   "user_check": null
+  },
+  {
+   "name": "20261107_140015",
+   "set_src": "visit1107",
+   "winner": "bottom",
+   "riichi": false,
+   "table_pair": [],
+   "wall": [
+    "4s"
+   ],
+   "eval": "E4",
+   "stored": [
+    "4s"
+   ],
+   "stored_src": "experiments/visit_20261107/captures/20261107_140015/label.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "오른쪽 아래 패산 위 4삭",
+   "user_check": null
+  },
+  {
+   "name": "20261107_153029",
+   "set_src": "visit1107",
+   "winner": "left",
+   "riichi": true,
+   "table_pair": [
+    "8p",
+    "2z"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "1z"
+   ],
+   "stored_src": "experiments/visit_20261107/captures/20261107_153029/label.json",
+   "stored_same": false,
+   "truth_src": "사진 확대(2026-11-16) — 저장 정답과 다름",
+   "memo": "왼쪽 손패 끝 옆 펠트에 8통·發 비스듬히 2장. 패산에 앞면 패 없음. label.json 은 [1z] — 사진에 東 표시패가 안 보임",
+   "user_check": "label.json [1z] 와 다름 — 사진은 8통·發 2장",
+   "user_confirmed": {
+    "date": "2026-11-16",
+    "by": "사용자가 그림을 보고 답함",
+    "note": "8통·남(저장 정답 1z 는 틀림, 0단계에서는 發 로 잘못 읽어 6z 로 적었음 — 패가 겹쳐 반쯤 가림)",
+    "before": [
+     "8p",
+     "6z"
+    ],
+    "changed": true
+   }
+  },
+  {
+   "name": "20261107_153311",
+   "set_src": "visit1107",
+   "winner": "bottom",
+   "riichi": false,
+   "table_pair": [],
+   "wall": [
+    "6m"
+   ],
+   "eval": "E4",
+   "stored": [
+    "6m"
+   ],
+   "stored_src": "experiments/visit_20261107/captures/20261107_153311/label.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "오른쪽 아래 패산 위 六萬. 손패 오른쪽 눕힌 4통은 떼어 둔 쯔모패",
+   "user_check": null
+  },
+  {
+   "name": "20261107_153939",
+   "set_src": "visit1107",
+   "winner": "bottom",
+   "riichi": true,
+   "table_pair": [
+    "6s",
+    "7m"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "6s",
+    "7m"
+   ],
+   "stored_src": "experiments/visit_20261107/captures/20261107_153939/label.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "가운데 오른쪽 아래 펠트에 6삭·七萬. 오른쪽 아래 패산 위에 앞면이 옆(왼쪽)을 향해 기운 패 1장이 있음 — 무늬를 읽을 수 없어 표시패로 안 셈",
+   "user_check": "패산 위 기운 패 1장(읽을 수 없음)을 표시패가 아닌 것으로 적음",
+   "user_confirmed": {
+    "date": "2026-11-16",
+    "by": "사용자가 그림을 보고 답함",
+    "note": "패산 위 기운 패는 실수로 뒤집힌 패(표시패 아님)",
+    "before": [
+     "6s",
+     "7m"
+    ],
+    "changed": false
+   }
+  },
+  {
+   "name": "20261107_154417",
+   "set_src": "visit1107",
+   "winner": "top",
+   "riichi": true,
+   "table_pair": [
+    "6p",
+    "6m"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "6p",
+    "6m"
+   ],
+   "stored_src": "experiments/visit_20261107/captures/20261107_154417/label.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "위(화료자) 손패 뒤 펠트에 6통·六萬",
+   "user_check": null
+  },
+  {
+   "name": "20261107_154904",
+   "set_src": "visit1107",
+   "winner": "right",
+   "riichi": true,
+   "table_pair": [
+    "6m",
+    "1m"
+   ],
+   "wall": [],
+   "eval": "E2",
+   "stored": [
+    "1m",
+    "6m"
+   ],
+   "stored_src": "experiments/visit_20261107/captures/20261107_154904/label.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "오른쪽 위 펠트에 六萬·一萬(손가락이 가까이 있으나 가리지 않음)",
+   "user_check": null
+  },
+  {
+   "name": "20261107_155553",
+   "set_src": "visit1107",
+   "winner": "right",
+   "riichi": false,
+   "table_pair": [],
+   "wall": [
+    "6s"
+   ],
+   "eval": "E4",
+   "stored": [
+    "6s"
+   ],
+   "stored_src": "experiments/visit_20261107/captures/20261107_155553/label.json",
+   "stored_same": true,
+   "truth_src": "사진 확대(2026-11-16)",
+   "memo": "왼쪽 아래 패산 위 6삭. 아래 자리 손패 줄의 앞면 南 1장은 표시패 아님",
+   "user_check": null
+  }
+ ],
+ "user_fix": "2026-11-16 0단계 채점 뒤 사용자 확인으로 133826(8m·8p)·153029(8p·2z)를 고침. 고치기 전 파일은 data/role/pair/step0/role_pair_scenes_before_userfix.json"
+}

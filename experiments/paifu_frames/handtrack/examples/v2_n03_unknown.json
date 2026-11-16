@@ -1,0 +1,32 @@
+{"game": "n03_150528", "judge": "fakeB", "note": "가짜 판정 v2 — v2_n03_call 과 같되 구간 15 를 unknown(끊김), 구간 32 에 move·place 후보. 칸 값은 아무렇게나",
+ "judgments": [
+  {"seg": 2, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw"}, {"kind": "discard", "what": 3, "left": 2, "right": 10}, {"kind": "place", "pos": 8}]},
+  {"seg": 4, "n_before": 13, "n_after": 13, "events": [{"kind": "draw"}, {"kind": "discard", "what": "D"}]},
+  {"seg": 6, "n_before": 13, "n_after": 13, "events": []},
+  {"seg": 7, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw"}, {"kind": "discard", "what": 10, "left": 9, "right": 3}, {"kind": "place", "pos": 1}]},
+  {"seg": 11, "n_before": 13, "n_after": 13, "events": [{"kind": "draw"}, {"kind": "discard", "what": "D"}]},
+  {"seg": 15, "n_before": 13, "n_after": 13, "events": [{"kind": "unknown", "note": "두 손으로 줄 전체를 들었다 놓음"}]},
+  {"seg": 17, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw"}, {"kind": "discard", "what": 13, "left": 12, "right": 0}, {"kind": "place", "pos": 13}]},
+  {"seg": 20, "n_before": 13, "n_after": 13, "events": [{"kind": "draw"}, {"kind": "discard", "what": "D"}]},
+  {"seg": 22, "n_before": 13, "n_after": 13, "events": [{"kind": "draw"}, {"kind": "discard", "what": "D"}]},
+  {"seg": 25, "n_before": 13, "n_after": 13, "events": [{"kind": "draw"}, {"kind": "discard", "what": "D"}]},
+  {"seg": 29, "n_before": 13, "n_after": 10, "events": [
+    {"kind": "draw"}, {"kind": "discard", "what": "D"},
+    {"kind": "call", "meld_pos": [6, 7]},
+    {"kind": "discard", "what": 3, "left": 2, "right": 8}]},
+  {"seg": 30, "n_before": 10, "n_after": 10, "events": []},
+  {"seg": 32, "n_before": 10, "n_after": 10, "events": [
+    {"kind": "draw"}, {"kind": "discard", "what": 2, "left": 1, "right": 8}, {"kind": "place", "pos": [9, 10]},
+    {"kind": "move", "from": 1, "to": [4, 5]}]},
+  {"seg": 35, "n_before": 10, "n_after": 10, "events": [{"kind": "draw"}, {"kind": "discard", "what": "D"}]},
+  {"seg": 42, "n_before": 10, "n_after": 10, "events": []},
+  {"seg": 43, "n_before": 10, "n_after": 10, "events": [{"kind": "draw"}, {"kind": "discard", "what": "D"}]},
+  {"seg": 44, "n_before": 10, "n_after": 10, "events": []},
+  {"seg": 46, "n_before": 10, "n_after": 10, "events": [{"kind": "draw"}, {"kind": "discard", "what": "D"}]},
+  {"seg": 49, "n_before": 10, "n_after": 10, "events": [{"kind": "draw"}, {"kind": "discard", "what": "D"}]},
+  {"seg": 53, "n_before": 10, "n_after": 10, "events": []},
+  {"seg": 54, "n_before": 10, "n_after": 10, "events": [{"kind": "draw"}, {"kind": "reveal", "order_kept": true}]}
+ ]}

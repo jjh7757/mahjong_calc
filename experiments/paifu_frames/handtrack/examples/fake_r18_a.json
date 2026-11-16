@@ -1,0 +1,15 @@
+{"game": "r18_141259", "note": "가짜 판정 — replay.py 형식 시험용. 칸 번호는 아무렇게나 넣은 것(그림을 보고 정한 값 아님)",
+ "judgments": [
+  {"seg": 3, "kind": "tedashi", "out_pos": 13, "in_pos": 13, "conf": "high"},
+  {"seg": 7, "kind": "tedashi", "out_pos": 1, "in_pos": 2, "conf": "high"},
+  {"seg": 8, "kind": "draw", "in_pos": 14, "conf": "low"},
+  {"seg": 9, "kind": "discard", "out_pos": 5, "conf": "low", "note": "강 기록은 구간 8 — 경고가 나와야 함"},
+  {"seg": 11, "kind": "tedashi", "out_pos": 12, "in_pos": 3, "moves": [[3, 1]], "conf": "high"},
+  {"seg": 14, "kind": "tsumogiri", "conf": "high"},
+  {"seg": 16, "kind": "tedashi", "out_pos": 13, "in_pos": 9, "conf": "high"},
+  {"seg": 20, "kind": "tsumogiri", "conf": "high"},
+  {"seg": 24, "kind": "tsumogiri", "conf": "high"},
+  {"seg": 29, "kind": "tsumogiri", "conf": "high"},
+  {"seg": 34, "kind": "tsumogiri", "conf": "high"},
+  {"seg": 37, "kind": "reveal", "conf": "high"}
+ ]}

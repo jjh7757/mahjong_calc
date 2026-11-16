@@ -1,0 +1,16 @@
+{"game": "n03_150528", "note": "가짜 판정 — 울기(call)·draw/discard 갈림을 시험. 칸은 아무렇게나",
+ "judgments": [
+  {"seg": 2, "kind": "tedashi", "out_pos": 3, "in_pos": 7},
+  {"seg": 4, "kind": "tsumogiri"},
+  {"seg": 7, "kind": "tedashi", "out_pos": 10, "in_pos": 1},
+  {"seg": 11, "kind": "draw", "in_pos": 14},
+  {"seg": 12, "kind": "rearrange", "moves": [[14, 2]], "note": "강 2z 는 구간 11 에서 버림 → 아래 discard 위치가 어긋나 경고가 나와야 함"},
+  {"seg": 13, "kind": "discard", "out_pos": 6},
+  {"seg": 15, "kind": "tsumogiri"}, {"seg": 17, "kind": "tsumogiri"}, {"seg": 20, "kind": "tsumogiri"},
+  {"seg": 22, "kind": "tsumogiri"}, {"seg": 25, "kind": "tsumogiri"},
+  {"seg": 29, "kind": "tsumogiri", "note": "4z"},
+  {"seg": 30, "kind": "call", "meld_pos": [4, 5], "meld_tiles": ["7p", "7p"], "out_pos": 2},
+  {"seg": 32, "kind": "tedashi", "out_pos": 1, "in_pos": 9},
+  {"seg": 35, "kind": "tsumogiri"}, {"seg": 43, "kind": "tsumogiri"}, {"seg": 46, "kind": "tsumogiri"}, {"seg": 49, "kind": "tsumogiri"},
+  {"seg": 54, "kind": "reveal"}
+ ]}

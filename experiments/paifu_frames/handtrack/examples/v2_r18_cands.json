@@ -1,0 +1,47 @@
+{"game": "r18_141259", "judge": "fakeB", "note": "가짜 판정 v2 — place 후보 3개(구간 8), 끝 가림(11), shuffle(14), 리치 뒤 손에서 냄 = 규칙 위반(24), 리치 뒤 후보 [7, D](29). 칸 값은 아무렇게나",
+ "judgments": [
+  {"seg": 3, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"},
+    {"kind": "discard", "what": 5, "left": 4, "right": 8, "conf": "high"},
+    {"kind": "place", "pos": 13, "conf": "high"}]},
+  {"seg": 5, "n_before": 13, "n_after": 13, "events": []},
+  {"seg": 6, "n_before": 13, "n_after": 13, "events": []},
+  {"seg": 7, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"}, {"kind": "discard", "what": "D", "conf": "high"}]},
+  {"seg": 8, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"},
+    {"kind": "discard", "what": 2, "left": 1, "right": 11, "conf": "high"},
+    {"kind": "place", "pos": [6, 7, 8], "conf": "low"}], "note": "D 와 6~8 칸을 함께 들었다 놓음"},
+  {"seg": 10, "n_before": 13, "n_after": 13, "events": []},
+  {"seg": 11, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"},
+    {"kind": "discard", "what": "D", "end_hidden": true, "conf": "low"}], "note": "D 를 13번째 칸 위에 겹쳐 댐"},
+  {"seg": 14, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"},
+    {"kind": "discard", "what": 4, "left": 3, "right": 9, "conf": "high"},
+    {"kind": "place", "pos": 10, "conf": "high"},
+    {"kind": "shuffle", "pos": [9, 10, 11], "conf": "low"}]},
+  {"seg": 15, "n_before": 13, "n_after": 13, "events": []},
+  {"seg": 16, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"},
+    {"kind": "discard", "what": 12, "left": 11, "right": 1, "conf": "high"},
+    {"kind": "place", "pos": 1, "conf": "high"}]},
+  {"seg": 20, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"},
+    {"kind": "discard", "what": 3, "left": 2, "right": 10, "conf": "high"},
+    {"kind": "place", "pos": 4, "conf": "high"}]},
+  {"seg": 21, "n_before": 13, "n_after": 13, "events": []},
+  {"seg": 24, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"},
+    {"kind": "discard", "what": 6, "left": 5, "right": 7, "conf": "low"},
+    {"kind": "place", "pos": 6, "conf": "low"}], "note": "리치 뒤인데 손에서 냄 — 규칙 위반 시험"},
+  {"seg": 29, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"},
+    {"kind": "discard", "what": [7, "D"], "conf": "low"},
+    {"kind": "place", "pos": 7, "conf": "low"}], "note": "리치 뒤 후보 — --use-rules 면 D 가지만 남아야 함"},
+  {"seg": 30, "n_before": 13, "n_after": 13, "events": []},
+  {"seg": 34, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"}, {"kind": "discard", "what": "D", "conf": "high"}]},
+  {"seg": 37, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"}, {"kind": "reveal", "order_kept": true, "conf": "high"}]}
+ ]}

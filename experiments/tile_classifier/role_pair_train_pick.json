@@ -1,0 +1,1617 @@
+{
+ "made_at": "2026-11-16 12:53:45",
+ "note": "계획서 docs/role_pair_plan_1116.md 3-1 의 고정 규칙으로 고른 11-14 학습 쪽 장면. 이 파일과 지금 규칙으로 다시 고른 목록이 다르면 train 이 멈춘다.",
+ "rule": [
+  "출처: r판 v1114_load.role_scenes('train','all'), n판 v1114rec_load.role_scenes('train','all',parts=('new',)). v1114rec pair·mid 안 씀. dev 안 씀.",
+  "공개 = phase=='end', 판 중 = phase=='play'. 판 중은 강(river) 앞면 0장 그림을 먼저 뺀다.",
+  "토큰 기준 자리 = winner 있으면 winner, 없으면 bottom(로더 기본값).",
+  "scene_round 안 시각순(r판 이름 끝 HHMMSS, n판 new_<ms>, 같으면 이름순), n<=3 전부, 아니면 색인 0, n//2, n-1. 공개·판 중 따로.",
+  "묶음 = role_v2_train.load() 연출 뺌 33장(순서 그대로) 뒤에 M1 = 공개, M2 = 공개 + 판 중. 겹 'v1114_train'. other → -2(ROLE_OTHER_NEG).",
+  "사용자 결정(11-16, 계획서 8절 ⑤): 공개 장면에서 r08·r09·r10 은 한 탁자로 묶어 1장만 — meld 3상자 · 아래 자리 아닌 곳의 공개 손패 0 인 후보 중 시각순 첫 장. 판 중은 그대로."
+ ],
+ "candidates": {
+  "end": {
+   "scenes": 54,
+   "scene_rounds": 21
+  },
+  "play": {
+   "scenes": 124,
+   "scene_rounds": 18
+  }
+ },
+ "pre_game_dropped": [
+  "r01_112804/112804_f0042_113245",
+  "r01_112804/112804_f0120_113648",
+  "r01_112804/112804_f0158_113845",
+  "r01_112804/112804_f0196_114051",
+  "r02_114700/114700_f0016_114751",
+  "r02_114700/114700_f0029_114833",
+  "r02_114700/114700_f0044_114925",
+  "r03_115446/115446_f0022_115554",
+  "r03_115446/115446_f0040_115649",
+  "r03_115446/115446_f0059_115757",
+  "r06_121933/121933_f0035_122122",
+  "r06_121933/121933_f0063_122246",
+  "r13_132644/132644_f0001_132630",
+  "r14_133610/133610_f0010_133628",
+  "r14_133610/133610_f0018_133652",
+  "r18_141259/141259_f0001_141148",
+  "r20_143236/143236_f0042_143539"
+ ],
+ "after_drop": {
+  "end": {
+   "scenes": 54,
+   "scene_rounds": 19
+  },
+  "play": {
+   "scenes": 107,
+   "scene_rounds": 18
+  }
+ },
+ "picked": {
+  "end": 35,
+  "play": 51
+ },
+ "end": [
+  {
+   "name": "r01_112804/112804_f0297_114609",
+   "src": "v1114",
+   "scene_round": "r01_112804",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "bottom",
+   "side": "bottom",
+   "n_cand": 3,
+   "idx": 0,
+   "faces": {
+    "hand": 13,
+    "pair": 2,
+    "river": 48
+   },
+   "n_face": 63,
+   "n_back": 56
+  },
+  {
+   "name": "r01_112804/win_114614",
+   "src": "v1114",
+   "scene_round": "r01_112804",
+   "phase": "end",
+   "kind": "win",
+   "winner": "bottom",
+   "side": "bottom",
+   "n_cand": 3,
+   "idx": 1,
+   "faces": {
+    "hand": 13,
+    "pair": 2,
+    "river": 48
+   },
+   "n_face": 63,
+   "n_back": 56
+  },
+  {
+   "name": "r02_114700/114700_f0001_114657",
+   "src": "v1114",
+   "scene_round": "r01_112804",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "bottom",
+   "side": "bottom",
+   "n_cand": 3,
+   "idx": 2,
+   "faces": {
+    "hand": 13,
+    "pair": 2,
+    "river": 48
+   },
+   "n_face": 63,
+   "n_back": 56
+  },
+  {
+   "name": "r02_114700/win_115341",
+   "src": "v1114",
+   "scene_round": "r02_114700",
+   "phase": "end",
+   "kind": "win",
+   "winner": "right",
+   "side": "right",
+   "n_cand": 4,
+   "idx": 0,
+   "faces": {
+    "hand": 10,
+    "loose": 1,
+    "meld": 3,
+    "river": 24,
+    "wall": 1
+   },
+   "n_face": 39,
+   "n_back": 68
+  },
+  {
+   "name": "r02_114700/win_115419",
+   "src": "v1114",
+   "scene_round": "r02_114700",
+   "phase": "end",
+   "kind": "win",
+   "winner": "right",
+   "side": "right",
+   "n_cand": 4,
+   "idx": 2,
+   "faces": {
+    "hand": 11,
+    "meld": 3,
+    "river": 24,
+    "wall": 1
+   },
+   "n_face": 39,
+   "n_back": 68
+  },
+  {
+   "name": "r03_115446/115446_f0001_115442",
+   "src": "v1114",
+   "scene_round": "r02_114700",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "right",
+   "side": "right",
+   "n_cand": 4,
+   "idx": 3,
+   "faces": {
+    "hand": 11,
+    "meld": 3,
+    "river": 24,
+    "wall": 1
+   },
+   "n_face": 39,
+   "n_back": 68
+  },
+  {
+   "name": "r03_115446/win_120217",
+   "src": "v1114",
+   "scene_round": "r03_115446",
+   "phase": "end",
+   "kind": "win",
+   "winner": "top",
+   "side": "top",
+   "n_cand": 5,
+   "idx": 0,
+   "faces": {
+    "hand": 10,
+    "meld": 4,
+    "river": 33,
+    "wall": 2
+   },
+   "n_face": 49,
+   "n_back": 63
+  },
+  {
+   "name": "r03_115446/115446_f0148_120351",
+   "src": "v1114",
+   "scene_round": "r03_115446",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "top",
+   "side": "top",
+   "n_cand": 5,
+   "idx": 2,
+   "faces": {
+    "hand": 10,
+    "meld": 4,
+    "river": 33,
+    "wall": 2
+   },
+   "n_face": 49,
+   "n_back": 63
+  },
+  {
+   "name": "r04_120417/120417_f0001_120413",
+   "src": "v1114",
+   "scene_round": "r03_115446",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "top",
+   "side": "top",
+   "n_cand": 5,
+   "idx": 4,
+   "faces": {
+    "hand": 10,
+    "meld": 4,
+    "river": 33,
+    "wall": 2
+   },
+   "n_face": 49,
+   "n_back": 63
+  },
+  {
+   "name": "r06_121933/121933_f0210_123018",
+   "src": "v1114",
+   "scene_round": "r06_121933",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "bottom",
+   "side": "bottom",
+   "n_cand": 2,
+   "idx": 0,
+   "faces": {
+    "loose": 1,
+    "meld": 3,
+    "river": 64,
+    "wall": 1
+   },
+   "n_face": 69,
+   "n_back": 58
+  },
+  {
+   "name": "r06_121933/win_123046",
+   "src": "v1114",
+   "scene_round": "r06_121933",
+   "phase": "end",
+   "kind": "win",
+   "winner": "bottom",
+   "side": "bottom",
+   "n_cand": 2,
+   "idx": 1,
+   "faces": {
+    "hand": 10,
+    "loose": 1,
+    "meld": 3,
+    "river": 64,
+    "wall": 1
+   },
+   "n_face": 79,
+   "n_back": 48
+  },
+  {
+   "name": "r08_125630/win_125839",
+   "src": "v1114",
+   "scene_round": "r08_125630",
+   "phase": "end",
+   "kind": "win",
+   "winner": "bottom",
+   "side": "bottom",
+   "n_cand": 17,
+   "idx": 1,
+   "faces": {
+    "hand": 10,
+    "loose": 1,
+    "meld": 3,
+    "river": 61,
+    "wall": 1
+   },
+   "n_face": 76,
+   "n_back": 49
+  },
+  {
+   "name": "r12_131655/131655_f0173_132535",
+   "src": "v1114",
+   "scene_round": "r12_131655",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "bottom",
+   "side": "bottom",
+   "n_cand": 2,
+   "idx": 0,
+   "faces": {
+    "hand": 13,
+    "meld": 6,
+    "pair": 2,
+    "river": 51
+   },
+   "n_face": 72,
+   "n_back": 44
+  },
+  {
+   "name": "r12_131655/win_132536",
+   "src": "v1114",
+   "scene_round": "r12_131655",
+   "phase": "end",
+   "kind": "win",
+   "winner": "bottom",
+   "side": "bottom",
+   "n_cand": 2,
+   "idx": 1,
+   "faces": {
+    "hand": 13,
+    "meld": 6,
+    "pair": 2,
+    "river": 54
+   },
+   "n_face": 75,
+   "n_back": 42
+  },
+  {
+   "name": "r13_132644/132644_f0187_133548",
+   "src": "v1114",
+   "scene_round": "r13_132644",
+   "phase": "end",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 2,
+   "idx": 0,
+   "faces": {
+    "hand": 13,
+    "meld": 3,
+    "river": 70,
+    "wall": 1
+   },
+   "n_face": 87,
+   "n_back": 39
+  },
+  {
+   "name": "r14_133610/133610_f0001_133558",
+   "src": "v1114",
+   "scene_round": "r13_132644",
+   "phase": "end",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 2,
+   "idx": 1,
+   "faces": {
+    "hand": 13,
+    "meld": 3,
+    "river": 70,
+    "wall": 1
+   },
+   "n_face": 87,
+   "n_back": 43
+  },
+  {
+   "name": "r14_133610/133610_f0061_133904",
+   "src": "v1114",
+   "scene_round": "r14_133610",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "bottom",
+   "side": "bottom",
+   "n_cand": 2,
+   "idx": 0,
+   "faces": {
+    "hand": 13,
+    "loose": 1,
+    "pair": 2,
+    "river": 11
+   },
+   "n_face": 27,
+   "n_back": 75
+  },
+  {
+   "name": "r14_133610/win_133905",
+   "src": "v1114",
+   "scene_round": "r14_133610",
+   "phase": "end",
+   "kind": "win",
+   "winner": "bottom",
+   "side": "bottom",
+   "n_cand": 2,
+   "idx": 1,
+   "faces": {
+    "hand": 13,
+    "loose": 1,
+    "pair": 2,
+    "river": 11
+   },
+   "n_face": 27,
+   "n_back": 75
+  },
+  {
+   "name": "r16_135307/135321_f0194_140257",
+   "src": "v1114",
+   "scene_round": "r16_135307",
+   "phase": "end",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 1,
+   "idx": 0,
+   "faces": {
+    "hand": 21,
+    "meld": 3,
+    "river": 70,
+    "wall": 1
+   },
+   "n_face": 95,
+   "n_back": 32
+  },
+  {
+   "name": "r17_140450/140450_f0124_141042",
+   "src": "v1114",
+   "scene_round": "r17_140450",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "bottom",
+   "side": "bottom",
+   "n_cand": 2,
+   "idx": 0,
+   "faces": {
+    "hand": 13,
+    "loose": 1,
+    "meld": 3,
+    "pair": 2,
+    "river": 48
+   },
+   "n_face": 67,
+   "n_back": 53
+  },
+  {
+   "name": "r17_140450/win_141043",
+   "src": "v1114",
+   "scene_round": "r17_140450",
+   "phase": "end",
+   "kind": "win",
+   "winner": "bottom",
+   "side": "bottom",
+   "n_cand": 2,
+   "idx": 1,
+   "faces": {
+    "hand": 13,
+    "loose": 1,
+    "meld": 3,
+    "pair": 2,
+    "river": 48
+   },
+   "n_face": 67,
+   "n_back": 53
+  },
+  {
+   "name": "r18_141259/141259_f0145_141909",
+   "src": "v1114",
+   "scene_round": "r18_141259",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "left",
+   "side": "left",
+   "n_cand": 3,
+   "idx": 0,
+   "faces": {
+    "hand": 13,
+    "loose": 1,
+    "meld": 6,
+    "pair": 2,
+    "river": 40
+   },
+   "n_face": 62,
+   "n_back": 54
+  },
+  {
+   "name": "r18_141259/win_141910",
+   "src": "v1114",
+   "scene_round": "r18_141259",
+   "phase": "end",
+   "kind": "win",
+   "winner": "left",
+   "side": "left",
+   "n_cand": 3,
+   "idx": 1,
+   "faces": {
+    "hand": 13,
+    "loose": 1,
+    "meld": 6,
+    "pair": 2,
+    "river": 40
+   },
+   "n_face": 62,
+   "n_back": 54
+  },
+  {
+   "name": "r19_142013/142013_f0001_141933",
+   "src": "v1114",
+   "scene_round": "r18_141259",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "left",
+   "side": "left",
+   "n_cand": 3,
+   "idx": 2,
+   "faces": {
+    "hand": 14,
+    "meld": 6,
+    "pair": 2,
+    "river": 40
+   },
+   "n_face": 62,
+   "n_back": 54
+  },
+  {
+   "name": "r20_143236/win_143404",
+   "src": "v1114",
+   "scene_round": "r20_143236",
+   "phase": "end",
+   "kind": "win",
+   "winner": "right",
+   "side": "right",
+   "n_cand": 3,
+   "idx": 0,
+   "faces": {
+    "hand": 13,
+    "pair": 2,
+    "river": 20
+   },
+   "n_face": 35,
+   "n_back": 67
+  },
+  {
+   "name": "r20_143236/win_143425",
+   "src": "v1114",
+   "scene_round": "r20_143236",
+   "phase": "end",
+   "kind": "win",
+   "winner": "right",
+   "side": "right",
+   "n_cand": 3,
+   "idx": 1,
+   "faces": {
+    "hand": 13,
+    "pair": 2,
+    "river": 20
+   },
+   "n_face": 35,
+   "n_back": 67
+  },
+  {
+   "name": "r20_143236/win_143449",
+   "src": "v1114",
+   "scene_round": "r20_143236",
+   "phase": "end",
+   "kind": "win",
+   "winner": "right",
+   "side": "right",
+   "n_cand": 3,
+   "idx": 2,
+   "faces": {
+    "hand": 9,
+    "pair": 2,
+    "river": 20
+   },
+   "n_face": 31,
+   "n_back": 70
+  },
+  {
+   "name": "r22_144647/win_144647",
+   "src": "v1114",
+   "scene_round": "r22_144647",
+   "phase": "end",
+   "kind": "win",
+   "winner": "left",
+   "side": "left",
+   "n_cand": 2,
+   "idx": 0,
+   "faces": {
+    "hand": 13,
+    "loose": 1,
+    "meld": 3,
+    "pair": 2,
+    "river": 24
+   },
+   "n_face": 43,
+   "n_back": 56
+  },
+  {
+   "name": "r22_144647/win_144653",
+   "src": "v1114",
+   "scene_round": "r22_144647",
+   "phase": "end",
+   "kind": "win",
+   "winner": "left",
+   "side": "left",
+   "n_cand": 2,
+   "idx": 1,
+   "faces": {
+    "hand": 13,
+    "loose": 1,
+    "meld": 3,
+    "pair": 2,
+    "river": 24
+   },
+   "n_face": 43,
+   "n_back": 65
+  },
+  {
+   "name": "n01_144748/new_1794635730030",
+   "src": "v1114rec",
+   "scene_round": "n01_144748",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "bottom",
+   "side": "bottom",
+   "n_cand": 1,
+   "idx": 0,
+   "faces": {
+    "hand": 13,
+    "loose": 1,
+    "meld": 4,
+    "pair": 4,
+    "river": 60
+   },
+   "n_face": 82,
+   "n_back": 42
+  },
+  {
+   "name": "n02_145625/new_1794636269936",
+   "src": "v1114rec",
+   "scene_round": "n02_145625",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "top",
+   "side": "top",
+   "n_cand": 1,
+   "idx": 0,
+   "faces": {
+    "hand": 13,
+    "loose": 1,
+    "meld": 6,
+    "pair": 2,
+    "river": 69
+   },
+   "n_face": 91,
+   "n_back": 35
+  },
+  {
+   "name": "n04_151410/new_1794637091716",
+   "src": "v1114rec",
+   "scene_round": "n04_151410",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "right",
+   "side": "right",
+   "n_cand": 1,
+   "idx": 0,
+   "faces": {
+    "hand": 7,
+    "meld": 6,
+    "river": 34,
+    "wall": 1
+   },
+   "n_face": 48,
+   "n_back": 64
+  },
+  {
+   "name": "n05_151953/new_1794637493006",
+   "src": "v1114rec",
+   "scene_round": "n05_151953",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "top",
+   "side": "top",
+   "n_cand": 1,
+   "idx": 0,
+   "faces": {
+    "hand": 10,
+    "meld": 6,
+    "river": 49,
+    "wall": 1
+   },
+   "n_face": 66,
+   "n_back": 49
+  },
+  {
+   "name": "n06_152545/new_1794637759028",
+   "src": "v1114rec",
+   "scene_round": "n06_152545",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "top",
+   "side": "top",
+   "n_cand": 1,
+   "idx": 0,
+   "faces": {
+    "hand": 13,
+    "loose": 1,
+    "pair": 2,
+    "river": 32
+   },
+   "n_face": 48,
+   "n_back": 64
+  },
+  {
+   "name": "n08_153825/new_1794638707022",
+   "src": "v1114rec",
+   "scene_round": "n08_153825",
+   "phase": "end",
+   "kind": "frame",
+   "winner": "left",
+   "side": "left",
+   "n_cand": 1,
+   "idx": 0,
+   "faces": {
+    "hand": 13,
+    "pair": 2,
+    "river": 55
+   },
+   "n_face": 70,
+   "n_back": 54
+  }
+ ],
+ "play": [
+  {
+   "name": "r01_112804/112804_f0250_114342",
+   "src": "v1114",
+   "scene_round": "r01_112804",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 1,
+   "idx": 0,
+   "faces": {
+    "river": 24,
+    "wall": 1
+   },
+   "n_face": 25,
+   "n_back": 73
+  },
+  {
+   "name": "r02_114700/114700_f0059_115013",
+   "src": "v1114",
+   "scene_round": "r02_114700",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 3,
+   "idx": 0,
+   "faces": {
+    "river": 1
+   },
+   "n_face": 1,
+   "n_back": 93
+  },
+  {
+   "name": "r02_114700/114700_f0074_115103",
+   "src": "v1114",
+   "scene_round": "r02_114700",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 3,
+   "idx": 1,
+   "faces": {
+    "meld": 3,
+    "river": 5
+   },
+   "n_face": 8,
+   "n_back": 86
+  },
+  {
+   "name": "r02_114700/114700_f0099_115237",
+   "src": "v1114",
+   "scene_round": "r02_114700",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 3,
+   "idx": 2,
+   "faces": {
+    "meld": 3,
+    "river": 16
+   },
+   "n_face": 19,
+   "n_back": 83
+  },
+  {
+   "name": "r03_115446/115446_f0078_115855",
+   "src": "v1114",
+   "scene_round": "r03_115446",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 3,
+   "idx": 0,
+   "faces": {
+    "river": 5,
+    "wall": 1
+   },
+   "n_face": 6,
+   "n_back": 89
+  },
+  {
+   "name": "r03_115446/115446_f0100_120001",
+   "src": "v1114",
+   "scene_round": "r03_115446",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 3,
+   "idx": 1,
+   "faces": {
+    "river": 18
+   },
+   "n_face": 18,
+   "n_back": 76
+  },
+  {
+   "name": "r03_115446/115446_f0122_120109",
+   "src": "v1114",
+   "scene_round": "r03_115446",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 3,
+   "idx": 2,
+   "faces": {
+    "meld": 4,
+    "river": 26,
+    "wall": 2
+   },
+   "n_face": 32,
+   "n_back": 74
+  },
+  {
+   "name": "r06_121933/121933_f0091_122412",
+   "src": "v1114",
+   "scene_round": "r06_121933",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 4,
+   "idx": 0,
+   "faces": {
+    "river": 4,
+    "wall": 1
+   },
+   "n_face": 5,
+   "n_back": 92
+  },
+  {
+   "name": "r06_121933/121933_f0148_122706",
+   "src": "v1114",
+   "scene_round": "r06_121933",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 4,
+   "idx": 2,
+   "faces": {
+    "meld": 3,
+    "river": 29,
+    "wall": 1
+   },
+   "n_face": 33,
+   "n_back": 72
+  },
+  {
+   "name": "r06_121933/121933_f0180_122842",
+   "src": "v1114",
+   "scene_round": "r06_121933",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 4,
+   "idx": 3,
+   "faces": {
+    "river": 45,
+    "wall": 1
+   },
+   "n_face": 46,
+   "n_back": 62
+  },
+  {
+   "name": "r08_125630/125630_f0021_125755",
+   "src": "v1114",
+   "scene_round": "r08_125630",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 2,
+   "idx": 0,
+   "faces": {
+    "hand": 6,
+    "meld": 3,
+    "river": 61,
+    "wall": 1
+   },
+   "n_face": 71,
+   "n_back": 49
+  },
+  {
+   "name": "r08_125630/125630_f0026_125810",
+   "src": "v1114",
+   "scene_round": "r08_125630",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 2,
+   "idx": 1,
+   "faces": {
+    "hand": 6,
+    "river": 61,
+    "wall": 1
+   },
+   "n_face": 68,
+   "n_back": 48
+  },
+  {
+   "name": "r12_131655/131655_f0023_131758",
+   "src": "v1114",
+   "scene_round": "r12_131655",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 6,
+   "idx": 0,
+   "faces": {
+    "river": 2,
+    "wall": 1
+   },
+   "n_face": 3,
+   "n_back": 76
+  },
+  {
+   "name": "r12_131655/131655_f0099_132152",
+   "src": "v1114",
+   "scene_round": "r12_131655",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 6,
+   "idx": 3,
+   "faces": {
+    "meld": 3,
+    "river": 30,
+    "wall": 1
+   },
+   "n_face": 34,
+   "n_back": 72
+  },
+  {
+   "name": "r12_131655/131655_f0151_132428",
+   "src": "v1114",
+   "scene_round": "r12_131655",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 6,
+   "idx": 5,
+   "faces": {
+    "meld": 5,
+    "river": 45,
+    "wall": 1
+   },
+   "n_face": 51,
+   "n_back": 65
+  },
+  {
+   "name": "r13_132644/132644_f0027_132748",
+   "src": "v1114",
+   "scene_round": "r13_132644",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 6,
+   "idx": 0,
+   "faces": {
+    "river": 5,
+    "wall": 1
+   },
+   "n_face": 6,
+   "n_back": 81
+  },
+  {
+   "name": "r13_132644/132644_f0105_133142",
+   "src": "v1114",
+   "scene_round": "r13_132644",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 6,
+   "idx": 3,
+   "faces": {
+    "river": 35,
+    "wall": 1
+   },
+   "n_face": 36,
+   "n_back": 73
+  },
+  {
+   "name": "r13_132644/132644_f0159_133424",
+   "src": "v1114",
+   "scene_round": "r13_132644",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 6,
+   "idx": 5,
+   "faces": {
+    "meld": 3,
+    "river": 54,
+    "wall": 1
+   },
+   "n_face": 58,
+   "n_back": 60
+  },
+  {
+   "name": "r14_133610/133610_f0027_133718",
+   "src": "v1114",
+   "scene_round": "r14_133610",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 4,
+   "idx": 0,
+   "faces": {
+    "river": 2,
+    "wall": 1
+   },
+   "n_face": 3,
+   "n_back": 73
+  },
+  {
+   "name": "r14_133610/133610_f0044_133810",
+   "src": "v1114",
+   "scene_round": "r14_133610",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 4,
+   "idx": 2,
+   "faces": {
+    "river": 7,
+    "wall": 1
+   },
+   "n_face": 8,
+   "n_back": 91
+  },
+  {
+   "name": "r14_133610/133610_f0052_133836",
+   "src": "v1114",
+   "scene_round": "r14_133610",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 4,
+   "idx": 3,
+   "faces": {
+    "river": 9,
+    "wall": 1
+   },
+   "n_face": 10,
+   "n_back": 89
+  },
+  {
+   "name": "r16_135307/135307_f0001_135257",
+   "src": "v1114",
+   "scene_round": "r16_135307",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 0,
+   "faces": {
+    "meld": 2,
+    "river": 4,
+    "wall": 1
+   },
+   "n_face": 7,
+   "n_back": 86
+  },
+  {
+   "name": "r16_135307/135321_f0076_135700",
+   "src": "v1114",
+   "scene_round": "r16_135307",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 3,
+   "faces": {
+    "meld": 3,
+    "river": 33,
+    "wall": 1
+   },
+   "n_face": 37,
+   "n_back": 73
+  },
+  {
+   "name": "r16_135307/135321_f0168_140139",
+   "src": "v1114",
+   "scene_round": "r16_135307",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 6,
+   "faces": {
+    "meld": 3,
+    "river": 61,
+    "wall": 1
+   },
+   "n_face": 65,
+   "n_back": 54
+  },
+  {
+   "name": "r17_140450/140450_f0001_140433",
+   "src": "v1114",
+   "scene_round": "r17_140450",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 0,
+   "faces": {
+    "river": 3,
+    "wall": 1
+   },
+   "n_face": 4,
+   "n_back": 74
+  },
+  {
+   "name": "r17_140450/140450_f0054_140712",
+   "src": "v1114",
+   "scene_round": "r17_140450",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 3,
+   "faces": {
+    "meld": 3,
+    "river": 26,
+    "wall": 1
+   },
+   "n_face": 30,
+   "n_back": 72
+  },
+  {
+   "name": "r17_140450/140450_f0107_140951",
+   "src": "v1114",
+   "scene_round": "r17_140450",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 6,
+   "faces": {
+    "meld": 3,
+    "river": 43,
+    "wall": 1
+   },
+   "n_face": 47,
+   "n_back": 69
+  },
+  {
+   "name": "r18_141259/141259_f0020_141245",
+   "src": "v1114",
+   "scene_round": "r18_141259",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 6,
+   "idx": 0,
+   "faces": {
+    "river": 4,
+    "wall": 1
+   },
+   "n_face": 5,
+   "n_back": 87
+  },
+  {
+   "name": "r18_141259/141259_f0082_141557",
+   "src": "v1114",
+   "scene_round": "r18_141259",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 6,
+   "idx": 3,
+   "faces": {
+    "meld": 3,
+    "river": 23,
+    "wall": 1
+   },
+   "n_face": 27,
+   "n_back": 78
+  },
+  {
+   "name": "r18_141259/141259_f0125_141809",
+   "src": "v1114",
+   "scene_round": "r18_141259",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 6,
+   "idx": 5,
+   "faces": {
+    "meld": 3,
+    "river": 36,
+    "wall": 1
+   },
+   "n_face": 40,
+   "n_back": 68
+  },
+  {
+   "name": "r20_143236/143236_f0002_143215",
+   "src": "v1114",
+   "scene_round": "r20_143236",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 15,
+   "idx": 0,
+   "faces": {
+    "river": 2,
+    "wall": 1
+   },
+   "n_face": 3,
+   "n_back": 85
+  },
+  {
+   "name": "r21_144337/144337_f0002_144104",
+   "src": "v1114",
+   "scene_round": "r20_143236",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 15,
+   "idx": 7,
+   "faces": {
+    "meld": 6,
+    "river": 46,
+    "wall": 1
+   },
+   "n_face": 53,
+   "n_back": 57
+  },
+  {
+   "name": "r21_144337/144337_f0012_144141",
+   "src": "v1114",
+   "scene_round": "r20_143236",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 15,
+   "idx": 14,
+   "faces": {
+    "meld": 6,
+    "river": 54,
+    "wall": 1
+   },
+   "n_face": 61,
+   "n_back": 57
+  },
+  {
+   "name": "n01_144748/new_1794635331932",
+   "src": "v1114rec",
+   "scene_round": "n01_144748",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 0,
+   "faces": {
+    "river": 12,
+    "wall": 1
+   },
+   "n_face": 13,
+   "n_back": 83
+  },
+  {
+   "name": "n01_144748/new_1794635522181",
+   "src": "v1114rec",
+   "scene_round": "n01_144748",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 3,
+   "faces": {
+    "meld": 4,
+    "river": 37,
+    "wall": 2
+   },
+   "n_face": 43,
+   "n_back": 70
+  },
+  {
+   "name": "n01_144748/new_1794635712439",
+   "src": "v1114rec",
+   "scene_round": "n01_144748",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 6,
+   "faces": {
+    "meld": 4,
+    "river": 60,
+    "wall": 2
+   },
+   "n_face": 66,
+   "n_back": 57
+  },
+  {
+   "name": "n02_145625/new_1794635852646",
+   "src": "v1114rec",
+   "scene_round": "n02_145625",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 0,
+   "faces": {
+    "river": 10,
+    "wall": 1
+   },
+   "n_face": 11,
+   "n_back": 84
+  },
+  {
+   "name": "n02_145625/new_1794636055624",
+   "src": "v1114rec",
+   "scene_round": "n02_145625",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 3,
+   "faces": {
+    "meld": 3,
+    "river": 39,
+    "wall": 1
+   },
+   "n_face": 43,
+   "n_back": 71
+  },
+  {
+   "name": "n02_145625/new_1794636258601",
+   "src": "v1114rec",
+   "scene_round": "n02_145625",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 6,
+   "faces": {
+    "meld": 6,
+    "river": 69,
+    "wall": 1
+   },
+   "n_face": 76,
+   "n_back": 52
+  },
+  {
+   "name": "n04_151410/new_1794636884202",
+   "src": "v1114rec",
+   "scene_round": "n04_151410",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 0,
+   "faces": {
+    "river": 5,
+    "wall": 1
+   },
+   "n_face": 6,
+   "n_back": 81
+  },
+  {
+   "name": "n04_151410/new_1794636986423",
+   "src": "v1114rec",
+   "scene_round": "n04_151410",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 3,
+   "faces": {
+    "meld": 5,
+    "river": 19,
+    "wall": 1
+   },
+   "n_face": 25,
+   "n_back": 78
+  },
+  {
+   "name": "n04_151410/new_1794637088646",
+   "src": "v1114rec",
+   "scene_round": "n04_151410",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 6,
+   "faces": {
+    "meld": 6,
+    "river": 34,
+    "wall": 1
+   },
+   "n_face": 41,
+   "n_back": 70
+  },
+  {
+   "name": "n05_151953/new_1794637193544",
+   "src": "v1114rec",
+   "scene_round": "n05_151953",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 8,
+   "idx": 0,
+   "faces": {
+    "river": 1,
+    "wall": 1
+   },
+   "n_face": 2,
+   "n_back": 72
+  },
+  {
+   "name": "n05_151953/new_1794637362324",
+   "src": "v1114rec",
+   "scene_round": "n05_151953",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 8,
+   "idx": 4,
+   "faces": {
+    "river": 31,
+    "wall": 1
+   },
+   "n_face": 32,
+   "n_back": 77
+  },
+  {
+   "name": "n05_151953/new_1794637489009",
+   "src": "v1114rec",
+   "scene_round": "n05_151953",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 8,
+   "idx": 7,
+   "faces": {
+    "meld": 6,
+    "river": 49,
+    "wall": 1
+   },
+   "n_face": 56,
+   "n_back": 61
+  },
+  {
+   "name": "n06_152545/new_1794637574311",
+   "src": "v1114rec",
+   "scene_round": "n06_152545",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 0,
+   "faces": {
+    "river": 5,
+    "wall": 1
+   },
+   "n_face": 6,
+   "n_back": 85
+  },
+  {
+   "name": "n06_152545/new_1794637660602",
+   "src": "v1114rec",
+   "scene_round": "n06_152545",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 3,
+   "faces": {
+    "river": 20,
+    "wall": 1
+   },
+   "n_face": 21,
+   "n_back": 74
+  },
+  {
+   "name": "n06_152545/new_1794637747036",
+   "src": "v1114rec",
+   "scene_round": "n06_152545",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 6,
+   "faces": {
+    "river": 32,
+    "wall": 1
+   },
+   "n_face": 33,
+   "n_back": 76
+  },
+  {
+   "name": "n08_153825/new_1794638360836",
+   "src": "v1114rec",
+   "scene_round": "n08_153825",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 0,
+   "faces": {
+    "river": 9,
+    "wall": 1
+   },
+   "n_face": 10,
+   "n_back": 90
+  },
+  {
+   "name": "n08_153825/new_1794638526438",
+   "src": "v1114rec",
+   "scene_round": "n08_153825",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 3,
+   "faces": {
+    "river": 37,
+    "wall": 1
+   },
+   "n_face": 38,
+   "n_back": 71
+  },
+  {
+   "name": "n08_153825/new_1794638692034",
+   "src": "v1114rec",
+   "scene_round": "n08_153825",
+   "phase": "play",
+   "kind": "frame",
+   "winner": null,
+   "side": "bottom",
+   "n_cand": 7,
+   "idx": 6,
+   "faces": {
+    "river": 55,
+    "wall": 1
+   },
+   "n_face": 56,
+   "n_back": 61
+  }
+ ]
+}

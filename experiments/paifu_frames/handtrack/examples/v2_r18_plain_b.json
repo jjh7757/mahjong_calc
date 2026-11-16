@@ -1,0 +1,22 @@
+{"game": "r18_141259", "judge": "fakeA", "note": "가짜 판정 v2 — 후보 없음(뒤 절반). 구간 20 이 리치(5p 가로), 그 뒤는 모두 쯔모기리",
+ "judgments": [
+  {"seg": 15, "n_before": 13, "n_after": 13, "events": []},
+  {"seg": 16, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"},
+    {"kind": "discard", "what": 12, "left": 11, "right": 1, "conf": "high"},
+    {"kind": "place", "pos": 1, "conf": "high"}]},
+  {"seg": 20, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"},
+    {"kind": "discard", "what": 3, "left": 2, "right": 10, "conf": "high"},
+    {"kind": "place", "pos": 4, "conf": "high"}]},
+  {"seg": 21, "n_before": 13, "n_after": 13, "events": []},
+  {"seg": 24, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"}, {"kind": "discard", "what": "D", "conf": "high"}]},
+  {"seg": 29, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"}, {"kind": "discard", "what": "D", "conf": "high"}]},
+  {"seg": 30, "n_before": 13, "n_after": 13, "events": []},
+  {"seg": 34, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"}, {"kind": "discard", "what": "D", "conf": "high"}]},
+  {"seg": 37, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"}, {"kind": "reveal", "order_kept": true, "conf": "high"}]}
+ ]}

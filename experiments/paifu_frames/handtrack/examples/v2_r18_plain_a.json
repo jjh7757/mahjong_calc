@@ -1,0 +1,22 @@
+{"game": "r18_141259", "judge": "fakeA", "note": "가짜 판정 v2 — 후보 없음(앞 절반). 칸 값은 아무렇게나라 결과 손패는 의미 없다. v2_r18_plain_b.json 과 함께 읽는다",
+ "judgments": [
+  {"seg": 3, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"},
+    {"kind": "discard", "what": 5, "left": 4, "right": 8, "conf": "high"},
+    {"kind": "place", "pos": 13, "conf": "high"}], "note": "가짜"},
+  {"seg": 5, "n_before": 13, "n_after": 13, "events": [], "note": "손이 1~4칸을 덮음"},
+  {"seg": 6, "n_before": 13, "n_after": 13, "events": [], "note": "남의 팔"},
+  {"seg": 7, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"}, {"kind": "discard", "what": "D", "conf": "high"}]},
+  {"seg": 8, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"},
+    {"kind": "discard", "what": 2, "left": 1, "right": 11, "conf": "high"},
+    {"kind": "place", "pos": 7, "conf": "high"}]},
+  {"seg": 10, "n_before": 13, "n_after": 13, "events": [{"kind": "move", "from": 3, "to": 9, "conf": "high"}]},
+  {"seg": 11, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"},
+    {"kind": "discard", "what": 9, "left": 8, "right": 4, "conf": "high"},
+    {"kind": "place", "pos": 9, "conf": "high"}]},
+  {"seg": 14, "n_before": 13, "n_after": 13, "events": [
+    {"kind": "draw", "conf": "high"}, {"kind": "discard", "what": "D", "conf": "high"}]}
+ ]}
