@@ -2,6 +2,15 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 앱 저장소의 README.md 는 2026-11-09 부터 프로젝트 소개·개발 과정 문서이고, 개발 환경·빌드 명령·화면 기능은 `docs/development.md` 로 옮겼다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-16: 일발 누락(11-14 동4국 1본장, 편집영상 33:22) 원인 둘 고침 (앱 84e8959 — APK·실기기 전)
+
+- 사용자 "편집영상 33분22초 부근에 일발이 빠졌어 원인 분석해줘" → "둘 다 고치기". problem_log 65번, metrics 표 11(11-16 줄)·표 10-2·표 11-3.
+- **원인 ①** 12:56 `localsetup` 격자 뒤 12:58 카메라 이동 → 리치봉 상자가 기기에서 어긋나 2반장 리치 추적 0/8. **고침:** 펠트 없이 자동으로 맞춘 격자(`mount.gridCheckFelt`, `_saveGrid(checkFelt: true)`)는 `FeltWatch` 가 처음 기준을 잡을 때(`adoptedFirst`) 그 펠트로 만든 격자와 리치봉 상자 중심을 견줘(`gridShiftOf` ≥ `feltGridShiftMax` 30) 어긋났으면 카메라 이동 때와 똑같이 다시 맞춘다. 손으로 맞춰 저장한 격자는 안 고친다.
+- **원인 ②** 울기 픽셀 추적의 모서리 칸에 탁자 흰 테두리가 들어가 노출 흔들림이 "울기 늘어남" 으로 찍혀 일발을 지움. **고침:** `GridZones.feltBox`(펠트 안쪽 상자, `gridFromFelt`·첫 기준 때 채움, 격자 JSON `felt_box`) → `cornerWatchCell` → `TableFrameStats.watchCorners` 를 `MeldTracker` 에만 줌(장면 전체 변화 검사는 예전 칸). 일발 후보는 다른 세 자리 울기만 보고(`grewSince(except:)`), 리치한 사람 자기 모서리는 `trackedSelfGrew` → `mergeReading(selfGrewHint:)` 가 화료자 안깡이 있을 때만 씀. 거짓 일발(11-07 154029)을 막으려 **리치 뒤 네 자리 버림 합 3장 이하** 조건 추가(`ippatsuMaxDiscards`).
+- **재생 결과(`experiments/tracking/replay_rounds.dart <out> <auto 0|1> <추적 폴더>…` → `score_rounds.py`):** 11-14 리치 6/16 → 13/16(2반장 0/8 → 6/8), 그 판 일발 ✗ → ✓. 테스트 10-31·11-07 은 리치 12/19 그대로, 헛 "울기 늘어남" 235 → 24, 일발 후보 [참 1 · 거짓 1] → [참 1]. analyze 깨끗, test 794.
+- **②의 맞바꿈(사용자 지적 11-16) → 겹쳐 보기 판정으로 바꿈:** 자른 칸은 이 매장처럼 **흰 테두리 위에 놓은 울기**를 못 본다(내가 "예전에도 못 봤다" 고 적은 것은 틀림 — 예전 통째 칸은 반응했다). 사용자 "겹쳐 보기를 켜면 감지할 수 있지 않나" → "겹쳐 보기로 바꾸기": `lib/table/call_watch.dart` + `mount_screen`(`_callWatch`·`_runOverlay(baselineFor:)`·`_finalCalls`). 리치봉이 처음 보일 때·확정될 때 `OnDeviceReader.overlay` 를 한 번씩 돌려 기준(강 상자 수·자리별 강·자리별 울기 상자)을 잡고, 화료 사진을 한 번 더 읽어 견준다 → 강 +0~3 · 리치한 자리 강 그대로 · 다른 자리 울기(3장 이상만) 그대로면 일발, 강이 줄었으면 모름 → 픽셀 판정. 겹쳐 보기 표시 토글과 무관하게 돈다. 촬영 기록 `setup.tracked_calls`. 재생(`experiments/ondevice/overlay_ippatsu_replay.py`) 30구간: 참 3 모두 예 · 거짓 2 모두 아니오. test 806.
+- **남은 것:** 태블릿 APK·실제 대국 확인(리치 화료마다 화료 사진 겹쳐 보기 1회가 더 걸리는 시간 약 2초 예상·리치 때 읽기 2회의 발열 — 안 잼). 왼쪽 홈 봉 색 마스크(2건), 판 도중 격자 다시 맞추면 리치 시점 잃음, 겹쳐 보기를 못 쓰는 기기의 픽셀 판정 한계(테두리 위 울기·강 버림 세기), 일발 정답 라벨(다음 매장에서 리치 화료마다 일발 여부 적기). `experiments/tracking/results/` 는 .gitignore 에 없다 — 결과 JSON 은 커밋하지 말 것.
+
 ## 2026-11-15 (이어서 3): 헤드 휴대폰 녹화 프레임으로도 세 세트 — `data/v1114rec/` (자료만, 학습 없음, 커밋 안 함 — metrics 표 6 마지막 줄)
 
 - 사용자 "휴대폰 녹화영상으로는 아직 안 만들었으니까 녹화영상으로도 추가해줘, 너는 계획·검토만, 작업은 Opus 5.5". Fable 세션이 계획·검토, Opus 5.5 중간 에이전트 22대(모으기 2 · 초안 1 · 짝 상자 눈 확인 2 · 패 종류 눈 확인 3 · 검출·역할 눈 확인 5 · 세트 만들기 2 · 가린 독립 검토 2 · 검출·역할 독립 검토 3 · 반영·로더 2, 이어 맡긴 것 포함).
