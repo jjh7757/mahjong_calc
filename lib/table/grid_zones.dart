@@ -44,6 +44,10 @@ const int doraSearchMargin = 40;
 /// 리치봉 크롭: 가운데 칸 한가운데에서 이 비율만큼(가운데 기기와 그 둘레).
 const double sticksZoneShare = 0.7;
 
+/// [GridZones.cornerWatchCell] 이 펠트로 자른 뒤 남아야 하는 최소 변(0~1000). 패 한 장 폭쯤 — 손으로 맞춘 격자는 선이 펠트 끝에
+/// 가까워 자른 칸이 50 안팎으로 좁다(10-31 매장 53). 그래도 테두리가 든 통째 칸보다 낫다(60 이면 그 칸만 안 잘려 헛 늘어남이 남았다).
+const int cornerWatchMin = 30;
+
 /// 추적용 강 띠가 시작하는 곳(가운데에서 그 자리 쪽 반폭의 비율). 0 = [lastZone] 전체.
 /// 격자 가운데 칸의 한가운데가 기기 한가운데와 다를 수 있어(장면 D: 아래쪽은 기기가 반폭의 8%, 오른쪽은 20%) 기기 몫을
 /// 떼지 않는다 — 떼면 기기에 붙은 첫 줄을 잃는다. 기기(검정)는 변하지 않으니 띠에 들어 있어도 해가 없다.
@@ -105,6 +109,11 @@ class GridZones {
   /// [sticks] 상자를 그 한가운데로 돌린 각도(도, 시계 방향). 기운 탁자에서 기기에 맞춘다. 자를 때는 돌린 상자를 감싸는 상자.
   final int sticksAngle;
 
+  /// 펠트 안쪽 상자(사진 좌표, 펠트 네 모서리로 맞췄을 때만 — `feltBoxOf`). 울기 픽셀 추적이 보는 모서리 칸([cornerWatchCell])을
+  /// 이 안으로 자른다. 격자 칸은 사진 끝까지라 탁자의 흰 테두리가 통째로 들어가, 패가 없어도 노출 흔들림·손 지나감이
+  /// "패 2장 늘어남" 으로 잡혔다(2026-11-16, 11-14 매장 동4국 1본장 — 일발이 그것 때문에 지워짐).
+  final NormBox? feltBox;
+
   const GridZones({
     required this.x1,
     required this.x2,
@@ -113,6 +122,7 @@ class GridZones {
     this.doraRel = doraRelDefault,
     this.sticks,
     this.sticksAngle = 0,
+    this.feltBox,
   });
 
   /// 오른쪽 선은 사용자가 도라 표시패(오른쪽 아래)를 감싸 휘게 그린 것을 직선으로 펴 그 패들이 가운데에 들어오게 했다.
@@ -175,6 +185,23 @@ class GridZones {
         Side.top => NormBox(0, 0, y1, x1),
         Side.left => NormBox(y2, 0, 1000, x1),
       };
+
+  /// 울기 픽셀 추적이 보는 모서리 칸: [cornerCell] 을 [feltBox] 안으로 자른 것(펠트 밖 = 탁자 테두리·바닥을 뺀다).
+  /// [feltBox] 가 없거나 자르면 칸이 [cornerWatchMin] 보다 작아지면(격자와 펠트가 안 맞음) [cornerCell] 그대로.
+  /// **펠트 밖(흰 테두리 위)에 놓은 울기는 이 칸에 안 들어온다** — 11-14·10-31 매장은 울기를 테두리 모서리에 놓아 화료자 울기 12판 중
+  /// 3판만 늘어남으로 잡혔다(metrics 표 11-3). 그래서 일발 판정은 패 인식(`call_watch.dart`)을 먼저 쓰고, 이 칸은 그것을 못 쓸 때만.
+  NormBox cornerWatchCell(Side side) {
+    final c = cornerCell(side), f = feltBox;
+    if (f == null) return c;
+    final ymin = c.ymin > f.ymin ? c.ymin : f.ymin, xmin = c.xmin > f.xmin ? c.xmin : f.xmin;
+    final ymax = c.ymax < f.ymax ? c.ymax : f.ymax, xmax = c.xmax < f.xmax ? c.xmax : f.xmax;
+    if (ymax - ymin < cornerWatchMin || xmax - xmin < cornerWatchMin) return c;
+    return NormBox(ymin, xmin, ymax, xmax);
+  }
+
+  /// [feltBox] 만 바꾼 격자(null 이면 지움 — [copyWith] 로는 못 지운다).
+  GridZones withFeltBox(NormBox? box) =>
+      GridZones(x1: x1, x2: x2, y1: y1, y2: y2, doraRel: doraRel, sticks: sticks, sticksAngle: sticksAngle, feltBox: box);
 
   /// [side] 의 강 끝: 가운데 칸 한가운데부터 그 자리 쪽 끝까지, 옆으로는 가운데 [band] 만큼.
   NormBox lastZone(Side side, {double band = lastZoneBand}) {
@@ -252,7 +279,7 @@ class GridZones {
     for (var i = 0; i < (4 - dealer.index) % 4; i++) {
       r = (u0: r.v0, v0: 1000 - r.u1, u1: r.v1, v1: 1000 - r.u0);
     }
-    return GridZones(x1: x1, x2: x2, y1: y1, y2: y2, doraRel: r, sticks: sticks, sticksAngle: sticksAngle);
+    return GridZones(x1: x1, x2: x2, y1: y1, y2: y2, doraRel: r, sticks: sticks, sticksAngle: sticksAngle, feltBox: feltBox);
   }
 
   /// 리치봉을 볼 곳: 가운데 칸 한가운데 [share] 만큼.
@@ -281,6 +308,7 @@ class GridZones {
         doraRel: doraRel ?? this.doraRel,
         sticks: sticks ?? this.sticks,
         sticksAngle: sticksAngle ?? this.sticksAngle,
+        feltBox: feltBox,
       );
 
   Map<String, dynamic> toJson() => {
@@ -291,6 +319,7 @@ class GridZones {
     'dora': [doraRel.u0, doraRel.v0, doraRel.u1, doraRel.v1],
     if (sticks case final b?) 'sticks': b.toList(),
     if (sticksAngle != 0) 'sticks_angle': sticksAngle,
+    if (feltBox case final b?) 'felt_box': b.toList(),
   };
 
   /// 예전 저장값의 `panel`(가운데 기기 상자)은 무시한다. `dora` 가 없으면(예전 저장값) 기본 도라 구역.
@@ -310,6 +339,7 @@ class GridZones {
       doraRel: dora,
       sticks: NormBox.fromList(j['sticks'] as List<dynamic>?),
       sticksAngle: n('sticks_angle') ?? 0,
+      feltBox: NormBox.fromList(j['felt_box'] as List<dynamic>?),
     );
     return g.valid ? g : null;
   }
@@ -323,9 +353,10 @@ class GridZones {
       other.y2 == y2 &&
       other.doraRel == doraRel &&
       other.sticks?.toList().join(',') == sticks?.toList().join(',') &&
-      other.sticksAngle == sticksAngle;
+      other.sticksAngle == sticksAngle &&
+      other.feltBox?.toList().join(',') == feltBox?.toList().join(',');
   @override
-  int get hashCode => Object.hash(x1, x2, y1, y2, doraRel, sticks?.toList().join(','), sticksAngle);
+  int get hashCode => Object.hash(x1, x2, y1, y2, doraRel, sticks?.toList().join(','), sticksAngle, feltBox?.toList().join(','));
 }
 
 /// [box] 를 그 한가운데로 [deg] 도 돌린 상자를 감싸는 상자. 사진 비율 [aspect](가로/세로, 촬영 4:3)로 실제 픽셀처럼 돌린다.

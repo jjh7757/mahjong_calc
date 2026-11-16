@@ -29,6 +29,9 @@ const double feltDeviceW = 0.197, feltDeviceH = 0.194;
 /// 리치봉 상자 여유(0~1000).
 const int feltSticksPad = 10;
 
+/// [feltBoxOf] 가 펠트 변에서 안쪽으로 들이는 양(0~1000). 테두리 그림자·펠트 판독 오차(모서리 ±12) 여유.
+const int feltBoxMargin = 15;
+
 /// 변 하나를 곧은 윤곽이 덮어야 하는 비율. 밑돌면 그 변이 사진 밖이거나 다 가려진 것이라 모서리를 믿지 못한다.
 const double feltMinSpan = 0.25;
 
@@ -578,7 +581,18 @@ GridZones? gridFromFelt(FeltQuad q, {GridZones? keep}) {
     doraRel: keep?.doraRel ?? doraRelDefault,
     sticks: NormBox(box(ys.reduce(math.min), -feltSticksPad), box(xs.reduce(math.min), -feltSticksPad), box(ys.reduce(math.max), feltSticksPad),
         box(xs.reduce(math.max), feltSticksPad)),
+    feltBox: feltBoxOf(q),
   );
+}
+
+/// 펠트 네 모서리 안에 드는 축 평행 상자(0~1000)에서 [feltBoxMargin] 만큼 안쪽. 너무 작으면(펠트를 잘못 읽음) null.
+/// [GridZones.feltBox] 에 넣어 울기 픽셀 추적이 탁자 테두리를 안 보게 한다.
+NormBox? feltBoxOf(FeltQuad q) {
+  int v(double x) => (x * 1000).round();
+  final ymin = v(math.max(q.topLeft.y, q.topRight.y)) + feltBoxMargin, ymax = v(math.min(q.bottomLeft.y, q.bottomRight.y)) - feltBoxMargin;
+  final xmin = v(math.max(q.topLeft.x, q.bottomLeft.x)) + feltBoxMargin, xmax = v(math.min(q.topRight.x, q.bottomRight.x)) - feltBoxMargin;
+  if (ymax - ymin < 300 || xmax - xmin < 300) return null;
+  return NormBox(ymin.clamp(0, 1000), xmin.clamp(0, 1000), ymax.clamp(0, 1000), xmax.clamp(0, 1000));
 }
 
 double _median(List<double> v) {
@@ -616,16 +630,23 @@ class FeltWatch {
   FeltQuad? _basis;
   final List<FeltQuad> _pending = [];
 
-  /// 지금 격자를 잡은 펠트 위치. null 이면 다음 안정된 위치를 격자를 건드리지 않고 기준으로 삼는다(손으로 맞춘 격자).
+  /// 지금 격자를 잡은 펠트 위치. null 이면 다음 안정된 위치를 기준으로 삼고 [adoptedFirst] 로 알린다(손으로·기기 판독으로 맞춘 격자).
   FeltQuad? get basis => _basis;
+
+  /// 방금 [add] 가 기준 없이 지켜보다 처음 안정된 위치를 기준으로 삼았다. 그 격자가 이 위치에서 맞춘 것인지는 모르므로
+  /// 쓰는 쪽이 [gridShiftOf] 로 견줘 어긋났으면 다시 맞춘다(2026-11-16 — 11-14 매장 2반장: 펠트를 못 찾아 기기 판독으로 맞춘 뒤
+  /// 카메라를 옮겼는데, 새 자리를 기준으로만 삼고 격자를 그대로 둬 리치봉 상자가 1시간 반 어긋나 있었다).
+  bool adoptedFirst = false;
 
   void reset(FeltQuad? basis) {
     _basis = basis;
     _pending.clear();
+    adoptedFirst = false;
   }
 
   /// 새 프레임의 판독. 카메라가 옮겨져 안정됐으면 새 위치, 아니면 null.
   FeltQuad? add(FeltQuad? q) {
+    adoptedFirst = false;
     if (q == null) return null;
     final basis = _basis;
     if (basis != null && sameFelt(q, basis)) {
@@ -640,6 +661,22 @@ class FeltWatch {
     if (!recent.every((p) => sameFelt(p, mid))) return null;
     _basis = mid;
     _pending.clear();
+    adoptedFirst = basis == null;
     return basis == null ? null : mid;
   }
+}
+
+/// 기준 없이 처음 잡은 펠트 위치로 만든 격자와 저장 격자의 [gridShiftOf] 가 이 이상이면 카메라가 옮겨진 것으로 보고 다시 맞춘다.
+/// 매장 추적 프레임(metrics 표 10-2): 맞는 격자 0.5~7 · 손으로 맞춘 10-31 격자 21~24(리치봉 상자를 넉넉히 그려 중심이 치우침) /
+/// 카메라가 옮겨진 뒤 43(11-07 12:05)·75.5(11-14 2반장)·93(10-31 12:59).
+const int feltGridShiftMax = 30;
+
+/// 두 격자가 어긋난 정도(0~1000): 리치봉 상자(가운데 기기) 중심의 가로·세로 차이 가운데 큰 값. 한쪽이라도 리치봉 상자가 없으면 0.
+/// 선은 견주지 않는다 — 손으로 맞춘 격자는 도라 표시패·손패에 맞춰 선을 옮겨 두어, 같은 자리여도 펠트로 만든 선과 37~100 다르다.
+/// 저장된 격자가 지금 펠트 위치로 만든 격자([gridFromFelt])와 같은 자리의 것인지 볼 때 쓴다.
+int gridShiftOf(GridZones a, GridZones b) {
+  final p = a.sticks, q = b.sticks;
+  if (p == null || q == null) return 0;
+  final dx = ((p.xmin + p.xmax) - (q.xmin + q.xmax)).abs() / 2, dy = ((p.ymin + p.ymax) - (q.ymin + q.ymax)).abs() / 2;
+  return math.max(dx, dy).round();
 }

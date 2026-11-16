@@ -214,9 +214,33 @@ void main() {
     // 안깡 등 강에 안 보이는 울기: 울기 추적이 리치 뒤에 늘었다고 알려 주면 아니다.
     r = riichiAfter(2);
     final riichiTime = r.tr.riichiAt[Side.bottom]!.at;
-    expect(r.tr.ippatsuCandidates(meldGrewSince: (t) => !t.isAfter(riichiTime)), isEmpty);
-    expect(r.tr.ippatsuCandidates(meldGrewSince: (_) => false), {Side.bottom});
+    expect(r.tr.ippatsuCandidates(meldGrewSince: (t, _) => !t.isAfter(riichiTime)), isEmpty);
+    expect(r.tr.ippatsuCandidates(meldGrewSince: (_, _) => false), {Side.bottom});
+    // 울기 추적에는 리치한 자리도 넘어간다(쓰는 쪽이 그 사람 자기 모서리를 빼고 본다).
+    final asked = <Side>[];
+    r.tr.ippatsuCandidates(meldGrewSince: (_, s) {
+      asked.add(s);
+      return false;
+    });
+    expect(asked, [Side.bottom]);
     expect((r.tr.toJson()['ippatsu'] as List), ['bottom']);
+  });
+
+  test('일발 후보: 리치 뒤 네 자리 버림 합이 3장을 넘으면(한 바퀴 넘음) 아니다 — 그 자리 버림을 못 셌어도', () {
+    // 11-07 15:40 판: 리치한 자리가 두 번 더 버렸는데 장면 전체 변화에 묻혀 0장으로 세었다. 다른 띠에 잡힌 버림 합으로 거른다.
+    final r = riichiAfter(2);
+    Map<Side, ZoneSnapshot> frame(int n) => {
+          for (final s in Side.values)
+            s: snap(s, s == Side.bottom ? r.blocks : (s == Side.top ? {for (var i = 0; i < 2 * n; i++) i} : const {})),
+        };
+    var t = r.t + 20;
+    for (var n = 1; n <= 4; n++) {
+      r.tr.onFrame(frame(n), strips(shift: 40), at(t));
+      r.tr.onFrame(frame(n), strips(shift: 40), at(t + 3));
+      t += 6;
+      expect(r.tr.discardCounts[Side.top], n);
+      expect(r.tr.ippatsuCandidates(), n <= 3 ? {Side.bottom} : isEmpty, reason: '다른 자리 버림 $n장');
+    }
   });
 
   test('리치봉 띠가 바뀌면 읽기를 요청하고 두 읽기가 같으면 확정', () {
@@ -387,6 +411,34 @@ void main() {
     expect(tr.riichi, {Side.right});
     tr.reset(at(30));
     expect(tr.riichi, isEmpty);
+  });
+
+  test('riichiSeenAt: 봉이 처음 보인 순간부터 그 시각을 낸다(확정 전에도) — 패 인식 기준 읽기를 잡는 때', () {
+    final tr = RiverTracker(tileFrac: frac, config: withSticks);
+    for (var i = 0; i < 3; i++) {
+      tr.onFrame(rivers(), strips(), at(i * 3), sticksSeen: seen());
+    }
+    expect(tr.riichiSeenAt, isEmpty);
+    tr.onFrame(rivers(), strips(shift: 40), at(9), sticksSeen: seen({Side.right}));
+    expect(tr.riichi, isEmpty);
+    expect(tr.riichiSeenAt, {Side.right: at(9)}); // 확정 전
+    tr.onFrame(rivers(), strips(shift: 40), at(12), sticksSeen: seen({Side.right}));
+    expect(tr.riichiSeenAt, {Side.right: at(9)}); // 확정 뒤에도 처음 본 시각
+    tr.reset(at(30));
+    expect(tr.riichiSeenAt, isEmpty);
+    // 한 프레임만 보이고 사라진 헛 잡음은 빠진다.
+    tr.onFrame(rivers(), strips(), at(33), sticksSeen: seen());
+    tr.onFrame(rivers(), strips(), at(36), sticksSeen: seen());
+    tr.onFrame(rivers(), strips(), at(39), sticksSeen: seen({Side.top}));
+    expect(tr.riichiSeenAt.keys, {Side.top});
+    tr.onFrame(rivers(), strips(), at(42), sticksSeen: seen());
+    expect(tr.riichiSeenAt, isEmpty);
+    // 판 처음부터 꽂혀 있던 봉(시점 모름)은 내지 않는다.
+    final carried = RiverTracker(tileFrac: frac, config: withSticks);
+    carried.onFrame(rivers(), strips(), at(0), sticksSeen: seen({Side.left}));
+    carried.onFrame(rivers(), strips(), at(3), sticksSeen: seen({Side.left}));
+    expect(carried.riichi, {Side.left});
+    expect(carried.riichiSeenAt, isEmpty);
   });
 
   test('픽셀 판정: 한 프레임만 보이고 사라지면(헛 잡음) 리치가 아니고, 손이 지나간 프레임은 끊김으로 안 센다', () {

@@ -641,6 +641,54 @@ void main() {
       expect(n.hasFlag(MergeIssue.ippatsuTracked), isFalse);
     });
 
+    test('리치 뒤 자기 모서리가 늘었다는 힌트는 화료자에게 안깡이 있을 때만 일발을 지운다', () {
+      // 11-14 매장 동4국 1본장: 쯔모 패를 손패 옆에 떼어 놓아 화료자 모서리의 흰 면이 늘 수 있지만 울기는 없었다.
+      CenterReading center() => CenterReading.fromJson(_center(riichi: {'top': true}, last: {'left': '4m'}));
+      final plain = mergeReading(
+        hand: HandReading.fromJson({
+          'tiles': _tiles('1m 2m 3m 4p 5p 6p 7s 8s 9s 1z 1z 2m 3m'),
+          'win_tile': {'tile': '4m', 'conf': 0.9},
+        }),
+        center: center(),
+        winnerSide: Side.top,
+        game: _game(riichi: {2}),
+        seats: seats,
+        ippatsuHint: true,
+        selfGrewHint: true,
+      );
+      expect(plain.situation.ippatsu, isTrue);
+      expect(plain.hasFlag(MergeIssue.ippatsuTracked), isTrue);
+      HandReading kanHand() => HandReading.fromJson({
+            'tiles': _tiles('1m 2m 3m 4p 5p 6p 9s 9s 2m 3m'),
+            'melds': [
+              {'type': 'kan_closed', 'tiles': ['1z', '1z', '1z', '1z'], 'conf': 0.9},
+            ],
+            'win_tile': {'tile': '4m', 'conf': 0.9},
+          });
+      final kan = mergeReading(
+        hand: kanHand(),
+        center: center(),
+        winnerSide: Side.top,
+        game: _game(riichi: {2}),
+        seats: seats,
+        ippatsuHint: true,
+        selfGrewHint: true,
+      );
+      expect(kan.situation.riichi, isTrue);
+      expect(kan.situation.ippatsu, isFalse);
+      expect(kan.hasFlag(MergeIssue.ippatsuTracked), isFalse);
+      // 자기 모서리가 안 늘었으면(리치 전에 한 안깡) 일발 그대로.
+      final early = mergeReading(
+        hand: kanHand(),
+        center: center(),
+        winnerSide: Side.top,
+        game: _game(riichi: {2}),
+        seats: seats,
+        ippatsuHint: true,
+      );
+      expect(early.situation.ippatsu, isTrue);
+    });
+
     test('울린 손패면 사진·기록의 리치를 버리고 riichiImpossible 플래그', () {
       // 실기기 기록(2026-10-23): 발 퐁 손패인데 중앙 판독이 리치 램프를 봤다.
       final m = mergeReading(

@@ -93,11 +93,15 @@ class RiverTrackerConfig {
   /// 홈이 이 프레임 수만큼 이어 비어 보인 자리만 리치 시점을 적는다(판 처음부터 꽂혀 있던 봉 = 전판 유국 공탁 등은 시점 모름).
   final int localEmptyFrames;
 
+  /// 일발 후보로 남으려면 리치 뒤 네 자리 버림 합이 이 장수 이하여야 한다(한 바퀴: 다른 세 사람).
+  final int ippatsuMaxDiscards;
+
   const RiverTrackerConfig({
     this.trackSticks = true,
     this.localSticks = true,
     this.localConfirmFrames = 2,
     this.localEmptyFrames = 2,
+    this.ippatsuMaxDiscards = 3,
     this.riichiTileLag = const Duration(seconds: 6),
     this.emptyTiles = 0.5,
 
@@ -177,13 +181,26 @@ class RiverTracker {
           if (e.value.fresh && e.value.own <= 1 && e.value.total <= 4 && e.value.taken == 0) e.key,
       };
 
+  /// 리치봉이 처음 보인 시각(자리별): 픽셀 판정에서 봉이 이어 보이는 중(확정 전, 홈이 빈 것을 본 자리만)과 시점을 아는 확정 리치.
+  /// 쓰는 쪽이 이 순간에 패 인식 기준 읽기([CallWatch] — 일발의 "리치 뒤 울기·버림")를 잡는다.
+  Map<Side, DateTime> get riichiSeenAt => {
+        for (final e in _firstSeen.entries)
+          if ((_seenRun[e.key] ?? 0) > 0 && _slotWasEmpty.contains(e.key)) e.key: e.value.at,
+        for (final e in riichiAt.entries) e.key: e.value.at,
+      };
+
   /// 일발 후보: 리치 뒤 그 자리가 더 버리지 않았고(다음 쯔모까지) 아무도 강에서 울어 가져가지 않았다.
-  /// 안깡·가깡은 강에 안 보이니 쓰는 쪽이 [meldGrewSince](울기 추적)로 거른다.
-  Set<Side> ippatsuCandidates({bool Function(DateTime since)? meldGrewSince}) => {
+  /// 안깡·가깡은 강에 안 보이니 쓰는 쪽이 [meldGrewSince](울기 추적, 리치 시각과 그 자리를 받는다)로 거른다.
+  ///
+  /// 리치 뒤 네 자리 버림 합이 [RiverTrackerConfig.ippatsuMaxDiscards] 를 넘어도 아니다(한 바퀴 = 다른 세 사람 한 장씩).
+  /// 그 자리 버림은 장면 전체 변화 직후면 새 기준에 묻혀 안 세지거나 옆 자리 띠로 세지는데(11-07 15:40 판: 리치 뒤 두 번
+  /// 더 버렸는데 0장으로 셈), 합은 어느 띠로 세든 늘어난다(2026-11-16).
+  Set<Side> ippatsuCandidates({bool Function(DateTime since, Side riichiSide)? meldGrewSince}) => {
         for (final e in riichiAt.entries)
           if (rivers[e.key]!.discards == e.value.own &&
               _taken == e.value.taken &&
-              !(meldGrewSince?.call(e.value.at) ?? false))
+              _totalDiscards - e.value.total <= config.ippatsuMaxDiscards &&
+              !(meldGrewSince?.call(e.value.at, e.key) ?? false))
             e.key,
       };
 

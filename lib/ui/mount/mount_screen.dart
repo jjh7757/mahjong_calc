@@ -21,6 +21,7 @@ import '../../services/record_puller.dart';
 import '../../services/server_backoff.dart';
 import '../../services/volume_keys.dart';
 import '../../table/auto_record.dart';
+import '../../table/call_watch.dart';
 import '../../table/corner_change.dart';
 import '../../table/cropper.dart';
 import '../../table/felt_grid.dart';
@@ -70,6 +71,12 @@ Future<ShotAnalysis> _analyzeGridInIsolate(Uint8List small, GridZones g) => comp
 
 /// JPEG 머리(SOF)에서 긴 변만 읽는다(디코딩 없음). 못 읽으면 null.
 int? jpegLongSide(Uint8List b) {
+  final s = jpegSize(b);
+  return s == null ? null : (s.$1 > s.$2 ? s.$1 : s.$2);
+}
+
+/// JPEG 머리(SOF)에서 (가로, 세로)를 읽는다(디코딩 없음). 못 읽으면 null.
+(int, int)? jpegSize(Uint8List b) {
   var i = 2;
   while (i + 9 < b.length) {
     if (b[i] != 0xFF) return null;
@@ -77,7 +84,7 @@ int? jpegLongSide(Uint8List b) {
     final len = (b[i + 2] << 8) | b[i + 3];
     if (m >= 0xC0 && m <= 0xCF && m != 0xC4 && m != 0xC8 && m != 0xCC) {
       final h = (b[i + 5] << 8) | b[i + 6], w = (b[i + 7] << 8) | b[i + 8];
-      return w > h ? w : h;
+      return (w, h);
     }
     i += 2 + len;
   }
@@ -233,6 +240,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
   /// 지금 격자를 잡은 펠트 위치(없으면 손으로 맞춘 격자라 다음 안정된 위치를 기준으로만 삼는다).
   static const String gridFeltPref = 'mount.gridFelt';
+
+  /// 저장된 격자가 "펠트 없이 자동으로 맞춘 것"(기기 판독 `localsetup`·서버 `/v2/setup`)인가. 그런 격자는 펠트가 처음 읽혀 자리를 잡았을 때
+  /// 그 펠트로 만든 격자와 견줘([gridShiftOf]) 어긋나 있으면 다시 맞춘다 — 맞춘 뒤 카메라가 옮겨진 것(11-14 매장 2반장, 2026-11-16).
+  /// 손으로 맞춰 저장한 격자는 견주지 않는다: 펠트 판독이 어긋나는 탁자에서 손으로 고친 격자를 18초 뒤 되돌리는 일이 없게.
+  static const String gridCheckFeltPref = 'mount.gridCheckFelt';
+  bool _gridCheckFelt = false;
   final FeltWatch _feltWatch = FeltWatch();
 
   /// 마지막 거치 점검(자동 맞추기·카메라 이동 때 조용히 한 번, 또는 점검 창을 닫을 때). 테이블 화면 "거치 점검" 버튼 색.
@@ -307,6 +320,14 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   static const Duration _gridFlashFor = Duration(seconds: 8);
   TileOverlay? _overlay;
   bool _overlayBusy = false;
+
+  /// 일발의 "리치 뒤 울기·버림" 을 패 인식으로([CallWatch], 2026-11-16 사용자 "겹쳐 보기로 바꾸기"). 리치봉이 처음 보일 때·확정될 때
+  /// 겹쳐 보기와 같은 판독을 한 번씩 돌려 기준을 잡고(겹쳐 보기 표시를 꺼 놔도), 화료 사진을 한 번 읽어 견준다([_finalCalls]).
+  /// 이 기기에서 판독할 수 없으면(기준 없음) 픽셀 판정 그대로.
+  final CallWatch _callWatch = CallWatch();
+
+  /// 이번 화료 사진의 자리별 판정([_finalCalls]). 화료 처리마다 새로.
+  Map<Side, CallVerdict> _callVerdicts = const {};
 
   /// 마지막으로 받은 3초 미리보기의 스트림 원래 크기(`X-Frame-Size`). 실시간 보기 중엔 미리보기를 안 받아 이 값을 쓴다.
   int? _previewFrameW;
@@ -551,7 +572,15 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       // 이번 차례에 받은 기록용 사본이 원래 크기면 그대로 쓰고, 아니면 원래 크기로 따로 받는다. 스트림이 1600 미만이면 안 한다.
       final fullSide = p.frameLongSide ?? 0;
       final overlayDue = _tickChanged || _overlayAt == null || DateTime.now().difference(_overlayAt!) >= _overlayEvery;
-      if (_tileOverlay && overlayDue && OnDeviceReader.supported && !_busy && !_overlayBusy && fullSide >= _trackPreviewMinLongSide) {
+      // 리치봉이 방금 보인 자리가 있으면 겹쳐 보기 표시와 무관하게 한 번 읽어 일발 판정의 기준을 잡는다([_callWatch]).
+      final seenAt = _trackingEnabled && _useGrid ? (_riverTracker?.riichiSeenAt ?? const <Side, DateTime>{}) : const <Side, DateTime>{};
+      _callWatch.prune({...seenAt.keys});
+      final tickNow = DateTime.now();
+      final callSides = {
+        for (final e in seenAt.entries)
+          if (_callWatch.wants(e.key, e.value, tickNow)) e.key,
+      };
+      if (((_tileOverlay && overlayDue) || callSides.isNotEmpty) && OnDeviceReader.supported && !_busy && !_overlayBusy && fullSide >= _trackPreviewMinLongSide) {
         Uint8List? full = hiBytes != null && (jpegLongSide(hiBytes!) ?? 0) >= fullSide ? hiBytes : null;
         if (full == null) {
           try {
@@ -560,7 +589,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         }
         if (full != null) {
           _overlayAt = DateTime.now();
-          unawaited(_runOverlay(full));
+          unawaited(_runOverlay(full, baselineFor: callSides));
         }
       }
     } on RemoteCameraException catch (e) {
@@ -619,6 +648,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _gridSrc = GridSource.ofLoaded(g == null ? null : _grid);
       final felt = p.getString(gridFeltPref);
       if (felt != null) _feltWatch.reset(feltQuadFromJson(jsonDecode(felt) as Map<String, dynamic>));
+      _gridCheckFelt = p.getBool(gridCheckFeltPref) ?? false;
     } catch (_) {}
     if (!mounted) return;
     if (url != null && url.isNotEmpty) {
@@ -933,7 +963,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   }
 
   /// [felt] = 이 격자를 계산한 펠트 위치. 손으로 맞춘 격자면 null 이고, 다음에 안정된 위치를 기준으로만 삼아 격자를 덮어쓰지 않는다.
-  Future<void> _saveGrid({FeltQuad? felt}) async {
+  /// [checkFelt] = 펠트 없이 자동으로 맞춘 격자([gridCheckFeltPref]) — 다음에 안정된 펠트 위치와 견줘 어긋났으면 다시 맞춘다.
+  Future<void> _saveGrid({FeltQuad? felt, bool checkFelt = false}) async {
     // 격자가 바뀌면 패 한 장 비율·기준이 달라져 추적기를 새로 만든다. 사건 기록은 이어받는다 — track.json 을 덮어쓰므로
     // 버리면 그 판 앞부분 사건이 사라지고, 프레임 기록의 사건 위치(_meldEventsSeen)도 어긋난다.
     _carryMeldEvents = [...?_tracker?.events];
@@ -943,11 +974,15 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     _shiftGate.reset();
     _gridSource = _cameraId;
     _feltWatch.reset(felt);
+    _gridCheckFelt = checkFelt && felt == null;
+    // 펠트 안쪽 상자는 이 격자를 잡은 펠트의 것만(손으로·기기 판독으로 맞췄으면 지우고, 다음 안정 위치에서 다시 채운다).
+    _grid = _grid.withFeltBox(felt == null ? null : feltBoxOf(felt));
     try {
       final p = await SharedPreferences.getInstance();
       await p.setString(gridPref, jsonEncode(_grid.toJson()));
       await p.setBool(useGridPref, _useGrid);
       await p.setString(gridSourcePref, _gridSource!);
+      await p.setBool(gridCheckFeltPref, _gridCheckFelt);
       if (felt == null) {
         await p.remove(gridFeltPref);
       } else {
@@ -970,7 +1005,33 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       return;
     }
     if (!mounted || _busy || _setupBusy || _gridBeforeEdit != null || _galleryShot != null) return;
-    final moved = _feltWatch.add(felt);
+    var moved = _feltWatch.add(felt);
+    if (moved == null && _feltWatch.adoptedFirst) {
+      // 기준 없이(손으로·기기 판독으로 맞춘 격자) 지켜보다 처음 안정된 펠트 위치. 저장된 격자가 이 자리의 것이면 그대로 두고
+      // 펠트 안쪽 상자만 채운다. 크게 어긋나 있으면: 자동으로 맞춘 격자([_gridCheckFelt])는 맞춘 뒤 카메라가 옮겨진 것이니
+      // 옮겨졌을 때와 똑같이 다시 맞추고, 손으로 맞춘 격자는 건드리지 않는다(펠트 상자도 안 채움 — 펠트 판독을 못 믿는 탁자일 수 있다).
+      final basis = _feltWatch.basis!;
+      final fromFelt = gridFromFelt(basis, keep: _grid);
+      if (fromFelt == null) return;
+      final shift = gridShiftOf(_grid, fromFelt);
+      final check = _gridCheckFelt;
+      debugPrint('[felt] 첫 기준, 저장 격자와 차이 $shift(자동 격자 $check)');
+      if (shift < feltGridShiftMax || !check) {
+        final box = shift < feltGridShiftMax ? feltBoxOf(basis) : null;
+        if (box?.toList().join(',') != _grid.feltBox?.toList().join(',')) {
+          setState(() => _grid = _grid.withFeltBox(box));
+          // 울기 추적 칸이 달라지니 울기 추적기만 새로(강·리치봉 추적은 그대로 — 판 중 리치를 잃지 않게).
+          _carryMeldEvents = [...?_tracker?.events];
+          _tracker = null;
+          try {
+            final p = await SharedPreferences.getInstance();
+            await p.setString(gridPref, jsonEncode(_grid.toJson()));
+          } catch (_) {}
+        }
+        return;
+      }
+      moved = basis;
+    }
     if (moved == null) return;
     final grid = gridFromFelt(moved, keep: _grid);
     if (grid == null) return;
@@ -1177,6 +1238,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     'tracked_riichi': [for (final s in _trackedRiichi()) s.name],
     'tracked_double_riichi': [for (final s in _trackedDoubleRiichi()) s.name],
     'tracked_ippatsu': [for (final s in _trackedIppatsu()) s.name],
+    'tracked_self_grew': [for (final s in _trackedSelfGrew()) s.name],
     'tracked_discard': _trackedDiscard()?.toJson(),
     'tracked_dora': _doraTracker?.confirmed?.toJson(),
     'preview_long_side': _previewFrameLongSide,
@@ -1220,21 +1282,72 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   final SceneShiftGate _shiftGate = SceneShiftGate();
 
   /// 패 인식 겹쳐 보기 한 장면(기기 안 Python). 실패는 로그만.
-  Future<void> _runOverlay(Uint8List frame) async {
+  /// [baselineFor] = 리치봉이 방금 보인 자리 — 이 판독의 울기·강 상자 수를 그 자리 일발 판정의 기준으로 넣는다([_callWatch]).
+  Future<void> _runOverlay(Uint8List frame, {Set<Side> baselineFor = const {}}) async {
     _overlayBusy = true;
     try {
-      final o = await OnDeviceReader.overlay(frame, {
-        'x1': '${_grid.x1}',
-        'x2': '${_grid.x2}',
-        'y1': '${_grid.y1}',
-        'y2': '${_grid.y2}',
-      });
+      final o = await OnDeviceReader.overlay(frame, _overlayQuery());
       debugPrint('[overlay] ${o.tiles.length}장 ${o.ms}');
+      if (baselineFor.isNotEmpty) {
+        final c = _countOf(o, frame);
+        for (final s in baselineFor) {
+          _callWatch.addBaseline(s, c);
+        }
+        debugPrint('[calls] 기준 ${[for (final s in baselineFor) s.name]} ${c.toJson()}');
+      }
       if (mounted && _tileOverlay && !_busy) setState(() => _overlay = o);
     } catch (e) {
       debugPrint('[overlay] 실패: $e');
     } finally {
       _overlayBusy = false;
+    }
+  }
+
+  Map<String, String> _overlayQuery() => {'x1': '${_grid.x1}', 'x2': '${_grid.x2}', 'y1': '${_grid.y1}', 'y2': '${_grid.y2}'};
+
+  /// 패 인식 한 장면 → 강·울기 상자 수. 강 주인은 가운데 기기(리치봉 구역) 중심에서 본 방향.
+  TableCount _countOf(TileOverlay o, Uint8List jpeg) {
+    final z = _grid.sticksZone;
+    final size = jpegSize(jpeg);
+    return TableCount.of(
+      [
+        for (final t in o.tiles)
+          (cx: t.x + t.w / 2, cy: t.y + t.h / 2, role: t.role, side: Side.values.asNameMap()[t.side]),
+      ],
+      centerX: (z.xmin + z.xmax) / 2000,
+      centerY: (z.ymin + z.ymax) / 2000,
+      aspect: size == null || size.$2 == 0 ? _frameAspect : size.$1 / size.$2,
+    );
+  }
+
+  /// 화료 사진을 패 인식으로 한 번 읽어, 리치 때 잡아 둔 기준과 견준 자리별 판정을 [_callVerdicts] 에 둔다(촬영 기록용 값을 돌려준다).
+  /// 기준이 없거나 이 기기에서 못 읽으면 null — 픽셀 판정 그대로. 태블릿에서 약 2초(리치 화료일 때만).
+  Future<Map<String, Object?>?> _finalCalls(Uint8List photo) async {
+    _callVerdicts = const {};
+    final river = _riverTracker;
+    if (!_trackingEnabled || !_useGrid || river == null || _callWatch.isEmpty || !OnDeviceReader.supported) return null;
+    final sides = [
+      for (final s in river.riichiAt.keys)
+        if (_callWatch.baseline(s) != null) s,
+    ];
+    if (sides.isEmpty) return null;
+    try {
+      final sw = Stopwatch()..start();
+      final o = await OnDeviceReader.overlay(photo, _overlayQuery()).timeout(const Duration(seconds: 10));
+      final last = _countOf(o, photo);
+      _callVerdicts = {for (final s in sides) s: _callWatch.verdict(s, last)!};
+      debugPrint('[calls] 화료 ${sw.elapsedMilliseconds}ms ${{for (final e in _callVerdicts.entries) e.key.name: e.value.toJson()}}');
+      return {
+        'tracked_calls': {
+          'ms': sw.elapsedMilliseconds,
+          for (final e in _callVerdicts.entries) e.key.name: e.value.toJson(),
+        },
+        'tracked_ippatsu': [for (final s in _trackedIppatsu()) s.name],
+        'tracked_self_grew': [for (final s in _trackedSelfGrew()) s.name],
+      };
+    } catch (e) {
+      debugPrint('[calls] 화료 사진 판독 실패(픽셀 판정으로): $e');
+      return null;
     }
   }
 
@@ -1314,9 +1427,29 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
 
   Set<Side> _trackedDoubleRiichi() =>
       _trackingEnabled && _useGrid ? (_riverTracker?.doubleRiichiCandidates ?? const {}) : const {};
-  Set<Side> _trackedIppatsu() => _trackingEnabled && _useGrid
-      ? (_riverTracker?.ippatsuCandidates(meldGrewSince: (t) => _tracker?.grewSince(t) ?? false) ?? const {})
-      : const {};
+  /// 일발 후보. 울기 픽셀 추적은 **다른 세 자리**만 본다 — 리치한 사람 자기 모서리는 [_trackedSelfGrew] 로 따로 넘겨
+  /// 화료 사진에 안깡이 있을 때만 쓴다(2026-11-16).
+  ///
+  /// 화료 사진의 패 인식 판정([_callVerdicts])이 있는 자리는 그것을 따른다(yes → 후보, no → 아님). 판정이 없거나 모름이면 픽셀 판정.
+  Set<Side> _trackedIppatsu() {
+    if (!_trackingEnabled || !_useGrid) return const {};
+    final pixel = _riverTracker?.ippatsuCandidates(meldGrewSince: (t, s) => _tracker?.grewSince(t, except: s) ?? false) ?? const <Side>{};
+    return {
+      for (final s in pixel)
+        if ((_callVerdicts[s]?.answer ?? CallAnswer.unknown) == CallAnswer.unknown) s,
+      for (final e in _callVerdicts.entries)
+        if (e.value.answer == CallAnswer.yes) e.key,
+    };
+  }
+
+  Set<Side> _trackedSelfGrew() {
+    final river = _riverTracker, meld = _tracker;
+    if (!_trackingEnabled || !_useGrid || river == null || meld == null) return const {};
+    return {
+      for (final e in river.riichiAt.entries)
+        if (_callVerdicts[e.key]?.selfGrew ?? (meld.seat(e.key).grewAt?.isAfter(e.value.at) ?? false)) e.key,
+    };
+  }
   Discard? _trackedDiscard() => _trackingEnabled && _useGrid ? _riverTracker?.lastDiscard : null;
 
   /// 판 중 프레임 투표로 확정한 도라 표시패(없으면 null). 화료 판독의 표시패 답을 검증·보충한다(merge, metrics 표 1-53).
@@ -1419,7 +1552,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       tracker.cameraMoved(now);
       river.cameraMoved(now);
     }
-    tracker.onFrame(stats.corners, now);
+    tracker.onFrame(stats.watchCorners, now);
     final riverActions = river.onFrame(stats.rivers, stats.strips, now, sticksSeen: stats.sticksSeen);
     final why = _frameWhy(tracker, river, shifted);
     // 도라 표시패: 모서리·강이 다 가만히 있고(손이 안 지나감) 카메라도 안 움직였을 때만 읽는다.
@@ -1564,7 +1697,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           _gridSrc = GridSource.felt; // 자동 맞추기 성공(펠트 대신 /v2/setup 틀) — 이 사진에 맞춘 격자
         }
       });
-      if (auto && proposed != null) await _saveGrid();
+      if (auto && proposed != null) await _saveGrid(checkFelt: true);
       if (gallery == null) {
         unawaited(_saveSetup(small, {if (local) 'method': 'localsetup', ...setup, 'mount': mount?.toJson()}, proposed, auto: auto, ms: sw.elapsedMilliseconds));
       }
@@ -2008,8 +2141,10 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       CaptureLog.setPending(logDir, CaptureLog.roundKey(g.roundLabel, g.honba));
     }
     final trace = TableReadTrace();
+    // 리치 때 패 인식 기준을 잡아 뒀으면 화료 사진을 한 번 읽어 일발 판정을 바꾼다([_finalCalls]) — 그 값을 촬영 기록에도 남긴다.
+    var setupLog = setup;
     void saveLog({TableMerge? merge, String? error, List<String> warnings = const []}) =>
-        _saveLog(logDir, bytes, trace, g, setup, merge: merge, error: error, warnings: warnings);
+        _saveLog(logDir, bytes, trace, g, setupLog, merge: merge, error: error, warnings: warnings);
     final seats = SeatMap(g.settings.bottomSeat);
     final client = RecognizerClient();
     final reader = TableReader(client, ops: _isolateOps);
@@ -2055,6 +2190,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
             loserHint: r.trackedDiscardSide,
             doubleRiichiHint: r.trackedDoubleRiichi.contains(r.winnerSide!),
             ippatsuHint: r.trackedIppatsu.contains(r.winnerSide!),
+            selfGrewHint: r.trackedSelfGrew.contains(r.winnerSide!),
             trackedRiichi: r.trackedRiichi,
             trackedDora: r.trackedDora,
           ),
@@ -2062,6 +2198,11 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     }
 
     try {
+      final calls = await _finalCalls(bytes);
+      if (calls != null) setupLog = {...setup, ...calls};
+      // 판정은 이 사진에만 쓴다 — 여기서 값을 굳히고 비운다(다음 촬영의 기록·판독에 남지 않게).
+      final ippatsuSides = _trackedIppatsu(), selfGrewSides = _trackedSelfGrew();
+      _callVerdicts = const {};
       final readFuture = _useGrid
           ? reader.readGrid(
               bytes,
@@ -2094,7 +2235,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
               ),
               trackedRiichi: _trackedRiichi(),
               trackedDoubleRiichi: _trackedDoubleRiichi(),
-              trackedIppatsu: _trackedIppatsu(),
+              trackedIppatsu: ippatsuSides,
+              trackedSelfGrew: selfGrewSides,
               trackedDiscard: _trackedDiscard(),
               trackedDora: _trackedDora(),
               trace: trace,

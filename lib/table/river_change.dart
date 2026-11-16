@@ -12,7 +12,7 @@ import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
 
-import 'corner_change.dart' show CornerStats, analyzeCorners, cornerStats;
+import 'corner_change.dart' show analyzeCorners, CornerStats, cornerStats, cornerWatchStats;
 import 'fixed_layout.dart' show decodeSmall, whiteMask;
 import 'grid_zones.dart';
 import 'stick_slots.dart';
@@ -171,16 +171,25 @@ class TableFrameStats {
 
   /// 자리별 홈에 리치봉이 보이는지([stickSlotsIn], 색 무관 픽셀 판정, 2026-11-10). 격자에 리치봉 상자가 없으면 빈 맵.
   final Map<Side, bool> sticksSeen;
-  const TableFrameStats({required this.corners, required this.rivers, required this.strips, this.sticksSeen = const {}});
+
+  /// 울기 픽셀 추적용 모서리 통계([cornerWatchStats], 펠트 안쪽만). 격자에 펠트 상자가 없으면 [corners] 와 같다.
+  final Map<Side, CornerStats> watchCorners;
+  const TableFrameStats({required this.corners, required this.rivers, required this.strips, this.sticksSeen = const {}, Map<Side, CornerStats>? watchCorners})
+      : watchCorners = watchCorners ?? corners;
 }
 
 /// 미리보기 JPEG → 프레임 통계. `compute()` 에 그대로 넘길 수 있다. [analyzeCorners] 의 확장판.
 TableFrameStats analyzeTableFrame((Uint8List, GridZones) args) {
   final (jpeg, grid) = args;
   final im = decodeSmall(jpeg);
-  final white = whiteMask(im);
+  return tableFrameStatsOf(im, whiteMask(im), grid);
+}
+
+/// 이미 푼 프레임과 흰 면 마스크([whiteMask])로 통계만. 같은 프레임을 여러 격자로 볼 때(재생 실험) 다시 풀지 않게.
+TableFrameStats tableFrameStatsOf(img.Image im, Uint8List white, GridZones grid) {
   return TableFrameStats(
     corners: cornerStats(im, white, grid),
+    watchCorners: grid.feltBox == null ? null : cornerWatchStats(im, white, grid),
     rivers: {for (final s in Side.values) s: snapshotIn(im, white, grid.riverBand(s))},
     strips: {for (final s in Side.values) s: snapshotIn(im, white, grid.stickStrip(s))},
     // 리치봉 상자(자동 맞추기·격자 편집)가 있을 때만: 없으면 가운데 칸 70% 라 홈 위치가 맞지 않는다.

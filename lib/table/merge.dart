@@ -213,6 +213,9 @@ TableMerge mergeReading({
   bool doubleRiichiHint = false,
   /// 추적이 화료자를 일발 후보로 봤다([TableReading.trackedIppatsu] 에 화료자 자리가 있음).
   bool ippatsuHint = false,
+  /// 리치 뒤 화료자 자기 모서리의 흰 면이 늘었다([TableReading.trackedSelfGrew]). 화료 사진에 화료자 울기(리치했으니 안깡)가
+  /// 있을 때만 "리치 뒤 깡" 으로 보고 일발을 지운다 — 울기가 없으면 쯔모 패·눕힌 손패가 모서리에 들어온 것이다.
+  bool selfGrewHint = false,
   /// 추적이 이번 판에 리치봉이 새로 놓인 것을 본 자리([TableReading.trackedRiichi]).
   Set<Side> trackedRiichi = const {},
   /// 판 중 프레임 투표로 확정한 도라 표시패([TableReading.trackedDora]). 화료 사진 답을 검증하고 못 읽었으면 채운다.
@@ -365,7 +368,7 @@ TableMerge mergeReading({
   }
 
   // 일발: 리치가 살아 있고 추적이 리치 뒤 버림·울기를 못 봤을 때만. 추정이라 확인 플래그.
-  final ippatsu = riichi && ippatsuHint;
+  final ippatsu = riichi && ippatsuHint && !(selfGrewHint && hand.melds.isNotEmpty);
   if (ippatsu) {
     flags.add(const MergeFlag(
       MergeIssue.ippatsuTracked,

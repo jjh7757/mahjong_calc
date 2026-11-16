@@ -361,6 +361,10 @@ class TableReading {
   /// 추적이 "리치 뒤 아직 안 버림·울기 없음" 으로 본 자리(일발 후보, `RiverTracker.ippatsuCandidates`). merge 가 확인 플래그와 함께 쓴다.
   final Set<Side> trackedIppatsu;
 
+  /// 리치 뒤 **자기 모서리**의 흰 면이 늘어난 리치 자리(울기 픽셀 추적). 리치한 사람의 울기는 안깡뿐이라, merge 쪽이 화료 사진에
+  /// 그 사람 울기(안깡)가 있을 때만 이걸로 일발을 지운다 — 쯔모 패를 모서리에 떼어 놓거나 손패를 눕히면서 늘어난 것은 울기가 아니다.
+  final Set<Side> trackedSelfGrew;
+
   /// 유국으로 봉이 남은 자리의 강에 눕힌 패가 있는지(모르면 null). 그 자리만 잰다. merge 가 이번 판 리치를 이걸로 정한다.
   final Map<Side, bool?> riverSideways;
 
@@ -378,6 +382,7 @@ class TableReading {
     this.trackedRiichi = const {},
     this.trackedDoubleRiichi = const {},
     this.trackedIppatsu = const {},
+    this.trackedSelfGrew = const {},
     this.riverSideways = const {},
     this.trackedDora,
   });

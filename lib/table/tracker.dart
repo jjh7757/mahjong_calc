@@ -148,8 +148,9 @@ class MeldTracker {
 
   TrackedSeat seat(Side side) => seats[side]!;
 
-  /// [since] 뒤에 어느 자리든 울기가 늘었는가(울기·깡은 일발을 깬다).
-  bool grewSince(DateTime since) => seats.values.any((t) => t.grewAt != null && t.grewAt!.isAfter(since));
+  /// [since] 뒤에 어느 자리든 울기가 늘었는가(울기·깡은 일발을 깬다). [except] 자리는 안 본다.
+  bool grewSince(DateTime since, {Side? except}) =>
+      seats.entries.any((e) => e.key != except && e.value.grewAt != null && e.value.grewAt!.isAfter(since));
 
   /// 화료 때 믿고 쓸 울기. 확정됐고 그 뒤 변화가 없을 때만. 아니면 null(지금 방식으로 자리 전체를 읽는다).
   List<ObservedMeld>? trackedMelds(Side side) {

@@ -299,6 +299,7 @@ class TableReader {
     Set<Side> trackedRiichi = const {},
     Set<Side> trackedDoubleRiichi = const {},
     Set<Side> trackedIppatsu = const {},
+    Set<Side> trackedSelfGrew = const {},
     Set<Side> carriedSticks = const {},
     Discard? trackedDiscard,
     Side? winnerSide,
@@ -798,6 +799,7 @@ class TableReader {
         trackedRiichi: trackedRiichi,
         trackedDoubleRiichi: trackedDoubleRiichi,
         trackedIppatsu: trackedIppatsu,
+        trackedSelfGrew: trackedSelfGrew,
         riverSideways: riverSideways,
         trackedDora: trackedDora,
       );
@@ -855,6 +857,7 @@ class TableReader {
       trackedRiichi: first.trackedRiichi,
       trackedDoubleRiichi: first.trackedDoubleRiichi,
       trackedIppatsu: first.trackedIppatsu,
+      trackedSelfGrew: first.trackedSelfGrew,
       riverSideways: first.riverSideways,
       trackedDora: first.trackedDora,
     );
