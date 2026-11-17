@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>시험 판 정답 확인</title>
+<style>
+  :root { --bg:#f6f5f2; --panel:#fff; --ink:#1f2328; --mute:#6b7280; --line:#d9d6cf; --acc:#1f6f5c; --acc2:#e7f2ee; --warn:#b4541a; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#17191c; --panel:#202327; --ink:#e7e6e3; --mute:#9aa0a8; --line:#363a40; --acc:#57b79f; --acc2:#1f332e; --warn:#e0935a; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 "Malgun Gothic", system-ui, sans-serif; }
+  #wrap { display:grid; grid-template-columns: 210px 1fr; min-height:100vh; }
+  #side { border-right:1px solid var(--line); padding:12px 10px; overflow:auto; max-height:100vh; position:sticky; top:0; }
+  #side h2 { font-size:12px; color:var(--mute); margin:14px 0 6px; font-weight:600; }
+  details.grp { margin:0 0 10px; padding:6px 8px; }
+  details.grp summary { font-weight:600; font-size:13px; cursor:pointer; }
+  details.grp h2 { margin:10px 0 6px; }
+  .chips { display:flex; flex-wrap:wrap; gap:4px; }
+  .chip { border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:6px; padding:2px 0; min-width:34px; text-align:center; cursor:pointer; font-size:12px; }
+  .chip.done { background:var(--acc2); border-color:var(--acc); }
+  .chip.cur { outline:2px solid var(--acc); }
+  #main { padding:14px 18px 40px; min-width:0; }
+  h1 { font-size:17px; margin:0 0 2px; }
+  .sub { color:var(--mute); margin-bottom:10px; }
+  .sub b { color:var(--ink); }
+  #view { background:#000; border-radius:8px; overflow:auto; max-height:62vh; }
+  #view img { display:block; width:100%; }
+  #view.zoom img { width:200%; }
+  #bar { display:flex; height:22px; margin-top:8px; border-radius:5px; overflow:hidden; border:1px solid var(--line); }
+  #bar div { font-size:11px; text-align:center; line-height:20px; cursor:pointer; white-space:nowrap; overflow:hidden; background:var(--panel); color:var(--mute); border-right:1px solid var(--line); }
+  #bar div.own { background:var(--acc2); color:var(--ink); font-weight:600; }
+  #slider { width:100%; margin:4px 0 2px; }
+  .ctl { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:4px 0 12px; }
+  button, select, input[type=number], input[type=text], textarea { font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:4px 10px; }
+  button { cursor:pointer; }
+  button.pri { background:var(--acc); color:#fff; border-color:var(--acc); }
+  #time { font-variant-numeric:tabular-nums; min-width:150px; }
+  form { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px; display:grid; gap:10px; }
+  .kinds { display:flex; flex-wrap:wrap; gap:6px 14px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px 18px; align-items:center; }
+  .row input[type=number] { width:64px; }
+  textarea { width:100%; min-height:38px; resize:vertical; }
+  .hint { color:var(--mute); font-size:12px; }
+  #saved { color:var(--acc); font-size:12px; }
+  details { margin:0 0 10px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px 12px; }
+  details p { margin:6px 0; }
+  .warn { color:var(--warn); }
+  #board { display:grid; gap:6px; }
+  #slots { display:flex; gap:3px; overflow-x:auto; padding-bottom:2px; }
+  .slot { flex:0 0 auto; width:36px; display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .slot button { width:36px; height:48px; padding:0; border-radius:5px; font-weight:600; font-size:14px; }
+  .slot button.empty { background:transparent; border-style:dashed; color:var(--mute); }
+  .slot button.drawn { background:#f3d27a; color:#3b2a00; border-color:#c79a1c; }
+  .slot button.sel { outline:3px solid var(--warn); outline-offset:1px; }
+  .slot button.lastop { box-shadow:0 0 0 2px var(--acc) inset; }
+  .slot span { font-size:11px; color:var(--mute); font-variant-numeric:tabular-nums; }
+  .slot.temp span { color:var(--warn); }
+  .slot.dslot span { color:#c79a1c; }
+  #held { display:flex; gap:6px; align-items:center; min-height:30px; }
+  #held button { min-width:36px; font-weight:600; }
+  #held button.sel { outline:3px solid var(--warn); }
+  #ops { width:100%; font-family:Consolas, monospace; }
+  #opsres { font-size:13px; }
+  #opsres.err { color:var(--warn); }
+  #oldans { font-size:12px; color:var(--warn); }
+  .hide { display:none !important; }
+  @media (max-width: 760px) { #wrap { grid-template-columns:1fr; } #side { position:static; max-height:none; border-right:0; border-bottom:1px solid var(--line); } }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <nav id="side"></nav>
+  <main id="main">
+    <h1 id="title">불러오는 중…</h1>
+    <div class="sub" id="sub"></div>
+    <details>
+      <summary>적는 법</summary>
+      <p>한 차례 = 이 사람이 강에 패를 <b>한 장 버린 것</b>. 그림은 그 사람 시점(왼쪽 = 왼손 쪽)이고, 가운데 진한 구간이 그 버림이 일어난 손 움직임, 앞·뒤 구간은 그 전후의 손 움직임이다.</p>
+      <p><b>칸 판(-1 ~ 15, 2026-11-17 새 방식)</b> — 손이 한 일을 칸 위에서 그대로 따라 한다. 줄이 13장이면 <b>1~13 = 차례를 시작할 때 손패</b>(왼쪽부터), <b>14 = 오른쪽 끝에 붙이는 칸 · 0 = 왼쪽 끝에 붙이는 칸</b>(뽑은 패를 어느 쪽에 붙여도 된다), <b>-1 · 15 = 양 끝 임시칸</b>. 줄이 10장이면 -1 ~ 12. 칸에 적힌 글자는 "원래 몇 번째 패" 라 밀거나 옮겨도 안 바뀌고, 뽑은 패는 <b>D</b>.</p>
+      <p>누르는 법: ① 뽑기 전에 <b>빈칸을 누르면</b> 뽑은 패 D 가 거기 놓인다(오른쪽 끝이면 14, 왼쪽 끝이면 0). ② <b>패를 누르면 고름</b>(주황 테) → 빈칸을 누르면 그리로 옮김, 다른 패를 누르면 맞바꿈. ③ 고른 채 <b>버림</b> · <b>← 밀기 / 밀기 →</b>(붙어 있는 패를 한꺼번에 한 칸) · <b>손에 들기</b>(두 장을 같이 들 때). 손에 든 패는 눌러 고른 뒤 빈칸을 누르면 놓인다. ④ 다 하면 <b>정리</b>(빈칸을 메워 왼쪽부터 붙임 — 버린 뒤 줄을 미는 동작). 정리 뒤에도 옮김 · 맞바꿈을 더 할 수 있다.</p>
+      <p>순서대로 쌓인 동작은 아래 글 칸에 <code>draw 14; discard 5; tidy</code> 꼴로 남고(글을 직접 고쳐도 된다), 끝나면 "원래 몇 번째를 버렸나 · 버리는 순간 몇 번째였나 · 정리 뒤 뽑은 패가 몇 번째인가" 를 자동으로 계산해 같이 저장한다. 찬 칸에 놓기 · 버림 두 번 · 손에 패가 남음 같은 것은 바로 빨갛게 알려 준다. 쯔모기리는 <code>draw 14; discard 14</code>.</p>
+      <p><b>한 구간에 버림이 두 번</b>(위에 주황 글씨로 뜸)이면 버림마다 칩이 따로 있고 같은 프레임을 보여 준다. 각 칩에는 <b>그 칩의 버림 하나만</b> 적는다(강에서 읽은 패로 어느 버림인지 맞춘다). 두 번째 버림 칩의 칸 판은 첫 번째 버림이 끝나고 정리된 줄을 1번부터 다시 센 것 — 첫 번째 칩에 "두번째 버림: …" 을 메모로 몰아 적지 않는다.</p>
+      <p>손 밑이라 동작을 한 칸으로 못 정하면 가장 그럴듯한 동작을 넣고 "확신 없음" 을 켜고 메모에 후보를 적는다.</p>
+      <p><b>울기(치·퐁)</b>는 따로 한 차례로 세지 않는다. 울고 나서 버린 것이 그다음 버림 차례이고, 거기서 "울기 뒤 버림" 을 고른다. 그 차례에는 <b>울기로 뺀 칸</b>(손패에서 울기 쪽으로 나간 패들이 울기 전 줄에서 몇 번째였나, 예 4,5)을 적고, <b>나간 칸은 울기 패를 뺀 뒤 남은 줄에서 왼쪽부터 다시 1번으로</b> 센다(13장에서 두 장을 뺐으면 1~11). 들어간 칸은 비운다(뽑은 패가 없음). 앞 차례의 뒤 구간에 울기가 보여도 앞 차례 답에는 넣지 않는다.</p>
+      <p>뽑은 패를 그대로 버렸으면 쯔모기리 — 칸은 비워 둔다. 보이는 만큼만 적고, 자신 없으면 "확신 없음" 을 켠다.</p>
+      <p>키: ← → 한 프레임, Shift + ← → 열 프레임, 스페이스 재생/멈춤, [ ] 앞·다음 차례.</p>
+    </details>
+    <div id="view"><img id="img" alt="손패 줄 프레임"></div>
+    <div id="bar"></div>
+    <input id="slider" type="range" min="0" max="0" value="0">
+    <div class="ctl">
+      <button id="prevf" type="button">◀</button>
+      <button id="play" type="button" class="pri">재생</button>
+      <button id="nextf" type="button">▶</button>
+      <select id="speed"><option value="0.25">0.25배</option><option value="0.5" selected>0.5배</option><option value="1">1배</option><option value="2">2배</option></select>
+      <label><input id="zoom" type="checkbox"> 2배 확대</label>
+      <span id="time"></span>
+      <span class="hint" id="load"></span>
+    </div>
+    <form id="form" onsubmit="return false">
+      <div class="kinds" id="kinds"></div>
+      <div id="board">
+        <div id="slots"></div>
+        <div id="held"></div>
+        <div class="row">
+          <button type="button" id="b_discard">버림</button>
+          <button type="button" id="b_pushL">← 밀기</button>
+          <button type="button" id="b_pushR">밀기 →</button>
+          <button type="button" id="b_pick">손에 들기</button>
+          <button type="button" id="b_drawhand">뽑은 패를 손에 쥠</button>
+          <button type="button" id="b_tidy">정리</button>
+          <button type="button" id="b_undo">되돌리기</button>
+          <button type="button" id="b_reset">처음부터</button>
+        </div>
+        <input id="ops" type="text" placeholder="동작 — 칸을 누르면 여기에 쌓인다(예: draw 14; discard 5; tidy)">
+        <div id="opsres"></div>
+        <div id="oldans"></div>
+      </div>
+      <div class="row">
+        <span id="callrow" class="row">
+          <label>울기로 뺀 칸 <input id="meld" type="text" placeholder="예: 4,5" style="width:90px"></label>
+          <label>나간 칸(울기 패 뺀 줄에서) <input id="k" type="number" min="1" max="14"></label>
+        </span>
+        <label>줄 장수가 다르면 <input id="n" type="number" min="1" max="14"></label>
+        <label><input id="unsure" type="checkbox"> 확신 없음</label>
+      </div>
+      <textarea id="note" placeholder="메모(선택) — 예: 끝에 붙였다가 버린 뒤 다시 집어 4번째에 넣음"></textarea>
+      <div class="row">
+        <button id="prevt" type="button">앞 차례</button>
+        <button id="nextt" type="button" class="pri">다음 차례</button>
+        <span id="saved"></span>
+        <span class="hint" id="prog"></span>
+      </div>
+    </form>
+  </main>
+</div>
+<script>
+const KINDS = [["tsumogiri","쯔모기리(뽑은 패를 그대로 버림)"],["hand","손에서 냄"],["call","울기 뒤 버림(뽑지 않음)"],["unseen","안 보임 · 모름"],["bad","구간이 이상함(이 버림이 안 보이거나 섞임)"]];
+const $ = id => document.getElementById(id);
+let turns = [], answers = {}, cur = 0, frames = [], pos = 0, timer = null, imgs = [], loadGen = 0, saveT = null;
+
+function mmss(ms) { const d = new Date(ms), p = n => String(n).padStart(2, "0"); return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${Math.floor(d.getMilliseconds() / 100)}`; }
+
+async function init() {
+  const d = await (await fetch("/turns.json")).json();
+  answers = await (await fetch("/answers")).json();
+  const side = $("side");
+  const groups = [[2, "2반장 — 적을 판", false], [3, "3반장 쪽 — 적지 않음", true], [1, "1반장 — 연출용, 제외", true]];
+  for (const [han, label, folded] of groups) {
+    const gs = d.games.filter(g => g.han === han);
+    if (!gs.length) continue;
+    const sec = document.createElement("details"); sec.className = "grp"; sec.open = !folded;
+    const sm = document.createElement("summary"); sm.textContent = label; sec.appendChild(sm); side.appendChild(sec);
+    for (const g of gs) {
+      const h = document.createElement("h2"); h.textContent = g.id.slice(0, 3) + ({bottom: " 아래", right: " 오른쪽", top: " 위", left: " 왼쪽"}[g.side] || "") + " · 버림 " + g.turns.length; sec.appendChild(h);
+      const box = document.createElement("div"); box.className = "chips"; sec.appendChild(box);
+      for (const t of g.turns) {
+        const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = t.label || t.i; b.dataset.i = turns.length;
+        b.onclick = () => open(+b.dataset.i); box.appendChild(b); t.chip = b; t.han = han; turns.push(t);
+      }
+    }
+  }
+  for (const [v, label] of KINDS) {
+    const l = document.createElement("label"); l.innerHTML = `<input type="radio" name="kind" value="${v}"> ${label}`; $("kinds").appendChild(l);
+  }
+  $("form").addEventListener("input", onEdit);
+  wireBoard();
+  $("slider").oninput = e => show(+e.target.value);
+  $("prevf").onclick = () => step(-1); $("nextf").onclick = () => step(1);
+  $("play").onclick = toggle; $("speed").onchange = () => { if (timer) { toggle(); toggle(); } };
+  $("zoom").onchange = e => $("view").classList.toggle("zoom", e.target.checked);
+  $("prevt").onclick = () => open(cur - 1); $("nextt").onclick = () => open(cur + 1);
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT" || e.target.type === "text") return;
+    if (e.key === "ArrowLeft") { step(e.shiftKey ? -10 : -1); e.preventDefault(); }
+    else if (e.key === "ArrowRight") { step(e.shiftKey ? 10 : 1); e.preventDefault(); }
+    else if (e.key === " ") { toggle(); e.preventDefault(); }
+    else if (e.key === "[") open(cur - 1); else if (e.key === "]") open(cur + 1);
+  });
+  marks();
+  const first = turns.findIndex(t => t.han === 2 && !(answers[t.id] && answers[t.id].kind));
+  open(first < 0 ? 0 : first);
+}
+
+function marks() {
+  let n = 0, tot = 0;
+  turns.forEach((t, i) => { const done = !!(answers[t.id] && answers[t.id].kind); if (t.han === 2) { n += done; tot++; } t.chip.classList.toggle("done", done); t.chip.classList.toggle("cur", i === cur); });
+  $("prog").textContent = `2반장 적은 차례 ${n} / ${tot}`;
+}
+
+function open(i) {
+  if (i < 0 || i >= turns.length) return;
+  if (timer) toggle();
+  flush();
+  cur = i; const t = turns[i];
+  $("title").textContent = `${t.game.slice(0, 3)} · ${t.i}번째 버림` + (t.repeat ? ` (${t.label} — 앞의 버림을 남이 가져간 뒤 다시 버린 것)` : "");
+  const bits = [];
+  bits.push(t.tile ? `강에서 읽은 버린 패 <b>${t.tile}</b>` : "버린 패 종류 모름");
+  bits.push(t.n_calc ? `줄 <b>${t.n_calc}장</b>(울기 장수로 계산)` : "줄 장수 계산 못 함");
+  if (t.same_seg > 1) {  // 같은 버림 구간을 쓰는 차례들(강 순서대로) — 이 칩은 그중 몇 번째 버림인지
+    const ownT0 = s => (s.segs.find(x => x.role === "버림") || {}).t0;
+    const sib = turns.filter(x => x.game === t.game && ownT0(x) === ownT0(t)).sort((a, b) => a.i - b.i);
+    const nth = sib.indexOf(t) + 1;
+    const others = sib.filter(x => x !== t).map(x => `${x.label || x.i}순(${x.tile || "?"})`).join(" · ");
+    bits.push(`<span class="warn">이 구간에 버림이 ${t.same_seg}번 — 이 칩은 그중 <b>${nth}번째 버림</b>(${t.tile || "?"})만 적는다. 나머지 ${others} 는 그 칩에서.` +
+              (nth > 1 ? ` 칸 판은 앞 버림이 끝나고 정리된 줄을 1번부터 다시 센다.` : ` 칸 판은 이 버림이 끝나고 다음 뽑기 전까지만.`) + `</span>`);
+  }
+  if (t.more_before) bits.push("앞 구간 더 있음(생략)");
+  if (t.more_after) bits.push("뒤 구간 더 있음(생략)");
+  $("sub").innerHTML = bits.join(" · ");
+  frames = []; const bar = $("bar"); bar.innerHTML = "";
+  t.segs.forEach(s => {
+    const start = frames.length;
+    s.frames.forEach(ms => frames.push({ms, role: s.role}));
+    const d = document.createElement("div"); d.style.flex = s.frames.length + " 0 0"; d.textContent = `${s.role} ${s.t0}`;
+    if (s.role === "버림") d.className = "own"; d.onclick = () => show(start); bar.appendChild(d);
+  });
+  $("slider").max = frames.length - 1;
+  const own = frames.findIndex(f => f.role === "버림");
+  loadFrames(t, own < 0 ? 0 : own);
+  show(own < 0 ? 0 : own);
+  const a = answers[t.id] || {};
+  document.querySelectorAll("input[name=kind]").forEach(r => r.checked = r.value === a.kind);
+  $("k").value = a.kind === "call" ? (a.k ?? "") : ""; $("n").value = a.n ?? ""; $("meld").value = (a.meld_pos || []).join(","); $("unsure").checked = !!a.unsure; $("note").value = a.note ?? "";
+  ops = a.ops ? splitOps(a.ops) : []; sel = null; $("ops").value = ops.join("; ");
+  $("oldans").textContent = oldAnswerText(a);
+  $("saved").textContent = a.saved_at ? "저장됨 " + a.saved_at.slice(11) : "";
+  renderBoard();
+  marks();
+}
+
+// 프레임 불러오기(11-17 고침): 한꺼번에 200장을 던지면 서버가 접속을 거절해 깨진 그림이 그대로 남았다 →
+// 6장씩, 버림 프레임에서 가까운 것부터, 실패하면 3번까지 다시, 앞 차례의 남은 요청은 끊는다.
+let fq = [], inflight = new Set();
+function loadFrames(t, own) {
+  for (const el of inflight) { el.onload = el.onerror = null; el.src = ""; }
+  inflight = new Set();
+  const gen = ++loadGen; let got = 0, bad = 0;
+  imgs = frames.map(f => ({url: `/f/${t.game}/${f.ms}.jpg`, ok: false, src: null, tries: 0}));
+  fq = frames.map((_, i) => i).sort((a, b) => Math.abs(a - own) - Math.abs(b - own) || a - b);
+  const status = () => { if (gen === loadGen) $("load").textContent = got + bad < frames.length ? `프레임 ${got}/${frames.length} 불러오는 중` : (bad ? `프레임 ${bad}장을 못 불러옴 — 서버가 켜져 있는지 보고 차례를 다시 연다` : ""); };
+  const next = () => {
+    if (gen !== loadGen || !fq.length) return;
+    const i = fq.shift(), rec = imgs[i], el = new Image(); inflight.add(el);
+    el.onload = () => { inflight.delete(el); if (gen !== loadGen) return; rec.ok = true; rec.src = el.src; got++; if (i === pos) paint(); status(); next(); };
+    el.onerror = () => { inflight.delete(el); if (gen !== loadGen) return;
+      if (++rec.tries <= 3) setTimeout(() => { if (gen === loadGen) { fq.unshift(i); next(); } }, 400 * rec.tries);
+      else { bad++; status(); if (i === pos) paint(); next(); } };
+    el.src = rec.url + (rec.tries ? `?r=${rec.tries}` : "");
+  };
+  status();
+  for (let k = 0; k < 6; k++) next();
+}
+function paint() {
+  const rec = imgs[pos], f = frames[pos];
+  if (rec.ok) $("img").src = rec.src;
+  $("time").textContent = `${mmss(f.ms)} · ${f.role} · ${pos + 1}/${frames.length}` + (rec.ok ? "" : rec.tries > 3 ? " · 이 프레임 못 불러옴" : " · 불러오는 중");
+}
+function show(p) {
+  pos = Math.max(0, Math.min(frames.length - 1, p));
+  const k = fq.indexOf(pos);
+  if (k > 0) { fq.splice(k, 1); fq.unshift(pos); }  // 지금 보려는 프레임을 먼저
+  $("slider").value = pos;
+  paint();
+}
+function step(d) { if (timer) toggle(); show(pos + d); }
+function toggle() {
+  if (timer) { clearInterval(timer); timer = null; $("play").textContent = "재생"; return; }
+  if (pos >= frames.length - 1) show(0);
+  timer = setInterval(() => { if (pos >= frames.length - 1) toggle(); else show(pos + 1); }, 100 / +$("speed").value);
+  $("play").textContent = "멈춤";
+}
+
+// ------------------------------------------------------------ 칸 판(slotsim.py 와 같은 규칙 — 저장 뒤 truthnorm.py 가 파이썬으로 다시 굴린다)
+class SlotError extends Error {}
+const LO = -1;  // 맨 왼쪽 칸(-1 = 왼쪽 임시칸, 0 = 왼쪽 끝에 붙이는 칸)
+class Row {
+  constructor(n) {
+    this.n = n; this.c = Array(n + 3 - LO).fill(null);
+    for (let i = 1; i <= n; i++) this.c[i - LO] = String(i);
+    this.held = []; this.drawn = false; this.discarded = null; this.k_pos = null; this.tidied = false;
+  }
+  g(s) { return this.c[s - LO]; }
+  s(s, v) { this.c[s - LO] = v; }
+  chk(s) { if (!(Number.isInteger(s) && s >= LO && s <= this.n + 2)) throw new SlotError(`칸 ${s} 은 없다(${LO} ~ ${this.n + 2})`); }
+  order() { return this.c.filter(c => c !== null); }
+  draw(to) {
+    if (this.drawn) throw new SlotError("뽑기가 두 번");
+    this.drawn = true;
+    if (to === "hand") { this.held.push("D"); return; }
+    this.chk(to); if (this.g(to) !== null) throw new SlotError(`draw: 칸 ${to} 이 차 있다(${this.g(to)})`);
+    this.s(to, "D");
+  }
+  pick(f) { this.chk(f); if (this.g(f) === null) throw new SlotError(`pick: 칸 ${f} 이 비어 있다`); this.held.push(this.g(f)); this.s(f, null); }
+  place(to, tile) {
+    this.chk(to); if (this.g(to) !== null) throw new SlotError(`place: 칸 ${to} 이 차 있다(${this.g(to)})`);
+    if (tile == null) { if (this.held.length !== 1) throw new SlotError(`place: 손에 든 패가 ${this.held.length}장 — 어느 패인지 적어야 한다`); tile = this.held[0]; }
+    const i = this.held.indexOf(tile); if (i < 0) throw new SlotError(`place: 손에 ${tile} 이 없다(손: ${this.held.join(" ")})`);
+    this.held.splice(i, 1); this.s(to, tile);
+  }
+  move(f, to) { this.pick(f); this.place(to, this.held[this.held.length - 1]); }
+  swap(a, b) { this.chk(a); this.chk(b); if (this.g(a) === null || this.g(b) === null) throw new SlotError(`swap: 칸 ${a} · ${b} 중 빈 칸이 있다`); const t = this.g(a); this.s(a, this.g(b)); this.s(b, t); }
+  push(f, side, k = 1) {
+    this.chk(f); const d = {R: 1, L: -1}[side.toUpperCase()]; if (!d) throw new SlotError(`push: 쪽은 L 이나 R`);
+    if (this.g(f) === null) throw new SlotError(`push: 칸 ${f} 이 비어 있다`);
+    let run = [f];
+    while (run[run.length - 1] + d >= LO && run[run.length - 1] + d <= this.n + 2 && this.g(run[run.length - 1] + d) !== null) run.push(run[run.length - 1] + d);
+    for (let t = 0; t < k; t++) {
+      const head = run[run.length - 1] + d;
+      if (head < LO || head > this.n + 2) throw new SlotError(`push: 칸 ${run[run.length - 1]} 의 패가 줄 밖으로 나간다`);
+      if (this.g(head) !== null) throw new SlotError(`push: 칸 ${head} 이 차 있어 못 민다`);
+      for (const s of [...run].reverse()) { this.s(s + d, this.g(s)); this.s(s, null); }
+      run = run.map(s => s + d);
+    }
+  }
+  discard(f) {
+    if (this.discarded !== null) throw new SlotError("버림이 두 번");
+    if (f === "hand") { if (this.held.length !== 1) throw new SlotError(`discard hand: 손에 든 패가 ${this.held.length}장`); this.discarded = this.held.pop(); return; }
+    this.chk(f); if (this.g(f) === null) throw new SlotError(`discard: 칸 ${f} 이 비어 있다`);
+    const row = this.c.filter(c => c !== null && c !== "D");
+    this.k_pos = this.g(f) !== "D" ? row.indexOf(this.g(f)) + 1 : null;
+    this.discarded = this.g(f); this.s(f, null);
+  }
+  tidy() { const o = this.order(); if (o.length > this.n + 1) throw new SlotError(`tidy: 줄에 ${o.length}장`); this.c = this.c.map((_, i) => { const sl = i + LO; return sl >= 1 && sl <= o.length ? o[sl - 1] : null; }); this.tidied = true; }
+  result() {  // 끝나지 않았으면 이유를 글로
+    if (!this.drawn) return "뽑기가 없다";
+    if (this.discarded === null) return "버림이 없다";
+    if (this.held.length) return `손에 패가 남았다: ${this.held.join(" ")}`;
+    const o = this.order();
+    if (o.length !== this.n) return `줄이 ${o.length}장(있어야 할 것 ${this.n}) — 정리가 덜 됐나?`;
+    if (o.join() !== this.c.slice(1 - LO, this.n + 1 - LO).join()) return "줄이 1번 칸부터 붙어 있지 않다 — 정리를 누른다";
+    if (this.discarded === "D") return {kind: "tsumogiri", k_id: null, k_pos: null, j_closed: null, order: o, reordered: o.join() !== Array.from({length: this.n}, (_, i) => String(i + 1)).join()};
+    const k = +this.discarded, plain = Array.from({length: this.n}, (_, i) => String(i + 1)).filter(x => x !== String(k));
+    return {kind: "hand", k_id: k, k_pos: this.k_pos, j_closed: o.indexOf("D") + 1, order: o, reordered: o.filter(x => x !== "D").join() !== plain.join()};
+  }
+}
+function splitOps(text) { return text.replace(/\n/g, ";").split(";").map(s => s.trim()).filter(s => s); }
+function runOps(list, n) {  // → {row, err, at}: 걸린 동작 앞까지 굴린 줄
+  const r = new Row(n), num = x => x === "hand" ? "hand" : (/^-?\d+$/.test(x) ? +x : NaN);
+  for (let i = 0; i < list.length; i++) {
+    const w = list[i].split(/\s+/), op = w[0].toLowerCase(), a = w.slice(1);
+    const snap = JSON.stringify([r.c, r.held, r.drawn, r.discarded, r.k_pos, r.tidied]);
+    try {
+      if (op === "draw") r.draw(num(a[0]));
+      else if (op === "pick") r.pick(num(a[0]));
+      else if (op === "place") r.place(num(a[0]), a[1] ?? null);
+      else if (op === "move") r.move(num(a[0]), num(a[1]));
+      else if (op === "swap") r.swap(num(a[0]), num(a[1]));
+      else if (op === "push") r.push(num(a[0]), a[1] || "", a[2] ? num(a[2]) : 1);
+      else if (op === "discard") r.discard(num(a[0]));
+      else if (op === "tidy") r.tidy();
+      else throw new SlotError(`모르는 동작: ${list[i]}`);
+    } catch (e) {
+      [r.c, r.held, r.drawn, r.discarded, r.k_pos, r.tidied] = JSON.parse(snap);
+      return {row: r, err: (e instanceof SlotError ? e.message : `동작을 못 읽음: ${list[i]}`), at: i};
+    }
+  }
+  return {row: r, err: null, at: -1};
+}
+
+let ops = [], sel = null, lastSlots = [];
+function boardN() { const t = turns[cur]; return +$("n").value || t.n_calc || 13; }
+function curKind() { return (document.querySelector("input[name=kind]:checked") || {}).value || null; }
+function lastTouched(op) {  // 방금 동작이 건드린 칸(테 표시용)
+  const w = op.split(/\s+/), a = w.slice(1).filter(x => /^-?\d+$/.test(x)).map(Number);
+  return ({draw: a.slice(0, 1), place: a.slice(0, 1), move: a.slice(0, 2), swap: a.slice(0, 2), push: a.slice(0, 1)})[w[0]] || [];
+}
+function renderBoard() {
+  const kind = curKind(), boardOn = kind !== "call" && kind !== "unseen" && kind !== "bad";
+  $("board").classList.toggle("hide", !boardOn);
+  $("callrow").classList.toggle("hide", kind !== "call");
+  if (!boardOn) return null;
+  const n = boardN(), {row, err, at} = runOps(ops, n);
+  if (sel && sel.type === "cell" && row.g(sel.i) == null) sel = null;
+  if (sel && sel.type === "held" && !row.held.includes(sel.tile)) sel = null;
+  const touched = ops.length && !err ? lastTouched(ops[ops.length - 1]) : [];
+  const box = $("slots"); box.innerHTML = "";
+  row.c.forEach((c, ix) => {
+    const i = ix + LO;
+    const d = document.createElement("div"); d.className = "slot" + (i === LO || i === n + 2 ? " temp" : i === n + 1 || i === 0 ? " dslot" : "");
+    const b = document.createElement("button"); b.type = "button"; b.textContent = c ?? "·";
+    b.className = (c == null ? "empty" : c === "D" ? "drawn" : "") + (sel && sel.type === "cell" && sel.i === i ? " sel" : "") + (touched.includes(i) ? " lastop" : "");
+    b.title = i === LO ? `${LO} = 왼쪽 임시칸` : i === 0 ? "0 = 왼쪽 끝에 붙이는 칸" : i === n + 2 ? `${n + 2} = 오른쪽 임시칸` : i === n + 1 ? `${n + 1} = 오른쪽 끝에 붙이는 칸` : `${i}번 칸`;
+    b.onclick = () => clickCell(i, row);
+    const s = document.createElement("span"); s.textContent = i;
+    d.append(b, s); box.appendChild(d);
+  });
+  const held = $("held"); held.innerHTML = row.held.length ? "손에 든 패: " : "";
+  row.held.forEach(tile => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = tile;
+    b.className = sel && sel.type === "held" && sel.tile === tile ? "sel" : "";
+    b.onclick = () => { sel = sel && sel.type === "held" && sel.tile === tile ? null : {type: "held", tile}; renderBoard(); };
+    held.appendChild(b);
+  });
+  $("b_drawhand").classList.toggle("hide", row.drawn);
+  if (document.activeElement !== $("ops")) $("ops").value = ops.join("; ");
+  const res = err ? null : row.result(), el = $("opsres");
+  el.className = err ? "err" : "";
+  if (err) el.textContent = `✗ ${at + 1}번째 동작 "${ops[at]}" 에서 걸림: ${err} — 판은 그 앞까지`;
+  else if (!ops.length) el.textContent = "뽑은 패를 놓을 빈칸을 누른다(오른쪽 끝 = " + (n + 1) + ", 왼쪽 끝 = 0).";
+  else if (typeof res === "string") el.textContent = `… 아직: ${res}`;
+  else if (res.kind === "tsumogiri") el.textContent = `→ 쯔모기리` + (res.reordered ? " · 다른 패 순서도 바뀜" : "") + ` · 끝 줄 ${res.order.join(" ")}`;
+  else el.textContent = `→ 손에서 냄 · 원래 ${res.k_id}번째 패를 버림` + (res.k_pos != null && res.k_pos !== res.k_id ? ` (버리는 순간엔 ${res.k_pos}번째)` : "") + ` · 정리 뒤 뽑은 패 ${res.j_closed}번째` + (res.reordered ? " · 다른 패 순서도 바뀜" : "") + ` · 끝 줄 ${res.order.join(" ")}`;
+  return {row, err, res: err || typeof res === "string" ? null : res, pending: typeof res === "string" ? res : null};
+}
+function addOp(op) {
+  const n = boardN(), {err} = runOps([...ops, op], n);
+  if (err) { const el = $("opsres"); el.className = "err"; el.textContent = `✗ "${op}" 는 안 됨: ${err}`; return; }
+  ops.push(op); sel = null; afterBoard();
+}
+function afterBoard() {
+  const out = renderBoard();
+  if (out && out.res) {  // 끝난 동작이면 종류를 맞춰 둔다
+    document.querySelectorAll("input[name=kind]").forEach(r => r.checked = r.value === out.res.kind);
+  }
+  onEdit(true);
+}
+function clickCell(i, row) {
+  const c = row.g(i);
+  if (!row.drawn) { if (c == null) addOp(`draw ${i}`); else { sel = {type: "cell", i}; renderBoard(); } return; }
+  if (!sel) { if (c != null) { sel = {type: "cell", i}; renderBoard(); } return; }
+  if (sel.type === "cell") {
+    if (sel.i === i) { sel = null; renderBoard(); return; }
+    addOp(c == null ? `move ${sel.i} ${i}` : `swap ${sel.i} ${i}`);
+    return;
+  }
+  if (c == null) addOp(row.held.length > 1 ? `place ${i} ${sel.tile}` : `place ${i}`);
+  else { sel = {type: "cell", i}; renderBoard(); }
+}
+function selOp(fn) {
+  const n = boardN(), {row} = runOps(ops, n);
+  if (!sel) { const el = $("opsres"); el.className = "err"; el.textContent = "먼저 칸(또는 손에 든 패)을 눌러 고른다"; return; }
+  fn(row);
+}
+function wireBoard() {
+  $("b_discard").onclick = () => selOp(row => addOp(sel.type === "cell" ? `discard ${sel.i}` : (row.held.length === 1 ? "discard hand" : `discard hand`)));
+  $("b_pushL").onclick = () => selOp(() => sel.type === "cell" && addOp(`push ${sel.i} L`));
+  $("b_pushR").onclick = () => selOp(() => sel.type === "cell" && addOp(`push ${sel.i} R`));
+  $("b_pick").onclick = () => selOp(() => sel.type === "cell" && addOp(`pick ${sel.i}`));
+  $("b_drawhand").onclick = () => addOp("draw hand");
+  $("b_tidy").onclick = () => addOp("tidy");
+  $("b_undo").onclick = () => { ops.pop(); sel = null; afterBoard(); };
+  $("b_reset").onclick = () => { if (!ops.length || confirm("이 차례의 동작을 다 지울까요?")) { ops = []; sel = null; afterBoard(); } };
+  $("ops").addEventListener("input", e => { e.stopPropagation(); ops = splitOps($("ops").value); sel = null; afterBoard(); });
+  $("ops").addEventListener("blur", () => renderBoard());
+}
+function oldAnswerText(a) {  // 칸 판 전에 적은 답(빈칸 둔 번호 1~14)
+  if (!a || a.ops || a.num !== "gap" || !(a.kind === "hand" || a.kind === "tsumogiri")) return "";
+  if (a.kind === "tsumogiri") return "예전 방식으로 적은 답: 쯔모기리 — 칸 판으로 다시 적으면 이 답을 대신한다.";
+  return `예전 방식(빈칸 둔 번호 1~14)으로 적은 답: 나간 ${a.k ?? "-"} · 들어간 ${a.j ?? "-"}${a.insert_first ? " · 먼저 넣고 버림" : ""}${a.j_closed != null ? ` (메운 뒤 ${a.j_closed}번째)` : ""} — 칸 판으로 다시 적으면 이 답을 대신한다.`;
+}
+
+function read() {
+  const kind = curKind();
+  const num = id => $(id).value === "" ? null : +$(id).value;
+  const base = {kind, n: num("n"), unsure: $("unsure").checked, note: $("note").value.trim()};
+  if (kind === "call") {
+    const meld = $("meld").value.split(/[^0-9]+/).filter(x => x).map(Number);
+    return {...base, num: "call", k: num("k"), k_base: "after_call", meld_pos: meld.length ? meld : null, ops: null, j: null, j_closed: null};
+  }
+  if (!ops.length) {  // 칸 판이 비었음 — 예전 방식 답(있으면)은 그대로 두고, 칸 판으로 적었던 값만 지운다
+    const prev = answers[turns[cur].id] || {};
+    return {...base, ops: null, ...(prev.num === "slot" ? {num: null, k: null, k_orig: null, k_id: null, k_pos: null, j_closed: null, order: null, reordered: null} : {})};
+  }
+  const out = renderBoard() || {}, r = out.res;
+  return {...base, num: "slot", ops: ops.join("; "), ops_error: out.err || null, ops_pending: out.pending || null,
+          k: r ? r.k_pos : null, k_orig: r ? r.k_id : null, k_id: r ? r.k_id : null, k_pos: r ? r.k_pos : null, j_closed: r ? r.j_closed : null,
+          order: r ? r.order : null, reordered: r ? r.reordered : null, j: null, insert_first: false, k_base: null, meld_pos: null};
+}
+function onEdit(fromBoard) { if (fromBoard !== true) renderBoard(); clearTimeout(saveT); saveT = setTimeout(flush, 500); $("saved").textContent = "저장하는 중…"; }
+function flush() {
+  if (!saveT) return;
+  clearTimeout(saveT); saveT = null;
+  const t = turns[cur], a = {...(answers[t.id] || {}), ...read()};  // 페이지에 칸이 없는 항목(옮긴 패 기록 등)은 그대로 둔다
+  delete a.saved_at;
+  answers[t.id] = a; marks();
+  fetch("/save", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({id: t.id, answer: a})})
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(() => { if (turns[cur].id === t.id) $("saved").textContent = "저장됨 " + mmss(Date.now()).slice(0, 8); })
+    .catch(e => { $("saved").textContent = "저장 실패 — 서버가 꺼졌는지 확인(" + e + ")"; });
+}
+window.addEventListener("beforeunload", flush);
+init();
+</script>
+</body>
+</html>
