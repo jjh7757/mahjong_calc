@@ -417,7 +417,8 @@ function afterBoard() {
 }
 function clickCell(i, row) {
   const c = row.g(i);
-  if (!row.drawn) { if (c == null) addOp(`draw ${i}`); else { sel = {type: "cell", i}; renderBoard(); } return; }
+  // 뽑기 전이라도 칸이나 손에 든 패를 고른 상태면 옮김 · 맞바꿈 · 놓기(11-18 사용자: "손에 들기 하고 그 패를 넣으려면 쯔모패가 넣어져")
+  if (!row.drawn && !sel) { if (c == null) addOp(`draw ${i}`); else { sel = {type: "cell", i}; renderBoard(); } return; }
   if (!sel) { if (c != null) { sel = {type: "cell", i}; renderBoard(); } return; }
   if (sel.type === "cell") {
     if (sel.i === i) { sel = null; renderBoard(); return; }
