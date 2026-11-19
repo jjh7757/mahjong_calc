@@ -29,6 +29,9 @@ import sam2verify as sv  # noqa: E402
 OUT = hc.WORK / "geminiagent_1118"
 SRC = hc.WORK / "opusread_1118"
 MODEL = "gemini-3.8-flash"
+# 100만 토큰당 달러: (입력, 출력·생각) — 프롬프트 20만 이하 / 초과. 캐시 입력은 입력의 1/4 로 어림(추가 40 과 같은 셈).
+PRICE = {"gemini-3.8-flash": ((0.75, 3.75), (0.75, 3.75)),
+         "gemini-3.1-pro-preview": ((2.0, 12.0), (4.0, 18.0))}   # ai.google.dev/gemini-api/docs/pricing (11-19 확인)
 MAX_VIEW = 6
 STRIP_ROWS, STRIP_MAX = 8, 32   # strip: 한 그림에 8줄, 한 번에 32줄까지(추가 40 g3 — Opus 가 스스로 만든 sheet.py 와 같은 일)
 
@@ -164,7 +167,10 @@ def run_one(tid: str, a) -> dict:
     first = [f"차례를 시작할 때 줄은 {T.n}장. 프레임 {F}장(번호 · 시각):\n{lst}\n\n확인 그림 이름: {', '.join(T.checks) or '없음'}\n\n첫 프레임(color):", ipart(jpg(T.img(0, 'color'))),
              f"끝 프레임 {F - 1}(color):", ipart(jpg(T.img(F - 1, 'color'))), "도구로 필요한 프레임을 보며 읽고, 다 보면 answer 를 불러라."]
     contents = [types.Content(role="user", parts=[types.Part(text=x) if isinstance(x, str) else x for x in first])]
-    log, usage, ans, nudges = [], {"in": 0, "cached": 0, "out": 0, "think": 0, "calls": 0}, None, 0
+    model = a.gmodel
+    p_lo, p_hi = PRICE[model]
+    log, usage, ans, nudges = [], {"in": 0, "cached": 0, "out": 0, "think": 0, "calls": 0, "max_prompt": 0}, None, 0
+    usd = 0.0
     t0 = time.perf_counter()
     last_cfg = types.GenerateContentConfig(system_instruction=sys_prompt, tools=decls(types, a.strip), **kw,
                                            tool_config=types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode="ANY", allowed_function_names=["answer"])))
@@ -174,7 +180,7 @@ def run_one(tid: str, a) -> dict:
             contents.append(types.Content(role="user", parts=[types.Part(text="볼 수 있는 단계를 다 썼다. 지금까지 본 것으로 answer 를 불러라(확신이 낮으면 unsure 를 true 로).")]))
         for attempt in range(3):
             try:
-                r = c.models.generate_content(model=MODEL, contents=contents, config=last_cfg if final else cfg)
+                r = c.models.generate_content(model=model, contents=contents, config=last_cfg if final else cfg)
                 break
             except Exception as e:  # noqa: BLE001
                 err = f"{type(e).__name__}: {e}"[:300]
@@ -187,6 +193,10 @@ def run_one(tid: str, a) -> dict:
         usage["out"] += um.candidates_token_count or 0
         usage["think"] += getattr(um, "thoughts_token_count", 0) or 0
         usage["calls"] += 1
+        pin, cin = um.prompt_token_count or 0, getattr(um, "cached_content_token_count", 0) or 0
+        usage["max_prompt"] = max(usage["max_prompt"], pin)
+        pi, po = p_hi if pin > 200_000 else p_lo
+        usd += ((pin - cin) * pi + cin * pi / 4 + ((um.candidates_token_count or 0) + (getattr(um, "thoughts_token_count", 0) or 0)) * po) * 1e-6
         cand = r.candidates[0].content
         contents.append(cand)
         fcs = [p.function_call for p in (cand.parts or []) if p.function_call]
@@ -234,7 +244,7 @@ def run_one(tid: str, a) -> dict:
         contents.append(types.Content(role="user", parts=resp))
         if ans is not None:
             break
-    res = {"id": tid, "model": MODEL, "think_level": a.think, "steps": usage["calls"], "s": round(time.perf_counter() - t0, 1), "usage": usage, "log": log}
+    res = {"id": tid, "model": model, "think_level": a.think, "steps": usage["calls"], "s": round(time.perf_counter() - t0, 1), "usage": usage, "log": log}
     if ans:
         n = T.n
         kj = sv.from_order([str(x) for x in ans.get("end_order") or []], n)
@@ -243,9 +253,8 @@ def run_one(tid: str, a) -> dict:
                     "k_model": ans.get("k"), "j_model": ans.get("j"), "order_ok": kj is not None})
     else:
         res.update({"kind": None, "k": None, "j": None, "error": "answer 없음"})
-    # 값: 입력 0.75 · 캐시 입력은 그 1/4 로 어림 · 출력 3.75 / 100만
-    u = usage
-    res["usd"] = round((u["in"] - u["cached"]) * 0.75e-6 + u["cached"] * 0.1875e-6 + (u["out"] + u["think"]) * 3.75e-6, 3)
+    # 값: 부를 때마다 PRICE(프롬프트 20만 넘으면 위 칸) — Flash 는 앞 셈(입력 0.75 · 캐시 1/4 · 출력 3.75)과 같음
+    res["usd"] = round(usd, 3)
     return res
 
 
@@ -300,6 +309,7 @@ def main():
             q.add_argument("--workers", type=int, default=4)
             q.add_argument("--force", action="store_true")
             q.add_argument("--strip", action="store_true", help="strip 도구를 더함(g3)")
+            q.add_argument("--gmodel", default=MODEL, choices=sorted(PRICE), help="p1 = gemini-3.1-pro-preview(추가 42)")
     a = ap.parse_args()
     {"run": cmd_run, "score": cmd_score}[a.cmd](a)
 
