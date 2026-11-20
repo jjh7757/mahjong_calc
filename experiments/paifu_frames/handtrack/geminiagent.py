@@ -149,9 +149,15 @@ def run_one(tid: str, a) -> dict:
     import gemframes as gf
     from google.genai import types
     c = gf.client()
-    T = Turn(tid)
+    motion2 = getattr(a, "variant", "base") == "motion2"
+    if motion2:   # 11-19 밤 "m2b 모델만 flash로 바꿔서": claudeagent motion2 와 같은 지시문 · 사건 목록 · 떠 있는 숫자 표시 그림
+        import claudeagent as ca
+        T = ca.FloatTurn(tid)
+    else:
+        T = Turn(tid)
     F = len(T.rows)
-    sys_prompt = PROMPT.format(n=T.n, F=F, last=F - 1, mv=MAX_VIEW, W=T.W, H=T.H, sr=STRIP_ROWS, sm=STRIP_MAX)
+    base_prompt = ca.PROMPT_MOTION2 if motion2 else PROMPT
+    sys_prompt = base_prompt.format(n=T.n, F=F, last=F - 1, mv=MAX_VIEW, W=T.W, H=T.H, sr=STRIP_ROWS, sm=STRIP_MAX)
     if not a.strip:   # g1 · g2 와 같은 글(strip 줄 없이)
         sys_prompt = "\n".join(ln for ln in sys_prompt.split("\n") if not ln.startswith("- `strip("))
     kw = {"thinking_config": types.ThinkingConfig(thinking_level=a.think)} if a.think else {}
@@ -164,6 +170,8 @@ def run_one(tid: str, a) -> dict:
         return p
 
     lst = "\n".join(f"{i:03d} {t}" for i, t, _, _ in T.rows)
+    if motion2:
+        lst += f"\n\n칸 틀 사건 목록(코드가 패 검출로 만든 것):\n{ca.events_text(T)}"   # claudeagent.first_content 와 같은 글
     first = [f"차례를 시작할 때 줄은 {T.n}장. 프레임 {F}장(번호 · 시각):\n{lst}\n\n확인 그림 이름: {', '.join(T.checks) or '없음'}\n\n첫 프레임(color):", ipart(jpg(T.img(0, 'color'))),
              f"끝 프레임 {F - 1}(color):", ipart(jpg(T.img(F - 1, 'color'))), "도구로 필요한 프레임을 보며 읽고, 다 보면 answer 를 불러라."]
     contents = [types.Content(role="user", parts=[types.Part(text=x) if isinstance(x, str) else x for x in first])]
@@ -244,7 +252,10 @@ def run_one(tid: str, a) -> dict:
         contents.append(types.Content(role="user", parts=resp))
         if ans is not None:
             break
-    res = {"id": tid, "model": model, "think_level": a.think, "steps": usage["calls"], "s": round(time.perf_counter() - t0, 1), "usage": usage, "log": log}
+    res = {"id": tid, "model": model, "think_level": a.think, "steps": usage["calls"], "s": round(time.perf_counter() - t0, 1), "usage": usage, "log": log,
+           "variant": getattr(a, "variant", "base"), "strip": a.strip}
+    if motion2:
+        res["events"] = ca.EVENTS.get(tid)
     if ans:
         n = T.n
         kj = sv.from_order([str(x) for x in ans.get("end_order") or []], n)
@@ -262,6 +273,10 @@ def cmd_run(a):
     od = OUT / a.tag
     od.mkdir(parents=True, exist_ok=True)
     ids = [t for t in sv.ids_of(a.ids) if a.force or not (od / f"{t}.json").exists()]
+    if getattr(a, "variant", "base") == "motion2":   # 사건 목록은 스레드 전에(claudeagent.events_text 주의 — redirect_stdout)
+        import claudeagent as ca
+        for t in ids:
+            ca.EVENTS[t] = ca.events_text(Turn(t))
     with ThreadPoolExecutor(a.workers) as ex:
         for r in ex.map(lambda t: run_one(t, a), ids):
             r["at"] = hc.hms(int(time.time() * 1000), date=True)
@@ -310,6 +325,7 @@ def main():
             q.add_argument("--force", action="store_true")
             q.add_argument("--strip", action="store_true", help="strip 도구를 더함(g3)")
             q.add_argument("--gmodel", default=MODEL, choices=sorted(PRICE), help="p1 = gemini-3.1-pro-preview(추가 42)")
+            q.add_argument("--variant", default="base", choices=["base", "motion2"], help="motion2 = claudeagent m2b 와 같은 지시문 · 사건 목록 · 떠 있는 숫자 그림(11-19 밤)")
     a = ap.parse_args()
     {"run": cmd_run, "score": cmd_score}[a.cmd](a)
 

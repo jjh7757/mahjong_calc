@@ -43,12 +43,23 @@ def ms_of(tstr: str, ref: int) -> int:
 def truth_all() -> dict:
     t = dict(hc.jload(tc.BASE / "truth_final.json"))
     t.update(hc.jload(hc.WORK / "slotgrid_1117" / "truth_r13.json"))
+    fx = hc.WORK / "slotgrid_1117" / "truth_fix_1120.json"   # 11-20 사용자가 영상으로 고친 칸(r16_d13 옮김 하나 더) — 그 전 표의 숫자는 옛 정답 기준
+    for k, v in (hc.jload(fx) if fx.exists() else {}).items():
+        t[k] = {**t[k], **v}
     return t
 
 
+GAMES = ("r12_131655", "r16_135321", "r17_140450", "r19_142013", "r13_132644", "r15_134151", "L16_135321")   # 11-19: r15 · L16 더함(L16 = r16 판의 왼쪽 자리)
+
+
 def turn_of(tid: str):
-    gid = next(g for g in ("r12_131655", "r16_135321", "r17_140450", "r19_142013", "r13_132644") if g[:3] == tid[:3])
-    return gid, next(t for t in tc.turns_of(gid) if t["id"] == tid)
+    gid = next((g for g in GAMES if g[:3] == tid[:3]), None)
+    if gid is None:
+        raise KeyError(f"{tid}: sam2track.GAMES 에 이 앞글자({tid[:3]})의 판이 없다")
+    t = next((t for t in tc.turns_of(gid) if t["id"] == tid), None)
+    if t is None:
+        raise KeyError(f"{tid}: {gid} 의 새 묶음 차례에 없다")
+    return gid, t
 
 
 # ------------------------------------------------------------------ 좌표: sheet_band 시점 ↔ 원본 ↔ 넓힌 띠 시점

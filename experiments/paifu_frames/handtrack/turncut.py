@@ -6,7 +6,8 @@ truthprep 은 "손이 움직인 구간" 을 통째로 차례에 붙여서, 손�
           (그 버림보다 늦을 수 없는 시각. 울기로 순서가 바뀌어도 "마지막" 을 쓰므로 누가 울었는지 몰라도 된다 — 표 12-32)
   사이에 찍힌 남의 버림이 없으면(추적 시작 전 · 내가 운 차례 등) truthprep 의 시작을 그대로 쓰고 cut.by = "옛 묶음" 으로 적는다.
 
-  python -X utf8 turncut.py build <판 id…>     # → _work/testtruth_1116/turns_cut.json (turns.json 은 안 건드림) + 모자란 프레임 그리기
+  python -X utf8 turncut.py build <판 id…> [--out 파일]   # → _work/testtruth_1116/turns_cut.json (turns.json 은 안 건드림) + 모자란 프레임 그리기
+      (11-19 r15 · L16 은 --out _work/testtruth_1116/turns_cut_r15L16_1119.json — turns_of 는 두 파일을 다 읽음)
   python -X utf8 turncut.py check <판 id…>     # 옛 묶음과 나란히: 차례끼리 겹치는 프레임, 창, 구간 수
   python -X utf8 turncut.py reread <판 id> --ids a,b[,…] [--readers ABE]   # 새 묶음으로 고정한 판독기를 다시 부름(있는 답은 안 부름) → _work/turncut_1117/
   python -X utf8 turncut.py score <판 id…>     # 다시 읽은 답을 정답 · 옛 묶음의 답과 나란히(호출 없음)
@@ -29,6 +30,8 @@ import htcommon as hc  # noqa: E402
 
 BASE = hc.WORK / "testtruth_1116"
 OUTF = BASE / "turns_cut.json"
+# 11-19 r15 · L16 넓히기: 두 판의 새 묶음은 turns_cut.json 을 안 건드리려고 따로 씀(build --out). 읽을 땐 OUTF 먼저, 같은 판이 겹치면 앞 파일 것.
+EXTRA = [BASE / "turns_cut_r15L16_1119.json"]
 EDGE_MS = 300
 
 
@@ -40,9 +43,25 @@ def old_turns(gid: str) -> list:
     return next(x for x in hc.jload(BASE / "turns.json")["games"] if x["id"] == gid)["turns"]
 
 
+def cut_games() -> list:
+    """새 묶음의 판 목록 — turns_cut.json 의 판 다음에 EXTRA 파일들의 판(이미 있는 판 id 는 건너뜀)."""
+    out, seen = [], set()
+    for f in [OUTF] + EXTRA:
+        if not f.exists():
+            continue
+        for g in hc.jload(f)["games"]:
+            if g["id"] not in seen:
+                seen.add(g["id"])
+                out.append(g)
+    return out
+
+
 def turns_of(gid: str) -> list:
     """새 묶음의 차례 목록(gemturn.turns_of 와 같은 꼴)."""
-    return next(x for x in hc.jload(OUTF)["games"] if x["id"] == gid)["turns"]
+    g = next((x for x in cut_games() if x["id"] == gid), None)
+    if g is None:   # 11-19: 전에는 next() 가 StopIteration 으로 죽었다(r15 · L16 은 build 를 안 돌려 turns_cut.json 에 없었음)
+        raise KeyError(f"{gid} 가 새 묶음 파일({', '.join(f.name for f in [OUTF] + EXTRA)})에 없다 — turncut.py build {gid} --out <파일>")
+    return g["turns"]
 
 
 def build_game(gid: str) -> dict:
@@ -140,13 +159,14 @@ def render_missing(g: dict) -> int:
 
 
 def cmd_build(a):
-    have = {g["id"]: g for g in hc.jload(OUTF)["games"]} if OUTF.exists() else {}
+    outf = Path(a.out) if a.out else OUTF
+    have = {g["id"]: g for g in hc.jload(outf)["games"]} if outf.exists() else {}
     for gid in a.games:
         g = build_game(gid)
         have[gid] = g
         n = render_missing(g)
         print(f"{gid}: 차례 {len(g['turns'])} · 경계를 네 자리 강으로 그은 차례 {sum(t['cut']['by'] != '옛 묶음' for t in g['turns'])} · 새로 그린 프레임 {n}")
-    hc.jsave(OUTF, {"rule": "차례 k = [내 버림 k-1 과 k 사이 마지막 남의 버림이 보이기 직전 프레임, 다음 차례의 같은 시각)", "games": list(have.values())})
+    hc.jsave(outf, {"rule": "차례 k = [내 버림 k-1 과 k 사이 마지막 남의 버림이 보이기 직전 프레임, 다음 차례의 같은 시각)", "games": list(have.values())})
 
 
 def cmd_check(a):
@@ -239,6 +259,8 @@ def main():
     for name in ("build", "check", "reread", "score"):
         p = sp.add_parser(name)
         p.add_argument("games", nargs="+")
+        if name == "build":
+            p.add_argument("--out", help="쓸 파일(기본 turns_cut.json). r15 · L16 은 turncut.EXTRA 의 파일로")
         if name == "reread":
             p.add_argument("--ids", required=True)
             p.add_argument("--readers", default="AB")

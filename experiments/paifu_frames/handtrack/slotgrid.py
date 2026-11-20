@@ -29,10 +29,10 @@ JOIN = 0.45                    # 이웃 상자 사이가 한 장 폭의 이 비�
 
 
 def game_of(tid: str) -> str:
-    for g in hc.jload(tc.OUTF)["games"]:
+    for g in tc.cut_games():          # 11-19: turns_cut.json + tc.EXTRA(r15 · L16)
         if any(t["id"] == tid for t in g["turns"]):
             return g["id"]
-    raise SystemExit(f"차례 {tid} 가 turns_cut.json 에 없다")
+    raise SystemExit(f"차례 {tid} 가 turns_cut.json · {[f.name for f in tc.EXTRA]} 에 없다")
 
 
 def window(t: dict) -> tuple[int, int]:
