@@ -2,11 +2,11 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 앱 저장소의 README.md 는 2026-11-09 부터 프로젝트 소개·개발 과정 문서이고, 개발 환경·빌드 명령·화면 기능은 `docs/development.md` 로 옮겼다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
-## 2026-11-20 밤: mahjong-helper 버림 평가 Dart 이식 — 끝남 (사용자 "mahjong-helper 기능부터 옮겨줘" → 노트북 종료로 중지 → "재개해" → "보여줘" → "커밋해", **엔진 묶음만 커밋** · 평가기 연결 · 화면은 패보 기능 전체와 함께 커밋 전 · 운영 없음)
+## 2026-11-20 밤: mahjong-helper 버림 평가 Dart 이식 — 끝남 (사용자 "mahjong-helper 기능부터 옮겨줘" → 노트북 종료로 중지 → "재개해" → "보여줘" → "커밋해", **커밋함 — 엔진 49df957 · 패보 기능 전체(연결 · 화면 포함) 4eca2a3**, push 안 함 · 운영 없음)
 
 **한 줄:** mahjong-helper(MIT, 514bb97)의 개량 · 속도 · 화료율 · 기대 타점 · 정렬 · 후퇴 권장 · 위험도 · 텐파이율을 Dart 엔진으로 옮기고 평가기에 칸으로 붙였다. **원본 Go 를 직접 돌린 독립 검토에서 Dart 버그 0**(새 손 1,122 · 위험 장면 360, metrics 표 16-4). 그러나 Mortal-S42 첫째 버림과의 일치는 지금 평가기 23/33 · 이식 22/33 · 후퇴 권장 끈 이식 24/33 으로 사실상 같고, **후퇴 권장 6차례는 S42 가 0/6 따름**(표 16-3) → **등급 규칙은 안 바꿈.** problem_log 72(71 덧붙임 포함).
 
-- **파일 — 커밋한 것(사용자 "엔진만 먼저"):** 엔진 10개(이식 8 + 의존하는 11-18 `shanten.dart` · `efficiency.dart`) · 그 시험 7개 · fixture 3 · LICENSE · 실험 스크립트 · 문서의 이 흐름 덩어리. **커밋 안 한 것:** `lib/paifu/` · `lib/ui/paifu/` 전체(패보 기능이 한 번도 커밋 안 됨 — 연결 · 화면은 그 위에 있음), `tool/paifu_review_dump.dart`, 시험 `paifu_review_mh` · `paifu_review_engine_ui`. 패보 기능을 커밋할 때 함께 넣을 것.
+- **커밋:** 49df957 = 엔진 10개(이식 8 + 의존하는 11-18 `shanten.dart` · `efficiency.dart`) · 시험 7 · fixture 3 · LICENSE · 실험 스크립트 · 문서의 이 흐름 덩어리. 4eca2a3 = 패보 기능 전체 42개(`lib/paifu/` · `lib/ui/paifu/` · `assets/paifu/` 11판 · 지난 대국 · 거치 · 결과 화면 연결 · pubspec · Android `-P appIdSuffix` · tool 3 · 시험 10 · 통합 시험 1) — 다른 흐름(버림 기록기 · 재생 화면 · 해설 사실표 · 천봉 변환 · 예시 패보)이 만든 것 포함, 그 시각 돌던 세션 없음 확인 뒤. 두 커밋 다 그 묶음만 꺼낸 판본에서 analyze 0 · 시험 통과(1,030 · 1,262). **안 넣은 것:** 문서의 다른 흐름 덩어리 · `.claude/launch.json`.
 - **파일 목록:**
   - 엔진: `lib/engine/` mh_player · improve · agari_rate · hand_value · discard_rank · risk · risk_data · tenpai_rate, `third_party/mahjong-helper/LICENSE`.
   - 연결: `lib/paifu/mh_context.dart`(새), `lib/paifu/paifu_review.dart`(null 허용 칸 추가 — mh · mhBest · mhRankOfActual · mhRecommendBackward · riskOfActual · minRiskTile 등, `reviewPaifu(withEngine: true)` 일 때만 계산, 기본 꺼짐 — 한 판 2 ~ 6초라 재생 화면이 화면 스레드에서 부르면 멈춤). 덤프 `tool/paifu_review_dump.dart`.
