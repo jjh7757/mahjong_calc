@@ -155,7 +155,10 @@ def main():
     ap.add_argument("games", nargs="*")
     ap.add_argument("--json")
     ap.add_argument("--full", action="store_true", help="추가 39: 정답 없이(리치 뒤 규칙 + 나머지 모두 Opus)")
+    ap.add_argument("--root", default="opusread_1118", help="_work 아래 Opus 답 폴더(11-20: rawread_r15L16_1120 — SAM 2 없는 읽기)")
     a = ap.parse_args()
+    global OP
+    OP = hc.WORK / a.root
     out = {}
     tot = Counter()
     for gid in a.games or GAMES:

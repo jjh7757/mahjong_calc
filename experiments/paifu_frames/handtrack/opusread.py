@@ -205,10 +205,52 @@ def prep_nosam(tid: str, hands: bool = False):
     print(tid, len(labs), "장(원본만) · 사건 목록", len(ev), "자" + (" · 손 사건 있음" if hands else ""), "→", d)
 
 
+# 11-20 사용자 "r15·L16 오퍼스로 sam2 없이 재봐" — SAM 2 추적이 없는 차례(r15 d11 뒤 · L16)도 되게: 프레임은 sam2track.plan + frame_list(p, 2)
+# 로 SAM 2 에 넣었을 것과 같은 띠 · 같은 프레임(품질 95)을 직접 자름. 지시문 = TASK_NOSAM 그대로, "보면 안 되는 것" 의 폴더 이름만 늘림.
+R15L16 = ["r15_d01", "r15_d02"] + [f"r15_d{i:02d}" for i in range(4, 18)] + [f"L16_d{i:02d}" for i in range(3, 19)]   # 정답 있는 32(r15_d03 안 보임 · L16_d02 울기 뺌)
+
+
+class _PlanTurn:
+    """claudeagent.events_text 가 쓰는 것(tid · rows)만."""
+    def __init__(self, tid, rows):
+        self.tid, self.rows = tid, rows
+
+
+def prep_fromplan(tid: str):
+    import claudeagent as ca
+    p = s1.plan(tid)
+    assert p["ok"], (tid, p.get("why"))
+    d = OUT / tid
+    (d / "raw").mkdir(parents=True, exist_ok=True)
+    (d / "work").mkdir(exist_ok=True)
+    fl = s1.frame_list(p, 2)
+    lines, rows = [], []
+    for i, ms in enumerate(fl):
+        f = d / "raw" / f"{i:05d}.jpg"
+        if not f.exists():
+            Image.fromarray(hc.band_crop(hc.load(ms), p["band2"], p["side"])).save(f, quality=95)
+        lines.append(f"{i:03d} {hc.mss(ms)} {f.as_posix()}")
+        rows.append((i, hc.mss(ms), f, f))
+    (d / "frames.txt").write_bytes(("\n".join(lines) + "\n").encode("utf-8"))
+    ev = ca.events_text(_PlanTurn(tid, rows))
+    assert ev.startswith(f"== {tid} ·"), ev[:80]
+    (d / "events.txt").write_bytes((ev + "\n").encode("utf-8"))
+    task = TASK_NOSAM.format(n=p["n"], F=len(fl), tid=tid, dir=d.as_posix(), work=(d / "work").as_posix())
+    old = "`opusread_1118` · `claudeagent_1119` · `geminiagent_1118`"
+    assert old in task
+    task = task.replace(old, "`opusread_*` · `rawread_*` · `rawhand_*` · `m2bsub_*` · `claudeagent_*` · `geminiagent_*` · `mottrack_*` · `idsolve_*` · `hands_*` · `slotgrid_*`")
+    (d / "TASK.md").write_bytes(task.encode("utf-8"))
+    print(tid, f"n={p['n']}", len(fl), "장(원본만) · 사건 목록", len(ev), "자 →", d, flush=True)
+
+
+def _ids(s):
+    return list(R15L16) if s == "r15L16" else sv.ids_of(s)
+
+
 def cmd_score(a):
     truth = s1.truth_all()
     T = 0
-    for tid in sv.ids_of(a.ids):
+    for tid in _ids(a.ids):
         f = OUT / tid / "answer.json"
         if not f.exists():
             print(tid, "답 없음")
@@ -218,7 +260,7 @@ def cmd_score(a):
         T += ok
         kj = sv.from_order(r.get("end_order") or [], s1.turn_of(tid)[1]["n_calc"])   # 11-19: 13 고정 → 차례의 줄 장수(L16 울기 뒤 10)
         print(f"{tid:8s} 정답 {truth[tid].get('kind')} {truth[tid].get('k_id')}·{truth[tid].get('j_closed')} | Opus {r.get('kind')} {r.get('k')}·{r.get('j')}{'?' if r.get('unsure') else ''} {'✓' if ok else '✗'} | 끝 순서→{kj}")
-    print(f"맞음 {T}/{len(sv.ids_of(a.ids))}")
+    print(f"맞음 {T}/{len(_ids(a.ids))}")
 
 
 def main():
@@ -232,12 +274,15 @@ def main():
             q.add_argument("--raw", action="store_true", help="SAM 2 없이 원본 띠만(추가 39 — r19 4순)")
             q.add_argument("--nosam", action="store_true", help="SAM 2 없이 원본 + 칸 틀 사건 목록(11-20, --root rawread_1120)")
             q.add_argument("--hands", action="store_true", help="--nosam 에 손 관절 사건 더함(11-20, --root rawhand_1120)")
+            q.add_argument("--fromplan", action="store_true", help="--nosam 꼴을 SAM 2 추적 없이 plan 틀에서 바로(11-20, --ids r15L16 --root rawread_r15L16_1120)")
     a = ap.parse_args()
     global OUT
     OUT = hc.WORK / a.root
     if a.cmd == "prep":
-        for tid in sv.ids_of(a.ids):
-            if a.nosam:
+        for tid in _ids(a.ids):
+            if a.fromplan:
+                prep_fromplan(tid)
+            elif a.nosam:
                 prep_nosam(tid, a.hands)
             elif a.raw:
                 prep_raw(tid)
