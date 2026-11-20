@@ -2,6 +2,21 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 앱 저장소의 README.md 는 2026-11-09 부터 프로젝트 소개·개발 과정 문서이고, 개발 환경·빌드 명령·화면 기능은 `docs/development.md` 로 옮겼다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-20 밤: mahjong-helper 버림 평가 Dart 이식 — 끝남 (사용자 "mahjong-helper 기능부터 옮겨줘" → 노트북 종료로 중지 → "재개해" → "보여줘" → "커밋해", **엔진 묶음만 커밋** · 평가기 연결 · 화면은 패보 기능 전체와 함께 커밋 전 · 운영 없음)
+
+**한 줄:** mahjong-helper(MIT, 514bb97)의 개량 · 속도 · 화료율 · 기대 타점 · 정렬 · 후퇴 권장 · 위험도 · 텐파이율을 Dart 엔진으로 옮기고 평가기에 칸으로 붙였다. **원본 Go 를 직접 돌린 독립 검토에서 Dart 버그 0**(새 손 1,122 · 위험 장면 360, metrics 표 16-4). 그러나 Mortal-S42 첫째 버림과의 일치는 지금 평가기 23/33 · 이식 22/33 · 후퇴 권장 끈 이식 24/33 으로 사실상 같고, **후퇴 권장 6차례는 S42 가 0/6 따름**(표 16-3) → **등급 규칙은 안 바꿈.** problem_log 72(71 덧붙임 포함).
+
+- **파일 — 커밋한 것(사용자 "엔진만 먼저"):** 엔진 10개(이식 8 + 의존하는 11-18 `shanten.dart` · `efficiency.dart`) · 그 시험 7개 · fixture 3 · LICENSE · 실험 스크립트 · 문서의 이 흐름 덩어리. **커밋 안 한 것:** `lib/paifu/` · `lib/ui/paifu/` 전체(패보 기능이 한 번도 커밋 안 됨 — 연결 · 화면은 그 위에 있음), `tool/paifu_review_dump.dart`, 시험 `paifu_review_mh` · `paifu_review_engine_ui`. 패보 기능을 커밋할 때 함께 넣을 것.
+- **파일 목록:**
+  - 엔진: `lib/engine/` mh_player · improve · agari_rate · hand_value · discard_rank · risk · risk_data · tenpai_rate, `third_party/mahjong-helper/LICENSE`.
+  - 연결: `lib/paifu/mh_context.dart`(새), `lib/paifu/paifu_review.dart`(null 허용 칸 추가 — mh · mhBest · mhRankOfActual · mhRecommendBackward · riskOfActual · minRiskTile 등, `reviewPaifu(withEngine: true)` 일 때만 계산, 기본 꺼짐 — 한 판 2 ~ 6초라 재생 화면이 화면 스레드에서 부르면 멈춤). 덤프 `tool/paifu_review_dump.dart`.
+  - 시험: `test/` improve · agari_rate · discard_rank · risk · tenpai_rate · paifu_review_mh, fixture `test/fixtures/mh_cases.json` · `mh_risk_cases.json` · `mh_cases_gen.dart`. 새 시험 포함 345개 통과, `flutter analyze lib test tool` 이슈 0(11-20 밤).
+  - 실험: `experiments/paifu_review/` mhgold · mhgold_risk(원본 대조 하네스, go.mod replace → 원본 클론) · review_mh(독립 검토 스크립트) · mhtest(원본 시험 사본) · mhdump(네 판 덤프) · tenhou6_1120 · mortal_1120(지금 판본 패보로 다시 만든 S42 입력 · 결과) · `mh_vs_s42.py`.
+  - 도구: Go 1.27.4 `C:\Users\jjh7757\dev\go-sdk\go\bin` · 원본 클론 `C:\Users\jjh7757\dev\mahjong-helper` · Mortal-S42 `C:\Users\jjh7757\dev\mortal-s42`(모두 PATH 안 바꿈).
+- **알아 둘 것:** `assets/paifu/` 가 11-20 20:20 에 다시 만들어져(바로 위 r18 절 등 다른 흐름) 11-18 tenhou6 · 표 16-1/16-2 의 r19 는 옛 판본이다. 원본 버그(안깡 손 이페코 누락)는 Dart 가 맞고 원본에 맞추지 않았다. 원본 정렬 동률은 Dart 가 패 번호 순으로 고정.
+- **같은 밤 화면에 붙임(사용자 "보여줘"):** 리뷰 카드 아래 "참고값 (mahjong-helper 기준)" 상자 — `review_view.dart` `EngineReviewBox` · `paifu_screen.dart`(compute 로 뒤에서 계산), 시험 `test/paifu_review_engine_ui_test.dart`. 후퇴 권장은 안 보임. 웹 1280×800 눈 확인만, 웹 · 기기 계산 시간은 안 잼. `paifu_review.dart` 256줄 근처 "기본으로 끈다" 주석은 이제 낡음(재생 화면은 compute 로 켬).
+- **사용자에게 물을 것(결정 거리):** ① ~~재생 화면에 새 칸~~ → 붙임 ② 후퇴 권장은 보이지 않음(S42 와 반대) — 이대로 둘지 ③ 등급 문턱 · "큰 실수" 이름(여전히 임시) ④ 기기에서 켜려면 isolate · 미리 계산 ⑤ 커밋.
+
 ## 2026-11-20 오후: 패보 손패 칸 읽기 — Opus 도구 읽기로 확정하고 닫음 (★ 다음 세션은 여기부터 — 사용자 "패보 기능 opus로 하는걸로 마무리" → "네, 진행", 새 측정 없음 · 돌고 있는 작업 없음)
 
 **한 줄:** 화료자 손패 칸 읽기(버린 칸 k · 뽑은 패가 들어간 칸 j)는 **Opus 5.5 가 도구로 프레임을 골라 열고 잘라 키워 읽는 방식**으로 확정하고, 이 흐름의 실험을 닫는다. 앱 · 서버에 넣은 것 없음(대국 뒤 오프라인 실험 그대로). 이 흐름의 스크립트 · 문서는 이번에 커밋.
