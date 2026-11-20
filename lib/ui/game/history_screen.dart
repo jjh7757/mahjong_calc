@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../game/game_store.dart';
+import '../../paifu/paifu_store.dart';
 import '../kiosk.dart';
+import '../paifu/paifu_screen.dart';
 import 'settlement_screen.dart';
 
 /// 끝난 대국 목록.
@@ -15,7 +17,18 @@ class HistoryScreen extends StatelessWidget {
       builder: (context, _) {
         final list = gameStore.history;
         return kioskWrap(context, Scaffold(
-          appBar: AppBar(title: const Text('지난 대국')),
+          appBar: AppBar(
+            title: const Text('지난 대국'),
+            actions: [
+              // 묶어 둔 예시 판(11-14 매장 2반장 동1국~남4국 · 3반장 동1국) 목록. 대국에서 적힌 패보는 대국 줄의 패보 단추로.
+              TextButton.icon(
+                icon: const Icon(Icons.slideshow),
+                label: const Text('패보 예시'),
+                onPressed: () =>
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PaifuAssetListScreen())),
+              ),
+            ],
+          ),
           body: kioskPage(context, list.isEmpty
               ? const Center(child: Text('저장된 대국이 없습니다'))
               : ListView.separated(
@@ -29,6 +42,12 @@ class HistoryScreen extends StatelessWidget {
                     return ListTile(
                       title: Text(rows.map((r) => '${r.name} ${_fmt(r.score)}').join('  ')),
                       subtitle: Text('$date · ${g.roundLabel} · ${g.events.length}건'),
+                      trailing: IconButton(
+                        tooltip: '패보',
+                        icon: const Icon(Icons.slideshow),
+                        onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => PaifuListScreen(gameId: g.id, title: '패보 · $date'))),
+                      ),
                       onTap: () => Navigator.of(context)
                           .push(MaterialPageRoute(builder: (_) => SettlementScreen(game: g))),
                       onLongPress: () async {
@@ -42,7 +61,10 @@ class HistoryScreen extends StatelessWidget {
                             ],
                           )),
                         );
-                        if (ok == true) gameStore.deleteHistory(g.id);
+                        if (ok == true) {
+                          gameStore.deleteHistory(g.id);
+                          PaifuStore.delete(g.id);
+                        }
                       },
                     );
                   },

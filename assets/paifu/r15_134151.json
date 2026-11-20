@@ -1,0 +1,1127 @@
+{
+ "version": 1,
+ "id": "r15_134151",
+ "title": "2026-11-14 2반장 남1국",
+ "round": "남1국",
+ "honba": 0,
+ "dealer": 0,
+ "hero": 3,
+ "names": [
+  "플레이어 1",
+  "플레이어 2",
+  "플레이어 3",
+  "플레이어 4"
+ ],
+ "dora_indicators": [],
+ "ura_indicators": [],
+ "note": "유국(텐파이 공개). 버림은 앱 기록기가 저장된 장면에서 적은 그대로, 손패 주인은 텐파이를 공개한 사람이고 손패는 사람이 적은 정답(영상으로 고친 것 포함)으로 끝 손패에서 거꾸로 복원한 것. 3순은 뽑기가 화면 밖이라 뽑은 패를 버린 패로 짐작함(그 앞 1 · 2순 손패도 이 짐작을 따름 — 한 장이 다를 수 있음). 표시패 기록은 없음.",
+ "source": "recorder+user_hand",
+ "events": [
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "4z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "3z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "1z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "5p",
+   "hand": [
+    "1s",
+    "3s",
+    "6s",
+    "7s",
+    "8s",
+    "1m",
+    "2m",
+    "7m",
+    "8m",
+    "8m",
+    "4z",
+    "2z",
+    "4p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "4z",
+   "tsumogiri": false,
+   "riichi": false,
+   "hand": [
+    "1s",
+    "3s",
+    "6s",
+    "7s",
+    "8s",
+    "1m",
+    "2m",
+    "7m",
+    "8m",
+    "8m",
+    "2z",
+    "4p",
+    "5p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "4z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "9s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "4z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "6z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "9m",
+   "hand": [
+    "1s",
+    "3s",
+    "6s",
+    "7s",
+    "8s",
+    "1m",
+    "2m",
+    "7m",
+    "8m",
+    "8m",
+    "2z",
+    "4p",
+    "5p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "2z",
+   "tsumogiri": false,
+   "riichi": false,
+   "hand": [
+    "1s",
+    "3s",
+    "6s",
+    "7s",
+    "8s",
+    "1m",
+    "2m",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "1p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "2z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "9s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "8s",
+   "hand": [
+    "1s",
+    "3s",
+    "6s",
+    "7s",
+    "8s",
+    "1m",
+    "2m",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "8s",
+   "tsumogiri": null,
+   "riichi": false,
+   "hand": [
+    "1s",
+    "3s",
+    "6s",
+    "7s",
+    "8s",
+    "1m",
+    "2m",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "7z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "9m",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "3z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "4s",
+   "hand": [
+    "1s",
+    "3s",
+    "6s",
+    "7s",
+    "8s",
+    "1m",
+    "2m",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "1s",
+   "tsumogiri": false,
+   "riichi": false,
+   "hand": [
+    "3s",
+    "4s",
+    "6s",
+    "7s",
+    "8s",
+    "1m",
+    "2m",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "2z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "7z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "3z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "2s",
+   "hand": [
+    "3s",
+    "4s",
+    "6s",
+    "7s",
+    "8s",
+    "1m",
+    "2m",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "1m",
+   "tsumogiri": false,
+   "riichi": false,
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "2m",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "8p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "6z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "1p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "7p",
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "2m",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "2m",
+   "tsumogiri": false,
+   "riichi": false,
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "7p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "1z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "5m",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "2p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "5z",
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "7p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "5z",
+   "tsumogiri": true,
+   "riichi": false,
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "7p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "2z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "6z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "1p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "1m",
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "7p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "1m",
+   "tsumogiri": true,
+   "riichi": false,
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "7p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "9m",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "4p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "1z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "8s",
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "7p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "8s",
+   "tsumogiri": true,
+   "riichi": false,
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "7p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "7z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "8p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "9s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "3s",
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "7p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "3s",
+   "tsumogiri": true,
+   "riichi": false,
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "7p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "8m",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "4s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "8p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "4p",
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "9m",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "7p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "9m",
+   "tsumogiri": false,
+   "riichi": false,
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "4p",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "7p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "5m",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "4m",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "1z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "5s",
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "4p",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "7p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "7p",
+   "tsumogiri": false,
+   "riichi": false,
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "4p",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "5s"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "2p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "5z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "7z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "5s",
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "4p",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "5s"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "4p",
+   "tsumogiri": false,
+   "riichi": false,
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "5s",
+    "5s"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "3p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "6s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "7p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "1s",
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "4p",
+    "5p",
+    "3s",
+    "4s",
+    "2s",
+    "5s",
+    "5s"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "1s",
+   "tsumogiri": true,
+   "riichi": false,
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "4p",
+    "5p",
+    "2s",
+    "3s",
+    "4s",
+    "5s",
+    "5s"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "3m",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "2p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "1m",
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "4p",
+    "5p",
+    "2s",
+    "3s",
+    "4s",
+    "5s",
+    "5s"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "1m",
+   "tsumogiri": true,
+   "riichi": false,
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "4p",
+    "5p",
+    "2s",
+    "3s",
+    "4s",
+    "5s",
+    "5s"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "8p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "6s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "5z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "3p",
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "7m",
+    "8m",
+    "8m",
+    "4p",
+    "5p",
+    "2s",
+    "3s",
+    "4s",
+    "5s",
+    "5s"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "7m",
+   "tsumogiri": false,
+   "riichi": true,
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "8m",
+    "8m",
+    "3p",
+    "4p",
+    "5p",
+    "2s",
+    "3s",
+    "4s",
+    "5s",
+    "5s"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "7p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "call",
+   "seat": 1,
+   "kind": "chi",
+   "from": 0,
+   "tiles": [
+    "7p",
+    "5p",
+    "6p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "3s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "3z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 3,
+   "tile": "9s",
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "8m",
+    "8m",
+    "3p",
+    "4p",
+    "5p",
+    "2s",
+    "3s",
+    "4s",
+    "5s",
+    "5s"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "9s",
+   "tsumogiri": true,
+   "riichi": false,
+   "hand": [
+    "6s",
+    "7s",
+    "8s",
+    "8m",
+    "8m",
+    "3p",
+    "4p",
+    "5p",
+    "2s",
+    "3s",
+    "4s",
+    "5s",
+    "5s"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "3p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "7m",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "7m",
+   "tsumogiri": null,
+   "riichi": false
+  }
+ ],
+ "result": {
+  "type": "draw"
+ }
+}

@@ -1,0 +1,175 @@
+{
+ "version": 1,
+ "id": "r20_143236",
+ "title": "2026-11-14 3반장 동1국",
+ "round": "동1국",
+ "honba": 0,
+ "dealer": 0,
+ "hero": 1,
+ "names": [
+  "플레이어 1",
+  "플레이어 2",
+  "플레이어 3",
+  "플레이어 4"
+ ],
+ "dora_indicators": [],
+ "ura_indicators": [],
+ "note": "버림은 앱 기록기가 저장된 장면에서 적은 그대로(사람이 고치지 않음). 이 판은 그날 화료 기록이 남지 않아 끝 손패와 점수가 없음.",
+ "source": "recorder",
+ "events": [
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "1z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "8s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "4p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "4z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "9s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "9s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "8p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "9m",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "2z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "1s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "6z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "1z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "1z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "3p",
+   "tsumogiri": null,
+   "riichi": true
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "1z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "1s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "3p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "6z",
+   "tsumogiri": true,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "8s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "7s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "3p",
+   "tsumogiri": true,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "4z",
+   "tsumogiri": true,
+   "riichi": false
+  }
+ ]
+}

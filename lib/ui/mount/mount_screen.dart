@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:camera/camera.dart';
-import 'package:flutter/foundation.dart' show compute, kIsWeb;
+import 'package:flutter/foundation.dart' show compute, kIsWeb, visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +15,10 @@ import '../../game/game_store.dart';
 import '../../services/camera_head.dart';
 import '../../services/capture_log.dart';
 import '../../services/head_camera.dart';
+import '../../engine/tile.dart';
+import '../../paifu/discard_recorder.dart';
+import '../../paifu/paifu.dart';
+import '../../paifu/paifu_store.dart';
 import '../../services/on_device_reader.dart';
 import '../../services/recognizer_client.dart';
 import '../../services/record_puller.dart';
@@ -126,6 +130,10 @@ class MountScreen extends StatefulWidget {
   /// 열자마자 갤러리를 띄울지(폰 계산기의 "테이블 전체 사진").
   final bool openGallery;
   const MountScreen({super.key, required this.editor, this.isHome = false, this.openGallery = false});
+
+  /// 통합 시험(`integration_test/paifu_live_replay_test.dart`)이 판 중 버림 기록기의 상태를 읽는 입구. 앱은 쓰지 않는다.
+  @visibleForTesting
+  static DiscardRecorder? debugDiscardRecorder;
 
   @override
   State<MountScreen> createState() => _MountScreenState();
@@ -320,6 +328,12 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   static const Duration _gridFlashFor = Duration(seconds: 8);
   TileOverlay? _overlay;
   bool _overlayBusy = false;
+
+  /// 패보: 판 중 버림 기록(실험, 2026-11-17). 켜면 겹쳐 보기 표시와 무관하게 장면이 바뀐 차례마다 패 인식을 돌려 강의 패를
+  /// [_discardRec] 에 넣고, 화료 사진을 읽을 때 그 국의 패보를 남긴다([_savePaifu]). 기본 끔 — 판 내내 패 인식이 돈다(발열·배터리).
+  static const String paifuRecordPref = 'mount.paifuRecord';
+  bool _paifuRecord = false;
+  DiscardRecorder? _discardRec;
 
   /// 일발의 "리치 뒤 울기·버림" 을 패 인식으로([CallWatch], 2026-11-16 사용자 "겹쳐 보기로 바꾸기"). 리치봉이 처음 보일 때·확정될 때
   /// 겹쳐 보기와 같은 판독을 한 번씩 돌려 기준을 잡고(겹쳐 보기 표시를 꺼 놔도), 화료 사진을 한 번 읽어 견준다([_finalCalls]).
@@ -580,7 +594,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         for (final e in seenAt.entries)
           if (_callWatch.wants(e.key, e.value, tickNow)) e.key,
       };
-      if (((_tileOverlay && overlayDue) || callSides.isNotEmpty) && OnDeviceReader.supported && !_busy && !_overlayBusy && fullSide >= _trackPreviewMinLongSide) {
+      if ((((_tileOverlay || _paifuRecord) && overlayDue) || callSides.isNotEmpty) && OnDeviceReader.supported && !_busy && !_overlayBusy && fullSide >= _trackPreviewMinLongSide) {
         Uint8List? full = hiBytes != null && (jpegLongSide(hiBytes!) ?? 0) >= fullSide ? hiBytes : null;
         if (full == null) {
           try {
@@ -635,6 +649,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       _hiResFrames = p.getBool(hiResFramesPref) ?? true;
       _frameVote = p.getBool(frameVotePref) ?? false;
       _tileOverlay = p.getBool(tileOverlayPref) ?? false;
+      _paifuRecord = p.getBool(paifuRecordPref) ?? false;
       _overlayHideScore = p.getBool(overlayHideScorePref) ?? true;
       _showGrid = p.getBool(showGridPref) ?? false;
       _geminiRead = p.getBool(geminiReadPref) ?? false;
@@ -1288,6 +1303,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     try {
       final o = await OnDeviceReader.overlay(frame, _overlayQuery());
       debugPrint('[overlay] ${o.tiles.length}장 ${o.ms}');
+      if (_paifuRecord) _recordDiscards(o, frame);
       if (baselineFor.isNotEmpty) {
         final c = _countOf(o, frame);
         for (final s in baselineFor) {
@@ -1300,6 +1316,120 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       debugPrint('[overlay] 실패: $e');
     } finally {
       _overlayBusy = false;
+    }
+  }
+
+  /// 패 인식 한 장면의 강 패를 버림 기록기에 넣는다.
+  /// 강 주인·순서는 가운데 기기(리치봉 구역) 중심에서 본 위치로 정한다([DiscardRecorder]).
+  void _recordDiscards(TileOverlay o, Uint8List jpeg) {
+    final g = gameStore.current;
+    if (g == null || !_useGrid) return;
+    // 기록기는 하나를 대국 내내 쓴다 — 국의 경계는 기록기가 빈 탁자를 보고 스스로 안다(화료 기록이 늦어도 다음 국에 안 섞인다).
+    // 선은 대국 기록이 넘어간 뒤에야 바뀌므로 장면마다 지금 값을 넣어 준다.
+    final rec = _discardRec ??= DiscardRecorder();
+    MountScreen.debugDiscardRecorder = rec;
+    rec.dealer =SeatMap(g.settings.bottomSeat).sideOf(g.dealer);
+    final z = _grid.sticksZone;
+    final size = jpegSize(jpeg);
+    // 역할(river)로 거르지 않는다: 판 초반 강의 첫 패들을 역할 모델이 wall 로 오락가락 읽어 칸이 깜박였다(11-14 r11, metrics 표 12-28).
+    // 앞면 상자를 다 넘기고 기록기가 위치(가운데 기기 둘레의 띠)로 강만 고른다.
+    final s = sightingsOf(
+      [
+        for (final t in o.tiles) (x: t.x, y: t.y, w: t.w, h: t.h, tile: t.tile, conf: t.tileConf),
+      ],
+      zoneXmin: z.xmin / 1000,
+      zoneXmax: z.xmax / 1000,
+      zoneYmin: z.ymin / 1000,
+      zoneYmax: z.ymax / 1000,
+      aspect: size == null || size.$2 == 0 ? _frameAspect : size.$1 / size.$2,
+    );
+    // 울기 상자의 패(자리별): 한 장면만 보이고 사라진 패가 정말 울려 나갔는지 확인하고, 누가 어떤 묶음으로 가져갔는지 적는 데 쓴다.
+    final melds = {for (final side in Side.values) side: <String>[]};
+    for (final t in o.tiles) {
+      final side = Side.values.asNameMap()[t.side];
+      if (t.role == 'meld' && side != null) melds[side]!.add(t.tile);
+    }
+    rec.add(o.at, s.sightings, hd: s.hd, meldTiles: melds);
+  }
+
+  /// 화료 사진을 한 번 더 읽어 마지막 버림까지 넣고, 이 국의 버림 기록을 패보로 남긴다(대국별 [PaifuStore] + 촬영 기록 paifu.json).
+  /// 손패는 화료자의 끝 손패만(판 중 손패는 안 적는다). 실패는 로그만 — 판독 흐름을 막지 않는다.
+  Future<void> _savePaifu(Game g, TableMerge merge, String logDir, Uint8List photo) async {
+    if (!_paifuRecord) return;
+    try {
+      if (OnDeviceReader.supported && !_overlayBusy) {
+        _overlayBusy = true;
+        try {
+          final o = await OnDeviceReader.overlay(photo, _overlayQuery()).timeout(const Duration(seconds: 10));
+          _recordDiscards(o, photo);
+        } finally {
+          _overlayBusy = false;
+        }
+      }
+      final rec = _discardRec;
+      if (rec == null || rec.count == 0) return;
+      final closed = [for (final t in merge.closed) PaifuTile(t.tile, red: t.red)];
+      final paifu = rec.toPaifu(
+        id: _trackRoundKey ?? '${g.id}/${g.roundLabel}/${g.honba}',
+        bottomSeat: g.settings.bottomSeat,
+        dealerSeat: g.dealer,
+        hero: merge.winner,
+        title: '${g.roundLabel}${g.honba > 0 ? ' ${g.honba}본장' : ''}',
+        round: g.roundLabel,
+        honba: g.honba,
+        names: g.names,
+        doraIndicators: [for (final t in merge.situation.doraIndicators) PaifuTile(t)],
+        uraIndicators: [for (final t in merge.situation.uraIndicators) PaifuTile(t)],
+        note: '버림만 자동으로 적은 기록(실험). 손패는 화료자의 끝 손패만 있고, 한 장면에 여럿 버려진 패의 순서는 차례 규칙으로 맞춤.',
+        result: PaifuResult(
+          type: merge.isTsumo ? 'tsumo' : 'ron',
+          winner: merge.winner,
+          loser: merge.loser,
+          winTile: closed.isEmpty ? null : closed.last,
+          hand: closed.isEmpty ? null : closed.sublist(0, closed.length - 1),
+          // 재생 화면이 끝 걸음에서 같은 점수를 다시 낼 수 있게 울기 묶음과 이때 정한 상황을 같이 남긴다.
+          melds: [
+            for (final (i, m) in merge.melds.indexed)
+              PaifuResultMeld(
+                m.isSequence ? 'chi' : (m.isKan ? (m.isOpen ? 'kan' : 'ankan') : 'pon'),
+                () {
+                  var red = i < merge.meldRed.length ? merge.meldRed[i] : 0;
+                  return [
+                    for (final t in m.tiles)
+                      PaifuTile(t, red: !Tiles.isHonor(t) && Tiles.number(t) == 5 && red-- > 0),
+                  ];
+                }(),
+              ),
+          ],
+          flags: {
+            'riichi': merge.situation.riichi,
+            'double_riichi': merge.situation.doubleRiichi,
+            'ippatsu': merge.situation.ippatsu,
+            'last_tile': merge.situation.lastTile,
+            'rinshan': merge.situation.rinshan,
+            'chankan': merge.situation.chankan,
+            'first_turn': merge.situation.firstTurnWin,
+          },
+        ),
+      );
+      await PaifuStore.put(g.id, paifu);
+      debugPrint('[paifu] ${paifu.title} 버림 ${rec.count}장 장면 ${rec.frames} 검사 ${paifu.check()}');
+      if (_logEnabled) {
+        unawaited(CaptureLog.saveFile(
+          logDir,
+          'paifu.json',
+          CaptureLog.jsonBytes({
+            ...paifu.toJson(),
+            'frames': rec.frames,
+            'rivers': {
+              for (final e in rec.rivers().entries) e.key.name: [for (final d in e.value) d.toJson()],
+            },
+          }),
+          'application/json',
+        ));
+      }
+    } catch (e) {
+      debugPrint('[paifu] 저장 실패: $e');
     }
   }
 
@@ -2330,6 +2460,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         for (final b in [...signalCheck.blocks, ...signalCheck.cautions]) '판독 신호: $b — 손패를 확인하세요',
       ];
       saveLog(merge: merge, warnings: reading.warnings);
+      unawaited(_savePaifu(g, merge, logDir, bytes));
       debugPrint('[read] merged winner=${merge.winner} hand=${merge.hand != null} → 진행 창 닫기');
       await closeProgress();
       debugPrint('[read] 진행 창 닫힘 mounted=$mounted');
@@ -2817,6 +2948,14 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                       await p.setBool(tileOverlayPref, _tileOverlay);
                     } catch (_) {}
                     if (_tileOverlay) _toast('3초마다 패 인식을 겹쳐 보여 줍니다(실험, 이 기기에서 계산)');
+                  } else if (v == 'paifuRecord') {
+                    setState(() => _paifuRecord = !_paifuRecord);
+                    if (!_paifuRecord) _discardRec = null;
+                    try {
+                      final p = await SharedPreferences.getInstance();
+                      await p.setBool(paifuRecordPref, _paifuRecord);
+                    } catch (_) {}
+                    if (_paifuRecord) _toast('판 중 버림을 적습니다(실험) — 판 내내 패 인식이 돕니다. 지난 대국 → 패보에서 봅니다');
                   } else if (v == 'showGrid') {
                     setState(() => _showGrid = !_showGrid);
                     try {
@@ -2959,6 +3098,14 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
                       checked: _tileOverlay,
                       enabled: _remoteUrl != null,
                       child: const Text('패 인식 겹쳐 보기 (실험, 종류·역할)'),
+                    ),
+                  if (OnDeviceReader.supported)
+                    CheckedPopupMenuItem(
+                      key: const ValueKey('mount-paifu-record-menu'),
+                      value: 'paifuRecord',
+                      checked: _paifuRecord,
+                      enabled: _remoteUrl != null && _useGrid,
+                      child: const Text('패보: 버림 기록 (실험, 판 내내 패 인식)'),
                     ),
                   if (OnDeviceReader.supported)
                     CheckedPopupMenuItem(

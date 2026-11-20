@@ -83,6 +83,9 @@ class ResultScreen extends StatefulWidget {
 
   /// 상황 칩으로 다시 계산할 때 쓰는 룰(입력 화면·거치 촬영의 룰 설정).
   final RuleSet rules;
+
+  /// 보기 전용(패보 재생): 진행 중인 대국이 있어도 "대국에 반영" 을 내지 않는다 — 지난 판의 결과가 지금 대국에 들어가면 안 된다.
+  final bool viewOnly;
   const ResultScreen({
     super.key,
     required this.result,
@@ -104,6 +107,7 @@ class ResultScreen extends StatefulWidget {
     this.autoCautions = const [],
     this.autoRecordGate,
     this.rules = RuleSet.standard,
+    this.viewOnly = false,
   });
 
   @override
@@ -177,7 +181,7 @@ class _ResultScreenState extends State<ResultScreen> with SingleTickerProviderSt
 
   /// 이 손패를 리치로 계산했는지(칩으로 바꿨으면 그것). "대국에 반영" 의 자동 리치봉에 쓴다.
   bool get _winnerRiichi => _sit == null ? widget.winnerRiichi : (_sit!.riichi || _sit!.doubleRiichi);
-  Game? get _game => gameStore.current;
+  Game? get _game => widget.viewOnly ? null : gameStore.current;
 
   /// 칩으로 상황을 고쳐 바로 다시 계산한다(2026-10-29, 사용자: 더블 리치·일발을 "판독 수정" 없이 결과 화면에서).
   /// 연출·음성은 건너뛰고, 10초 자동 반영은 멈춘다(사용자가 손댄 결과는 직접 반영).

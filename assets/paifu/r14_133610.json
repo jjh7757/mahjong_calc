@@ -1,0 +1,218 @@
+{
+ "version": 1,
+ "id": "r14_133610",
+ "title": "2026-11-14 2반장 동4국 1본장",
+ "round": "동4국",
+ "honba": 1,
+ "dealer": 3,
+ "hero": 2,
+ "names": [
+  "플레이어 1",
+  "플레이어 2",
+  "플레이어 3",
+  "플레이어 4"
+ ],
+ "dora_indicators": [
+  "2s",
+  "6s"
+ ],
+ "ura_indicators": [],
+ "note": "버림은 앱 기록기가 저장된 장면에서 적은 그대로, 내 손패는 사람이 적은 정답으로 복원한 것(첫 1순은 녹화 전이라 없음). 점수는 그날 화료 기록의 끝 손패로 계산. 녹화 전 순 손패는 짐작으로 채움(버린 뒤 손패와 14장은 확실, 뽑은 패는 14장 중 가장 많은 종류 — guess 표시).",
+ "source": "recorder+user_hand",
+ "events": [
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "3z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "3z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "9s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "5m",
+   "hand": [
+    "3m",
+    "4m",
+    "0m",
+    "6m",
+    "1s",
+    "2s",
+    "3s",
+    "7s",
+    "8s",
+    "8s",
+    "0p",
+    "6p",
+    "6z"
+   ],
+   "guess": true
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "6z",
+   "tsumogiri": false,
+   "riichi": false,
+   "hand": [
+    "3m",
+    "4m",
+    "5m",
+    "0m",
+    "6m",
+    "1s",
+    "2s",
+    "3s",
+    "7s",
+    "8s",
+    "8s",
+    "0p",
+    "6p"
+   ],
+   "guess": true
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "4z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "9m",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "2s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "7p",
+   "hand": [
+    "3m",
+    "4m",
+    "5m",
+    "0m",
+    "6m",
+    "1s",
+    "2s",
+    "3s",
+    "7s",
+    "8s",
+    "8s",
+    "0p",
+    "6p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "7s",
+   "tsumogiri": false,
+   "riichi": true,
+   "hand": [
+    "3m",
+    "4m",
+    "5m",
+    "0m",
+    "6m",
+    "1s",
+    "2s",
+    "3s",
+    "8s",
+    "8s",
+    "0p",
+    "6p",
+    "7p"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "2z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "4s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "4s",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "7m",
+   "hand": [
+    "3m",
+    "4m",
+    "5m",
+    "0m",
+    "6m",
+    "1s",
+    "2s",
+    "3s",
+    "8s",
+    "8s",
+    "0p",
+    "6p",
+    "7p"
+   ]
+  }
+ ],
+ "result": {
+  "type": "tsumo",
+  "winner": 2,
+  "loser": null,
+  "win_tile": "7m",
+  "hand": [
+   "3m",
+   "4m",
+   "5m",
+   "0m",
+   "6m",
+   "1s",
+   "2s",
+   "3s",
+   "8s",
+   "8s",
+   "0p",
+   "6p",
+   "7p"
+  ],
+  "melds": [],
+  "flags": {
+   "riichi": true
+  }
+ }
+}

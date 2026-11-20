@@ -21,7 +21,9 @@ android {
         applicationId = "dev.jjh.mahjong_calc"
         // 기기 판독 실험 브랜치는 사본 앱으로 깐다(2026-11-11 사용자 "기존 앱은 그대로 두고 사본 앱으로"): 패키지 이름·앱 이름이 달라
         // 원래 앱(dev.jjh.mahjong_calc)과 나란히 설치되고 데이터도 따로다.
-        applicationIdSuffix = ".ondevice"
+        // 기기에 까는 통합 시험은 사본 앱 자료를 건드리지 않게 다른 이름으로: `flutter build apk -P appIdSuffix=.ondevice.e2e` 로 만들고
+        // `aapt2 dump packagename` 으로 이름을 확인한 뒤 `flutter drive --use-application-binary` 로 돌린다(환경 변수로는 안 먹는다 — 2026-11-17 사고).
+        applicationIdSuffix = (project.findProperty("appIdSuffix") as String?) ?: ".ondevice"
         manifestPlaceholders["appLabel"] = "마작 실험"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
