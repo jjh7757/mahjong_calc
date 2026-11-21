@@ -2,6 +2,15 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 앱 저장소의 README.md 는 2026-11-09 부터 프로젝트 소개·개발 과정 문서이고, 개발 환경·빌드 명령·화면 기능은 `docs/development.md` 로 옮겼다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-21 밤: 패보 복기 에이전트(LangGraph) — 코드까지, 실제 Gemini 호출 0, 커밋 전 (`docs/paifu_review_agent_design_1121.md`)
+
+- 사용자 "복기 에이전트 구현해봐"(해설 2단계 평가보다 먼저). 질문 → 도구로 사실 찾기 → 한국어 답 → 코드 검증 → 재시도 · 대체. 도구는 앱이 미리 계산한 "에이전트 사실표"에서 찾기만 한다(서버에 엔진 이식 안 함). LLM 은 Gemini(`GeminiTextGenerator`), Claude API 안 씀.
+- 앱(커밋 전): `lib/paifu/agent_facts.dart` · `tool/paifu_agent_facts.dart` · `test/agent_facts_test.dart`. 서버(worktree `C:\Users\jjh7757\dev\mahjong-recognizer-review`, 브랜치 `feat/review-explain`, 해설 1단계와 함께 커밋 전 — 운영에 안 닿음): `app/review_agent.py` · `POST /v2/review/ask` · `tests/test_review_agent.py` · `tests/fixtures/agent_facts/` · `scripts/review_ask.py` · `langgraph==1.2.11`.
+- 검토: 앱 test 1,374 · 서버 390 통과, 따로 짠 Python 샹텐으로 후보 1,398개 불일치 0. 해설 라우트가 `guessed` 상태를 거절하던 문제(오후 복기 화면 작업 탓)를 `app/review.py` 에서 고침.
+- **실제 호출 함(사용자 "돌려 봐", metrics 표 15-3):** 질문 12개(본 판 4판) 검증 첫 통과 12/12 · 대체 0 · 중앙 6.0초 · 최대 16.3초, 사람이 읽어 틀림 2/12(f4 리치 중인데 "버려도 같다" · g4 도구 한도로 차례 빠뜨림 — 둘 다 검증이 못 잡는 종류). 실행 `experiments/paifu_review/agent_run_1121.py`(키는 `.env` 에서 자식 프로세스에만).
+- **고쳐서 다시 잼(사용자 "고쳐서 다시 재", metrics 표 15-4 · problem_log 74번):** `what_if` · `discard_options` 에 리치 중 상태(`can_choose` · `note`), `find_turns` 에 `after_riichi` 조건, 지시문 a2. 본 판 12 틀림 2 → 0, **안 본 판 12 검증 12/12 · 대체 0 · 틀림 0 → a2 채택.** 서버 pytest 411.
+- **다음:** 남이 쓴 질문 · 다른 사람 판으로 재기, 말투(% · 바람 이름 대괄호), 앱 질문 창, 운영 배포(사용자 결정). 서버 worktree 와 앱 쪽(`agent_facts.dart` 등) 모두 커밋 전.
+
 ## 2026-11-21 오후: 패보 복기 화면을 "한 문장 먼저" 구조로 — 설계서만 (`docs/paifu_review_ui_design_1121.md`, 코드·측정 없음)
 
 - 사용자가 체스닷컴 게임 리뷰 화면 네 장을 보여 주며 "이런 식의 서비스가 더 나아 보인다"고 했고, 같은 날 "mahjong-helper 참고값이 보기 힘들다"고도 했다. 이력서·포트폴리오 작업 세션에서 설계서만 썼다(이 저장소의 코드는 안 건드림).
