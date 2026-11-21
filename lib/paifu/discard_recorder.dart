@@ -709,6 +709,7 @@ class DiscardRecorder {
   ///
   /// 울려 나간 패는 그 뒤에 바로 버린 자리가 가져간 것으로 본다(묶음 종류·나머지 패는 모름 → `kind: call`, 그 한 장만).
   /// 뒤에 버림이 없으면(론) 울기로 적지 않는다. 눕힌 패는 그 자리의 첫 장만 리치 선언패, 그 뒤 버림은 쯔모기리로 적는다.
+  /// 버림 사건의 `at` 은 그 패를 처음 본 장면 시각([RecordedDiscard.firstAt], epoch ms).
   Paifu toPaifu({
     required String id,
     required int bottomSeat,
@@ -742,6 +743,8 @@ class DiscardRecorder {
         tile: tile,
         tsumogiri: declared.contains(seat) ? true : null,
         riichi: riichi,
+        // 처음 본 장면의 시각 — 손패 복원(hand_restore/turns.dart)이 차례 창을 이것으로 자른다.
+        at: d.firstAt.millisecondsSinceEpoch,
       ));
       if (riichi) declared.add(seat);
       // 뒤에 버림이 하나도 없으면 그 패는 쏘인 패다(론) — 화료자가 펼친 손패가 울기 상자로 읽혀도 울기로 안 적는다(11-07 R3a 위 6삭).

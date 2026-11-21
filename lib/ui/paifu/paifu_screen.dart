@@ -7,13 +7,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../engine/hand.dart';
 import '../../engine/tile.dart';
+import '../../paifu/hand_restore/restore_ui.dart';
+import '../../paifu/hand_restore/restorer.dart';
 import '../../paifu/paifu.dart';
+import '../../paifu/paifu_review.dart';
 import '../../paifu/paifu_score.dart';
 import '../../paifu/paifu_store.dart';
+import '../../paifu/review_sentence.dart';
 import '../../paifu/start_hand.dart';
 import '../kiosk.dart';
 import '../result_screen.dart';
 import '../settings_screen.dart';
+import 'review_summary_view.dart';
 import 'review_view.dart';
 import 'start_hand_sheet.dart';
 import '../tile_view.dart';
@@ -60,13 +65,33 @@ class _PaifuAssetScreenState extends State<PaifuAssetScreen> {
   }
 }
 
+/// 패보 화면의 세 모습(설계서 `docs/paifu_review_ui_design_1121.md`).
+/// summary = 판 요약(3-1), review = 복기(말풍선 · 탁자 · 수 띠 · 단추 줄, 3-2 · 3-7), play = 지금까지의 재생 화면
+/// (자동 재생 · 사건 목록 · 시작 손패 입력 · 손패 복원 단추, 말풍선 없음).
+enum PaifuView { summary, review, play }
+
 /// 패보 재생: 한 사람(hero)의 매 순 손패 + 네 자리의 버림을 걸음마다 넘겨 본다.
+///
+/// 손패가 있는 패보(`Paifu.hasHeroHands`)는 판 요약을 먼저 띄우고(9절 ②), "복기 시작" 이면 복기 화면, "처음부터 보기" 면
+/// 재생 화면으로 간다. 손패가 없는 판은 바로 재생 화면이다(시작 손패 입력 · 손패 복원 단추가 그 패널에 그대로 있다).
 class PaifuScreen extends StatefulWidget {
   final Paifu paifu;
 
   /// 리뷰 카드의 엔진 참고값을 뒤에서 내는 함수(기본 [computeEngineReview]). 시험에서 바꿔 끼운다.
   final EngineReviewRunner engineReview;
-  const PaifuScreen({super.key, required this.paifu, this.engineReview = computeEngineReview});
+
+  /// 이 패보가 든 대국([PaifuStore] 열쇠). 있으면(기기에 저장된 패보) 손패 복원 · 되돌리기를 낸다. 예시(asset)는 null.
+  final String? gameId;
+
+  /// 손패 복원(Claude API)에 쓰는 것(녹화 폴더 확인 · 실행기). 시험에서 바꿔 끼운다.
+  final HandRestoreSetup restoreSetup;
+  const PaifuScreen({
+    super.key,
+    required this.paifu,
+    this.engineReview = computeEngineReview,
+    this.gameId,
+    this.restoreSetup = const HandRestoreSetup(),
+  });
 
   @override
   State<PaifuScreen> createState() => _PaifuScreenState();
@@ -81,7 +106,9 @@ class _PaifuScreenState extends State<PaifuScreen> {
   int _intervalMs = 1000;
   final _log = ScrollController();
 
-  Paifu get _p => widget.paifu;
+  /// 지금 보는 패보(손패 복원 · 되돌리기로 바뀜).
+  late Paifu _paifu = widget.paifu;
+  Paifu get _p => _paifu;
   int get _last => _p.states.length - 1;
   bool get _playing => _timer != null;
 
@@ -96,12 +123,139 @@ class _PaifuScreenState extends State<PaifuScreen> {
   EngineReviewStatus _engine = EngineReviewStatus.off;
   Timer? _engineTimer;
 
+  // ── 복기 화면(설계서 3-1 ~ 3-9) ──
+
+  /// 지금 보이는 모습. 손패가 있는 판은 요약부터.
+  late PaifuView _view = _p.hasHeroHands ? PaifuView.summary : PaifuView.play;
+
+  /// 단계 걸음(배패 · 리치 · 끝).
+  late List<ReviewStage> _stages = reviewStages(_p);
+
+  /// 단계 말풍선을 일부러 띄운 걸음("다음" · 단계 아이콘 · 복기 시작). 내 버림이 없는 단계 걸음은 이 값과 상관없이 단계 말풍선.
+  int? _stageFor;
+
+  /// 펼침: 최선 보기(막대) · 후보 · 참고값. 후보 · 참고값은 판을 보는 동안 펼친 채로 둔다.
+  bool _bestView = false;
+  bool _showCandidates = false;
+  bool _showEngine = false;
+
+  /// 최선 보기에서 누른 막대의 패 종류.
+  int? _barTile;
+
+  /// 수 띠 칸(리뷰가 바뀌면 다시 만든다).
+  List<StripEntry>? _stripCache;
+  PaifuReviewIndex? _stripFor;
+
   @override
   void initState() {
     super.initState();
     _loadRules();
     _loadStartHand();
     _startEngineReview();
+    _loadRestoreState();
+  }
+
+  /// 손패 복원: API 키가 있는지(키 자체는 다시 보여 주지 않음) · 되돌릴 원본이 있는지.
+  bool _hasKey = false;
+  bool _hasOriginal = false;
+  bool _restoring = false;
+
+  Future<void> _loadRestoreState() async {
+    final gid = widget.gameId;
+    if (gid == null) return;
+    try {
+      final key = await ClaudeKeyStore.load();
+      final orig = await RestoreStore.hasOriginal(gid, _p.id);
+      if (!mounted) return;
+      setState(() {
+        _hasKey = key != null;
+        _hasOriginal = orig;
+      });
+    } catch (_) {}
+  }
+
+  /// 패보를 바꿔 끼우고(복원 · 되돌리기) 점수 · 리뷰 · 시작 손패를 다시 셈한다.
+  void _replacePaifu(Paifu p) {
+    setState(() => _resetFor(p));
+    _loadRestoreState();
+  }
+
+  void _resetFor(Paifu p) {
+    _engineTimer?.cancel();
+    _engineTimer = null;
+    _paifu = p;
+    _step = _step.clamp(0, _last);
+    _score = scoreOf(_p, rules: _rules);
+    _review = PaifuReviewIndex.of(_p);
+    _engine = EngineReviewStatus.off;
+    _startHand = const [];
+    _infer = null;
+    // 복기 화면: 단계 · 수 띠를 다시 셈. 손패가 없어진 판이면 재생 화면으로(보던 모습은 그대로 둔다).
+    _stages = reviewStages(p);
+    _stageFor = null;
+    _barTile = null;
+    _stripCache = null;
+    if (!p.hasHeroHands) _view = PaifuView.play;
+    _startEngineReview();
+    _loadStartHand();
+  }
+
+  @override
+  void didUpdateWidget(covariant PaifuScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.paifu, widget.paifu)) {
+      _resetFor(widget.paifu);
+      _loadRestoreState();
+    }
+  }
+
+  Future<void> _restoreHands() async {
+    final gid = widget.gameId;
+    if (gid == null || _restoring) return;
+    _stop();
+    setState(() => _restoring = true);
+    try {
+      final p = await runHandRestore(context, paifu: _p, gameId: gid, setup: widget.restoreSetup);
+      if (!mounted) return;
+      if (p != null) _replacePaifu(p);
+    } finally {
+      if (mounted) setState(() => _restoring = false);
+      await _loadRestoreState();
+    }
+  }
+
+  Future<void> _revertRestore() async {
+    final gid = widget.gameId;
+    if (gid == null) return;
+    _stop();
+    final p = await RestoreStore.revert(gid, _p.id);
+    if (!mounted) return;
+    if (p != null) _replacePaifu(p);
+    await _loadRestoreState();
+  }
+
+  /// 손패 복원 단추(또는 못 쓰는 까닭 한 줄). 기기에 저장된, 손패가 없는 패보에서만.
+  Widget _restoreRow(ThemeData theme) {
+    final why = restoreBlocker(_p, widget.restoreSetup);
+    if (why != null) {
+      return Text(why,
+          key: const ValueKey('paifu-restore-why'),
+          style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant));
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        OutlinedButton.icon(
+          key: const ValueKey('paifu-restore'),
+          icon: const Icon(Icons.auto_fix_high),
+          label: const Text('손패 복원 (Claude API)'),
+          onPressed: _restoring ? null : _restoreHands,
+        ),
+        if (!_hasKey)
+          Text('Claude API 키가 없습니다 — 누르면 넣습니다',
+              key: const ValueKey('paifu-restore-nokey'), style: theme.textTheme.bodySmall),
+      ],
+    );
   }
 
   /// 엔진 참고값 계산(한 판 수 초). 첫 화면을 그린 뒤 조금 있다 시작한다 — 웹은 compute 가 같은 스레드에서 돈다.
@@ -117,15 +271,17 @@ class _PaifuScreenState extends State<PaifuScreen> {
 
   Future<void> _runEngineReview() async {
     _engineTimer = null;
+    final p = _p;
     try {
-      final r = await widget.engineReview(_p);
-      if (!mounted) return;
+      final r = await widget.engineReview(p);
+      // 그새 패보가 바뀌었으면(손패 복원 · 되돌리기) 옛 판의 결과는 버린다.
+      if (!mounted || !identical(p, _p)) return;
       setState(() {
         _review = PaifuReviewIndex.fromReview(r);
         _engine = EngineReviewStatus.ready;
       });
     } catch (_) {
-      if (mounted) setState(() => _engine = EngineReviewStatus.failed);
+      if (mounted && identical(p, _p)) setState(() => _engine = EngineReviewStatus.failed);
     }
   }
 
@@ -233,10 +389,23 @@ class _PaifuScreenState extends State<PaifuScreen> {
     super.dispose();
   }
 
-  void _go(int step) {
+  /// [step] 으로 간다. [stage] 가 그 걸음이면 단계 말풍선을 띄운다(복기 화면).
+  void _go(int step, {int? stage}) {
     final s = step.clamp(0, _last);
-    if (s == _step) return;
-    setState(() => _step = s);
+    if (s == _step) {
+      if (_stageFor != stage || _barTile != null) {
+        setState(() {
+          _stageFor = stage;
+          _barTile = null;
+        });
+      }
+      return;
+    }
+    setState(() {
+      _step = s;
+      _stageFor = stage;
+      _barTile = null;
+    });
     if (s == _last) {
       // 자동 재생이 끝까지 가면 점수를 계산해 결과 화면을 띄운다. 손으로 넘겨 온 끝 걸음에서는 단추·"다음" 으로.
       final played = _playing;
@@ -315,49 +484,519 @@ class _PaifuScreenState extends State<PaifuScreen> {
   Widget build(BuildContext context) {
     final state = _p.states[_step];
     final title = _p.title.isNotEmpty ? _p.title : '패보';
-    return kioskWrap(
-      context,
-      Scaffold(
-        appBar: AppBar(title: Text(title)),
-        body: CallbackShortcuts(
-          bindings: {
-            const SingleActivator(LogicalKeyboardKey.arrowRight): _next,
-            const SingleActivator(LogicalKeyboardKey.arrowLeft): () => _go(_step - 1),
-            const SingleActivator(LogicalKeyboardKey.arrowDown): () => _heroTurn(1),
-            const SingleActivator(LogicalKeyboardKey.arrowUp): () => _heroTurn(-1),
-            const SingleActivator(LogicalKeyboardKey.space): () => _playing ? _stop() : _play(),
-          },
-          child: Focus(
-            autofocus: true,
-            child: SafeArea(
-              child: LayoutBuilder(
-                builder: (context, box) {
-                  final table = PaifuTableView(paifu: _p, state: state, heroView: _infer?.viewAt(_p, state.step));
-                  final wide = box.maxWidth > box.maxHeight * 1.2;
-                  if (wide) {
-                    final panelW = (box.maxWidth * 0.34).clamp(300.0, 460.0);
-                    return Row(
-                      children: [
-                        Expanded(child: Padding(padding: const EdgeInsets.all(8), child: Center(child: table))),
-                        SizedBox(width: panelW, child: _panel(context, state)),
-                      ],
-                    );
-                  }
-                  return Column(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(6),
-                        child: SizedBox(height: box.maxHeight * 0.56, child: Center(child: table)),
-                      ),
-                      Expanded(child: _panel(context, state)),
-                    ],
-                  );
-                },
-              ),
+    final view = _view;
+    final Widget body;
+    if (view == PaifuView.summary) {
+      body = PaifuReviewSummary(
+        paifu: _p,
+        review: _review.review,
+        result: _resultShort(),
+        onStart: _startReview,
+        onPlay: _startPlay,
+        onLesson: (step) {
+          setState(() => _view = PaifuView.review);
+          _go(step);
+        },
+      );
+    } else {
+      body = CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.arrowRight): _next,
+          const SingleActivator(LogicalKeyboardKey.arrowLeft): () => _go(_step - 1),
+          const SingleActivator(LogicalKeyboardKey.arrowDown): () => _heroTurn(1),
+          const SingleActivator(LogicalKeyboardKey.arrowUp): () => _heroTurn(-1),
+          const SingleActivator(LogicalKeyboardKey.space): () => _playing ? _stop() : _play(),
+        },
+        child: Focus(
+          autofocus: true,
+          child: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, box) => view == PaifuView.review ? _reviewBody(context, state, box) : _playBody(context, state, box),
             ),
           ),
         ),
+      );
+    }
+    return kioskWrap(
+      context,
+      Scaffold(
+        appBar: AppBar(
+          title: Text(view == PaifuView.play ? title : '복기'),
+          actions: [
+            if (view != PaifuView.summary && _p.hasHeroHands)
+              TextButton(key: const ValueKey('paifu-open-summary'), onPressed: _openSummary, child: const Text('요약')),
+            if (view == PaifuView.play && _p.hasHeroHands)
+              TextButton(
+                key: const ValueKey('paifu-open-review'),
+                onPressed: () {
+                  _stop();
+                  setState(() => _view = PaifuView.review);
+                },
+                child: const Text('복기'),
+              ),
+            if (view == PaifuView.review)
+              IconButton(
+                key: const ValueKey('paifu-review-settings'),
+                tooltip: '설정',
+                icon: const Icon(Icons.settings_outlined),
+                onPressed: _openSettings,
+              ),
+          ],
+        ),
+        body: body,
       ),
+    );
+  }
+
+  /// 재생 화면(지금까지의 배치): 가로면 탁자 왼쪽 · 패널 오른쪽, 세로면 탁자 위 · 패널 아래.
+  Widget _playBody(BuildContext context, PaifuState state, BoxConstraints box) {
+    final table = PaifuTableView(paifu: _p, state: state, heroView: _infer?.viewAt(_p, state.step));
+    final wide = box.maxWidth > box.maxHeight * 1.2;
+    if (wide) {
+      final panelW = (box.maxWidth * 0.34).clamp(300.0, 460.0);
+      return Row(
+        children: [
+          Expanded(child: Padding(padding: const EdgeInsets.all(8), child: Center(child: table))),
+          SizedBox(width: panelW, child: _panel(context, state)),
+        ],
+      );
+    }
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(6),
+          child: SizedBox(height: box.maxHeight * 0.56, child: Center(child: table)),
+        ),
+        Expanded(child: _panel(context, state)),
+      ],
+    );
+  }
+
+  // ── 복기 화면 ──
+
+  /// 머리 줄 · 끝 띠에 쓰는 결과 한 낱말.
+  String _resultShort() => switch (_p.result?.type) {
+        'ron' => '론',
+        'tsumo' => '쯔모',
+        'draw' => '유국',
+        null => '',
+        _ => '유국',
+      };
+
+  int? get _points {
+    final s = _score;
+    return s != null && s.result.isValid ? s.result.payment.total : null;
+  }
+
+  void _openSummary() {
+    _stop();
+    setState(() => _view = PaifuView.summary);
+  }
+
+  /// 요약의 "복기 시작": 첫 걸음 + 배패 말풍선(있으면).
+  void _startReview() {
+    setState(() => _view = PaifuView.review);
+    final s0 = _stageAt(0);
+    _go(0, stage: s0 == null ? null : 0);
+  }
+
+  /// 요약의 "처음부터 보기": 말풍선 없는 재생 화면의 첫 걸음.
+  void _startPlay() {
+    setState(() => _view = PaifuView.play);
+    _go(0);
+  }
+
+  ReviewStage? _stageAt(int step) {
+    for (final s in _stages) {
+      if (s.step == step) return s;
+    }
+    return null;
+  }
+
+  /// 이 걸음에 단계 말풍선이 보이는가: 단계 걸음이고, 일부러 띄웠거나 그 걸음에 내 버림 평가가 없을 때.
+  bool _stageVisible(int step) => _stageAt(step) != null && (_stageFor == step || _review.byStep[step] == null);
+
+  /// 큰 "다음"(3-2): 다음 내 버림 걸음으로. 그 사이 단계 걸음이 있으면 거기서 먼저 멈추고, 단계 말풍선 위에서 한 번 더
+  /// 누르면 그 걸음의 수 말풍선. 마지막 내 버림 뒤에는 끝 걸음, 끝에서는 점수 결과 화면.
+  void _reviewNext() {
+    _stop();
+    final here = _stageAt(_step);
+    if (here != null && _stageFor == _step && _review.byStep[_step] != null) {
+      setState(() => _stageFor = null);
+      return;
+    }
+    int? target;
+    for (final s in _review.turnSteps) {
+      if (s > _step) {
+        target = s;
+        break;
+      }
+    }
+    final limit = target ?? _last;
+    for (final g in _stages) {
+      if (g.step > _step && g.step <= limit) {
+        _go(g.step, stage: g.step);
+        return;
+      }
+    }
+    if (target != null) {
+      _go(target);
+    } else if (_step < _last) {
+      _go(_last);
+    } else {
+      _showResult();
+    }
+  }
+
+  void _goStage(ReviewStage s) {
+    _stop();
+    _go(s.step, stage: s.step);
+  }
+
+  void _nextFlag() {
+    final n = _review.nextFlagged(_step);
+    if (n != null) _go(n);
+  }
+
+  /// 수 띠 칸들(걸음마다 하나).
+  List<StripEntry> get _strip {
+    final cached = _stripCache;
+    if (cached != null && identical(_stripFor, _review)) return cached;
+    _stripFor = _review;
+    return _stripCache = [for (final s in _p.states) _stripEntry(s)];
+  }
+
+  StripEntry _stripEntry(PaifuState s) {
+    final e = s.event;
+    if (e == null) return StripEntry(s.finished ? _resultShort() : '배패');
+    final w = _winds[_p.windOf(e.seat)];
+    switch (e.type) {
+      case PaifuEventType.draw:
+        return StripEntry(e.tile == null ? '뽑기' : '뽑기 ${_tileName(e.tile!)}');
+      case PaifuEventType.discard:
+        if (e.seat == _p.hero) {
+          final t = _review.byStep[s.step];
+          return StripEntry(
+            '${t?.turn ?? ''}·${_tileName(e.tile!)}',
+            mine: true,
+            grade: t != null && t.status == ReviewStatus.graded ? t.grade : null,
+          );
+        }
+        return StripEntry('$w ${_tileName(e.tile!)}${e.riichi ? ' 리치' : ''}');
+      case PaifuEventType.call:
+        final kind = switch (e.callKind) { 'chi' => '치', 'pon' => '퐁', 'call' => '울기', _ => '깡' };
+        return StripEntry('$w $kind');
+    }
+  }
+
+  /// 지금 걸음의 말풍선: 단계 → 내 버림 → 그 밖(한 줄 회색).
+  Widget _bubble(PaifuState state) {
+    final st = _stageAt(_step);
+    if (st != null && _stageVisible(_step)) {
+      return ReviewBubble.stage(
+        st,
+        step: _step,
+        sentence: stageSentence(
+          st,
+          seatLabel: _seatLabel,
+          result: endResultText(_p.result, points: _points),
+          efficiencyPct: _review.review.efficiencyPct,
+        ),
+      );
+    }
+    final t = _review.byStep[_step];
+    if (t != null) return ReviewBubble.turn(t, step: _step);
+    return ReviewBubble.plain(_describe(state), step: _step);
+  }
+
+  /// 이 걸음에서 최선 보기를 켤 수 있는가(손패를 아는 내 버림 걸음).
+  bool _bestAvailable(TurnReview? t) => t != null && t.options.isNotEmpty && t.before != null;
+
+  void _toggleBest(TurnReview? t) {
+    if (!_bestAvailable(t)) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(content: Text('이 걸음은 손패 기록이 없습니다')));
+      return;
+    }
+    setState(() {
+      _bestView = !_bestView;
+      _barTile = null;
+    });
+  }
+
+  Widget _foldContent(TurnReview? t) => Column(
+        key: const ValueKey('paifu-folds'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_showCandidates) ReviewCandidates(t),
+          if (_showCandidates && _showEngine) const Divider(height: 16),
+          if (_showEngine) EngineReviewFold(turn: t, engine: _engine, seatLabel: _seatLabel),
+        ],
+      );
+
+  Widget _barInfo(ThemeData theme, String text) => Container(
+        key: const ValueKey('paifu-bar-info'),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.inverseSurface.withAlpha(235),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(text,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onInverseSurface)),
+      );
+
+  /// 단추 줄: 최선 보기 · 후보 · 참고값(펼침 토글) + 큰 "다음".
+  Widget _reviewButtons(ThemeData theme, TurnReview? t) {
+    final scheme = theme.colorScheme;
+    Widget toggle(String label, Key key, bool on, VoidCallback onTap, {bool dim = false}) => Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: FilterChip(
+            key: key,
+            label: Text(label, style: dim ? TextStyle(color: scheme.onSurface.withAlpha(97)) : null),
+            selected: on && !dim,
+            showCheckmark: false,
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            onSelected: (_) => onTap(),
+          ),
+        );
+    return SizedBox(
+      height: 48,
+      child: Row(
+        children: [
+          toggle('최선 보기', const ValueKey('paifu-best-view'), _bestView, () => _toggleBest(t), dim: !_bestAvailable(t)),
+          toggle('후보', const ValueKey('paifu-fold-candidates-btn'), _showCandidates,
+              () => setState(() => _showCandidates = !_showCandidates)),
+          toggle('참고값', const ValueKey('paifu-fold-engine-btn'), _showEngine,
+              () => setState(() => _showEngine = !_showEngine)),
+          if (_playing)
+            IconButton(tooltip: '멈춤', icon: const Icon(Icons.pause), onPressed: _stop),
+          Expanded(
+            child: FilledButton(
+              key: const ValueKey('paifu-review-go'),
+              style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+              onPressed: _reviewNext,
+              child: const Text('다음', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 복기 화면(3-2 세로 · 3-7 가로): 말풍선 → 탁자 → 수 띠 → 단추 줄. 가로는 탁자 왼쪽, 오른쪽 패널에 같은 순서.
+  Widget _reviewBody(BuildContext context, PaifuState state, BoxConstraints box) {
+    final theme = Theme.of(context);
+    final t = _review.byStep[_step];
+    final bestOn = _bestView && _bestAvailable(t);
+    final before = bestOn ? beforeHandOf(_p, t!) : null;
+    final table = PaifuTableView(
+      paifu: _p,
+      state: state,
+      heroView: _infer?.viewAt(_p, state.step),
+      lastGrade: t != null && t.status == ReviewStatus.graded ? t.grade : null,
+      before: before,
+      bars: before == null ? null : handBars(t!),
+      selectedBar: _barTile,
+      onBarTap: (tile) => setState(() => _barTile = _barTile == tile ? null : tile),
+    );
+    final info = before != null && _barTile != null ? barInfoLine(t!, _barTile!) : null;
+    final folded = !_showCandidates && !_showEngine;
+    final strip = ReviewMoveStrip(
+      entries: _strip,
+      step: _step,
+      onGo: (s) {
+        _stop();
+        _go(s);
+      },
+      stages: _stages,
+      onStage: _goStage,
+      onNextFlag: _review.nextFlagged(_step) == null ? null : _nextFlag,
+    );
+    final buttons = _reviewButtons(theme, t);
+    final wide = box.maxWidth > box.maxHeight * 1.2;
+    if (wide) {
+      final panelW = (box.maxWidth * 0.34).clamp(320.0, 460.0);
+      return Row(
+        children: [
+          Expanded(child: Padding(padding: const EdgeInsets.all(8), child: Center(child: table))),
+          SizedBox(
+            width: panelW,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 12, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _bubble(state),
+                  if (info != null) Padding(padding: const EdgeInsets.only(top: 6), child: _barInfo(theme, info)),
+                  Expanded(
+                    child: folded
+                        ? const SizedBox.shrink()
+                        : SingleChildScrollView(
+                            key: const ValueKey('paifu-fold-scroll'),
+                            padding: const EdgeInsets.only(top: 8),
+                            child: _foldContent(t),
+                          ),
+                  ),
+                  strip,
+                  buttons,
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    return Column(
+      children: [
+        Padding(padding: const EdgeInsets.fromLTRB(8, 6, 8, 0), child: _bubble(state)),
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, area) => Stack(
+              children: [
+                Positioned.fill(child: Padding(padding: const EdgeInsets.all(6), child: Center(child: table))),
+                if (info != null) Positioned(top: 4, left: 8, right: 8, child: _barInfo(theme, info)),
+                // 펼친 후보 · 참고값은 탁자를 밀어내지 않고 위를 덮는 아래 시트로.
+                if (!folded)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: area.maxHeight * 0.6),
+                      child: Material(
+                        elevation: 6,
+                        color: theme.colorScheme.surfaceContainer,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                        child: SingleChildScrollView(
+                          key: const ValueKey('paifu-fold-scroll'),
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                          child: _foldContent(t),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 4), child: strip),
+        Padding(padding: const EdgeInsets.fromLTRB(8, 0, 8, 6), child: buttons),
+      ],
+    );
+  }
+
+  /// 복기 화면 ⚙: 처음 · 이전/다음 내 차례 · 끝, 사건 목록, 재생 화면(자동 재생)으로, 손패 복원 되돌리기.
+  Future<void> _openSettings() async {
+    _stop();
+    final canRevert = widget.gameId != null && _p.handSource == 'claude_api' && _hasOriginal;
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) {
+        void run(VoidCallback f) {
+          Navigator.of(ctx).pop();
+          f();
+        }
+
+        return SafeArea(
+          child: Column(
+            key: const ValueKey('paifu-settings-sheet'),
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Text('$_step / $_last', style: Theme.of(ctx).textTheme.bodySmall),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  IconButton(tooltip: '처음', icon: const Icon(Icons.first_page), onPressed: () => run(() => _go(0))),
+                  IconButton(
+                      tooltip: '이전 내 차례', icon: const Icon(Icons.fast_rewind), onPressed: () => run(() => _heroTurn(-1))),
+                  IconButton(
+                      tooltip: '다음 내 차례', icon: const Icon(Icons.fast_forward), onPressed: () => run(() => _heroTurn(1))),
+                  IconButton(tooltip: '끝', icon: const Icon(Icons.last_page), onPressed: () => run(() => _go(_last))),
+                ],
+              ),
+              ListTile(
+                key: const ValueKey('paifu-settings-log'),
+                leading: const Icon(Icons.list),
+                title: const Text('사건 목록'),
+                onTap: () => run(_openLog),
+              ),
+              ListTile(
+                key: const ValueKey('paifu-settings-play'),
+                leading: const Icon(Icons.play_circle_outline),
+                title: const Text('재생 화면으로 (자동 재생)'),
+                onTap: () => run(() => setState(() => _view = PaifuView.play)),
+              ),
+              if (canRevert)
+                ListTile(
+                  key: const ValueKey('paifu-settings-revert'),
+                  leading: const Icon(Icons.undo),
+                  title: const Text('손패 복원 되돌리기'),
+                  onTap: () => run(_revertRestore),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// ⚙ → 사건 목록(세로, 지금의 사건 목록과 같은 줄). 누르면 그 걸음으로.
+  Future<void> _openLog() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        final scheme = theme.colorScheme;
+        return SizedBox(
+          height: MediaQuery.of(ctx).size.height * 0.6,
+          child: ListView.builder(
+            key: const ValueKey('paifu-log-sheet'),
+            itemExtent: _rowH,
+            itemCount: _p.states.length,
+            itemBuilder: (context, i) {
+              final s = _p.states[i];
+              final mine = s.event?.seat == _p.hero;
+              final turn = _review.byStep[i];
+              return InkWell(
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _go(i);
+                },
+                child: Container(
+                  color: i == _step ? scheme.primary.withAlpha(46) : null,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: [
+                      SizedBox(width: 34, child: Text('$i', style: theme.textTheme.bodySmall)),
+                      Expanded(
+                        child: Text(
+                          _describe(s),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: mine ? FontWeight.w700 : FontWeight.w400,
+                            color: mine ? scheme.primary : null,
+                          ),
+                        ),
+                      ),
+                      if (turn != null && hasReviewBadge(turn)) ReviewBadge(turn),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -431,7 +1070,6 @@ class _PaifuScreenState extends State<PaifuScreen> {
                 ),
             ],
           ),
-          if (_review.hasNumbers) PaifuReviewPanel(index: _review, step: _step, onGo: _go, engine: _engine, seatLabel: _seatLabel),
           if (!_p.hasHeroHands)
             Padding(
               padding: const EdgeInsets.only(top: 6),
@@ -456,7 +1094,21 @@ class _PaifuScreenState extends State<PaifuScreen> {
                       key: const ValueKey('paifu-start-summary'),
                       style: theme.textTheme.bodySmall,
                     ),
+                  if (widget.gameId != null) ...[
+                    const SizedBox(height: 4),
+                    _restoreRow(theme),
+                  ],
                 ],
+              ),
+            ),
+          if (widget.gameId != null && _p.handSource == 'claude_api' && _hasOriginal)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: OutlinedButton.icon(
+                key: const ValueKey('paifu-restore-revert'),
+                icon: const Icon(Icons.undo),
+                label: const Text('손패 복원 되돌리기'),
+                onPressed: _revertRestore,
               ),
             ),
           if (state.finished && _score != null)
@@ -586,7 +1238,29 @@ class PaifuTableView extends StatelessWidget {
 
   /// 시작 손패로 헤아린 hero 손패(확정 패 + 모르는 장수). 패보에 그 걸음의 손패가 적혀 있으면 그쪽을 쓴다.
   final HeroHandView? heroView;
-  const PaifuTableView({super.key, required this.paifu, required this.state, this.heroView});
+
+  /// 복기 화면: 방금 버린 hero 패(강의 마지막 패)에 붙이는 등급 아이콘(3절 탁자 배지). null 이면 없음.
+  final ReviewGrade? lastGrade;
+
+  /// 복기 화면 "최선 보기"(3-9): 손패 줄을 버리기 전 줄로 바꿔 그리고(버린 패는 제자리에 흐리게) [bars] 를 세운다.
+  final BeforeHand? before;
+  final Map<int, HandBar>? bars;
+
+  /// 눌린 막대(패 종류)와 막대를 누를 때.
+  final int? selectedBar;
+  final ValueChanged<int>? onBarTap;
+
+  const PaifuTableView({
+    super.key,
+    required this.paifu,
+    required this.state,
+    this.heroView,
+    this.lastGrade,
+    this.before,
+    this.bars,
+    this.selectedBar,
+    this.onBarTap,
+  });
 
   int _seatAt(int side) => (paifu.hero + side) % 4;
 
@@ -607,21 +1281,28 @@ class PaifuTableView extends StatelessWidget {
             height: 23.6 * w,
             padding: EdgeInsets.all(0.3 * w),
             decoration: BoxDecoration(color: _tableFelt, borderRadius: BorderRadius.circular(0.5 * w)),
-            child: Column(
+            // hero 손패 띠는 맨 위 층에 바닥에 붙여 그린다: 최선 보기 막대가 띠 위(강 쪽)로 올라가도 탁자 크기는 그대로이고,
+            // 막대를 누를 수 있게(띠의 칸 밖이면 눌리지 않음) 탁자 전체 층 안에 둔다.
+            child: Stack(
               children: [
-                SizedBox(
-                  height: 1.1 * w,
-                  child: Center(child: RotatedBox(quarterTurns: 2, child: _sideStrip(_seatAt(2), w, core))),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                Column(
                   children: [
-                    RotatedBox(quarterTurns: 1, child: _sideStrip(_seatAt(3), w, core)),
-                    _core(w, core),
-                    RotatedBox(quarterTurns: 3, child: _sideStrip(_seatAt(1), w, core)),
+                    SizedBox(
+                      height: 1.1 * w,
+                      child: Center(child: RotatedBox(quarterTurns: 2, child: _sideStrip(_seatAt(2), w, core))),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        RotatedBox(quarterTurns: 1, child: _sideStrip(_seatAt(3), w, core)),
+                        _core(w, core),
+                        RotatedBox(quarterTurns: 3, child: _sideStrip(_seatAt(1), w, core)),
+                      ],
+                    ),
+                    SizedBox(height: 2.2 * w),
                   ],
                 ),
-                _heroStrip(w),
+                Positioned(left: 0, right: 0, bottom: 0, child: _heroStrip(w)),
               ],
             ),
           ),
@@ -693,6 +1374,13 @@ class PaifuTableView extends StatelessWidget {
         !all.last.called &&
         ((e != null && e.type == PaifuEventType.discard && e.seat == seat) ||
             (state.finished && r != null && r.type == 'ron' && r.loser == seat));
+    // 복기 화면 배지: hero 가 방금 버린 걸음의 hero 강 마지막 패에만.
+    final heroJustDiscarded = markLast &&
+        seat == paifu.hero &&
+        e != null &&
+        e.type == PaifuEventType.discard &&
+        e.seat == seat &&
+        lastGrade != null;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -707,7 +1395,12 @@ class PaifuTableView extends StatelessWidget {
                 for (var i = row * 6; i < shown.length && i < row * 6 + 6; i++)
                   Padding(
                     padding: EdgeInsets.only(right: 0.04 * w),
-                    child: _riverTile(shown[i], w, markLast && i == shown.length - 1),
+                    child: _riverTile(
+                      shown[i],
+                      w,
+                      markLast && i == shown.length - 1,
+                      badge: heroJustDiscarded && i == shown.length - 1 ? lastGrade : null,
+                    ),
                   ),
               ],
             ),
@@ -716,7 +1409,7 @@ class PaifuTableView extends StatelessWidget {
     );
   }
 
-  Widget _riverTile(PaifuRiverTile r, double w, bool last) {
+  Widget _riverTile(PaifuRiverTile r, double w, bool last, {ReviewGrade? badge}) {
     Widget t = TileView(r.tile.tile, red: r.tile.red, width: w, highlighted: last);
     if (r.tsumogiri == true) {
       t = Container(
@@ -725,6 +1418,19 @@ class PaifuTableView extends StatelessWidget {
       );
     }
     if (last) t = _glow(t, w);
+    if (badge != null) {
+      t = Stack(
+        clipBehavior: Clip.none,
+        children: [
+          t,
+          Positioned(
+            top: -0.32 * w,
+            right: -0.32 * w,
+            child: ReviewGradeIcon(badge, key: const ValueKey('paifu-river-badge'), size: 0.72 * w),
+          ),
+        ],
+      );
+    }
     if (r.riichi) t = RotatedBox(quarterTurns: 1, child: t);
     return t;
   }
@@ -934,7 +1640,66 @@ class PaifuTableView extends StatelessWidget {
     );
   }
 
+  /// 최선 보기 막대 하나(3-9): 위에서부터 ★ · "버림" 표시, 유효패 수, 막대(샹텐이 뒤로 가면 회색 점). 폭은 패 한 장.
+  Widget _bar(HandBar h, double w, double tw, double barH) {
+    final Color color;
+    if (h.best) {
+      color = const Color(0xFF2E7D32);
+    } else if (h.actual) {
+      color = lastGrade != null ? gradeColors(lastGrade!).$1 : const Color(0xFFB0BEC5);
+    } else {
+      color = const Color(0xFF9E9E9E);
+    }
+    final labelH = 0.42 * w;
+    final labels = [if (h.best) '★', if (h.actual) '버림'];
+    final maxBar = barH - 3 * labelH - 0.1 * w;
+    final selected = selectedBar == h.tile;
+    Widget label(String s, {Color c = Colors.white}) => SizedBox(
+          width: tw,
+          height: labelH,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(s, style: TextStyle(fontSize: 0.36 * w, height: 1.1, fontWeight: FontWeight.w800, color: c)),
+          ),
+        );
+    return GestureDetector(
+      key: ValueKey('paifu-bar-${h.tile}'),
+      behavior: HitTestBehavior.opaque,
+      onTap: onBarTap == null ? null : () => onBarTap!(h.tile),
+      child: SizedBox(
+        width: tw,
+        height: barH,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            for (final l in labels) label(l, c: l == '★' ? const Color(0xFF9CE59F) : Colors.white),
+            if (h.backward)
+              Container(
+                width: 0.32 * w,
+                height: 0.32 * w,
+                margin: EdgeInsets.only(bottom: 0.1 * w),
+                decoration: const BoxDecoration(color: Color(0xFF9E9E9E), shape: BoxShape.circle),
+              )
+            else ...[
+              label('${h.total}'),
+              Container(
+                width: tw * 0.72,
+                height: (h.frac * maxBar).clamp(0.08 * w, maxBar),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(0.1 * w)),
+                  border: selected ? Border.all(color: kioskGold, width: 0.08 * w) : null,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   /// hero 손패(앞면, 크게). 뽑은 패는 오른쪽에 떼어 둔다. 손패를 모르는 걸음은 뒷면.
+  /// [before] 가 있으면(최선 보기) 버리기 전 줄을 그리고, 버린 패는 제자리에 흐리게, 같은 종류의 맨 오른쪽 패 위에 막대.
   Widget _heroStrip(double w) {
     final tw = 1.38 * w;
     final seat = paifu.hero;
@@ -942,29 +1707,49 @@ class PaifuTableView extends StatelessWidget {
     final hand = state.heroHand;
     final r = paifu.result;
     final won = state.finished && r != null && r.winner == seat ? r.winTile : null;
-    Widget face(PaifuTile t, {bool mark = false}) => Padding(
+    final b = before;
+    final barMap = b == null ? null : bars;
+    final barH = barMap == null ? 0.0 : 2.6 * w;
+    Widget face(PaifuTile t, {bool mark = false, bool ghost = false}) => Padding(
           padding: EdgeInsets.only(right: tw * 0.05),
-          child: mark
-              ? _glow(TileView(t.tile, red: t.red, width: tw, highlighted: true), tw * 0.6)
-              : TileView(t.tile, red: t.red, width: tw),
+          child: ghost
+              ? TileView(t.tile, red: t.red, width: tw, dimmed: true)
+              : mark
+                  ? _glow(TileView(t.tile, red: t.red, width: tw, highlighted: true), tw * 0.6)
+                  : TileView(t.tile, red: t.red, width: tw),
         );
-    final tiles = <Widget>[
-      if (hand != null)
-        for (final t in hand) face(t)
-      else if (heroView != null) ...[
-        // 어느 뽑기 순서로 봐도 있는 패는 앞면, 그 순에 안 정해지는 패는 뒷면.
-        for (final t in heroView!.known) face(t),
-        for (var i = 0; i < heroView!.unknown; i++) _back(tw),
-      ] else
-        for (var i = 0; i < 13 - 3 * melds.length; i++) _back(tw),
-      if (state.hasDrawn || won != null) SizedBox(width: tw * 0.35),
-      if (won != null)
-        face(won, mark: true)
-      else if (state.hasDrawn)
-        state.drawn != null ? face(state.drawn!, mark: true) : _back(tw),
-    ];
+    // 막대 칸 + 패. 막대는 그 종류의 맨 오른쪽 패 위에만([barKind] 가 null 이면 빈 칸).
+    Widget slot(Widget tile, int? barKind) {
+      final h = barKind == null ? null : barMap?[barKind];
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: tw, height: barH, child: h == null ? null : _bar(h, w, tw, barH)),
+          tile,
+        ],
+      );
+    }
+
+    final List<Widget> tiles;
+    if (b != null) {
+      final all = b.all;
+      final rightmost = <int, int>{for (final (i, t) in all.indexed) t.tile: i};
+      tiles = [
+        for (final (i, t) in b.row.indexed) slot(face(t, ghost: b.ghost == i), rightmost[t.tile] == i ? t.tile : null),
+        if (b.drawn != null) ...[
+          SizedBox(width: tw * 0.35),
+          slot(
+            face(b.drawn!, mark: b.ghost != -1, ghost: b.ghost == -1),
+            rightmost[b.drawn!.tile] == b.row.length ? b.drawn!.tile : null,
+          ),
+        ],
+      ];
+    } else {
+      tiles = _heroTiles(w, tw, hand, melds, won, face);
+    }
     return SizedBox(
-      height: 2.2 * w,
+      height: 2.2 * w + barH,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -972,13 +1757,26 @@ class PaifuTableView extends StatelessWidget {
             child: Stack(
               alignment: Alignment.bottomCenter,
               children: [
+                if (barH > 0)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: barH,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xC0000000),
+                        borderRadius: BorderRadius.circular(0.3 * w),
+                      ),
+                    ),
+                  ),
                 Row(
                   key: const ValueKey('paifu-hero-hand'),
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: tiles,
                 ),
-                if (hand == null && paifu.hasHeroHands)
+                if (b == null && hand == null && paifu.hasHeroHands)
                   Positioned(
                     bottom: tw * 0.5,
                     child: Container(
@@ -998,6 +1796,26 @@ class PaifuTableView extends StatelessWidget {
       ),
     );
   }
+
+  /// 평소의 hero 손패 줄(앞면 · 헤아린 손패 · 뒷면 + 뽑은 패 · 화료패).
+  List<Widget> _heroTiles(double w, double tw, List<PaifuTile>? hand, List<PaifuMeld> melds, PaifuTile? won,
+      Widget Function(PaifuTile t, {bool mark, bool ghost}) face) {
+    return <Widget>[
+      if (hand != null)
+        for (final t in hand) face(t)
+      else if (heroView != null) ...[
+        // 어느 뽑기 순서로 봐도 있는 패는 앞면, 그 순에 안 정해지는 패는 뒷면.
+        for (final t in heroView!.known) face(t),
+        for (var i = 0; i < heroView!.unknown; i++) _back(tw),
+      ] else
+        for (var i = 0; i < 13 - 3 * melds.length; i++) _back(tw),
+      if (state.hasDrawn || won != null) SizedBox(width: tw * 0.35),
+      if (won != null)
+        face(won, mark: true)
+      else if (state.hasDrawn)
+        state.drawn != null ? face(state.drawn!, mark: true) : _back(tw),
+    ];
+  }
 }
 
 /// 한 대국에 적힌 패보(국 단위) 목록. 고르면 재생 화면.
@@ -1011,7 +1829,10 @@ class PaifuListScreen extends StatefulWidget {
 }
 
 class _PaifuListScreenState extends State<PaifuListScreen> {
-  late final Future<List<Paifu>> _list = PaifuStore.list(widget.gameId);
+  late Future<List<Paifu>> _list = PaifuStore.list(widget.gameId);
+
+  /// 재생 화면에서 손패를 복원 · 되돌렸을 수 있어 돌아오면 다시 읽는다.
+  void _reload() => setState(() => _list = PaifuStore.list(widget.gameId));
 
   @override
   Widget build(BuildContext context) {
@@ -1037,7 +1858,7 @@ class _PaifuListScreenState extends State<PaifuListScreen> {
               return ListView.separated(
                 itemCount: list.length,
                 separatorBuilder: (_, _) => const Divider(height: 1),
-                itemBuilder: (context, i) => _PaifuTile(list[i]),
+                itemBuilder: (context, i) => _PaifuTile(list[i], gameId: widget.gameId, onReturn: _reload),
               );
             },
           ),
@@ -1050,7 +1871,11 @@ class _PaifuListScreenState extends State<PaifuListScreen> {
 /// 목록의 한 줄: 제목, 버림 수 · 결과 · 손패 기록이 있는지. 누르면 재생 화면.
 class _PaifuTile extends StatelessWidget {
   final Paifu p;
-  const _PaifuTile(this.p);
+
+  /// 기기에 저장된 패보면 그 대국(재생 화면에 넘겨 손패 복원을 낸다). 예시는 null.
+  final String? gameId;
+  final VoidCallback? onReturn;
+  const _PaifuTile(this.p, {this.gameId, this.onReturn});
 
   @override
   Widget build(BuildContext context) {
@@ -1067,8 +1892,11 @@ class _PaifuTile extends StatelessWidget {
     return ListTile(
       leading: const Icon(Icons.slideshow),
       title: Text(p.title.isNotEmpty ? p.title : p.round),
-      subtitle: Text('버림 $discards장 · $end · ${p.hasHeroHands ? '손패 있음' : '버림만'}'),
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PaifuScreen(paifu: p))),
+      subtitle: Text('버림 $discards장 · $end · ${p.hasHeroHands ? (p.handSource == 'claude_api' ? '손패 복원함' : '손패 있음') : '버림만'}'),
+      onTap: () async {
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => PaifuScreen(paifu: p, gameId: gameId)));
+        onReturn?.call();
+      },
     );
   }
 }

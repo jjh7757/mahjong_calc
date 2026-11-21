@@ -27,6 +27,8 @@ Map<String, dynamic> reviewFacts(Paifu p, PaifuReview r) {
       'dora_indicators': [for (final t in p.doraIndicators) _code(t.tile)],
       'efficiency_pct': r.efficiencyPct,
       'grades': {for (final g in ReviewGrade.values) g.name: r.gradeCount(g)},
+      // 11-21(설계서 3-6): 짐작 손패 차례는 'guessed' 칸으로 센다. 화면은 unknownHand · inconsistent · guessed 를 묶어
+      // "손패 모름" 으로 보인다. 합은 늘 hero 버림 수.
       'statuses': {for (final s in ReviewStatus.values) s.name: r.count(s)},
     },
     'timeline': [

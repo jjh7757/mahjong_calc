@@ -20,6 +20,11 @@
 ///   "result": {"type": "ron" | "tsumo" | "draw", "winner", "loser", "win_tile", "hand": [끝 손패 줄],
 ///              "melds": [{"kind": "chi" | "pon" | "kan" | "ankan", "tiles": [...]}], "flags": {"riichi": true, ...} | 없음} }
 /// ```
+/// 선택 칸(2026-11-21, 손패 복원 `docs/paifu_hand_restore_api_1121.md` — 없어도 같은 버전 1):
+/// - 사건 `"at"`: 버림 기록기가 그 패를 처음 본 시각(epoch ms). `"guess": true`: 그 사건의 손패 · 뽑은 패가 짐작(울기 뒤 순서 등).
+/// - `"frames"`: `{"dir", "box": [xmin, ymin, xmax, ymax](0~1000), "side", "start_ms", "end_ms"}` — 태블릿에 받아 둔 헤드 녹화와
+///   hero 손패 구역. 거치 화면이 녹화를 받아 저장하던 판에만 있다.
+/// - `"hand_source"`(손패를 채운 방법, 예 `"claude_api"`)와 `"restore"`(차례별 복원 메모 — 답 · 확신 · 규칙 차례 표시).
 /// hero 의 사건은 그때의 손패 줄(`hand`)을 싣는다. null 이면 "그때 손패를 모름"(녹화 전 등)이다.
 library;
 
@@ -72,6 +77,12 @@ class PaifuEvent {
   final int? from;
   final List<PaifuTile> callTiles;
 
+  /// 버림 기록기가 이 패를 처음 본 시각(epoch ms). 모르면 null.
+  final int? at;
+
+  /// 이 사건의 손패(· 뽑은 패)가 짐작인가(울기 뒤 끼운 자리 · 녹화 전 순 등).
+  final bool guess;
+
   const PaifuEvent({
     required this.type,
     required this.seat,
@@ -82,7 +93,24 @@ class PaifuEvent {
     this.callKind,
     this.from,
     this.callTiles = const [],
+    this.at,
+    this.guess = false,
   });
+
+  /// 몇 칸만 바꾼 사본. [clearHand] 면 손패를 지운다(null).
+  PaifuEvent copyWith({PaifuTile? tile, bool? tsumogiri, List<PaifuTile>? hand, bool clearHand = false, int? at, bool? guess}) => PaifuEvent(
+        type: type,
+        seat: seat,
+        tile: tile ?? this.tile,
+        tsumogiri: tsumogiri ?? this.tsumogiri,
+        riichi: riichi,
+        hand: clearHand ? null : (hand ?? this.hand),
+        callKind: callKind,
+        from: from,
+        callTiles: callTiles,
+        at: at ?? this.at,
+        guess: guess ?? this.guess,
+      );
 
   factory PaifuEvent.fromJson(Map<String, dynamic> j) {
     final type = switch (j['type']) {
@@ -105,6 +133,8 @@ class PaifuEvent {
       callKind: j['kind'] as String?,
       from: j['from'] as int?,
       callTiles: _tiles(j['tiles']),
+      at: (j['at'] as num?)?.toInt(),
+      guess: j['guess'] == true,
     );
   }
 
@@ -115,6 +145,50 @@ class PaifuEvent {
         if (type == PaifuEventType.discard) ...{'tsumogiri': tsumogiri, 'riichi': riichi},
         if (type == PaifuEventType.call) ...{'kind': callKind, 'from': from, 'tiles': [for (final t in callTiles) t.code]},
         if (hand != null || type == PaifuEventType.draw) 'hand': hand == null ? null : [for (final t in hand!) t.code],
+        if (at != null) 'at': at,
+        if (guess) 'guess': true,
+      };
+}
+
+/// 태블릿에 받아 둔 헤드 녹화(`rec_pull/<폴더>/f_<ms>.jpg`)와 hero 손패 구역. 손패 복원(`hand_restore/`)이 읽는다.
+class PaifuFrames {
+  /// 녹화 폴더 절대 경로.
+  final String dir;
+
+  /// hero 자리 손패 구역 [xmin, ymin, xmax, ymax], 사진 비율 0~1000.
+  final List<int> box;
+
+  /// hero 가 사진에서 앉은 쪽: bottom · right · top · left.
+  final String side;
+  final int? startMs, endMs;
+
+  const PaifuFrames({required this.dir, required this.box, required this.side, this.startMs, this.endMs});
+
+  static const sides = ['bottom', 'right', 'top', 'left'];
+
+  /// 꼴이 틀리면(옛 촬영 기록의 `"frames": 장수` 등) null.
+  static PaifuFrames? fromJson(Object? j) {
+    if (j is! Map) return null;
+    final dir = j['dir'], box = j['box'], side = j['side'];
+    if (dir is! String || dir.isEmpty || box is! List || box.length != 4 || side is! String || !sides.contains(side)) return null;
+    if (box.any((v) => v is! num)) return null;
+    final b = [for (final v in box) (v as num).round().clamp(0, 1000)];
+    if (b[0] >= b[2] || b[1] >= b[3]) return null;
+    return PaifuFrames(
+      dir: dir,
+      box: b,
+      side: side,
+      startMs: (j['start_ms'] as num?)?.toInt(),
+      endMs: (j['end_ms'] as num?)?.toInt(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'dir': dir,
+        'box': box,
+        'side': side,
+        if (startMs != null) 'start_ms': startMs,
+        if (endMs != null) 'end_ms': endMs,
       };
 }
 
@@ -260,6 +334,15 @@ class Paifu {
   final List<PaifuEvent> events;
   final PaifuResult? result;
 
+  /// 받아 둔 헤드 녹화(손패 복원 재료). 없으면 null.
+  final PaifuFrames? frames;
+
+  /// 판 중 손패를 채운 방법(`"claude_api"` 등). 기록에 처음부터 있던 손패면 null.
+  final String? handSource;
+
+  /// 손패 복원의 차례별 메모(JSON 그대로).
+  final List<Map<String, dynamic>>? restore;
+
   Paifu({
     required this.id,
     this.title = '',
@@ -274,7 +357,37 @@ class Paifu {
     this.startHand,
     required this.events,
     this.result,
+    this.frames,
+    this.handSource,
+    this.restore,
   });
+
+  /// 몇 칸만 바꾼 사본.
+  Paifu copyWith({
+    List<PaifuTile>? startHand,
+    List<PaifuEvent>? events,
+    PaifuFrames? frames,
+    String? handSource,
+    List<Map<String, dynamic>>? restore,
+  }) =>
+      Paifu(
+        id: id,
+        title: title,
+        round: round,
+        honba: honba,
+        dealer: dealer,
+        hero: hero,
+        names: names,
+        doraIndicators: doraIndicators,
+        uraIndicators: uraIndicators,
+        note: note,
+        startHand: startHand ?? this.startHand,
+        events: events ?? this.events,
+        result: result,
+        frames: frames ?? this.frames,
+        handSource: handSource ?? this.handSource,
+        restore: restore ?? this.restore,
+      );
 
   factory Paifu.fromJson(Map<String, dynamic> j) {
     final version = j['version'] as int? ?? 1;
@@ -296,6 +409,14 @@ class Paifu {
       startHand: _tilesOrNull(j['start_hand']),
       events: [for (final e in (j['events'] as List? ?? const [])) PaifuEvent.fromJson(e as Map<String, dynamic>)],
       result: j['result'] == null ? null : PaifuResult.fromJson(j['result'] as Map<String, dynamic>),
+      frames: PaifuFrames.fromJson(j['frames']),
+      handSource: j['hand_source'] as String?,
+      restore: j['restore'] is List
+          ? [
+              for (final m in j['restore'] as List)
+                if (m is Map) m.cast<String, dynamic>(),
+            ]
+          : null,
     );
   }
 
@@ -314,6 +435,9 @@ class Paifu {
         if (startHand != null) 'start_hand': [for (final t in startHand!) t.code],
         'events': [for (final e in events) e.toJson()],
         if (result != null) 'result': result!.toJson(),
+        if (frames != null) 'frames': frames!.toJson(),
+        if (handSource != null) 'hand_source': handSource,
+        if (restore != null) 'restore': restore,
       };
 
   /// 자리의 바람(0 동 · 1 남 · 2 서 · 3 북).

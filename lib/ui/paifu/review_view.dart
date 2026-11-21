@@ -1,7 +1,8 @@
-/// 패보 재생 화면의 버림 평가(리뷰): 사건 목록 배지, 지금 걸음의 평가 카드, 판 요약 줄.
+/// 패보 복기 화면의 버림 평가(리뷰) 위젯: 수 말풍선 · 단계 말풍선, 등급 아이콘, 수 띠, 펼침(후보 · 참고값 · 자세히 표),
+/// 최선 보기 막대 재료. 설계는 `docs/paifu_review_ui_design_1121.md`(3-2 ~ 3-9).
 ///
-/// 계산은 [reviewPaifu] 가 하고, 여기서는 걸음에 붙이고 문구·그림으로 바꾸기만 한다.
-/// mahjong-helper 엔진 참고값은 한 판에 수 초가 걸려 [computeEngineReview] 로 뒤에서 낸 뒤 카드에 붙인다.
+/// 계산은 [reviewPaifu] 가 하고, 글은 `lib/paifu/review_sentence.dart` 가 만든다. 여기서는 걸음에 붙이고 그림으로 바꾸기만 한다.
+/// mahjong-helper 엔진 참고값은 한 판에 수 초가 걸려 [computeEngineReview] 로 뒤에서 낸 뒤 "참고값" 펼침에 붙인다.
 library;
 
 import 'dart:convert';
@@ -13,79 +14,21 @@ import '../../engine/efficiency.dart';
 import '../../engine/tile.dart';
 import '../../paifu/paifu.dart';
 import '../../paifu/paifu_review.dart';
+import '../../paifu/review_sentence.dart';
 import '../tile_view.dart';
 
 // ── 문구 ──
 
-String reviewGradeName(ReviewGrade g) => switch (g) {
-      ReviewGrade.best => '최선',
-      ReviewGrade.good => '좋음',
-      ReviewGrade.inaccuracy => '부정확',
-      ReviewGrade.mistake => '실수',
-      ReviewGrade.blunder => '큰 실수',
-    };
+String reviewGradeName(ReviewGrade g) => gradeName(g);
 
-/// −1 화료 형태 · 0 텐파이 · n n샹텐.
-String shantenLabel(int s) => switch (s) {
-      < 0 => '화료 형태',
-      0 => '텐파이',
-      _ => '$s샹텐',
-    };
-
-String _tileName(PaifuTile t) => t.red ? '적${Tiles.name(t.tile)}' : Tiles.name(t.tile);
-
-/// "1샹텐 · 유효패 10장(5종)" / "텐파이 · 대기 4장(2종)".
-String optionSummary(DiscardOption o) =>
-    '${shantenLabel(o.shanten)} · ${o.shanten <= 0 ? '대기' : '유효패'} ${o.ukeire.total}장(${o.ukeire.liveKinds}종)';
-
-/// "2통 버림 → 1샹텐 · 유효패 10장(5종)". 숫자 없는 차례는 버린 패만.
-String actualLine(TurnReview t) {
-  final a = t.actual;
-  return a == null ? '${_tileName(t.discard)} 버림' : '${_tileName(t.discard)} 버림 → ${optionSummary(a)}';
-}
-
-/// 최선과 차이. 실제가 최선(rank 1)이거나 숫자가 없으면 null.
-String? bestLine(TurnReview t) {
-  final b = t.best;
-  final rank = t.rank;
-  if (b == null || rank == null || rank <= 1) return null;
-  final name = Tiles.name(b.tile);
-  if ((t.shantenLoss ?? 0) > 0) {
-    return '최선은 $name → ${shantenLabel(b.shanten)} · ${b.shanten <= 0 ? '대기' : '유효패'} ${b.ukeire.total}장';
-  }
-  return '최선은 $name → ${b.ukeire.total}장 (${t.ukeireLoss}장 적음)';
-}
-
-/// 수비 차례의 현물 줄.
-String genbutsuLine(TurnReview t) {
-  final mine = t.genbutsu == true ? '버린 패는 현물' : '버린 패는 현물이 아님';
-  final safe = t.safeTiles.isEmpty ? '손 안에 현물 없음' : '손 안 현물: ${t.safeTiles.map(Tiles.name).join(' ')}';
-  return '$mine · $safe';
-}
-
-/// 판 요약: "패효율 80 · 최선 5 · 실수 1 · 큰 실수 1".
-String reviewSummaryLine(PaifuReview r) {
-  final pct = r.efficiencyPct;
-  return [
-    pct == null ? '패효율 —' : '패효율 $pct',
-    for (final g in ReviewGrade.values)
-      if (r.gradeCount(g) > 0) '${reviewGradeName(g)} ${r.gradeCount(g)}',
-  ].join(' · ');
-}
-
-const _noReviewText = {
-  ReviewStatus.unknownHand: '이 순은 손패 기록이 없어 평가하지 않음',
-  ReviewStatus.inconsistent: '이 순은 손패 기록이 앞뒤가 안 맞아 평가하지 않음',
-};
+String _tileName(PaifuTile t) => tileText(t);
 
 // ── mahjong-helper 엔진 참고값 ──
 //
-// 등급·기존 문구와 따로, 카드 아래 작은 묶음으로만 보인다. 후퇴 권장(mhRecommendBackward)은 보이지 않는다 —
-// 강한 AI 와 맞대 보니 6번 중 0번 맞았다(11-20). 그래서 추천은 「샹텐을 지키는 후보 중 엔진 1위」.
-// 카드(ReviewCard) 안이 아니라 그 아래 상자([EngineReviewBox])에 그린다.
+// 등급 · 말풍선과 따로, "참고값" 단추를 눌렀을 때만 펼친다([EngineReviewFold], 11-21 설계서 3-9). 후퇴 권장
+// (mhRecommendBackward)은 보이지 않는다 — 강한 AI 와 맞대 보니 6번 중 0번 맞았다(11-20). 그래서 추천은
+// 「샹텐을 지키는 후보 중 엔진 1위」. 아래 engineLines 계열(실제 버림 · 추천 · 위험 줄)은 예전 상자의 글로, 시험과 사실 비교에 남긴다.
 
-const engineReviewTitle = '참고값 (mahjong-helper 기준)';
-const engineReviewNote = '화료율 · 위험도는 통계표 어림';
 const engineReviewPending = '참고값 계산 중…';
 const engineReviewTooltip = '화료율과 방총 위험은 mahjong-helper 의 통계표로 낸 어림값입니다. '
     '등급(패효율)과는 따로 셉니다. 국수지는 이 손의 화료 가치를 점수로 어림한 값입니다.';
@@ -209,6 +152,9 @@ class PaifuReviewIndex {
   /// 등급이 부정확 · 실수 · 큰 실수인 걸음(오름차순).
   final List<int> flaggedSteps;
 
+  /// hero 가 버린 걸음 전부(평가가 붙는 걸음, 오름차순).
+  late final List<int> turnSteps = [...byStep.keys]..sort();
+
   PaifuReviewIndex._(this.review, this.byStep, this.hasNumbers, this.flaggedSteps);
 
   /// 엔진 없이(빠름) — 재생 화면이 처음 그릴 때.
@@ -243,7 +189,7 @@ class PaifuReviewIndex {
 // ── 배지 ──
 
 /// 등급 배지 색(배경, 글자). 채운 배지라 밝은·어두운 테마 모두 같은 짝을 쓴다.
-(Color, Color) _gradeColors(ReviewGrade g) => switch (g) {
+(Color, Color) gradeColors(ReviewGrade g) => switch (g) {
       ReviewGrade.best => (const Color(0xFF2E7D32), Colors.white),
       ReviewGrade.good => (const Color(0xFF7CB342), Colors.black),
       ReviewGrade.inaccuracy => (const Color(0xFFFBC02D), Colors.black),
@@ -270,7 +216,7 @@ class ReviewBadge extends StatelessWidget {
     final Color bg, fg;
     if (t.status == ReviewStatus.graded && grade != null) {
       label = reviewGradeName(grade);
-      (bg, fg) = _gradeColors(grade);
+      (bg, fg) = gradeColors(grade);
     } else if (t.status == ReviewStatus.defense) {
       (label, bg, fg) = ('수비', scheme.secondaryContainer, scheme.onSecondaryContainer);
     } else if (t.status == ReviewStatus.complete) {
@@ -290,165 +236,601 @@ class ReviewBadge extends StatelessWidget {
   }
 }
 
-// ── 패널: 요약 줄 + 카드 ──
 
-/// 패널에 들어가는 리뷰 묶음: 요약 줄(늘) + 지금 걸음의 카드 또는 "평가하지 않음" 줄.
-/// 숫자 있는 차례가 있는 판에서만 쓴다([PaifuReviewIndex.hasNumbers]).
-class PaifuReviewPanel extends StatelessWidget {
-  final PaifuReviewIndex index;
+// ── 등급 아이콘(4절) ──
+
+/// 등급 아이콘 글자: 최선 ★ · 좋음 ✓ · 부정확 ?! · 실수 ? · 큰 실수 ??. ★ · ✓ 는 Material 아이콘으로 그린다.
+String gradeGlyph(ReviewGrade g) => switch (g) {
+      ReviewGrade.best => '★',
+      ReviewGrade.good => '✓',
+      ReviewGrade.inaccuracy => '?!',
+      ReviewGrade.mistake => '?',
+      ReviewGrade.blunder => '??',
+    };
+
+/// 등급 색 동그라미 + 모양(색만으로 가르지 않음).
+class ReviewGradeIcon extends StatelessWidget {
+  final ReviewGrade grade;
+  final double size;
+  const ReviewGradeIcon(this.grade, {super.key, this.size = 20});
+
+  @override
+  Widget build(BuildContext context) {
+    final (bg, fg) = gradeColors(grade);
+    final Widget glyph = switch (grade) {
+      ReviewGrade.best => Icon(Icons.star, size: size * 0.72, color: fg),
+      ReviewGrade.good => Icon(Icons.check, size: size * 0.72, color: fg),
+      _ => Text(
+          gradeGlyph(grade),
+          textScaler: TextScaler.noScaling,
+          style: TextStyle(fontSize: size * 0.5, height: 1, fontWeight: FontWeight.w900, color: fg),
+        ),
+    };
+    return Semantics(
+      label: gradeName(grade),
+      child: Container(
+        width: size,
+        height: size,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: bg,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: size * 0.06),
+        ),
+        child: glyph,
+      ),
+    );
+  }
+}
+
+/// 단계 아이콘: 배패 깃발 · 리치 번개 · 끝 결승기.
+IconData stageIcon(ReviewStageKind k) => switch (k) {
+      ReviewStageKind.start => Icons.flag_outlined,
+      ReviewStageKind.riichi => Icons.bolt,
+      ReviewStageKind.end => Icons.sports_score,
+    };
+
+// ── 말풍선(3-3 · 3-4) ──
+
+/// 탁자 위 말풍선. 높이가 늘 [heightOf] 라 걸음을 넘겨도 탁자가 흔들리지 않는다(글자 배율만 따름 — 태블릿 키오스크는 1.25배).
+/// 줄은 제목 1 + 두 줄 비교 0~2 + 문장 최대 2(7절: 펼치기 전 다섯 줄 이하).
+class ReviewBubble extends StatelessWidget {
+  /// 다섯 줄(제목 줄 + 네 줄)이 들어가는 높이. 본문 한 줄 = 14 × 1.43(bodyMedium) × 글자 배율.
+  static double heightOf(BuildContext context) {
+    final line = MediaQuery.textScalerOf(context).scale(14) * 1.43;
+    final titleRow = line > 22 ? line : 22.0;
+    return (titleRow + 4 * line + 2 + 16 + 2 + 4).ceilToDouble();
+  }
+
+  /// 이 말풍선이 보이는 걸음(시험용).
   final int step;
+  final Widget? icon;
+  final String title;
 
-  /// "다음 지적" 으로 갈 걸음을 받는다.
-  final ValueChanged<int> onGo;
+  /// 구석의 숫자 하나("−5장" · "샹텐 후퇴"). null 이면 비움.
+  final String? corner;
+  final List<String> lines;
+  final String? sentence;
 
-  /// 엔진 참고값 계산 상태(카드에 넘긴다).
-  final EngineReviewStatus engine;
+  /// 내 버림이 아닌 걸음: 한 줄 회색.
+  final bool muted;
 
-  /// 위협 자리 표시(예: "동 가"). 없으면 "n번 자리".
-  final String Function(int seat)? seatLabel;
-
-  const PaifuReviewPanel({
+  const ReviewBubble({
     super.key,
-    required this.index,
     required this.step,
-    required this.onGo,
-    this.engine = EngineReviewStatus.off,
-    this.seatLabel,
+    this.icon,
+    required this.title,
+    this.corner,
+    this.lines = const [],
+    this.sentence,
+    this.muted = false,
   });
+
+  /// 내 버림 걸음. [sentence] 를 주면(LLM 해설 등) 코드 문장 대신 그것을 쓴다.
+  factory ReviewBubble.turn(TurnReview t, {Key? key, required int step, String? sentence}) => ReviewBubble(
+        key: key,
+        step: step,
+        icon: t.status == ReviewStatus.graded && t.grade != null ? ReviewGradeIcon(t.grade!, size: 22) : null,
+        title: reviewTitle(t),
+        corner: reviewCorner(t),
+        lines: reviewCompareLines(t),
+        sentence: sentence ?? reviewSentence(t),
+      );
+
+  /// 단계 걸음.
+  factory ReviewBubble.stage(ReviewStage s, {Key? key, required int step, required String sentence}) => ReviewBubble(
+        key: key,
+        step: step,
+        icon: Icon(stageIcon(s.kind), size: 22),
+        title: stageName(s.kind),
+        sentence: sentence,
+      );
+
+  /// 남의 걸음 · 뽑는 걸음: 한 줄만 회색.
+  factory ReviewBubble.plain(String text, {Key? key, required int step}) =>
+      ReviewBubble(key: key, step: step, title: text, muted: true);
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final turn = index.byStep[step];
-    final next = index.nextFlagged(step);
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            key: const ValueKey('paifu-review-summary'),
-            children: [
-              Expanded(
+    final body = theme.textTheme.bodyMedium;
+    final muteStyle = body?.copyWith(color: scheme.onSurfaceVariant);
+    final c = corner;
+    return Container(
+      key: const ValueKey('paifu-bubble'),
+      height: heightOf(context),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      // 글꼴이 달라 한 줄이 넘쳐도 오류 대신 잘라 보인다(높이는 그대로).
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                if (icon != null) ...[icon!, const SizedBox(width: 8)],
+                Expanded(
+                  child: Text(
+                    title,
+                    key: const ValueKey('paifu-bubble-title'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: muted ? muteStyle : theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                if (c != null)
+                  Container(
+                    key: const ValueKey('paifu-bubble-corner'),
+                    margin: const EdgeInsets.only(left: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(color: scheme.inverseSurface, borderRadius: BorderRadius.circular(6)),
+                    child: Text(c,
+                        style: theme.textTheme.labelMedium
+                            ?.copyWith(color: scheme.onInverseSurface, fontWeight: FontWeight.w700)),
+                  ),
+              ],
+            ),
+            for (final (i, l) in lines.indexed)
+              Text(l,
+                  key: ValueKey('paifu-bubble-line-$i'),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: body?.copyWith(fontWeight: FontWeight.w500)),
+            if (sentence != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
                 child: Text(
-                  reviewSummaryLine(index.review),
+                  sentence!,
+                  key: const ValueKey('paifu-bubble-sentence'),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                  style: body,
                 ),
               ),
-              TextButton.icon(
-                key: const ValueKey('paifu-review-next'),
-                style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-                icon: const Icon(Icons.flag_outlined, size: 18),
-                label: const Text('다음 지적'),
-                onPressed: next == null ? null : () => onGo(next),
-              ),
-            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── 수 띠(3-5) ──
+
+/// 띠의 한 칸. [grade] 는 등급이 매겨진 내 버림에만.
+class StripEntry {
+  final String label;
+  final bool mine;
+  final ReviewGrade? grade;
+  const StripEntry(this.label, {this.mine = false, this.grade});
+}
+
+/// 띠의 칸 위젯(시험에서 지금 걸음을 찾을 때 [current] 를 본다).
+class ReviewStripItem extends StatelessWidget {
+  final int step;
+  final StripEntry entry;
+  final bool current;
+  final VoidCallback onTap;
+  const ReviewStripItem({super.key, required this.step, required this.entry, required this.current, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final e = entry;
+    final style = theme.textTheme.labelMedium?.copyWith(
+      fontWeight: e.mine ? FontWeight.w700 : FontWeight.w400,
+      color: e.mine ? scheme.onSurface : scheme.onSurfaceVariant.withAlpha(160),
+    );
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: current ? scheme.primary.withAlpha(30) : null,
+          border: Border(bottom: BorderSide(color: current ? scheme.primary : Colors.transparent, width: 3)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(child: Text(e.label, maxLines: 1, overflow: TextOverflow.clip, style: style)),
+            if (e.grade != null) ...[const SizedBox(width: 3), ReviewGradeIcon(e.grade!, size: 16)],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 아래 가로 수 띠: ‹ [걸음들] › + 단계 아이콘 + "다음 지적". 지금 걸음은 가운데로 굴린다.
+class ReviewMoveStrip extends StatefulWidget {
+  static const itemWidth = 74.0;
+  static const barHeight = 44.0;
+
+  final List<StripEntry> entries;
+  final int step;
+  final ValueChanged<int> onGo;
+  final List<ReviewStage> stages;
+  final ValueChanged<ReviewStage> onStage;
+
+  /// "다음 지적"(null 이면 비활성).
+  final VoidCallback? onNextFlag;
+
+  const ReviewMoveStrip({
+    super.key,
+    required this.entries,
+    required this.step,
+    required this.onGo,
+    this.stages = const [],
+    required this.onStage,
+    this.onNextFlag,
+  });
+
+  @override
+  State<ReviewMoveStrip> createState() => _ReviewMoveStripState();
+}
+
+class _ReviewMoveStripState extends State<ReviewMoveStrip> {
+  final _scroll = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _center(animate: false));
+  }
+
+  @override
+  void didUpdateWidget(covariant ReviewMoveStrip old) {
+    super.didUpdateWidget(old);
+    if (old.step != widget.step) WidgetsBinding.instance.addPostFrameCallback((_) => _center());
+  }
+
+  void _center({bool animate = true}) {
+    if (!mounted || !_scroll.hasClients) return;
+    final pos = _scroll.position;
+    final target = (widget.step * ReviewMoveStrip.itemWidth + ReviewMoveStrip.itemWidth / 2 - pos.viewportDimension / 2)
+        .clamp(0.0, pos.maxScrollExtent);
+    if (animate) {
+      _scroll.animateTo(target, duration: const Duration(milliseconds: 150), curve: Curves.easeOut);
+    } else {
+      _scroll.jumpTo(target);
+    }
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final w = widget;
+    final n = w.entries.length;
+    // 단계 아이콘은 종류마다 하나(같은 종류가 둘이면 앞의 것).
+    final byKind = <ReviewStageKind, ReviewStage>{};
+    for (final s in w.stages) {
+      byKind.putIfAbsent(s.kind, () => s);
+    }
+    const dense = VisualDensity(horizontal: -4, vertical: -4);
+    return SizedBox(
+      key: const ValueKey('paifu-strip'),
+      height: ReviewMoveStrip.barHeight,
+      child: Row(
+        children: [
+          IconButton(
+            key: const ValueKey('paifu-strip-prev'),
+            tooltip: '이전',
+            visualDensity: dense,
+            icon: const Icon(Icons.chevron_left),
+            onPressed: w.step > 0 ? () => w.onGo(w.step - 1) : null,
           ),
-          if (turn != null && _noReviewText[turn.status] != null)
-            Text(
-              _noReviewText[turn.status]!,
-              key: const ValueKey('paifu-review-none'),
-              style: theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-            )
-          else if (turn != null)
-            ReviewCard(turn, key: const ValueKey('paifu-review-card')),
-          if (turn != null && _noReviewText[turn.status] == null)
-            EngineReviewBox(turn, engine: engine, seatLabel: seatLabel),
+          Expanded(
+            child: ListView.builder(
+              controller: _scroll,
+              scrollDirection: Axis.horizontal,
+              itemExtent: ReviewMoveStrip.itemWidth,
+              itemCount: n,
+              itemBuilder: (context, i) => ReviewStripItem(
+                key: ValueKey('paifu-strip-$i'),
+                step: i,
+                entry: w.entries[i],
+                current: i == w.step,
+                onTap: () => w.onGo(i),
+              ),
+            ),
+          ),
+          IconButton(
+            key: const ValueKey('paifu-strip-next'),
+            tooltip: '다음 걸음',
+            visualDensity: dense,
+            icon: const Icon(Icons.chevron_right),
+            onPressed: w.step < n - 1 ? () => w.onGo(w.step + 1) : null,
+          ),
+          for (final k in ReviewStageKind.values)
+            if (byKind[k] != null)
+              IconButton(
+                key: ValueKey('paifu-stage-${k.name}'),
+                tooltip: stageName(k),
+                visualDensity: dense,
+                iconSize: 20,
+                icon: Icon(stageIcon(k)),
+                onPressed: () => w.onStage(byKind[k]!),
+              ),
+          IconButton(
+            key: const ValueKey('paifu-review-next'),
+            tooltip: '다음 지적',
+            visualDensity: dense,
+            iconSize: 20,
+            icon: const Icon(Icons.flag),
+            onPressed: w.onNextFlag,
+          ),
         ],
       ),
     );
   }
 }
 
-/// 지금 걸음의 평가 카드. forced 는 한 줄, 그 밖(graded · defense · complete)은 머리 · 최선과 차이 · 상황 · 후보.
-class ReviewCard extends StatelessWidget {
-  final TurnReview turn;
-  const ReviewCard(this.turn, {super.key});
+// ── 펼침: 후보(3-9) ──
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final t = turn;
-    final small = theme.textTheme.bodySmall;
-    final muted = small?.copyWith(color: scheme.onSurfaceVariant);
+/// 후보 목록: 위에서 3개 + 실제 버림이 그 안에 없으면 실제 버림. 패 · 샹텐 · 장수와 "실제" · "최선" 표시.
+class ReviewCandidates extends StatelessWidget {
+  final TurnReview? turn;
+  const ReviewCandidates(this.turn, {super.key});
 
-    final List<Widget> lines;
-    if (t.status == ReviewStatus.forced) {
-      lines = [Text('리치 중 — 고를 수 없는 버림', style: theme.textTheme.bodyMedium)];
-    } else {
-      final best = bestLine(t);
-      lines = [
-        Row(
-          children: [
-            if (hasReviewBadge(t)) ...[ReviewBadge(t), const SizedBox(width: 6)],
-            Expanded(
-              child: Text(
-                actualLine(t),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-        if (best != null) Padding(padding: const EdgeInsets.only(top: 2), child: Text(best, style: small)),
-        if (t.status == ReviewStatus.defense) ...[
-          Text('다른 자리 리치 중 — 패효율 등급은 매기지 않음', style: muted),
-          Text(genbutsuLine(t), style: small),
-        ],
-        if (t.status == ReviewStatus.complete)
-          Text('화료 형태에서 버림 — 화료하지 않은 까닭(역 없음 등)은 판단하지 않음', style: muted),
-        const SizedBox(height: 4),
-        for (final o in _candidates(t)) _option(context, t, o),
-      ];
-    }
-    return Container(
-      margin: const EdgeInsets.only(top: 4),
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: lines),
-    );
-  }
-
-  /// 위에서 3개 + 실제 버림이 그 안에 없으면 실제 버림.
-  static List<DiscardOption> _candidates(TurnReview t) {
+  static List<DiscardOption> candidatesOf(TurnReview t) {
     final top = t.options.take(3).toList();
     final a = t.actual;
     if (a != null && !top.any((o) => o.tile == a.tile)) top.add(a);
     return top;
   }
 
-  Widget _option(BuildContext context, TurnReview t, DiscardOption o) {
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final isActual = o.tile == t.discard.tile;
-    final style = theme.textTheme.bodySmall?.copyWith(fontWeight: isActual ? FontWeight.w700 : FontWeight.w400);
-    return Padding(
-      padding: const EdgeInsets.only(top: 2),
-      child: Row(
-        children: [
-          TileView(o.tile, red: isActual && t.discard.red, width: 18, highlighted: isActual),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              '${shantenLabel(o.shanten)} · ${o.ukeire.total}장',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: style,
+    final t = turn;
+    final small = theme.textTheme.bodySmall;
+    final head = Text('후보', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700));
+    if (t == null || t.options.isEmpty) {
+      return Column(
+        key: const ValueKey('paifu-fold-candidates'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [head, Text('이 걸음은 후보가 없습니다', style: small?.copyWith(color: scheme.onSurfaceVariant))],
+      );
+    }
+    final bests = bestTiles(t).toSet();
+    return Column(
+      key: const ValueKey('paifu-fold-candidates'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        head,
+        for (final o in candidatesOf(t))
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Row(
+              children: [
+                TileView(o.tile,
+                    red: o.tile == t.discard.tile && t.discard.red, width: 20, highlighted: o.tile == t.discard.tile),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    '${shantenText(o.shanten)} · ${ukeireWord(o.shanten)} ${o.ukeire.total}장',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: small?.copyWith(fontWeight: o.tile == t.discard.tile ? FontWeight.w700 : FontWeight.w400),
+                  ),
+                ),
+                if (o.tile == t.discard.tile)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: Text('실제', style: small?.copyWith(color: scheme.primary, fontWeight: FontWeight.w700)),
+                  ),
+                if (bests.contains(o.tile))
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: Text('최선',
+                        style: small?.copyWith(color: const Color(0xFF2E7D32), fontWeight: FontWeight.w700)),
+                  ),
+              ],
             ),
           ),
-          if (isActual)
-            Padding(
-              padding: const EdgeInsets.only(left: 6),
-              child: Text('실제', style: style?.copyWith(color: scheme.primary)),
+      ],
+    );
+  }
+}
+
+// ── 펼침: 참고값(3-9) ──
+
+/// 참고값 제목(공개 도구 이름 + 등급과 따로 셈).
+const engineFoldTitle = '참고값 (공개 마작 도구 mahjong-helper 계산 · 등급과 따로 셈)';
+
+/// 참고값 세 줄: 점수 · 화료까지 본 추천 / 이 패 방총 위험(위협이 있을 때) / 가장 안전한 패(위협이 있을 때).
+/// 추천은 샹텐을 지키는 후보 중 엔진 1위(후퇴 권장은 보이지 않음 — [engineRecommendLine] 과 같은 고름).
+/// 그 패가 말풍선의 최선(동률 포함)과 같으면 "말풍선의 최선과 같음". 엔진 칸이 없으면 빈 목록.
+List<String> engineFoldLines(TurnReview t, {String Function(int seat)? seatLabel}) {
+  final out = <String>[];
+  final l = t.mh;
+  if (l != null) {
+    RankedDiscard? top;
+    for (final d in l) {
+      if (!d.isBackward) {
+        top = d;
+        break;
+      }
+    }
+    if (top != null) {
+      final note = bestTiles(t).contains(top.tile)
+          ? ' — 말풍선의 최선과 같음'
+          : (top.tile == t.discard.tile ? ' — 실제 버림과 같음' : '');
+      out.add('점수 · 화료까지 본 추천: ${Tiles.name(top.tile)}$note');
+    }
+  }
+  final r = t.riskOfActual;
+  if (r != null) {
+    final label = seatLabel ?? (s) => '${s + 1}번 자리';
+    out.add('이 패 방총 위험: 약 ${_f1(r)}% (위협: ${t.riskSeats.map(label).join(', ')})');
+    final m = t.minRiskTile;
+    if (m != null) out.add('가장 안전한 패: ${Tiles.name(m)}${m == t.discard.tile ? ' — 실제 버림' : ''}');
+  }
+  return out;
+}
+
+/// "참고값" 펼침: 제목(누르면 도움말) + [engineFoldLines] + "자세히"(후보 표). 계산 중이면 한 줄.
+class EngineReviewFold extends StatefulWidget {
+  final TurnReview? turn;
+  final EngineReviewStatus engine;
+  final String Function(int seat)? seatLabel;
+  const EngineReviewFold({super.key, required this.turn, required this.engine, this.seatLabel});
+
+  @override
+  State<EngineReviewFold> createState() => _EngineReviewFoldState();
+}
+
+class _EngineReviewFoldState extends State<EngineReviewFold> {
+  bool _detail = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final small = theme.textTheme.bodySmall;
+    final muted = small?.copyWith(color: scheme.onSurfaceVariant);
+    final t = widget.turn;
+    final children = <Widget>[
+      Tooltip(
+        message: engineReviewTooltip,
+        triggerMode: TooltipTriggerMode.tap,
+        child: Text.rich(
+          TextSpan(children: [
+            TextSpan(text: engineFoldTitle, style: small?.copyWith(fontWeight: FontWeight.w700)),
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 2),
+                child: Icon(Icons.info_outline, size: 14, color: scheme.onSurfaceVariant),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    ];
+    var lines = const <String>[];
+    if (t == null || t.status == ReviewStatus.forced) {
+      children.add(Text('이 걸음은 참고값이 없습니다', style: muted));
+    } else {
+      switch (widget.engine) {
+        case EngineReviewStatus.pending:
+          children.add(Text(engineReviewPending, key: const ValueKey('paifu-review-engine-pending'), style: muted));
+        case EngineReviewStatus.off:
+        case EngineReviewStatus.failed:
+          children.add(Text('이 걸음은 참고값이 없습니다', style: muted));
+        case EngineReviewStatus.ready:
+          lines = engineFoldLines(t, seatLabel: widget.seatLabel);
+          if (lines.isEmpty) children.add(Text('이 걸음은 참고값이 없습니다', style: muted));
+      }
+    }
+    for (final l in lines) {
+      children.add(Padding(padding: const EdgeInsets.only(top: 2), child: Text(l, style: small)));
+    }
+    final mh = t?.mh;
+    if (t != null && lines.isNotEmpty && mh != null && mh.isNotEmpty) {
+      children.add(Align(
+        alignment: Alignment.centerRight,
+        child: TextButton(
+          key: const ValueKey('paifu-engine-detail'),
+          style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+          onPressed: () => setState(() => _detail = !_detail),
+          child: Text(_detail ? '자세히 접기' : '자세히'),
+        ),
+      ));
+      if (_detail) children.add(EngineCandidateTable(t));
+    }
+    return Column(
+      key: const ValueKey('paifu-review-engine'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: children,
+    );
+  }
+}
+
+/// "자세히": 엔진 후보마다 한 줄인 표(숙련자용). 열은 버릴 패 · 샹텐 · 유효패 · 개량 뒤 평균 · 화료율(텐파이 후보가
+/// 있을 때) · 이 패 방총 위험(위협이 있을 때) · 국수지. AI 선택 확률 열은 없다.
+class EngineCandidateTable extends StatelessWidget {
+  final TurnReview turn;
+  const EngineCandidateTable(this.turn, {super.key});
+
+  /// 머리 줄(시험용).
+  static List<String> headOf(TurnReview t) {
+    final list = t.mh ?? const <RankedDiscard>[];
+    return [
+      '버릴 패',
+      '샹텐',
+      '유효패',
+      '개량 뒤 평균',
+      if (list.any((d) => d.shanten <= 0)) '화료율',
+      if (t.riskByKind != null) '방총 위험',
+      '국수지',
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final small = theme.textTheme.bodySmall;
+    final bold = small?.copyWith(fontWeight: FontWeight.w700);
+    final t = turn;
+    final list = t.mh ?? const <RankedDiscard>[];
+    final tenpai = list.any((d) => d.shanten <= 0);
+    final risk = t.riskByKind;
+    String num1(double x) => x.isFinite ? _f1(x) : '—';
+    Widget cell(String s, {TextStyle? style}) =>
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), child: Text(s, style: style ?? small));
+    return SingleChildScrollView(
+      key: const ValueKey('paifu-engine-table'),
+      scrollDirection: Axis.horizontal,
+      child: Table(
+        defaultColumnWidth: const IntrinsicColumnWidth(),
+        children: [
+          TableRow(children: [for (final h in headOf(t)) cell(h, style: bold)]),
+          for (final d in list)
+            TableRow(
+              children: [
+                cell('${Tiles.name(d.tile)}${d.tile == t.discard.tile ? ' (실제)' : ''}',
+                    style: d.tile == t.discard.tile ? bold : null),
+                cell('${shantenText(d.shanten)}${d.isBackward ? ' (후퇴)' : ''}'),
+                cell('${d.waitsCount}장'),
+                cell(num1(d.avgImproveWaitsCount)),
+                if (tenpai) cell(d.shanten <= 0 ? '${num1(d.agariRate)}%' : '—'),
+                if (risk != null) cell(risk[d.tile] == null ? '—' : '${_f1(risk[d.tile]!)}%'),
+                cell(d.roundPoint.isFinite && d.roundPoint > 0 ? '${d.roundPoint.round()}' : '—'),
+              ],
             ),
         ],
       ),
@@ -456,73 +838,132 @@ class ReviewCard extends StatelessWidget {
   }
 }
 
-/// 카드 바로 아래 엔진 참고값 묶음(카드와 같은 꾸밈의 작은 상자). [engine] 이 pending 이면 "계산 중" 한 줄,
-/// ready 면 제목(통계표 어림 안내, 누르면 설명) + 숫자 줄, off · failed 면 없음.
-/// forced(리치 뒤)는 고를 수 없는 버림이라 붙이지 않는다. 패는 글자로만(카드의 「최선은 …」 줄과 같은 이름).
-/// 카드 안이 아니라 아래에 두는 까닭: 폰 세로(400×800)에선 위 칸 스크롤 창이 200px 남짓이라 카드 안에 넣으면
-/// 카드 하나가 창보다 커진다 — 카드는 그대로 한눈에 보이고, 참고값은 조금 더 스크롤해서 본다.
-class EngineReviewBox extends StatelessWidget {
-  final TurnReview turn;
-  final EngineReviewStatus engine;
-  final String Function(int seat)? seatLabel;
-  const EngineReviewBox(this.turn, {super.key, required this.engine, this.seatLabel});
+// ── 최선 보기: 손패 위 막대(3-9) ──
 
-  @override
-  Widget build(BuildContext context) {
-    final t = turn;
-    if (t.status == ReviewStatus.forced) return const SizedBox.shrink();
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final small = theme.textTheme.bodySmall;
-    final muted = small?.copyWith(color: scheme.onSurfaceVariant);
-    final Widget body;
-    final Key key;
-    switch (engine) {
-      case EngineReviewStatus.off:
-      case EngineReviewStatus.failed:
-        return const SizedBox.shrink();
-      case EngineReviewStatus.pending:
-        key = const ValueKey('paifu-review-engine-pending');
-        body = Text(engineReviewPending, style: muted);
-      case EngineReviewStatus.ready:
-        final lines = engineLines(t, seatLabel: seatLabel);
-        if (lines.isEmpty) return const SizedBox.shrink();
-        key = const ValueKey('paifu-review-engine');
-        body = Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Tooltip(
-              message: engineReviewTooltip,
-              triggerMode: TooltipTriggerMode.tap,
-              child: Text.rich(
-                TextSpan(children: [
-                  TextSpan(text: engineReviewTitle, style: small?.copyWith(fontWeight: FontWeight.w600)),
-                  TextSpan(text: ' · $engineReviewNote', style: muted),
-                  WidgetSpan(
-                    alignment: PlaceholderAlignment.middle,
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 2),
-                      child: Icon(Icons.info_outline, size: 14, color: scheme.onSurfaceVariant),
-                    ),
-                  ),
-                ]),
-              ),
-            ),
-            for (final l in lines) Padding(padding: const EdgeInsets.only(top: 2), child: Text(l, style: small)),
-          ],
-        );
-    }
-    return Container(
-      key: key,
-      margin: const EdgeInsets.only(top: 4),
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: scheme.outlineVariant),
-      ),
-      child: body,
-    );
+/// 손패 한 종류 위 막대. [frac] 은 샹텐을 지키는 후보 중 가장 많은 유효패를 1 로 둔 비율(뒤로 가는 후보는 0).
+class HandBar {
+  final int tile;
+  final int total;
+  final double frac;
+
+  /// 최선 후보(동률 모두).
+  final bool best;
+
+  /// 실제로 버린 패.
+  final bool actual;
+
+  /// 샹텐이 뒤로 가는 후보: 막대 대신 회색 점.
+  final bool backward;
+
+  const HandBar({
+    required this.tile,
+    required this.total,
+    required this.frac,
+    required this.best,
+    required this.actual,
+    required this.backward,
+  });
+}
+
+/// 차례 하나의 막대들(패 종류 → 막대). 숫자 없는 차례는 빈 맵.
+Map<int, HandBar> handBars(TurnReview t) {
+  final b = t.best;
+  if (b == null || t.options.isEmpty) return const {};
+  var max = 0;
+  for (final o in t.options) {
+    if (o.shanten == b.shanten && o.ukeire.total > max) max = o.ukeire.total;
   }
+  final bests = bestTiles(t).toSet();
+  return {
+    for (final o in t.options)
+      o.tile: HandBar(
+        tile: o.tile,
+        total: o.ukeire.total,
+        frac: o.shanten > b.shanten || max == 0 ? 0 : o.ukeire.total / max,
+        best: bests.contains(o.tile),
+        actual: o.tile == t.discard.tile,
+        backward: o.shanten > b.shanten,
+      ),
+  };
+}
+
+/// 버리기 전 손패 줄: [row](손패 기록 순서, 적5 표시 그대로) + 떼어 둔 뽑은 패 [drawn] + 흐리게 되돌린 버림의 자리 [ghost]
+/// (row 의 인덱스, −1 이면 [drawn]).
+class BeforeHand {
+  final List<PaifuTile> row;
+  final PaifuTile? drawn;
+  final int ghost;
+  const BeforeHand(this.row, this.drawn, this.ghost);
+
+  /// 그리는 순서대로 전부(row 다음 drawn).
+  List<PaifuTile> get all => [...row, ?drawn];
+}
+
+/// 차례 [t] 의 버리기 전 손패 줄. 평가는 버린 뒤 걸음에 붙어 있어 그때 탁자 손패는 13장이라, 최선 보기 때는 이것으로
+/// 바꿔 그린다. 줄은 직전 뽑기 사건(손패 + 뽑은 패) → 직전 울기 사건 → 버림 사건(버린 뒤 손패 + 버린 패를 오른쪽에)
+/// 순으로 찾고, 적5 는 그 손패 기록의 표시를 그대로 쓴다. 기록 줄이 [TurnReview.before] 와 맞지 않으면 before 를 패 번호
+/// 순으로 펴고 적5 는 버림 사건 쪽 기록에서 옮긴다. 숫자 없는 차례는 null.
+BeforeHand? beforeHandOf(Paifu p, TurnReview t) {
+  final before = t.before;
+  if (before == null || t.eventIndex < 0 || t.eventIndex >= p.events.length) return null;
+  final e = p.events[t.eventIndex];
+  final d = t.discard;
+  PaifuEvent? prev;
+  for (var j = t.eventIndex - 1; j >= 0; j--) {
+    if (p.events[j].seat == p.hero) {
+      prev = p.events[j];
+      break;
+    }
+  }
+  List<PaifuTile>? row;
+  PaifuTile? drawn;
+  var rightIsDiscard = false;
+  if (prev != null && prev.type == PaifuEventType.draw && prev.hand != null && prev.tile != null) {
+    row = prev.hand;
+    drawn = prev.tile;
+  } else if (prev != null && prev.type == PaifuEventType.call && prev.hand != null) {
+    row = prev.hand;
+  } else if (e.hand != null) {
+    row = e.hand;
+    drawn = d;
+    rightIsDiscard = true;
+  }
+
+  bool matches(List<PaifuTile> ts) {
+    final c = List<int>.filled(Tiles.count, 0);
+    for (final x in ts) {
+      if (x.tile < 0 || x.tile >= Tiles.count) return false;
+      c[x.tile]++;
+    }
+    for (var k = 0; k < Tiles.count; k++) {
+      if (c[k] != before[k]) return false;
+    }
+    return true;
+  }
+
+  if (row == null || !matches([...row, ?drawn])) {
+    // 기록 줄을 못 쓰면 34칸을 펴고, 적5 는 버린 뒤 손패 + 버린 패에서 옮긴다.
+    final reds = <int>{
+      for (final x in [...?e.hand, d])
+        if (x.red) x.tile,
+    };
+    final flat = <PaifuTile>[
+      for (var k = 0; k < Tiles.count; k++)
+        for (var n = 0; n < before[k]; n++) PaifuTile(k, red: n == 0 && reds.contains(k)),
+    ];
+    var g = flat.indexWhere((x) => x == d);
+    if (g < 0) g = flat.indexWhere((x) => x.tile == d.tile);
+    return BeforeHand(flat, null, g);
+  }
+
+  if (rightIsDiscard) return BeforeHand(row, drawn, -1);
+  // 버린 패의 자리: 쯔모기리(또는 쯔모기리 여부를 모르고 뽑은 패와 같음)면 뽑은 패, 아니면 손패 줄에서 같은 패.
+  final dr = drawn;
+  if (dr != null && dr.tile == d.tile && (e.tsumogiri == true || (e.tsumogiri == null && dr == d))) {
+    return BeforeHand(row, drawn, -1);
+  }
+  var g = row.indexWhere((x) => x == d);
+  if (g < 0) g = row.indexWhere((x) => x.tile == d.tile);
+  if (g < 0 && dr != null && dr.tile == d.tile) return BeforeHand(row, drawn, -1);
+  return BeforeHand(row, drawn, g);
 }

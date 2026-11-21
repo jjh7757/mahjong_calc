@@ -24,8 +24,13 @@ class ReviewThresholds {
 
 enum ReviewGrade { best, good, inaccuracy, mistake, blunder }
 
-/// 평가 상태. 위에서부터 먼저 걸리는 것: 손패 모름·어긋남 → 리치 뒤(forced) → 화료 형태(complete) → 남의 리치(defense) → graded.
-enum ReviewStatus { graded, forced, defense, complete, unknownHand, inconsistent }
+/// 평가 상태. 위에서부터 먼저 걸리는 것: 짐작 손패(guessed) → 손패 모름·어긋남 → 리치 뒤(forced) → 화료 형태(complete)
+/// → 남의 리치(defense) → graded.
+///
+/// [guessed](2026-11-21, `docs/paifu_review_ui_design_1121.md` 3-6): 버림 사건 또는 그 직전 뽑기 사건에 `guess: true` 가
+/// 적힌 차례. 손패가 짐작이라 등급을 매기지 않고 숫자도 내지 않는다. 화면 · 요약에서는 unknownHand · inconsistent 와
+/// 함께 "손패 모름" 묶음으로 센다([PaifuReview.handUnknownCount]). 값을 맨 뒤에 더해 앞 값들의 순서는 그대로다.
+enum ReviewStatus { graded, forced, defense, complete, unknownHand, inconsistent, guessed }
 
 /// hero 의 버림 한 번.
 class TurnReview {
@@ -192,6 +197,42 @@ class PaifuReview {
 
   int gradeCount(ReviewGrade g) => turns.where((t) => t.grade == g).length;
 
+  // ── 판 요약 화면(3-1)의 "평가 안 함" 네 묶음. 등급 개수 합 + 네 묶음 합 = hero 버림 수(turns.length). ──
+
+  /// 리치 중(forced).
+  int get forcedCount => count(ReviewStatus.forced);
+
+  /// 수비(defense).
+  int get defenseCount => count(ReviewStatus.defense);
+
+  /// 화료 형태(complete).
+  int get completeCount => count(ReviewStatus.complete);
+
+  /// 손패 모름: unknownHand + inconsistent + guessed(짐작 손패).
+  int get handUnknownCount =>
+      count(ReviewStatus.unknownHand) + count(ReviewStatus.inconsistent) + count(ReviewStatus.guessed);
+
+  /// 등급을 매긴 버림 수(graded).
+  int get gradedCount => count(ReviewStatus.graded);
+
+  /// 배울 장면(3-1): 최대 [max] 개. 큰 실수 → 실수 → 부정확 순. 같은 등급 안에서는 큰 실수는 shantenLoss 가 큰 것,
+  /// 나머지는 ukeireLoss 가 큰 것이 먼저, 같으면 앞 순(turn 작은 것)이 먼저.
+  List<TurnReview> lessons({int max = 3}) {
+    const order = [ReviewGrade.blunder, ReviewGrade.mistake, ReviewGrade.inaccuracy];
+    final out = <TurnReview>[];
+    for (final g in order) {
+      final same = turns.where((t) => t.status == ReviewStatus.graded && t.grade == g).toList()
+        ..sort((a, b) {
+          final la = g == ReviewGrade.blunder ? (a.shantenLoss ?? 0) : (a.ukeireLoss ?? 0);
+          final lb = g == ReviewGrade.blunder ? (b.shantenLoss ?? 0) : (b.ukeireLoss ?? 0);
+          if (la != lb) return lb - la;
+          return a.turn - b.turn;
+        });
+      out.addAll(same);
+    }
+    return out.take(max).toList();
+  }
+
   /// graded 인 차례들의 actual.total / best.total 평균 × 100 을 반올림한 0~100.
   /// blunder 는 0, best.total == 0 이면 100 으로 친다. graded 가 없으면 null.
   /// 분수로 정확히 더한 뒤 반올림한다(반은 올림).
@@ -251,9 +292,12 @@ List<int>? _counts(Iterable<PaifuTile> ts) {
 /// 패보 한 판 → hero 버림마다 평가 한 건. 어떤 패보에도 예외를 던지지 않는다.
 ///
 /// [withEngine] 이 true 면 mahjong-helper 엔진 칸([TurnReview.mh] · 위험도)도 채운다. 등급은 그대로다.
+/// [gradeGuessed] 가 false(기본)면 짐작 손패 차례(버림 또는 직전 뽑기 사건이 `guess`)는 [ReviewStatus.guessed] 로 두고
+/// 등급을 매기지 않는다(설계서 3-6). true 면 11-21 전처럼 짐작 손패도 평가한다(비교 · 되돌림용).
 /// 엔진 버림 순위는 한 판에 수 초(JIT, 손패 있는 판 2~6초)가 걸려 기본은 끈다 — 재생 화면이 화면 스레드에서
 /// 곧바로 부르기 때문(lib/ui/paifu/review_view.dart `PaifuReviewIndex.of`).
-PaifuReview reviewPaifu(Paifu p, {ReviewThresholds thresholds = const ReviewThresholds(), bool withEngine = false}) {
+PaifuReview reviewPaifu(Paifu p,
+    {ReviewThresholds thresholds = const ReviewThresholds(), bool withEngine = false, bool gradeGuessed = false}) {
   final hero = p.hero;
   List<PaifuState>? states;
   if (hero >= 0 && hero < 4) {
@@ -289,15 +333,15 @@ PaifuReview reviewPaifu(Paifu p, {ReviewThresholds thresholds = const ReviewThre
   for (final (i, e) in p.events.indexed) {
     if (e.type == PaifuEventType.discard && e.seat == hero) {
       turn++;
-      out.add(_review(p, states, i, turn, riichiAt, thresholds, withEngine));
+      out.add(_review(p, states, i, turn, riichiAt, thresholds, withEngine, gradeGuessed));
     }
     if (e.type == PaifuEventType.discard && e.riichi && riichiAt[e.seat] == null) riichiAt[e.seat] = i;
   }
   return PaifuReview(List.unmodifiable(out));
 }
 
-TurnReview _review(
-    Paifu p, List<PaifuState> states, int i, int turn, List<int?> riichiAt, ReviewThresholds th, bool engine) {
+TurnReview _review(Paifu p, List<PaifuState> states, int i, int turn, List<int?> riichiAt, ReviewThresholds th,
+    bool engine, bool gradeGuessed) {
   final hero = p.hero;
   final e = p.events[i];
   final discard = e.tile!;
@@ -381,6 +425,9 @@ TurnReview _review(
       riskOfActual: rk.actual,
     );
   }
+
+  // 3-6: 버림 사건 또는 그 직전 뽑기 사건의 손패가 짐작이면 평가하지 않는다.
+  if (!gradeGuessed && (e.guess || (draw?.guess ?? false))) return bare(ReviewStatus.guessed);
 
   // 버리기 전 손패: 뽑기 쪽 → 울기 쪽 → 버림 쪽.
   List<int>? front;
@@ -589,4 +636,95 @@ int? _minRisk(RiskTable table, List<int> before) {
     if (best == null || table.mixed34[t] < table.mixed34[best]) best = t;
   }
   return best;
+}
+
+// ── 단계(설계서 3-4): 배패 · 리치 · 끝. 복기 화면의 단계 말풍선이 쓴다. ──
+
+enum ReviewStageKind { start, riichi, end }
+
+/// 단계 하나. 문장은 `review_sentence.dart` 의 [stageSentence] 가 만든다.
+class ReviewStage {
+  final ReviewStageKind kind;
+
+  /// 이 단계 말풍선이 붙는 걸음(재생 걸음 번호: 0 = 시작, i + 1 = events[i] 뒤).
+  final int step;
+
+  /// start: 배패 13장의 샹텐(0 = 텐파이).
+  final int? startShanten;
+
+  /// riichi: 리치한 자리.
+  final int? seat;
+
+  /// riichi 이고 hero 가 리치했을 때: hero 의 몇 번째 버림이 리치 선언인가(1부터).
+  final int? riichiTurn;
+
+  /// riichi 이고 hero 가 리치했을 때: 리치 선언 뒤 hero 버림 수(리치 뒤에는 뽑은 패를 그대로 버린다).
+  final int afterRiichi;
+
+  const ReviewStage({
+    required this.kind,
+    required this.step,
+    this.startShanten,
+    this.seat,
+    this.riichiTurn,
+    this.afterRiichi = 0,
+  });
+
+  bool get heroRiichi => kind == ReviewStageKind.riichi && riichiTurn != null;
+}
+
+/// 배패(시작 손패 13장). `start_hand` 가 있으면 그것, 없으면 hero 의 첫 사건이 손패가 적힌 뽑기일 때 그 뽑기 전 손패.
+/// 그 뽑기가 짐작(`guess`)이거나 손패를 모르면 null — 배패 단계를 건너뛴다.
+List<PaifuTile>? startHandOf(Paifu p) {
+  bool ok(List<PaifuTile>? h) => h != null && h.length == 13 && h.every((t) => _valid(t.tile));
+  if (p.startHand != null) return ok(p.startHand) ? p.startHand : null;
+  for (final e in p.events) {
+    if (e.seat != p.hero) continue;
+    if (e.type == PaifuEventType.draw && !e.guess && ok(e.hand)) return e.hand;
+    return null;
+  }
+  return null;
+}
+
+/// 한 판의 단계 걸음(걸음 순). 배패는 [startHandOf] 가 있을 때만, 리치는 hero 의 리치와 남의 첫 리치,
+/// 끝은 마지막 걸음(걸음이 둘 이상일 때).
+List<ReviewStage> reviewStages(Paifu p) {
+  final out = <ReviewStage>[];
+  final start = startHandOf(p);
+  if (start != null) {
+    final c = _counts(start);
+    if (c != null) out.add(ReviewStage(kind: ReviewStageKind.start, step: 0, startShanten: shanten(c)));
+  }
+  var heroTurn = 0;
+  int? heroStep, heroRiichiTurn, otherStep, otherSeat;
+  var after = 0;
+  for (final (i, e) in p.events.indexed) {
+    if (e.type != PaifuEventType.discard) continue;
+    if (e.seat == p.hero) {
+      heroTurn++;
+      if (heroStep != null) {
+        after++;
+      } else if (e.riichi) {
+        heroStep = i + 1;
+        heroRiichiTurn = heroTurn;
+      }
+    } else if (e.riichi && otherStep == null) {
+      otherStep = i + 1;
+      otherSeat = e.seat;
+    }
+  }
+  if (heroStep != null) {
+    out.add(ReviewStage(
+      kind: ReviewStageKind.riichi,
+      step: heroStep,
+      seat: p.hero,
+      riichiTurn: heroRiichiTurn,
+      afterRiichi: after,
+    ));
+  }
+  if (otherStep != null) out.add(ReviewStage(kind: ReviewStageKind.riichi, step: otherStep, seat: otherSeat));
+  final last = p.stepCount - 1;
+  if (last > 0 && !out.any((s) => s.step == last)) out.add(ReviewStage(kind: ReviewStageKind.end, step: last));
+  out.sort((a, b) => a.step - b.step);
+  return out;
 }

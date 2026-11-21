@@ -219,6 +219,9 @@ void main() {
       addTearDown(tester.view.reset);
       await tester.pumpWidget(MaterialApp(home: PaifuScreen(paifu: Paifu.fromJson(_small()))));
       await tester.pump();
+      // 11-21: 손패가 있는 판은 판 요약이 먼저 뜬다 — "처음부터 보기" 로 재생 화면(말풍선 없음, 자동 재생 있음)에 들어간다.
+      await tester.tap(find.byKey(const ValueKey('paifu-summary-play')));
+      await tester.pump();
     }
 
     String now(WidgetTester tester) => tester.widget<Text>(find.byKey(const ValueKey('paifu-now'))).data!;
@@ -323,6 +326,10 @@ void main() {
       await tester.tap(find.text('2026-11-14 2반장 동2국'));
       await tester.pumpAndSettle();
       expect(find.byType(PaifuScreen), findsOneWidget);
+      // 11-21: 손패가 있는 판이라 판 요약이 먼저 — "처음부터 보기" 를 누르면 재생 화면의 첫 걸음.
+      expect(find.byKey(const ValueKey('paifu-summary')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('paifu-summary-play')));
+      await tester.pumpAndSettle();
       expect(now(tester), '시작');
     });
 

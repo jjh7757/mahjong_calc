@@ -1,4 +1,5 @@
-// 패보 재생 화면 리뷰 카드 아래의 mahjong-helper 참고값 묶음(lib/ui/paifu/review_view.dart EngineReviewBox).
+// 패보 복기 화면의 mahjong-helper 참고값(lib/ui/paifu/review_view.dart EngineReviewFold — 11-21 부터 "참고값" 단추로 펼침,
+// 세 줄 + "자세히" 후보 표, 설계서 docs/paifu_review_ui_design_1121.md 3-9).
 // 엔진 계산은 화면에선 compute 로 뒤에서 돈다 — 위젯 시험에서는 PaifuScreen.engineReview 를 바꿔 끼워 결과를 손으로 넣는다.
 // 문구 · 등급 칸은 test/paifu_review_ui_test.dart, 엔진 숫자 자체는 test/paifu_review_mh_test.dart 가 본다.
 import 'dart:async';
@@ -18,7 +19,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 Paifu _load(String name) =>
     Paifu.fromJson(jsonDecode(File('assets/paifu/$name.json').readAsStringSync()) as Map<String, dynamic>);
 
-const _card = ValueKey('paifu-review-card');
 const _engine = ValueKey('paifu-review-engine');
 const _pending = ValueKey('paifu-review-engine-pending');
 
@@ -81,11 +81,36 @@ void main() {
     });
 
     test('위협 없는 차례엔 위험 줄이 없음 · 엔진 없이 낸 평가엔 줄이 하나도 없음', () {
-      expect(engineRiskLines(at(r19Engine, 4)), isEmpty);
-      expect(engineLines(at(r19Engine, 4)), hasLength(2));
+      // 걸음 4(1순)는 짐작 손패(guessed)라 엔진 칸이 없다 — 숫자 있는 첫 차례인 걸음 9(2순, 위협 없음)로 본다.
+      expect(at(r19Engine, 9).status, ReviewStatus.graded);
+      expect(engineRiskLines(at(r19Engine, 9)), isEmpty);
+      expect(engineLines(at(r19Engine, 9)), hasLength(2));
       for (final t in reviewPaifu(r19).turns) {
         expect(engineLines(t), isEmpty);
       }
+    });
+
+    test('참고값 세 줄(engineFoldLines): 추천은 말풍선의 최선(동률 포함)과 같으면 그렇게 적고, 위협 없으면 추천 한 줄', () {
+      // 걸음 29: 최선 3만(또는 3삭), 엔진 추천 3만 · 위협 자리 0 · 방총 1.7% · 가장 안전 5통(위 engineLines 시험과 같은 값).
+      expect(engineFoldLines(at(r19Engine, 29), seatLabel: seat), [
+        '점수 · 화료까지 본 추천: 3만 — 말풍선의 최선과 같음',
+        '이 패 방총 위험: 약 1.7% (위협: 자리0)',
+        '가장 안전한 패: 5통',
+      ]);
+      // 걸음 24: 최선 2통(또는 5통), 엔진 추천 5통.
+      expect(engineFoldLines(at(r19Engine, 24)).first, '점수 · 화료까지 본 추천: 5통 — 말풍선의 최선과 같음');
+      // 걸음 9(2번째 버림 동): 위협 없음 → 추천 한 줄.
+      expect(engineFoldLines(at(r19Engine, 9)), hasLength(1));
+      // 짐작 손패 차례(걸음 4)는 엔진 순위가 없다.
+      expect(at(r19Engine, 4).mh, isNull);
+      expect(engineFoldLines(at(r19Engine, 4)), isEmpty);
+    });
+
+    test('"자세히" 표 머리: 텐파이 후보가 있으면 화료율, 위협이 있으면 방총 위험', () {
+      expect(EngineCandidateTable.headOf(at(r19Engine, 29)), ['버릴 패', '샹텐', '유효패', '개량 뒤 평균', '방총 위험', '국수지']);
+      expect(EngineCandidateTable.headOf(at(r19Engine, 38)),
+          ['버릴 패', '샹텐', '유효패', '개량 뒤 평균', '화료율', '방총 위험', '국수지']);
+      expect(EngineCandidateTable.headOf(at(r19Engine, 9)), ['버릴 패', '샹텐', '유효패', '개량 뒤 평균', '국수지']);
     });
 
     test('후퇴 권장은 추천으로 보이지 않음: 추천 패는 늘 샹텐을 지키는 후보 1위', () {
@@ -116,7 +141,7 @@ void main() {
     });
   });
 
-  group('재생 화면', () {
+  group('복기 화면 "참고값" 펼침', () {
     late int calls;
     // 화면이 부를 때 만든다: setUp 에서 만든 Completer 는 가짜 시계 밖 구역이라 complete 해도 pump 로는 이어지지 않는다.
     Completer<PaifuReview>? done;
@@ -138,7 +163,17 @@ void main() {
       await tester.pumpWidget(MaterialApp(home: PaifuScreen(paifu: p, engineReview: run ?? runner)));
     }
 
-    int step(WidgetTester tester) => tester.widget<Slider>(find.byType(Slider)).value.round();
+    /// 요약 → 복기 시작 → 참고값 펼침.
+    Future<void> openFold(WidgetTester tester) async {
+      await tester.pump();
+      await tester.ensureVisible(find.byKey(const ValueKey('paifu-summary-start')));
+      await tester.tap(find.byKey(const ValueKey('paifu-summary-start')));
+      await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('paifu-fold-engine-btn')));
+      await tester.pump();
+    }
+
+    int step(WidgetTester tester) => tester.widget<ReviewBubble>(find.byType(ReviewBubble)).step;
 
     Future<void> goTo(WidgetTester tester, int target) async {
       while (step(tester) != target) {
@@ -150,53 +185,58 @@ void main() {
 
     Finder inEngine(String text) => find.descendant(of: find.byKey(_engine), matching: find.textContaining(text));
 
-    testWidgets('r19: 첫 화면 뒤에 계산 시작 → "계산 중" → 결과가 오면 참고값 묶음', (tester) async {
+    testWidgets('r19: 첫 화면 뒤에 계산 시작 → "계산 중" → 결과가 오면 세 줄(추천 · 방총 위험 · 가장 안전)', (tester) async {
       await pump(tester, r19);
       // 첫 프레임에서는 아직 부르지 않는다(웹에서 compute 가 같은 스레드라 첫 화면이 먼저 나와야 함).
       expect(calls, 0);
       await tester.pump(const Duration(milliseconds: 200));
       expect(calls, 1);
 
+      await openFold(tester);
       await goTo(tester, 29);
-      expect(find.byKey(_card), findsOneWidget);
       expect(find.byKey(_pending), findsOneWidget);
       expect(find.text(engineReviewPending), findsOneWidget);
-      expect(find.byKey(_engine), findsNothing);
 
       done!.complete(r19Engine);
       await tester.pumpAndSettle();
       expect(find.byKey(_pending), findsNothing);
-      expect(find.byKey(_engine), findsOneWidget);
-      expect(inEngine(engineReviewTitle), findsOneWidget);
-      expect(inEngine('통계표 어림'), findsOneWidget);
-      expect(inEngine('실제 버림 4만: 개량 뒤 유효패 평균 10.9장 · 속도 15.3 · 국수지 3132'), findsOneWidget);
-      expect(inEngine('점수 · 화료까지 본 추천: 3만'), findsOneWidget);
-      // 위협 차례: 자리 표시는 재생 화면 그대로(바람 + 이름).
-      expect(inEngine('위협 자리: 남 플레이어 1 · 이 패 방총 위험 약 1.7%'), findsOneWidget);
-      expect(inEngine('가장 안전: 5통 (0.9%)'), findsOneWidget);
-      // 등급 · 기존 카드 문구는 그대로.
-      expect(find.descendant(of: find.byKey(_card), matching: find.textContaining('최선은 3만 → 15장 (5장 적음)')),
-          findsOneWidget);
+      expect(inEngine(engineFoldTitle), findsOneWidget);
+      // 자리 표시는 재생 화면 그대로(바람 + 이름).
+      expect(inEngine('점수 · 화료까지 본 추천: 3만 — 말풍선의 최선과 같음'), findsOneWidget);
+      expect(inEngine('이 패 방총 위험: 약 1.7% (위협: 남 플레이어 1)'), findsOneWidget);
+      expect(inEngine('가장 안전한 패: 5통'), findsOneWidget);
+      // 개량 뒤 평균 · 속도 · 국수지는 "자세히" 안으로.
+      expect(inEngine('개량 뒤'), findsNothing);
+      expect(inEngine('국수지'), findsNothing);
+      await tester.tap(find.byKey(const ValueKey('paifu-engine-detail')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('paifu-engine-table')), findsOneWidget);
+      expect(inEngine('개량 뒤 평균'), findsOneWidget);
+      expect(inEngine('4만 (실제)'), findsOneWidget);
+      // 말풍선(등급)은 그대로.
+      expect(tester.widget<Text>(find.byKey(const ValueKey('paifu-bubble-title'))).data, '4만 버림 · 실수');
       expect(calls, 1);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('r19: 텐파이 차례 · 리치 뒤(forced) 차례', (tester) async {
+    testWidgets('r19: 텐파이 차례(화료율 열) · 리치 뒤(forced)는 참고값 없음', (tester) async {
       await pump(tester, r19);
       await tester.pump(const Duration(milliseconds: 200));
       done!.complete(r19Engine);
       await tester.pumpAndSettle();
+      await openFold(tester);
 
       await goTo(tester, 38);
-      expect(inEngine('화료율 33.3%'), findsOneWidget);
-      expect(inEngine('기대 8276점(리치 기준)'), findsOneWidget);
-      expect(inEngine('점수 · 화료까지 본 추천: 실제 버림과 같음'), findsOneWidget);
+      expect(inEngine('점수 · 화료까지 본 추천: 3삭 — 말풍선의 최선과 같음'), findsOneWidget);
+      expect(inEngine('이 패 방총 위험: 약 3.0%'), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('paifu-engine-detail')));
+      await tester.pumpAndSettle();
+      expect(inEngine('화료율'), findsOneWidget);
 
-      // 리치 뒤는 고를 수 없는 버림이라 참고값도 붙이지 않는다.
       await goTo(tester, 43);
-      expect(find.byKey(_card), findsOneWidget);
-      expect(find.byKey(_engine), findsNothing);
+      expect(inEngine('이 걸음은 참고값이 없습니다'), findsOneWidget);
       expect(find.byKey(_pending), findsNothing);
+      expect(find.byKey(const ValueKey('paifu-engine-detail')), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
@@ -206,11 +246,11 @@ void main() {
         throw StateError('엔진 실패');
       });
       await tester.pump(const Duration(milliseconds: 200));
+      await openFold(tester);
       await goTo(tester, 29);
       expect(calls, 1);
-      expect(find.byKey(_card), findsOneWidget);
       expect(find.byKey(_pending), findsNothing);
-      expect(find.byKey(_engine), findsNothing);
+      expect(inEngine('이 걸음은 참고값이 없습니다'), findsOneWidget);
       expect(find.textContaining('엔진 실패'), findsNothing);
       expect(tester.takeException(), isNull);
     });
@@ -233,42 +273,42 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('손패 없는 판(r20): 계산하지 않고 묶음도 없음', (tester) async {
+    testWidgets('손패 없는 판(r20): 계산하지 않고 재생 화면엔 참고값이 없음', (tester) async {
       final p = _load('r20_143236');
       await pump(tester, p);
       await tester.pump(const Duration(seconds: 1));
       expect(calls, 0);
-      for (var i = 1; i < p.states.length; i++) {
-        await goTo(tester, i);
-        expect(find.byKey(_pending), findsNothing, reason: '걸음 $i');
-        expect(find.byKey(_engine), findsNothing, reason: '걸음 $i');
-      }
+      expect(find.byKey(_pending), findsNothing);
+      expect(find.byKey(_engine), findsNothing);
+      expect(find.byKey(const ValueKey('paifu-fold-engine-btn')), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('폰 세로 400×800: 참고값이 들어와도 넘침 없음 · 스크롤하면 묶음이 다 보임', (tester) async {
+    testWidgets('폰 세로 400×800: 참고값 · 자세히를 펼쳐도 넘침 없음, 시트는 수 띠 위', (tester) async {
       const size = Size(400, 800);
       await pump(tester, r19, size: size);
       await tester.pump(const Duration(milliseconds: 200));
       done!.complete(r19Engine);
       await tester.pumpAndSettle();
-      var boxes = 0;
+      await openFold(tester);
+      var opened = 0;
       for (var i = 1; i < r19.states.length; i++) {
         await goTo(tester, i);
         expect(tester.takeException(), isNull, reason: '걸음 $i');
-        final box = find.byKey(_engine);
-        if (box.evaluate().isEmpty) continue;
-        boxes++;
-        await tester.ensureVisible(box);
-        await tester.pumpAndSettle();
-        final scroll = tester.getRect(find.byKey(const ValueKey('paifu-panel-scroll')));
-        final r = tester.getRect(box);
-        expect(r.top, greaterThanOrEqualTo(scroll.top - 1), reason: '걸음 $i');
-        expect(r.bottom, lessThanOrEqualTo(scroll.bottom + 1), reason: '걸음 $i');
-        expect(r.right, lessThanOrEqualTo(size.width), reason: '걸음 $i');
+        final detail = find.byKey(const ValueKey('paifu-engine-detail'));
+        if (detail.evaluate().isNotEmpty && find.byKey(const ValueKey('paifu-engine-table')).evaluate().isEmpty) {
+          await tester.ensureVisible(detail);
+          await tester.tap(detail);
+          await tester.pumpAndSettle();
+          opened++;
+        }
+        final sheet = tester.getRect(find.byKey(const ValueKey('paifu-fold-scroll')));
+        expect(sheet.bottom, lessThanOrEqualTo(tester.getRect(find.byKey(const ValueKey('paifu-strip'))).top + 1),
+            reason: '걸음 $i');
+        expect(sheet.right, lessThanOrEqualTo(size.width), reason: '걸음 $i');
         expect(tester.takeException(), isNull, reason: '걸음 $i');
       }
-      expect(boxes, 8); // 숫자 있는 버림 10번 중 리치 뒤 2번을 뺀 것
+      expect(opened, 1); // "자세히" 는 한 번 열면 걸음을 넘겨도 열린 채
     });
   });
 }

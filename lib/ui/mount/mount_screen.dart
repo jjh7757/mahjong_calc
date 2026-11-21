@@ -1369,6 +1369,23 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       final rec = _discardRec;
       if (rec == null || rec.count == 0) return;
       final closed = [for (final t in merge.closed) PaifuTile(t.tile, red: t.red)];
+      // 헤드 녹화를 받아 저장하는 중이면 그 폴더와 화료자 손패 구역을 남긴다 — 재생 화면의 "손패 복원 (Claude API)" 재료
+      // (docs/paifu_hand_restore_api_1121.md). 보기만(save 거짓)이거나 꺼져 있으면 남기지 않는다.
+      PaifuFrames? frames;
+      final pull = _recPull;
+      final pullDir = pull?.localDir;
+      if (pull != null && pull.running && pull.save && pullDir != null) {
+        final heroSide = SeatMap(g.settings.bottomSeat).sideOf(merge.winner);
+        final z = _grid.seat(heroSide);
+        final ats = [for (final d in rec.timeline()) d.firstAt.millisecondsSinceEpoch];
+        frames = PaifuFrames(
+          dir: pullDir,
+          box: [z.xmin, z.ymin, z.xmax, z.ymax],
+          side: heroSide.name,
+          startMs: ats.isEmpty ? null : ats.reduce((a, b) => a < b ? a : b) - 30000,
+          endMs: DateTime.now().millisecondsSinceEpoch,
+        );
+      }
       final paifu = rec.toPaifu(
         id: _trackRoundKey ?? '${g.id}/${g.roundLabel}/${g.honba}',
         bottomSeat: g.settings.bottomSeat,
@@ -1412,7 +1429,8 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
           },
         ),
       );
-      await PaifuStore.put(g.id, paifu);
+      final saved = frames == null ? paifu : paifu.copyWith(frames: frames);
+      await PaifuStore.put(g.id, saved);
       debugPrint('[paifu] ${paifu.title} 버림 ${rec.count}장 장면 ${rec.frames} 검사 ${paifu.check()}');
       if (_logEnabled) {
         unawaited(CaptureLog.saveFile(

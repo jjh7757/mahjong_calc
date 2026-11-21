@@ -2,6 +2,22 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 앱 저장소의 README.md 는 2026-11-09 부터 프로젝트 소개·개발 과정 문서이고, 개발 환경·빌드 명령·화면 기능은 `docs/development.md` 로 옮겼다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
+## 2026-11-21 오후: 패보 복기 화면을 "한 문장 먼저" 구조로 — 설계서만 (`docs/paifu_review_ui_design_1121.md`, 코드·측정 없음)
+
+- 사용자가 체스닷컴 게임 리뷰 화면 네 장을 보여 주며 "이런 식의 서비스가 더 나아 보인다"고 했고, 같은 날 "mahjong-helper 참고값이 보기 힘들다"고도 했다. 이력서·포트폴리오 작업 세션에서 설계서만 썼다(이 저장소의 코드는 안 건드림).
+- 내용: ① 판 요약 화면(패효율 · 등급별 개수 · 배울 장면) 새로 만들기 ② 수마다 말풍선 하나(등급 · 한 문장 · 숫자 하나) ③ 후보 목록과 참고값은 접어 두고 참고값은 세 줄로 줄이기. 계산은 그대로, 한 문장은 우선 코드가 만들고 LLM 해설은 나중에 같은 자리에 끼운다.
+- 같은 날 저녁 사용자가 같은 네 장을 다시 주며 "위 같은 화면을 참고해줘" → 설계서를 고쳐 씀: 세로 배치를 참고 화면대로(말풍선 위 → 탁자 → 수 띠 → "최선 보기 · 후보 · 참고값" + 큰 "다음"), 탁자 마지막 버림에 등급 배지, 사건 목록 대신 가로 수 띠, 단계 말풍선(배패 · 리치 · 끝), 요약 화면 등급 세로 표. 검토에서 나온 다섯 가지도 반영: 평가 안 함에 화료 형태(`complete`) 넣기 · 참고값 추천 이름은 "점수 · 화료까지 본 추천" 유지(최선 두 개로 읽힘) · 샹텐 = "텐파이까지 N걸음" · 손패 복원의 짐작(`guess`) 걸음은 등급 안 매김(계산이 바뀌는 유일한 곳, 3-6) · 큰 실수는 `shantenLoss` 순.
+- 이어서 사용자가 일본어 마작 AI 복기 화면(손패 위 후보별 막대 · 후보 13줄 × 숫자 8열 표 · "Player 打 / AI 打")을 보여 주며 "이건 어떠니" → 본 화면으로는 안 씀(숫자 표 중심, P 열 · 순위 원그래프는 강한 AI 필요), **손패 위 막대(높이 = 받는 패 수, 샹텐 후퇴는 회색 점)와 말풍선 "내 버림 / 최선" 두 줄만 넣음**(사용자 "넣어 줘"), 큰 표는 "참고값 → 자세히" 후보 표로. 막대는 버리기 전 14장(`TurnReview.before`) 위에 그려야 해서 최선 보기 때 손패 줄을 바꿔 그린다(평가가 버린 뒤 걸음에 붙어 있음).
+- **11-21 밤 구현함(커밋 전):** 사용자 "마작용어 쓰고 나머지는 권장으로 구현해줘"(9절: 마작 용어 · 요약 자동 · 캐릭터 없음 · 문턱 임시 그대로 · 참고값 접음 · 복기에서 자동 재생 숨김). Opus 하위 에이전트 구현 → 이 세션 검토: analyze 문제 없음 · test 1,359 통과(다시 돌림) · 웹 빌드로 400×800 · 1280×800 눈 확인(기기는 안 봄). 새 파일 `lib/paifu/review_sentence.dart` · `lib/ui/paifu/review_summary_view.dart` · `test/review_sentence_test.dart` · `test/paifu_review_guess_test.dart`, 고친 파일 `paifu_review.dart`(`ReviewStatus.guessed` · 요약 getter · 단계) · `review_view.dart`(옛 `PaifuReviewPanel` · `ReviewCard` · `EngineReviewBox` 지움) · `paifu_screen.dart` · 시험 셋. **설계 전제 틀림:** 예시 7판 첫 순에 `guess` 가 있어 패효율이 r19 94→93 · r11 71→60 · r13 91→90 로 바뀜(`gradeGuessed: true` 면 전과 같음) — 사용자가 "짐작은 평가 안 함" 기본값으로 확정("그대로 둬"). 자세한 검토 메모는 설계서 맨 위 "검토".
+- **커밋할 때 주의:** `paifu_screen.dart` · `paifu.dart` 에 손패 복원 작업(커밋 전)이 같이 섞여 있다 — 복원 작업을 먼저 커밋하거나 덩어리를 나눠야 한다.
+
+## 2026-11-21: 패보 "손패 복원 (Claude API)" 버튼 — 구현만, 실제 API 로 안 돌림 (사용자 "버튼 누르면 손패 복구" → "구현은 claude api 쓰는걸로 해, 실제로 돌리지는 말고", 커밋 전)
+
+- 설계서 `docs/paifu_hand_restore_api_1121.md`(오프라인 `claudeagent.py` · `TASK_NOSAM` · `rebuild_opus.py` 를 앱으로, 바뀌는 점 표). 구현은 Opus 하위 에이전트, 검토 · 다시 돌리기는 이 세션.
+- 새 파일 `lib/paifu/hand_restore/`(turns · frames · claude_client · turn_agent · rebuild · restorer · restore_ui), 시험 `test/hand_restore_*`(49개). 고친 파일: `paifu.dart`(선택 칸 `PaifuEvent.at` · `guess`, `Paifu.frames` · `handSource` · `restore`), `discard_recorder.dart`(`toPaifu` 가 `at`), `mount_screen.dart` `_savePaifu`(헤드 녹화 **받아 저장** 중일 때만 `frames` = 폴더 · 화료자 자리 구역 · 쪽), `paifu_screen.dart`(단추 · 되돌리기, `PaifuListScreen` 이 gameId 넘김).
+- 흐름: 뒤 차례부터 Opus 도구 읽기(view · zoom · strip · answer, effort high, 차례당 5달러 · 판 10달러 한도) → 끝 손패에서 거꾸로 복원 → 원본은 `paifu.orig.<gameId>.<id>` 에 두고 되돌리기. 리치 뒤 = 규칙, 퐁 · 치 뒤 = 짐작. API 키는 앱 안 입력(`claude.apiKey`), APK 에 안 넣음.
+- **안 한 것 · 위험:** 실제 API 호출 0(요청 꼴은 claudeagent.py 와 같게, MockClient 시험만) · 정확도 안 잼(사건 목록 · 쉬움 거르기 없음, 띠가 격자 자리 구역 전체, 버림 시각 ±3초, 헤드 · 태블릿 시계 차이) · 기기 · 웹 화면 눈 확인 안 함 · 촬영 기록 `paifu.json` 사본은 `'frames': 장수` 가 녹화 정보를 덮음(그대로 둠). 측정이 없어 metrics · problem_log 는 안 고침.
+
 ## 2026-11-20 밤: mahjong-helper 버림 평가 Dart 이식 — 끝남 (사용자 "mahjong-helper 기능부터 옮겨줘" → 노트북 종료로 중지 → "재개해" → "보여줘" → "커밋해", **커밋함 — 엔진 49df957 · 패보 기능 전체(연결 · 화면 포함) 4eca2a3**, push 안 함 · 운영 없음)
 
 **한 줄:** mahjong-helper(MIT, 514bb97)의 개량 · 속도 · 화료율 · 기대 타점 · 정렬 · 후퇴 권장 · 위험도 · 텐파이율을 Dart 엔진으로 옮기고 평가기에 칸으로 붙였다. **원본 Go 를 직접 돌린 독립 검토에서 Dart 버그 0**(새 손 1,122 · 위험 장면 360, metrics 표 16-4). 그러나 Mortal-S42 첫째 버림과의 일치는 지금 평가기 23/33 · 이식 22/33 · 후퇴 권장 끈 이식 24/33 으로 사실상 같고, **후퇴 권장 6차례는 S42 가 0/6 따름**(표 16-3) → **등급 규칙은 안 바꿈.** problem_log 72(71 덧붙임 포함).
