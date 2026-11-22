@@ -7,23 +7,52 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../engine/hand.dart';
 import '../../engine/tile.dart';
+import '../../paifu/agent_facts.dart';
 import '../../paifu/hand_restore/restore_ui.dart';
 import '../../paifu/hand_restore/restorer.dart';
 import '../../paifu/paifu.dart';
 import '../../paifu/paifu_review.dart';
 import '../../paifu/paifu_score.dart';
 import '../../paifu/paifu_store.dart';
+import '../../paifu/review_chat.dart';
 import '../../paifu/review_sentence.dart';
 import '../../paifu/start_hand.dart';
+import '../../services/review_ask_client.dart';
 import '../kiosk.dart';
 import '../result_screen.dart';
 import '../settings_screen.dart';
+import 'review_ask_panel.dart';
 import 'review_summary_view.dart';
 import 'review_view.dart';
 import 'start_hand_sheet.dart';
 import '../tile_view.dart';
 
 const _winds = ['동', '남', '서', '북'];
+
+/// 복기 · 재생 화면 단축키(→ ← ↓ ↑ space).
+enum _ReviewKey { next, prev, heroNext, heroPrev, playPause }
+
+class _ReviewKeyIntent extends Intent {
+  final _ReviewKey key;
+  const _ReviewKeyIntent(this.key);
+}
+
+/// 글을 쓰는 중([typing])이면 꺼져서 키가 글 입력으로 넘어간다(Shortcuts 가 꺼진 행동의 키는 삼키지 않음).
+class _ReviewKeyAction extends Action<_ReviewKeyIntent> {
+  final void Function(_ReviewKey) onKey;
+  final bool Function() typing;
+  _ReviewKeyAction({required this.onKey, required this.typing});
+
+  @override
+  bool isEnabled(_ReviewKeyIntent intent) => !typing();
+
+  @override
+  Object? invoke(_ReviewKeyIntent intent) {
+    onKey(intent.key);
+    return null;
+  }
+}
+
 const _tableFelt = Color(0xFF1F4D3A);
 const _centerBg = Color(0xFF12241D);
 const _backColor = Color(0xFFD8A23A);
@@ -85,12 +114,17 @@ class PaifuScreen extends StatefulWidget {
 
   /// 손패 복원(Claude API)에 쓰는 것(녹화 폴더 확인 · 실행기). 시험에서 바꿔 끼운다.
   final HandRestoreSetup restoreSetup;
+
+  /// 복기 질문 창이 서버에 묻는 함수. null(기본)이면 화면이 [ReviewAskClient] 하나를 만들어 쓴다 — 그때 "키 있음" 은
+  /// [ReviewConfig.isConfigured]. 시험에서 가짜를 넣으면 키가 있는 것으로 본다.
+  final ReviewAsker? asker;
   const PaifuScreen({
     super.key,
     required this.paifu,
     this.engineReview = computeEngineReview,
     this.gameId,
     this.restoreSetup = const HandRestoreSetup(),
+    this.asker,
   });
 
   @override
@@ -146,13 +180,114 @@ class _PaifuScreenState extends State<PaifuScreen> {
   List<StripEntry>? _stripCache;
   PaifuReviewIndex? _stripFor;
 
+  // ── 복기 질문 창(설계서 docs/paifu_review_agent_app_design_1122.md 3절) ──
+
+  /// "질문" 펼침. 후보 · 참고값과 같은 자리를 써서 한 번에 하나만 켠다.
+  bool _askOpen = false;
+
+  /// [PaifuScreen.asker] 가 없을 때 쓰는 서버 클라이언트(dispose 에서 닫음).
+  ReviewAskClient? _askClient;
+
+  /// 대화(창을 닫았다 열어도 · 걸음을 옮겨도 남음, 패보가 바뀌면 비움).
+  late final ReviewAskController _ask = ReviewAskController(
+    asker: ({required facts, required question, history = const []}) =>
+        (widget.asker ?? (_askClient ??= ReviewAskClient()).ask)(facts: facts, question: question, history: history),
+    facts: _askFacts,
+    engine: () => _engine,
+  );
+
+  /// 사실표 캐시: 같은 리뷰 객체면 다시 만들지 않는다.
+  Map<String, dynamic>? _factsCache;
+  PaifuReviewIndex? _factsFor;
+
+  Map<String, dynamic> _askFacts() {
+    final cached = _factsCache;
+    if (cached != null && identical(_factsFor, _review)) return cached;
+    _factsFor = _review;
+    return _factsCache = agentFacts(_p, _review.review);
+  }
+
+  /// 글자판이 올라와 있는가(build 에서 셈). 세로 질문 시트를 탁자 영역 전체까지 키운다.
+  bool _keyboardUp = false;
+
+  bool get _askConfigured => widget.asker != null || ReviewConfig.isConfigured;
+
+  /// 복기 · 재생 화면의 방향키 · space 를 받는 자리. 입력 줄에서 빠져나오면 이리 되돌린다.
+  final _keysFocus = FocusNode(debugLabel: 'paifu-keys');
+  late final _keyAction = _ReviewKeyAction(onKey: _onReviewKey, typing: _typing);
+
   @override
   void initState() {
     super.initState();
+    if (widget.asker == null) _askClient = ReviewAskClient();
+    _ask.inputFocus.addListener(_askFocusChanged);
     _loadRules();
     _loadStartHand();
     _startEngineReview();
     _loadRestoreState();
+  }
+
+  /// 입력 줄이 포커스를 잃었는데 다른 자리가 받지 않았으면(창을 닫음 · 보냄) 방향키 자리로 되돌린다.
+  void _askFocusChanged() {
+    if (_ask.inputFocus.hasFocus) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _ask.inputFocus.hasFocus) return;
+      final f = FocusManager.instance.primaryFocus;
+      if (f == null || f is FocusScopeNode) _keysFocus.requestFocus();
+    });
+  }
+
+  /// 입력 줄에 글을 쓰는 중인가 — 그때는 복기 화면 단축키가 걸음을 옮기거나 재생을 켜지 않고 글 입력으로 넘긴다.
+  bool _typing() {
+    final f = FocusManager.instance.primaryFocus;
+    if (f == null) return false;
+    if (identical(f, _ask.inputFocus)) return true;
+    final ctx = f.context;
+    return ctx != null && (ctx.widget is EditableText || ctx.findAncestorStateOfType<EditableTextState>() != null);
+  }
+
+  void _onReviewKey(_ReviewKey k) {
+    switch (k) {
+      case _ReviewKey.next:
+        _next();
+      case _ReviewKey.prev:
+        _go(_step - 1);
+      case _ReviewKey.heroNext:
+        _heroTurn(1);
+      case _ReviewKey.heroPrev:
+        _heroTurn(-1);
+      case _ReviewKey.playPause:
+        _playing ? _stop() : _play();
+    }
+  }
+
+  void _setAskOpen(bool on) {
+    setState(() {
+      _askOpen = on;
+      if (on) {
+        _showCandidates = false;
+        _showEngine = false;
+      }
+    });
+    if (!on) _ask.inputFocus.unfocus();
+  }
+
+  /// 보낸 뒤: 글자판을 내려 답이 보이게 한다(방향키 자리는 [_askFocusChanged] 가 되돌림).
+  void _askSent() => _ask.inputFocus.unfocus();
+
+  /// "N순 보기": 그 차례의 걸음(창은 연 채로).
+  void _askGoto(int turn) {
+    final step = _askStepOf(turn);
+    if (step == null) return;
+    _stop();
+    _go(step);
+  }
+
+  int? _askStepOf(int turn) {
+    for (final t in _review.review.turns) {
+      if (t.turn == turn) return t.eventIndex + 1;
+    }
+    return null;
   }
 
   /// 손패 복원: API 키가 있는지(키 자체는 다시 보여 주지 않음) · 되돌릴 원본이 있는지.
@@ -196,6 +331,11 @@ class _PaifuScreenState extends State<PaifuScreen> {
     _barTile = null;
     _stripCache = null;
     if (!p.hasHeroHands) _view = PaifuView.play;
+    // 질문 창: 오던 답은 버리고 대화를 비운 뒤 닫는다.
+    _askOpen = false;
+    _factsCache = null;
+    _factsFor = null;
+    _ask.clear();
     _startEngineReview();
     _loadStartHand();
   }
@@ -283,6 +423,8 @@ class _PaifuScreenState extends State<PaifuScreen> {
     } catch (_) {
       if (mounted && identical(p, _p)) setState(() => _engine = EngineReviewStatus.failed);
     }
+    // 계산을 기다리던 질문을 보낸다(ready 면 수비 칸이 든 새 리뷰로).
+    if (mounted && identical(p, _p)) _ask.engineSettled();
   }
 
   /// 시작 손패(사람이 넣음)와 그것으로 헤아린 매 순 손패. 판 중 손패가 이미 적힌 패보에는 쓰지 않는다.
@@ -386,6 +528,10 @@ class _PaifuScreenState extends State<PaifuScreen> {
     _timer?.cancel();
     _engineTimer?.cancel();
     _log.dispose();
+    _ask.inputFocus.removeListener(_askFocusChanged);
+    _ask.dispose(); // 오던 답은 버린다
+    _askClient?.close();
+    _keysFocus.dispose();
     super.dispose();
   }
 
@@ -482,6 +628,8 @@ class _PaifuScreenState extends State<PaifuScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Scaffold 가 본문 MediaQuery 에서 글자판 높이를 지우므로 여기(Scaffold 바깥)에서 본다.
+    _keyboardUp = MediaQuery.viewInsetsOf(context).bottom > 0;
     final state = _p.states[_step];
     final title = _p.title.isNotEmpty ? _p.title : '패보';
     final view = _view;
@@ -499,19 +647,25 @@ class _PaifuScreenState extends State<PaifuScreen> {
         },
       );
     } else {
-      body = CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.arrowRight): _next,
-          const SingleActivator(LogicalKeyboardKey.arrowLeft): () => _go(_step - 1),
-          const SingleActivator(LogicalKeyboardKey.arrowDown): () => _heroTurn(1),
-          const SingleActivator(LogicalKeyboardKey.arrowUp): () => _heroTurn(-1),
-          const SingleActivator(LogicalKeyboardKey.space): () => _playing ? _stop() : _play(),
+      // 방향키 · space. 질문 창 입력 줄에 글을 쓰는 중이면 행동을 끄고(_ReviewKeyAction.isEnabled) 키를 흘려보내
+      // 글 입력 · 커서 이동(앱 위쪽의 기본 글 편집 단축키)이 받게 한다 — CallbackShortcuts 는 늘 키를 삼킨다.
+      body = Shortcuts(
+        shortcuts: const {
+          SingleActivator(LogicalKeyboardKey.arrowRight): _ReviewKeyIntent(_ReviewKey.next),
+          SingleActivator(LogicalKeyboardKey.arrowLeft): _ReviewKeyIntent(_ReviewKey.prev),
+          SingleActivator(LogicalKeyboardKey.arrowDown): _ReviewKeyIntent(_ReviewKey.heroNext),
+          SingleActivator(LogicalKeyboardKey.arrowUp): _ReviewKeyIntent(_ReviewKey.heroPrev),
+          SingleActivator(LogicalKeyboardKey.space): _ReviewKeyIntent(_ReviewKey.playPause),
         },
-        child: Focus(
-          autofocus: true,
-          child: SafeArea(
-            child: LayoutBuilder(
-              builder: (context, box) => view == PaifuView.review ? _reviewBody(context, state, box) : _playBody(context, state, box),
+        child: Actions(
+          actions: {_ReviewKeyIntent: _keyAction},
+          child: Focus(
+            focusNode: _keysFocus,
+            autofocus: true,
+            child: SafeArea(
+              child: LayoutBuilder(
+                builder: (context, box) => view == PaifuView.review ? _reviewBody(context, state, box) : _playBody(context, state, box),
+              ),
             ),
           ),
         ),
@@ -736,6 +890,20 @@ class _PaifuScreenState extends State<PaifuScreen> {
         ],
       );
 
+  /// 질문 창. 추천 질문 · 차례 칩은 지금 걸음에 맞춘다([t] = 지금 걸음의 내 버림 평가).
+  Widget _askPanel(TurnReview? t, {bool fill = false, bool compact = false}) => ReviewAskPanel(
+        controller: _ask,
+        configured: _askConfigured,
+        suggestions: suggestedQuestions(_p, _review.review, t),
+        turn: t?.turn,
+        canGoto: (n) => _askStepOf(n) != null,
+        onGoto: _askGoto,
+        onClose: () => _setAskOpen(false),
+        onSent: _askSent,
+        fill: fill,
+        compact: compact,
+      );
+
   Widget _barInfo(ThemeData theme, String text) => Container(
         key: const ValueKey('paifu-bar-info'),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -750,7 +918,14 @@ class _PaifuScreenState extends State<PaifuScreen> {
       );
 
   /// 단추 줄: 최선 보기 · 후보 · 참고값(펼침 토글) + 큰 "다음".
-  Widget _reviewButtons(ThemeData theme, TurnReview? t) {
+  Widget _reviewButtons(ThemeData theme, TurnReview? t) => SizedBox(
+        height: 48,
+        // 토글 넷이 기본 여백이면 시험 글꼴로 329px — 줄 폭이 440 보다 좁으면(폰 세로 · 가로 오른쪽 패널) 칩 여백을 줄여
+        // 233px 로, "다음" 이 360 폭에서도 100px 넘게 남게 한다.
+        child: LayoutBuilder(builder: (context, box) => _reviewButtonRow(theme, t, tight: box.maxWidth < 440)),
+      );
+
+  Widget _reviewButtonRow(ThemeData theme, TurnReview? t, {required bool tight}) {
     final scheme = theme.colorScheme;
     Widget toggle(String label, Key key, bool on, VoidCallback onTap, {bool dim = false}) => Padding(
           padding: const EdgeInsets.only(right: 6),
@@ -761,6 +936,8 @@ class _PaifuScreenState extends State<PaifuScreen> {
             showCheckmark: false,
             visualDensity: VisualDensity.compact,
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: tight ? EdgeInsets.zero : null,
+            labelPadding: tight ? const EdgeInsets.symmetric(horizontal: 4) : null,
             onSelected: (_) => onTap(),
           ),
         );
@@ -769,10 +946,16 @@ class _PaifuScreenState extends State<PaifuScreen> {
       child: Row(
         children: [
           toggle('최선 보기', const ValueKey('paifu-best-view'), _bestView, () => _toggleBest(t), dim: !_bestAvailable(t)),
-          toggle('후보', const ValueKey('paifu-fold-candidates-btn'), _showCandidates,
-              () => setState(() => _showCandidates = !_showCandidates)),
-          toggle('참고값', const ValueKey('paifu-fold-engine-btn'), _showEngine,
-              () => setState(() => _showEngine = !_showEngine)),
+          // 후보 · 참고값을 켜면 질문 창은 닫는다(같은 자리).
+          toggle('후보', const ValueKey('paifu-fold-candidates-btn'), _showCandidates, () {
+            if (!_showCandidates) _setAskOpen(false);
+            setState(() => _showCandidates = !_showCandidates);
+          }),
+          toggle('참고값', const ValueKey('paifu-fold-engine-btn'), _showEngine, () {
+            if (!_showEngine) _setAskOpen(false);
+            setState(() => _showEngine = !_showEngine);
+          }),
+          toggle('질문', const ValueKey('paifu-ask-btn'), _askOpen, () => _setAskOpen(!_askOpen)),
           if (_playing)
             IconButton(tooltip: '멈춤', icon: const Icon(Icons.pause), onPressed: _stop),
           Expanded(
@@ -834,7 +1017,9 @@ class _PaifuScreenState extends State<PaifuScreen> {
                   _bubble(state),
                   if (info != null) Padding(padding: const EdgeInsets.only(top: 6), child: _barInfo(theme, info)),
                   Expanded(
-                    child: folded
+                    child: _askOpen
+                        ? Padding(padding: const EdgeInsets.only(top: 8), child: _askPanel(t, fill: true))
+                        : folded
                         ? const SizedBox.shrink()
                         : SingleChildScrollView(
                             key: const ValueKey('paifu-fold-scroll'),
@@ -876,6 +1061,27 @@ class _PaifuScreenState extends State<PaifuScreen> {
                           key: const ValueKey('paifu-fold-scroll'),
                           padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                           child: _foldContent(t),
+                        ),
+                      ),
+                    ),
+                  ),
+                // 질문 창: 같은 자리의 아래 시트. 대화 목록이 따로 스크롤하고 입력 줄은 아래에 붙도록 fold-scroll 밖에 둔다.
+                // 글자판이 올라오면(본문이 줄어든 만큼) 탁자 영역 전체까지 쓴다.
+                if (_askOpen)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: area.maxHeight * (_keyboardUp ? 1.0 : 0.7)),
+                      child: Material(
+                        key: const ValueKey('paifu-ask-sheet'),
+                        elevation: 6,
+                        color: theme.colorScheme.surfaceContainer,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 2, 8, 8),
+                          child: _askPanel(t, compact: _keyboardUp),
                         ),
                       ),
                     ),

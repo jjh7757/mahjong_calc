@@ -7,6 +7,8 @@
 - 두 묶음: A = 고른 패로 방총한 국(dealt_on_choice), B = 안 쏘였고 그 버림들 중 2샹텐 이상인 차례가 있는 국.
 - random.Random(20261122) 로 각 묶음을 섞어, 판이 겹치지 않게 본 판 A 2 · B 2, 이어서 안 본 판 A 2 · B 2.
 - 사실표는 tool/tenhou6_agent_facts.dart 로. 파일 이름은 익명(ds1..ds4 본 판, du1..du4 안 본 판), 판 ID 는 picked.json 에만.
+  덧붙인 묶음(같은 씨 · 같은 규칙의 다음 차례, 앞 묶음은 그대로): dv · dw(안 본 판 2 · 3), dx(안 본 판 4 — 앱 질문 창 3단계).
+  후보가 모자라면 사실표 · picked.json 을 쓰기 전에 멈춘다.
 검증 40판(개발 판)만 쓴다 — 로그는 mxfit/split.log_path 로 연다.
 """
 import json
@@ -38,19 +40,23 @@ def main():
     used, picked = set(), []
     ia = ib = 0
     # dv = a4 재기용, dw = a5 재기용 새 안 본 판(11-22 덧붙임, 같은 씨 · 같은 규칙에서 다음 차례 국들 — 앞의 것은 그대로).
-    for label in ('ds', 'du', 'dv', 'dw'):
+    # dx = 앱 질문 창 3단계 A 묶음용 새 안 본 판(11-22 덧붙임, 설계서 docs/paifu_review_agent_app_design_1122.md 6절 — 앞의 것은 그대로).
+    sets = {'ds': 'seen', 'du': 'unseen', 'dv': 'unseen2', 'dw': 'unseen3', 'dx': 'unseen4'}
+    for label in sets:
         n = 0
         for pool, name in ((a, 'A'), (b, 'B')):
             got = 0
             idx = ia if name == 'A' else ib
             while got < 2:
+                if idx >= len(pool):
+                    sys.exit(f'{label} 묶음 {name} 후보가 모자람(남은 후보 없음, {name} {len(pool)}개 중 {got}개만 고름)')
                 c = pool[idx]
                 idx += 1
                 if c['game'] in used:
                     continue
                 used.add(c['game'])
                 n += 1
-                picked.append(dict(c, id=f'{label}{n}', group=name, set={'ds': 'seen', 'du': 'unseen', 'dv': 'unseen2', 'dw': 'unseen3'}[label]))
+                picked.append(dict(c, id=f'{label}{n}', group=name, set=sets[label]))
                 got += 1
             if name == 'A':
                 ia = idx
