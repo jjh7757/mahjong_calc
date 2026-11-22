@@ -80,4 +80,37 @@ void main() {
       expect(mism, isEmpty, reason: report);
     });
   }
+
+  // 입력 가림(0단계, 설계서 docs/paifu_fill_scores_tsumogiri_design_1122.md 3절): --mask-tsumogiri 의 kyokuToPaifu.
+  test('maskTsumogiri: hero · 리치 선언 뒤 버림은 그대로, 그 밖 남의 버림은 null', () {
+    var checked = 0, nulled = 0, kept = 0;
+    for (final id in games) {
+      final ex = toTenhou6(_load(id));
+      final log = (ex.json['log'] as List).first as List;
+      for (var hero = 0; hero < 4; hero++) {
+        final a = feat.kyokuToPaifu(log, hero, id: id);
+        final b = feat.kyokuToPaifu(log, hero, id: id, maskTsumogiri: true);
+        expect(b.events.length, a.events.length);
+        final declared = [false, false, false, false];
+        for (var i = 0; i < a.events.length; i++) {
+          final x = a.events[i], y = b.events[i];
+          expect(jsonEncode({...y.toJson(), 'tsumogiri': null}), jsonEncode({...x.toJson(), 'tsumogiri': null}));
+          if (x.type != PaifuEventType.discard) continue;
+          checked++;
+          if (x.seat == hero || declared[x.seat]) {
+            expect(y.tsumogiri, x.tsumogiri);
+            if (x.seat != hero) kept++;
+          } else {
+            expect(y.tsumogiri, isNull);
+            nulled++;
+          }
+          if (x.riichi) declared[x.seat] = true;
+        }
+      }
+    }
+    expect(nulled, greaterThan(0));
+    expect(kept, greaterThan(0));
+    // ignore: avoid_print
+    print('maskTsumogiri: 버림 $checked · null $nulled · 리치 뒤 그대로 $kept');
+  });
 }

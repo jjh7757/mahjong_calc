@@ -89,15 +89,18 @@ class _Discard extends _Step {
   _Discard(this.tile, {required this.riichi, required this.tsumogiri});
 }
 
-Tenhou6Export toTenhou6(Paifu p, {UnknownDiscard unknownAs = UnknownDiscard.tedashi, List<int>? scores, int seed = 0}) =>
-    _Exporter(p, unknownAs, scores, seed).run();
+/// 국 시작 점수는 [scores](우리 자리 순) → 패보 `start_scores` → 네 자리 25000 순, 공탁은 [kyotaku] → 패보 `kyotaku` → 0 순으로 쓴다.
+Tenhou6Export toTenhou6(Paifu p,
+        {UnknownDiscard unknownAs = UnknownDiscard.tedashi, List<int>? scores, int? kyotaku, int seed = 0}) =>
+    _Exporter(p, unknownAs, scores, kyotaku, seed).run();
 
 class _Exporter {
   final Paifu p;
   final UnknownDiscard unknownAs;
   final List<int>? scores;
+  final int? kyotaku;
   final int seed;
-  _Exporter(this.p, this.unknownAs, this.scores, this.seed);
+  _Exporter(this.p, this.unknownAs, this.scores, this.kyotaku, this.seed);
 
   final steps = [for (var s = 0; s < 4; s++) <_Step>[]];
 
@@ -118,6 +121,13 @@ class _Exporter {
     int ts(int s) => (s - p.dealer + kyoku % 4) % 4;
     final heroIndex = ts(hero);
     if (scores != null && scores!.length != 4) fail('scores 는 4개여야 함: ${scores!.length}개');
+    // 점수 · 공탁의 출처: 인자 → 패보 → 기본값.
+    final scoreSrc = scores != null ? 'arg' : (p.startScores != null ? 'paifu' : null);
+    final sc = scores ?? p.startScores ?? const [25000, 25000, 25000, 25000];
+    if (scoreSrc == 'paifu' && sc.length != 4) fail('패보 start_scores 는 4개여야 함: ${sc.length}개');
+    final stickSrc = kyotaku != null ? 'arg' : (p.kyotaku != null ? 'paifu' : null);
+    final sticks = kyotaku ?? p.kyotaku ?? 0;
+    if (sticks < 0) fail('공탁이 음수: $sticks');
 
     // ── 사건을 앞에서부터: 자리별 걸음 쌓기 · hero 손패 검사 ──
     final afterCall = [false, false, false, false];
@@ -460,7 +470,6 @@ class _Exporter {
       }
     }
 
-    final sc = scores ?? const [25000, 25000, 25000, 25000];
     final scoresT = List<int>.filled(4, 0);
     for (var s = 0; s < 4; s++) {
       scoresT[ts(s)] = sc[s];
@@ -470,7 +479,7 @@ class _Exporter {
         : ['和了', [0, 0, 0, 0], [ts(winner), ts(loser!), ts(winner), '']];
 
     final log = <Object>[
-      [kyoku, p.honba, 0],
+      [kyoku, p.honba, sticks],
       scoresT,
       p.doraIndicators.map(tenhouTileNumber).toList(),
       p.uraIndicators.map(tenhouTileNumber).toList(),
@@ -500,10 +509,19 @@ class _Exporter {
 
     // ── assumptions(B-2 의 번호 순) ──
     String seats(List<int> v) => v.join(', ');
+    final stickNote = switch (stickSrc) {
+      'arg' => '공탁 $sticks(인자)',
+      'paifu' => '공탁 $sticks(패보 kyotaku)',
+      _ => '공탁 0',
+    };
     final as = <String>[
-      scores == null
-          ? '1. 점수: 인자로 안 줘서 네 자리 25000, 공탁 0'
-          : '1. 점수: 인자 [${seats(scores!)}](우리 자리 순) → 천봉 자리 순 [${seats(scoresT)}], 공탁 0',
+      switch (scoreSrc) {
+        // 둘 다 없을 때의 글은 예전 그대로.
+        null when stickSrc == null => '1. 점수: 인자로 안 줘서 네 자리 25000, 공탁 0',
+        null => '1. 점수: 인자 · 패보 start_scores 가 없어 네 자리 25000, $stickNote',
+        'arg' => '1. 점수: 인자 [${seats(sc)}](우리 자리 순) → 천봉 자리 순 [${seats(scoresT)}], $stickNote',
+        _ => '1. 점수: 패보 start_scores [${seats(sc)}](우리 자리 순) → 천봉 자리 순 [${seats(scoresT)}], $stickNote',
+      },
       p.startHand != null && heroKnownFrom == 0
           ? '2. hero 배패: start_hand 그대로(앞 순 지어 채움 없음)'
           : '2. hero 배패: hero 손패가 처음 적힌 것은 $heroKnownFrom번째 뽑기 — 그 앞 $heroAssumedTurns 차례는 쯔모기리로 봄(뽑은 패 = 버린 패, 버림 60), 배패 = 그 첫 손패',

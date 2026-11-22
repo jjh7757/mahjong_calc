@@ -25,6 +25,12 @@
 /// - `"frames"`: `{"dir", "box": [xmin, ymin, xmax, ymax](0~1000), "side", "start_ms", "end_ms"}` — 태블릿에 받아 둔 헤드 녹화와
 ///   hero 손패 구역. 거치 화면이 녹화를 받아 저장하던 판에만 있다.
 /// - `"hand_source"`(손패를 채운 방법, 예 `"claude_api"`)와 `"restore"`(차례별 복원 메모 — 답 · 확신 · 규칙 차례 표시).
+///
+/// 선택 칸(2026-11-22, 국 시작 점수 · 공탁 `docs/paifu_fill_scores_tsumogiri_design_1122.md` 4절 — 없어도 같은 버전 1):
+/// - `"start_scores"`: [4] 자리 순 국 시작 점수(이 국에서 리치봉을 내기 전). `"kyotaku"`: 국 시작 때 걸려 있던 리치봉 수
+///   (앞 국에서 넘어온 것). 둘 다 없으면 모름(옛 파일 · 점수판 없이 적은 판).
+/// - `"frames"` 의 `"boxes"`: `{"bottom" | "right" | "top" | "left": [xmin, ymin, xmax, ymax](0~1000)}` — 저장 때 격자의 네 자리 구역
+///   (B4, 설계서 5절). `box` · `side` 는 그대로 화료자 자리. 없으면 옛 패보.
 /// hero 의 사건은 그때의 손패 줄(`hand`)을 싣는다. null 이면 "그때 손패를 모름"(녹화 전 등)이다.
 library;
 
@@ -162,24 +168,40 @@ class PaifuFrames {
   final String side;
   final int? startMs, endMs;
 
-  const PaifuFrames({required this.dir, required this.box, required this.side, this.startMs, this.endMs});
+  /// 네 자리 구역(쪽 이름 → [xmin, ymin, xmax, ymax], [box] 와 같은 좌표). 이 칸이 생기기 전 패보면 null.
+  final Map<String, List<int>>? boxes;
+
+  const PaifuFrames({required this.dir, required this.box, required this.side, this.startMs, this.endMs, this.boxes});
 
   static const sides = ['bottom', 'right', 'top', 'left'];
 
-  /// 꼴이 틀리면(옛 촬영 기록의 `"frames": 장수` 등) null.
-  static PaifuFrames? fromJson(Object? j) {
-    if (j is! Map) return null;
-    final dir = j['dir'], box = j['box'], side = j['side'];
-    if (dir is! String || dir.isEmpty || box is! List || box.length != 4 || side is! String || !sides.contains(side)) return null;
-    if (box.any((v) => v is! num)) return null;
+  /// 상자 하나: 숫자 넷, 0~1000 으로 자르고, 넓이가 있어야 한다. 아니면 null.
+  static List<int>? _box(Object? box) {
+    if (box is! List || box.length != 4 || box.any((v) => v is! num)) return null;
     final b = [for (final v in box) (v as num).round().clamp(0, 1000)];
     if (b[0] >= b[2] || b[1] >= b[3]) return null;
+    return b;
+  }
+
+  /// 꼴이 틀리면(옛 촬영 기록의 `"frames": 장수` 등) null. `boxes` 는 꼴이 맞는 쪽만 남기고, 하나도 없으면 null.
+  static PaifuFrames? fromJson(Object? j) {
+    if (j is! Map) return null;
+    final dir = j['dir'], side = j['side'];
+    final b = _box(j['box']);
+    if (dir is! String || dir.isEmpty || b == null || side is! String || !sides.contains(side)) return null;
+    final raw = j['boxes'];
+    final boxes = raw is Map
+        ? {
+            for (final s in sides) s: ?_box(raw[s]),
+          }
+        : null;
     return PaifuFrames(
       dir: dir,
       box: b,
       side: side,
       startMs: (j['start_ms'] as num?)?.toInt(),
       endMs: (j['end_ms'] as num?)?.toInt(),
+      boxes: boxes == null || boxes.isEmpty ? null : boxes,
     );
   }
 
@@ -189,6 +211,10 @@ class PaifuFrames {
         'side': side,
         if (startMs != null) 'start_ms': startMs,
         if (endMs != null) 'end_ms': endMs,
+        if (boxes != null)
+          'boxes': {
+            for (final s in sides) s: ?boxes![s],
+          },
       };
 }
 
@@ -343,6 +369,12 @@ class Paifu {
   /// 손패 복원의 차례별 메모(JSON 그대로).
   final List<Map<String, dynamic>>? restore;
 
+  /// 국 시작 점수(자리 순 4개, 이 국의 리치봉을 내기 전). 모르면 null.
+  final List<int>? startScores;
+
+  /// 국 시작 때 걸려 있던 리치봉 수(앞 국에서 넘어온 공탁). 모르면 null.
+  final int? kyotaku;
+
   Paifu({
     required this.id,
     this.title = '',
@@ -360,15 +392,19 @@ class Paifu {
     this.frames,
     this.handSource,
     this.restore,
+    this.startScores,
+    this.kyotaku,
   });
 
-  /// 몇 칸만 바꾼 사본.
+  /// 몇 칸만 바꾼 사본. 주지 않은 칸(국 시작 점수 · 공탁 포함)은 그대로 둔다.
   Paifu copyWith({
     List<PaifuTile>? startHand,
     List<PaifuEvent>? events,
     PaifuFrames? frames,
     String? handSource,
     List<Map<String, dynamic>>? restore,
+    List<int>? startScores,
+    int? kyotaku,
   }) =>
       Paifu(
         id: id,
@@ -387,6 +423,8 @@ class Paifu {
         frames: frames ?? this.frames,
         handSource: handSource ?? this.handSource,
         restore: restore ?? this.restore,
+        startScores: startScores ?? this.startScores,
+        kyotaku: kyotaku ?? this.kyotaku,
       );
 
   factory Paifu.fromJson(Map<String, dynamic> j) {
@@ -417,6 +455,9 @@ class Paifu {
                 if (m is Map) m.cast<String, dynamic>(),
             ]
           : null,
+      // 장수 · 100의 배수는 읽을 때 거르지 않고 [check] 가 적는다.
+      startScores: j['start_scores'] is List ? [for (final v in j['start_scores'] as List) (v as num).toInt()] : null,
+      kyotaku: (j['kyotaku'] as num?)?.toInt(),
     );
   }
 
@@ -429,6 +470,8 @@ class Paifu {
         'dealer': dealer,
         'hero': hero,
         'names': names,
+        if (startScores != null) 'start_scores': startScores,
+        if (kyotaku != null) 'kyotaku': kyotaku,
         'dora_indicators': [for (final t in doraIndicators) t.code],
         'ura_indicators': [for (final t in uraIndicators) t.code],
         'note': note,
@@ -611,6 +654,18 @@ class Paifu {
         if (e.riichi) declared = true;
       }
     }
+
+    // 4) 국 시작 점수 · 공탁(있을 때만). 합계는 시작 점수 설정을 몰라 보지 않는다.
+    final sc = startScores;
+    if (sc != null) {
+      if (sc.length != 4) {
+        problems.add('국 시작 점수가 ${sc.length}개(4개여야 함)');
+      } else if (sc.any((v) => v % 100 != 0)) {
+        problems.add('국 시작 점수가 100의 배수가 아님: [${sc.join(', ')}]');
+      }
+    }
+    final k = kyotaku;
+    if (k != null && k < 0) problems.add('공탁이 음수: $k');
     return problems;
   }
 

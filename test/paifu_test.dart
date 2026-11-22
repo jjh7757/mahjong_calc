@@ -160,6 +160,119 @@ void main() {
     });
   });
 
+  group('국 시작 점수 · 공탁(start_scores · kyotaku)', () {
+    test('없으면 null, 다시 쓸 때 열쇠를 더하지 않는다', () {
+      final p = Paifu.fromJson(_small());
+      expect(p.startScores, isNull);
+      expect(p.kyotaku, isNull);
+      final j = p.toJson();
+      expect(j.containsKey('start_scores'), isFalse);
+      expect(j.containsKey('kyotaku'), isFalse);
+      // 이 칸이 생기기 전과 같은 꼴: 다시 쓴 JSON 의 열쇠 = 옛 열쇠(+ 늘 쓰는 note).
+      expect(j.keys.toSet(), {..._small().keys, 'note'});
+    });
+
+    test('있으면 JSON 왕복에서 그대로', () {
+      final j = _small()
+        ..['start_scores'] = [26000, 24000, 25300, 23700]
+        ..['kyotaku'] = 1;
+      final p = Paifu.fromJson(j);
+      expect(p.startScores, [26000, 24000, 25300, 23700]);
+      expect(p.kyotaku, 1);
+      final out = jsonDecode(jsonEncode(p.toJson())) as Map<String, dynamic>;
+      expect(out['start_scores'], [26000, 24000, 25300, 23700]);
+      expect(out['kyotaku'], 1);
+      final q = Paifu.fromJson(out);
+      expect(jsonEncode(q.toJson()), jsonEncode(p.toJson()));
+      expect(p.check(), isEmpty);
+      // 공탁 0 도 "모름" 과 달리 적힌다.
+      final z = Paifu.fromJson(_small()..['kyotaku'] = 0);
+      expect(z.toJson()['kyotaku'], 0);
+    });
+
+    test('copyWith 는 두 칸을 보존하고, 주면 바꾼다', () {
+      final p = Paifu.fromJson(_small()
+        ..['start_scores'] = [25000, 25000, 25000, 25000]
+        ..['kyotaku'] = 2);
+      final c = p.copyWith(handSource: 'x', events: p.events, frames: const PaifuFrames(dir: 'd', box: [0, 0, 10, 10], side: 'bottom'));
+      expect(c.startScores, [25000, 25000, 25000, 25000]);
+      expect(c.kyotaku, 2);
+      final d = p.copyWith(startScores: [30000, 20000, 25000, 25000], kyotaku: 0);
+      expect(d.startScores, [30000, 20000, 25000, 25000]);
+      expect(d.kyotaku, 0);
+    });
+
+    test('check: 4개 · 100의 배수 · 공탁 0 이상', () {
+      List<String> check(Object? sc, Object? k) => Paifu.fromJson(_small()
+            ..['start_scores'] = sc
+            ..['kyotaku'] = k)
+          .check();
+      expect(check([25000, 25000, 25000, 25000], 0), isEmpty);
+      expect(check([-1200, 41200, 30000, 30000], 0), isEmpty, reason: '음수 점수(토비 직전)도 100의 배수면 됨');
+      expect(check([25000, 25000, 25000], 0).single, contains('3개'));
+      expect(check([25000, 25050, 25000, 24950], 0).single, contains('100의 배수'));
+      expect(check([25000, 25000, 25000, 25000], -1).single, contains('공탁이 음수'));
+      expect(check(null, null), isEmpty);
+    });
+  });
+
+  group('녹화 칸 frames 의 네 자리 구역(boxes)', () {
+    Map<String, dynamic> frames({Object? boxes}) => {
+          'dir': '/rec/a',
+          'box': [0, 713, 1000, 1000],
+          'side': 'bottom',
+          'start_ms': 1000,
+          'end_ms': 2000,
+          'boxes': ?boxes,
+        };
+
+    test('없으면 null, 다시 써도 열쇠가 생기지 않는다(옛 꼴)', () {
+      final p = Paifu.fromJson(_small()..['frames'] = frames());
+      expect(p.frames, isNotNull);
+      expect(p.frames!.boxes, isNull);
+      final out = p.toJson()['frames'] as Map<String, dynamic>;
+      expect(out.containsKey('boxes'), isFalse);
+      expect(out, frames());
+    });
+
+    test('있으면 JSON 왕복에서 그대로(쪽 순서 bottom · right · top · left)', () {
+      final boxes = {
+        'left': [0, 173, 280, 1000],
+        'bottom': [280, 713, 1000, 1000],
+        'top': [0, 0, 745, 173],
+        'right': [745, 0, 1000, 713],
+      };
+      final p = Paifu.fromJson(_small()..['frames'] = frames(boxes: boxes));
+      expect(p.frames!.boxes, boxes);
+      expect(p.frames!.box, [0, 713, 1000, 1000], reason: '화료자 구역은 그대로');
+      expect(p.frames!.side, 'bottom');
+      final j = jsonDecode(jsonEncode(p.toJson())) as Map<String, dynamic>;
+      final fb = (j['frames'] as Map)['boxes'] as Map;
+      expect(fb.keys.toList(), ['bottom', 'right', 'top', 'left']);
+      expect(fb, boxes);
+      expect(jsonEncode(Paifu.fromJson(j).toJson()), jsonEncode(p.toJson()));
+      // copyWith(손패 복원 저장 길)도 frames 를 그대로 넘긴다.
+      expect(p.copyWith(handSource: 'x').frames!.boxes, boxes);
+    });
+
+    test('꼴이 틀린 쪽은 빼고, 하나도 안 남으면 null', () {
+      final p = Paifu.fromJson(_small()
+        ..['frames'] = frames(boxes: {
+          'bottom': [280, 713, 1000, 1000],
+          'right': [745, 0, 745, 713], // 넓이 없음
+          'top': 'x',
+          'middle': [0, 0, 10, 10], // 모르는 쪽
+          'left': [-5, 173, 280, 1200], // 0~1000 으로 자름
+        }));
+      expect(p.frames!.boxes, {
+        'bottom': [280, 713, 1000, 1000],
+        'left': [0, 173, 280, 1000],
+      });
+      expect(Paifu.fromJson(_small()..['frames'] = frames(boxes: {'top': 'x'})).frames!.boxes, isNull);
+      expect(Paifu.fromJson(_small()..['frames'] = frames(boxes: 3)).frames!.boxes, isNull);
+    });
+  });
+
   group('패보 예시 파일', () {
     final dir = Directory('assets/paifu');
     final files = dir.existsSync()
@@ -202,6 +315,11 @@ void main() {
       test('${f.uri.pathSegments.last}: 읽히고 앞뒤가 맞는다', () {
         final p = Paifu.fromJson(jsonDecode(f.readAsStringSync()) as Map<String, dynamic>);
         expect(p.check(), isEmpty);
+        // 예시는 국 시작 점수 · 공탁을 모른다(11-14 점수 기록 없음) — 다시 써도 열쇠가 생기지 않는다.
+        expect(p.startScores, isNull);
+        expect(p.kyotaku, isNull);
+        expect(p.toJson().keys.where((k) => k == 'start_scores' || k == 'kyotaku'), isEmpty);
+        expect(p.frames?.boxes, isNull);
         expect(p.states.last.finished, p.result != null);
         final r = p.result;
         if (r != null && r.winner == p.hero && r.hand != null && p.hasHeroHands) {

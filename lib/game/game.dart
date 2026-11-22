@@ -397,6 +397,18 @@ class Game {
     _advance(dealerKeeps: dealerKeeps, incrementHonba: incrementHonba);
   }
 
+  /// 이 국 시작 때의 점수(자리 순)와 공탁(리치봉 수). 패보 `start_scores` · `kyotaku`(설계서 `docs/paifu_fill_scores_tsumogiri_design_1122.md` 4절).
+  ///
+  /// 국 중 바뀌는 것은 리치뿐이다: [declareRiichi] 가 1000점을 빼고 봉을 하나 더하고 [riichiSeats] 에 넣으며, 국이 끝나면
+  /// [_advance] 가 [riichiSeats] 를 비우고 봉(유국이면 넘어온 공탁)은 남긴다. 그래서 국 시작 점수 = 지금 점수 + (이 국 리치면 1000),
+  /// 국 시작 공탁 = 지금 봉 − 이 국 리치 수. 화료 사진에서 읽어 "대국에 반영" 때 넣는 리치(아직 안 넣은 것)는 식에 안 들어가도 맞다.
+  /// 국 중 기록 정정([correct])으로 봉을 이 국 리치 수보다 적게 고쳐 공탁이 음수로 나오면 모르는 것으로 보고 null.
+  ({List<int> scores, int kyotaku})? get handStart {
+    final k = riichiSticks - riichiSeats.length;
+    if (k < 0) return null;
+    return (scores: [for (var s = 0; s < 4; s++) scores[s] + (riichiSeats.contains(s) ? 1000 : 0)], kyotaku: k);
+  }
+
   // ---------- 사건 ----------
 
   /// [fromPhoto] 면 점수판에서 누른 게 아니라 화료 사진에서 읽어 자동으로 넣은 리치다.

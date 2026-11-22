@@ -6,6 +6,8 @@
 쓰기: python -X utf8 run_features.py --stage0 --procs 12 --dill <dill> --out-dir <features 폴더> --timing <timing.json>
       python -X utf8 run_features.py --dev --gzip ...   # 1단계: 개발 200판, 판마다 끝나면 <판>.jsonl.gz 로 압축(원본 지움)
       python -X utf8 run_features.py --test200 --gzip ...   # 2단계: 시험 200판(split.test200_path 로만 연다)
+      python -X utf8 run_features.py --dev --gzip --mask-tsumogiri ...   # 입력 가림(0단계, 설계서
+                     docs/paifu_fill_scores_tsumogiri_design_1122.md 3절): dart 에 --mask-tsumogiri 를 넘김
 """
 from __future__ import annotations
 
@@ -33,11 +35,13 @@ if not Path(DART).exists():
     DART = shutil.which('dart.exe') or 'dart'
 
 
-def run_one(game: str, dill: str, out_dir: Path, gz: bool = False, path_fn=split.log_path) -> dict:
+def run_one(game: str, dill: str, out_dir: Path, gz: bool = False, path_fn=split.log_path,
+            mask_tsumogiri: bool = False) -> dict:
     src = path_fn(game)
     out = out_dir / f'{game}.jsonl'
     t0 = time.perf_counter()
-    p = subprocess.Popen([DART, dill, str(src), '--out', str(out)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    cmd = [DART, dill, str(src), '--out', str(out)] + (['--mask-tsumogiri'] if mask_tsumogiri else [])
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     ps = psutil.Process(p.pid)
     seen: dict[int, float] = {}  # pid → 마지막으로 읽은 CPU 초. dart.exe 는 VM 을 자식 프로세스로 띄우므로 자식까지 센다.
     while p.poll() is None:
@@ -78,7 +82,11 @@ def main():
     ap.add_argument('--dill', required=True)
     ap.add_argument('--out-dir', required=True)
     ap.add_argument('--timing')
+    ap.add_argument('--mask-tsumogiri', action='store_true',
+                    help='남의 쯔모기리 가림(리치 선언 뒤 버림만 남김) — tool/tenhou6_features.dart --mask-tsumogiri')
     a = ap.parse_args()
+    if a.mask_tsumogiri and a.test200:
+        raise SystemExit('--mask-tsumogiri 는 개발 판에만(0단계 설계서: 시험 판은 열지 않음)')
     path_fn = split.log_path
     if a.test200:
         games, path_fn = split.test200_games(), split.test200_path
@@ -88,7 +96,7 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     t0 = time.perf_counter()
     with ThreadPoolExecutor(a.procs) as ex:
-        res = list(ex.map(lambda g: run_one(g, a.dill, out_dir, a.gzip, path_fn), games))
+        res = list(ex.map(lambda g: run_one(g, a.dill, out_dir, a.gzip, path_fn, a.mask_tsumogiri), games))
     wall = time.perf_counter() - t0
     ks = [x for r in res if r['summary'] for x in r['summary']['kyokuSeatSecs']]
     ks_sorted = sorted(ks)
@@ -102,6 +110,8 @@ def main():
                             'max': max(ks) if ks else None, 'sum': sum(ks)},
               'failed': [{'game': r['game'], 'rc': r['rc'], 'stderr': r['stderr']} for r in res if r['rc'] != 0],
               'cpuCount': os.cpu_count()}
+    if a.mask_tsumogiri:
+        timing['maskTsumogiri'] = True
     print(json.dumps({k: v for k, v in timing.items() if k not in ('gameWall', 'gameCpu')}, ensure_ascii=False, indent=1))
     if a.timing:
         Path(a.timing).write_text(json.dumps(timing, ensure_ascii=False, indent=1), encoding='utf-8')

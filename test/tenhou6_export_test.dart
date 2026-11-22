@@ -403,7 +403,7 @@ void _checkAgainstPaifu(Paifu p, Tenhou6Export out, _Sim sim, UnknownDiscard pol
   int ts(int s) => ((s - p.dealer + kyoku % 4) % 4 + 4) % 4;
   expect(sim.kyoku, kyoku);
   expect(sim.honba, p.honba);
-  expect(sim.kyotaku, 0);
+  expect(sim.kyotaku, p.kyotaku ?? 0);
   expect(out.heroIndex, ts(p.hero));
 
   for (var s = 0; s < 4; s++) {
@@ -670,6 +670,75 @@ void main() {
       expect((log[5 + 3] as List).last, 13);
       expect((log[5 + 3] as List).length, (log[6 + 3] as List).length + 1);
       expect(sim.hand[1]..sort(), [for (final c in [..._handE, '3m']) _tn(PaifuTile.parse(c))]..sort());
+    });
+  });
+
+  group('국 시작 점수 · 공탁(인자 → 패보 → 기본값)', () {
+    // D: 남2국 · 친 = 자리 3 → 우리 자리 s 는 천봉 자리 (s + 2) % 4.
+    Map<String, dynamic> withStart() => _gameD()
+      ..['start_scores'] = [10000, 20000, 30000, 40000]
+      ..['kyotaku'] = 2;
+
+    test('패보에 값이 있으면 그것을 쓴다', () {
+      final p = _p(withStart());
+      final out = toTenhou6(p);
+      final sim = _Sim.run(out.json);
+      _checkAgainstPaifu(p, out, sim, UnknownDiscard.tedashi);
+      expect(sim.scores, [30000, 40000, 10000, 20000]);
+      expect(sim.kyotaku, 2);
+      expect(((out.json['log'] as List).first as List).first, [5, 2, 2]);
+      expect(out.assumptions.first,
+          '1. 점수: 패보 start_scores [10000, 20000, 30000, 40000](우리 자리 순) → 천봉 자리 순 [30000, 40000, 10000, 20000], 공탁 2(패보 kyotaku)');
+    });
+
+    test('인자가 패보보다 먼저', () {
+      final out = toTenhou6(_p(withStart()), scores: [25000, 25000, 20000, 30000], kyotaku: 0);
+      final sim = _Sim.run(out.json);
+      expect(sim.scores, [20000, 30000, 25000, 25000]);
+      expect(sim.kyotaku, 0);
+      expect(out.assumptions.first,
+          '1. 점수: 인자 [25000, 25000, 20000, 30000](우리 자리 순) → 천봉 자리 순 [20000, 30000, 25000, 25000], 공탁 0(인자)');
+      // 점수만 인자로: 공탁은 패보 것.
+      final o2 = toTenhou6(_p(withStart()), scores: [25000, 25000, 20000, 30000]);
+      expect(_Sim.run(o2.json).kyotaku, 2);
+      expect(o2.assumptions.first, endsWith('공탁 2(패보 kyotaku)'));
+      // 공탁만 인자로: 점수는 패보 것.
+      final o3 = toTenhou6(_p(withStart()), kyotaku: 5);
+      final s3 = _Sim.run(o3.json);
+      expect(s3.scores, [30000, 40000, 10000, 20000]);
+      expect(s3.kyotaku, 5);
+      expect(o3.assumptions.first, startsWith('1. 점수: 패보 start_scores'));
+      expect(o3.assumptions.first, endsWith('공탁 5(인자)'));
+    });
+
+    test('패보 · 인자 모두 없으면 예전과 같다(25000 · 공탁 0 · 같은 가정 글)', () {
+      final out = toTenhou6(_p(_gameD()));
+      final sim = _Sim.run(out.json);
+      expect(sim.scores, [25000, 25000, 25000, 25000]);
+      expect(sim.kyotaku, 0);
+      expect(out.assumptions.first, '1. 점수: 인자로 안 줘서 네 자리 25000, 공탁 0');
+      // 점수 인자만(예전 쓰임새): 가정 글 끝도 예전처럼 "공탁 0".
+      final o2 = toTenhou6(_p(_gameD()), scores: [10000, 20000, 30000, 40000]);
+      expect(o2.assumptions.first, '1. 점수: 인자 [10000, 20000, 30000, 40000](우리 자리 순) → 천봉 자리 순 [30000, 40000, 10000, 20000], 공탁 0');
+      // 패보에 값을 적었다가 지운 꼴과 바이트까지 같다.
+      final again = Paifu.fromJson(jsonDecode(jsonEncode(_p(withStart()).toJson()..remove('start_scores')..remove('kyotaku'))) as Map<String, dynamic>);
+      expect(jsonEncode(toTenhou6(again).json), jsonEncode(out.json));
+      expect(toTenhou6(again).assumptions, out.assumptions);
+    });
+
+    test('공탁만 패보에 있으면 점수는 25000', () {
+      final out = toTenhou6(_p(_gameD()..['kyotaku'] = 1));
+      final sim = _Sim.run(out.json);
+      expect(sim.scores, [25000, 25000, 25000, 25000]);
+      expect(sim.kyotaku, 1);
+      expect(out.assumptions.first, '1. 점수: 인자 · 패보 start_scores 가 없어 네 자리 25000, 공탁 1(패보 kyotaku)');
+    });
+
+    test('잘못된 값은 거절', () {
+      Matcher err(String part) => throwsA(isA<Tenhou6ExportError>().having((e) => e.message, 'message', contains(part)));
+      expect(() => toTenhou6(_p(_gameD()..['start_scores'] = [25000, 25000, 25000])), err('start_scores 는 4개'));
+      expect(() => toTenhou6(_p(_gameD()), kyotaku: -1), err('공탁이 음수'));
+      expect(() => toTenhou6(_p(_gameD()..['kyotaku'] = -2)), err('공탁이 음수'));
     });
   });
 

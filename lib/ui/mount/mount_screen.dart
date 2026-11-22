@@ -1356,6 +1356,18 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
   /// 손패는 화료자의 끝 손패만(판 중 손패는 안 적는다). 실패는 로그만 — 판독 흐름을 막지 않는다.
   Future<void> _savePaifu(Game g, TableMerge merge, String logDir, Uint8List photo) async {
     if (!_paifuRecord) return;
+    // [g] 에서 읽는 값은 모두 기다리기(아래 overlay 최대 10초) 전에 잡는다 — 그사이 "대국에 반영" 이 [g] 를 바꿀 수 있다(같은 객체).
+    final start = g.handStart;
+    final gameId = g.id;
+    final roundLabel = g.roundLabel;
+    final honba = g.honba;
+    final dealer = g.dealer;
+    final bottomSeat = g.settings.bottomSeat;
+    final names = List<String>.of(g.names);
+    // 판 열쇠도 같은 때: 반영 뒤 [_syncTrackerRound] 가 다음 국 열쇠로 바꾼다.
+    final roundKey = _trackRoundKey;
+    // 격자도 같은 때: 펠트 지켜보기가 카메라 이동을 보면 기다리는 사이에도 [_grid] 를 바꾼다(화료 사진을 자른 격자를 남긴다).
+    final grid = _grid;
     try {
       if (OnDeviceReader.supported && !_overlayBusy) {
         _overlayBusy = true;
@@ -1375,26 +1387,34 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
       final pull = _recPull;
       final pullDir = pull?.localDir;
       if (pull != null && pull.running && pull.save && pullDir != null) {
-        final heroSide = SeatMap(g.settings.bottomSeat).sideOf(merge.winner);
-        final z = _grid.seat(heroSide);
+        final heroSide = SeatMap(bottomSeat).sideOf(merge.winner);
+        List<int> boxOf(Side s) {
+          final z = grid.seat(s);
+          return [z.xmin, z.ymin, z.xmax, z.ymax];
+        }
+
         final ats = [for (final d in rec.timeline()) d.firstAt.millisecondsSinceEpoch];
         frames = PaifuFrames(
           dir: pullDir,
-          box: [z.xmin, z.ymin, z.xmax, z.ymax],
+          box: boxOf(heroSide),
           side: heroSide.name,
           startMs: ats.isEmpty ? null : ats.reduce((a, b) => a < b ? a : b) - 30000,
           endMs: DateTime.now().millisecondsSinceEpoch,
+          // 네 자리 구역(B4): 다음 녹화부터 자리 띠를 사람이 정하지 않으려는 재료.
+          boxes: {for (final s in Side.values) s.name: boxOf(s)},
         );
       }
       final paifu = rec.toPaifu(
-        id: _trackRoundKey ?? '${g.id}/${g.roundLabel}/${g.honba}',
-        bottomSeat: g.settings.bottomSeat,
-        dealerSeat: g.dealer,
+        id: roundKey ?? '$gameId/$roundLabel/$honba',
+        bottomSeat: bottomSeat,
+        dealerSeat: dealer,
         hero: merge.winner,
-        title: '${g.roundLabel}${g.honba > 0 ? ' ${g.honba}본장' : ''}',
-        round: g.roundLabel,
-        honba: g.honba,
-        names: g.names,
+        title: '$roundLabel${honba > 0 ? ' $honba본장' : ''}',
+        round: roundLabel,
+        honba: honba,
+        names: names,
+        startScores: start?.scores,
+        kyotaku: start?.kyotaku,
         doraIndicators: [for (final t in merge.situation.doraIndicators) PaifuTile(t)],
         uraIndicators: [for (final t in merge.situation.uraIndicators) PaifuTile(t)],
         note: '버림만 자동으로 적은 기록(실험). 손패는 화료자의 끝 손패만 있고, 한 장면에 여럿 버려진 패의 순서는 차례 규칙으로 맞춤.',
@@ -1430,7 +1450,7 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         ),
       );
       final saved = frames == null ? paifu : paifu.copyWith(frames: frames);
-      await PaifuStore.put(g.id, saved);
+      await PaifuStore.put(gameId, saved);
       debugPrint('[paifu] ${paifu.title} 버림 ${rec.count}장 장면 ${rec.frames} 검사 ${paifu.check()}');
       if (_logEnabled) {
         unawaited(CaptureLog.saveFile(

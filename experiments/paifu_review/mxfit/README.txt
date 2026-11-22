@@ -90,3 +90,34 @@ mxfit — Mortal-S42 버림을 mahjong-helper 틀로 맞추기 (설계서 docs/m
 
 에이전트 문제지(2026-11-22, 설계서 13절): 검증 40판 주 묶음에서 구간 8 × 30 = 240결정(씨 20261122) → batches/batch_01~12.md, 열쇠 · 자기 검사는 private/.
   python -X utf8 experiments/paifu_review/mxfit/agent_packets.py --out-dir experiments/paifu_review/results/mxfit/agent1
+
+입력 가림(0단계, 설계서 docs/paifu_fill_scores_tsumogiri_design_1122.md): 개발 200판에서 국 시작 점수 · 남의 쯔모기리를 지워 넣으면
+답이 얼마나 바뀌나. 기준은 1단계 결과(stage1/s42.jsonl · stage1/features)를 읽기만 하고 다시 돌리지 않는다.
+  s42_batch.py   --mask scores|tsumogiri|both(없으면 전과 같음). mask_events() = to_mjai 사건 목록 → 가린 새 목록(순수 함수).
+                 scores: start_kyoku scores 네 자리 25000 · kyotaku 0(본장 그대로). tsumogiri: hero 아닌 dahai 중 그 자리 리치
+                 선언패 뒤의 버림만 그대로, 그 밖(선언패 포함)은 tsumogiri False. --selftest = 자기 검사(엔진 없이).
+                 --mask 는 개발 판에만(--test200 과 같이 쓰면 멈춤).
+  run_features.py --mask-tsumogiri → tool/tenhou6_features.dart --mask-tsumogiri: 같은 규칙이되 가린 칸은 null(모름 → 엔진 기본
+                 UnknownTsumogiri.tedashi, 엔진 안에서는 false 와 같은 셈). 없으면 출력은 전과 같다(secs 칸 빼고).
+                 엔진(DiscardContext · RiskContext · Paifu)은 국 시작 점수 · 공탁을 입력으로 받지 않는다 — 엔진 쪽 점수 가림은 없다.
+  input_value.py 기준 × 가린 쪽을 (game, kyoku, seat, k) 로 맞붙여 S42 첫째 버림 바뀜 · Q 손해(나눔: 위협 riskSeats · 남 리치
+                 riichiSeats · 국 kyokuNum · 국 시작 순위) + 엔진 위험 단계 · 가장 안전한 패 묶음 · 실제 버린 패 단계 바뀜. 판 단위
+                 부트스트랩 2,000번 · 씨 20261122. 판정 줄은 내지 않는다.
+
+다시 돌리기(Git Bash, 저장소 뿌리에서). 값 뽑기와 S42 는 겹쳐 돌리지 않는다. 1단계 s42 404초 · 값 뽑기 2,737초(12 프로세스) 기준
+S42 가림 셋 약 20분, 값 뽑기 가림 약 46분.
+  export PATH=/c/Users/jjh7757/flutter/bin:$PATH
+  O=experiments/paifu_review/results/mxfit/inputvalue
+  S1=experiments/paifu_review/results/mxfit/stage1
+  M=experiments/paifu_review/mxfit
+  mkdir -p $O/bin $O/features_tsumogiri $O/logs
+  python -X utf8 $M/split.py --check
+  python -X utf8 $M/s42_batch.py --selftest
+  flutter analyze lib test tool
+  flutter test test/tenhou6_features_test.dart
+  for m in scores tsumogiri both; do python -X utf8 $M/s42_batch.py --dev --mask $m --procs 16 --threads 1 --out $O/s42_$m.jsonl --timing $O/logs/s42_$m.json; done
+  dart compile kernel tool/tenhou6_features.dart -o $O/bin/tenhou6_features.dill
+  python -X utf8 $M/run_features.py --dev --gzip --mask-tsumogiri --procs 12 --dill $O/bin/tenhou6_features.dill --out-dir $O/features_tsumogiri --timing $O/logs/features_tsumogiri.json
+  python -X utf8 $M/input_value.py --base-s42 $S1/s42.jsonl --masked scores=$O/s42_scores.jsonl tsumogiri=$O/s42_tsumogiri.jsonl both=$O/s42_both.jsonl --base-features $S1/features --masked-features $O/features_tsumogiri --out-md $O/input_value.md --out-json $O/input_value.json
+  (연습: 같은 명령을 --stage0 --first 2 · run_features --games <앞 2판> · input_value --games <앞 2판> 으로 $O/_smoke 에 — 가림 없이
+   돌린 2판이 stage1 의 같은 줄과 s42Discard 가 모두 같고 Q 차 1e-4 안, 값 뽑기는 secs 칸 빼고 같아야 한다.)

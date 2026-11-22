@@ -12,6 +12,9 @@ hero 리치 성립 뒤 버림은 결정이 없어 줄을 내지 않는다.
   python -X utf8 s42_batch.py --games id1,id2 ...
   python -X utf8 s42_batch.py --dev ...        # 1단계: 개발 200판 전체
   python -X utf8 s42_batch.py --test200 ...    # 2단계: 시험 200판(split.test200_path 로만 연다)
+  python -X utf8 s42_batch.py --dev --mask scores|tsumogiri|both ...   # 입력 가림(0단계, 설계서
+                                               # docs/paifu_fill_scores_tsumogiri_design_1122.md 3절) — mask_events()
+  python -X utf8 s42_batch.py --selftest       # mask_events() 자기 검사(엔진 없이, 개발 앞 2판의 to_mjai 도 씀)
 """
 from __future__ import annotations
 
@@ -51,12 +54,129 @@ def has_kan(log: list) -> bool:
     return False
 
 
+MASKS = ('scores', 'tsumogiri', 'both')
+
+
+def mask_events(events: list[dict], hero: int, mask: str | None) -> tuple[list[dict], int]:
+    """to_mjai 사건 목록 → 가린 새 목록 · 바뀐 사건 수. 입력 목록 · 사건은 고치지 않는다(바뀌는 사건만 복사).
+
+    - scores: start_kyoku 의 scores 를 네 자리 25000, kyotaku 를 0 으로(본장은 그대로). 바뀌면 1 로 센다.
+    - tsumogiri: hero 아닌 actor 의 dahai 중, 그 actor 가 reach 를 선언한 뒤의 버림(선언패 자체는 빼고 그 다음 버림부터)은
+      그대로, 그 밖은 tsumogiri = False(지금 변환의 기본 "손에서 냄"). hero 의 dahai 는 그대로. 값이 바뀐 dahai 수를 센다.
+    - both: 둘 다. None: 그대로(같은 목록의 얕은 복사, 0).
+    """
+    if mask is not None and mask not in MASKS:
+        raise ValueError(f'모르는 가림 {mask}')
+    do_scores = mask in ('scores', 'both')
+    do_tg = mask in ('tsumogiri', 'both')
+    out: list[dict] = []
+    changed = 0
+    declared = [False] * 4   # 그 자리가 reach 를 냈다(선언패 앞)
+    after = [False] * 4      # 선언패를 이미 냈다 → 그 뒤 버림은 그대로
+    for e in events:
+        typ = e.get('type')
+        if do_scores and typ == 'start_kyoku':
+            ne = dict(e)
+            ne['scores'] = [25000, 25000, 25000, 25000]
+            ne['kyotaku'] = 0
+            if ne['scores'] != list(e['scores']) or ne['kyotaku'] != e['kyotaku']:
+                changed += 1
+            out.append(ne)
+            continue
+        if typ == 'reach':
+            declared[e['actor']] = True
+        if typ == 'dahai':
+            a = e['actor']
+            keep = a == hero or after[a]
+            if declared[a] and not after[a]:
+                after[a] = True  # 이 dahai 가 선언패 — 가리고, 다음 버림부터 그대로
+            if do_tg and not keep:
+                if e.get('tsumogiri'):
+                    ne = dict(e)
+                    ne['tsumogiri'] = False
+                    out.append(ne)
+                    changed += 1
+                    continue
+        out.append(e)
+    return out, changed
+
+
+def _selftest() -> None:
+    """mask_events() 자기 검사. 엔진 없이 돈다."""
+    syn = [
+        {'type': 'start_game', 'names': ['A', 'B', 'C', 'D']},
+        {'type': 'start_kyoku', 'bakaze': 'E', 'dora_marker': '1m', 'kyoku': 1, 'honba': 2, 'kyotaku': 1, 'oya': 0,
+         'scores': [30000, 20000, 26000, 23000], 'tehais': [['?'] * 13] * 4},
+        {'type': 'tsumo', 'actor': 0, 'pai': '1m'}, {'type': 'dahai', 'actor': 0, 'pai': '1m', 'tsumogiri': True},
+        {'type': 'tsumo', 'actor': 1, 'pai': '?'}, {'type': 'dahai', 'actor': 1, 'pai': '2m', 'tsumogiri': True},
+        {'type': 'tsumo', 'actor': 2, 'pai': '?'}, {'type': 'reach', 'actor': 2},
+        {'type': 'dahai', 'actor': 2, 'pai': '3m', 'tsumogiri': True}, {'type': 'reach_accepted', 'actor': 2},
+        {'type': 'tsumo', 'actor': 3, 'pai': '?'}, {'type': 'dahai', 'actor': 3, 'pai': '4m', 'tsumogiri': False},
+        {'type': 'tsumo', 'actor': 0, 'pai': '5m'}, {'type': 'dahai', 'actor': 0, 'pai': '5m', 'tsumogiri': True},
+        {'type': 'tsumo', 'actor': 1, 'pai': '?'}, {'type': 'dahai', 'actor': 1, 'pai': '6m', 'tsumogiri': True},
+        {'type': 'tsumo', 'actor': 2, 'pai': '?'}, {'type': 'dahai', 'actor': 2, 'pai': '7m', 'tsumogiri': True},
+    ]
+    orig = json.dumps(syn)
+    same, n0 = mask_events(syn, 0, None)
+    assert same == syn and n0 == 0
+    s, ns = mask_events(syn, 0, 'scores')
+    assert s[1]['scores'] == [25000] * 4 and s[1]['kyotaku'] == 0 and s[1]['honba'] == 2 and ns == 1
+    assert [x for i, x in enumerate(s) if i != 1] == [x for i, x in enumerate(syn) if i != 1]
+    t, nt = mask_events(syn, 0, 'tsumogiri')
+    tg = [(x['actor'], x['pai'], x['tsumogiri']) for x in t if x['type'] == 'dahai']
+    # hero(0) 그대로 · 1 은 가림 · 2 의 선언패(3m)는 가림 · 2 의 리치 뒤(7m)는 그대로 · 3 은 원래 False
+    assert tg == [(0, '1m', True), (1, '2m', False), (2, '3m', False), (3, '4m', False), (0, '5m', True),
+                  (1, '6m', False), (2, '7m', True)], tg
+    assert nt == 3 and t[1] == syn[1]
+    b, nb = mask_events(syn, 0, 'both')
+    assert nb == 4 and b[1]['scores'] == [25000] * 4
+    assert json.dumps(syn) == orig, '입력 목록이 바뀜'
+    # 실제 판: 개발 앞 2판(split.dev_games()[:2])의 모든 국 · 자리
+    tot = {'kyokuSeats': 0, 'dahai': 0, 'tsumogiriChanged': 0, 'heroDahai': 0, 'afterReachKept': 0}
+    for g in split.dev_games()[:2]:
+        for log in json.loads(split.log_path(g).read_text(encoding='utf-8'))['log']:
+            if has_kan(log):
+                continue
+            for seat in range(4):
+                ev = to_mjai(log, seat)
+                assert mask_events(ev, seat, None)[0] == ev
+                mt, n = mask_events(ev, seat, 'tsumogiri')
+                assert len(mt) == len(ev)
+                diff = 0
+                reached, decl_done = [False] * 4, [False] * 4
+                for x, y in zip(ev, mt):
+                    if x['type'] == 'reach':
+                        reached[x['actor']] = True
+                    if x != y:
+                        diff += 1
+                        assert x['type'] == 'dahai' and x['actor'] != seat and x['tsumogiri'] and not y['tsumogiri']
+                        assert {k: v for k, v in x.items() if k != 'tsumogiri'} == {k: v for k, v in y.items() if k != 'tsumogiri'}
+                    if x['type'] == 'dahai':
+                        tot['dahai'] += 1
+                        if x['actor'] == seat:
+                            tot['heroDahai'] += 1
+                            assert x == y, 'hero dahai 가 바뀜'
+                        elif decl_done[x['actor']]:
+                            tot['afterReachKept'] += 1
+                            assert x == y, '리치 뒤 dahai 가 바뀜'
+                        if reached[x['actor']]:
+                            decl_done[x['actor']] = True
+                assert diff == n
+                tot['tsumogiriChanged'] += n
+                ms, n2 = mask_events(ev, seat, 'scores')
+                assert n2 in (0, 1) and sum(x != y for x, y in zip(ev, ms)) == n2
+                tot['kyokuSeats'] += 1
+    print('자기 검사 통과', json.dumps(tot, ensure_ascii=False))
+
+
 _ENGINE = None
 _LOAD_SECS = None
+_MASK = None
 
 
-def _init(threads: int):
-    global _ENGINE, _LOAD_SECS
+def _init(threads: int, mask: str | None = None):
+    global _ENGINE, _LOAD_SECS, _MASK
+    _MASK = mask
     import torch
     torch.set_num_threads(threads)
     sys.path.insert(0, str(MORTAL))
@@ -85,6 +205,9 @@ def run_kyoku_seat(game: str, ki: int, log: list, seat: int) -> tuple[list[dict]
     from inference import Session  # noqa: E402  (_init 이 MORTAL 을 경로에 넣음)
     t0 = time.perf_counter()
     events = to_mjai(log, seat)
+    masked = 0
+    if _MASK is not None:
+        events, masked = mask_events(events, seat, _MASK)
     s = Session(_ENGINE, seat)
     rows = []
     dec_secs = []
@@ -130,6 +253,8 @@ def run_kyoku_seat(game: str, ki: int, log: list, seat: int) -> tuple[list[dict]
             reach_seen = False
     info ={'game': game, 'kyoku': ki, 'seat': seat, 'secs': time.perf_counter() - t0,
             'decisions': len(dec_secs), 'decSecs': dec_secs, 'rows': len(rows)}
+    if _MASK is not None:
+        info['maskChanged'] = masked
     return rows, info
 
 
@@ -188,7 +313,14 @@ def main():
     ap.add_argument('--threads', type=int, default=16)
     ap.add_argument('--out')
     ap.add_argument('--timing')
+    ap.add_argument('--mask', choices=MASKS, help='입력 가림(없으면 지금과 같음) — mask_events() 참고')
+    ap.add_argument('--selftest', action='store_true', help='mask_events() 자기 검사만 하고 끝')
     a = ap.parse_args()
+    if a.selftest:
+        _selftest()
+        return
+    if a.mask and a.test200:
+        raise SystemExit('--mask 는 개발 판에만(0단계 설계서: 시험 판은 열지 않음)')
     if a.test200:
         games, which = split.test200_games(), 'test200'
     else:
@@ -204,11 +336,11 @@ def main():
     t0 = time.perf_counter()
     results = []
     if a.procs == 1:
-        _init(a.threads)
+        _init(a.threads, a.mask)
         results = [run_task(t) for t in tasks]
     else:
         # 국 단위로 잘게 나눠 chunksize 1 로 돌린다(판 단위면 판 수보다 많은 프로세스가 놀았음).
-        with ProcessPoolExecutor(a.procs, initializer=_init, initargs=(a.threads,)) as ex:
+        with ProcessPoolExecutor(a.procs, initializer=_init, initargs=(a.threads, a.mask)) as ex:
             results = list(ex.map(run_task, tasks, chunksize=1))
     wall = time.perf_counter() - t0
     results.sort(key=lambda r: (r['game'], r['kyoku']))
@@ -227,6 +359,9 @@ def main():
               'kyokus': sum(r['kyokus'] for r in results), 'kanSkipped': sum(r['kanSkipped'] for r in results),
               'errors': sum(len(r['errors']) for r in results),
               'errorList': [e for r in results for e in r['errors']]}
+    if a.mask:
+        timing['mask'] = a.mask
+        timing['maskChanged'] = sum(i.get('maskChanged', 0) for r in results for i in r['infos'])
     print(json.dumps({k: v for k, v in timing.items() if k != 'errorList'}, ensure_ascii=False))
     for e in timing['errorList']:
         print('  오류', e)

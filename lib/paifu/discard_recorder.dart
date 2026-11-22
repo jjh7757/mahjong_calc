@@ -747,6 +747,7 @@ class DiscardRecorder {
   /// 울려 나간 패는 그 뒤에 바로 버린 자리가 가져간 것으로 본다(묶음 종류·나머지 패는 모름 → `kind: call`, 그 한 장만).
   /// 뒤에 버림이 없으면(론) 울기로 적지 않는다. 눕힌 패는 그 자리의 첫 장만 리치 선언패, 그 뒤 버림은 쯔모기리로 적는다.
   /// 버림 사건의 `at` 은 그 패를 처음 본 장면 시각([RecordedDiscard.firstAt], epoch ms).
+  /// [startScores] · [kyotaku] 는 국 시작 점수 · 공탁(거치 화면은 [Game.handStart] 로 채운다) — 안 주면 패보에도 없음(null).
   Paifu toPaifu({
     required String id,
     required int bottomSeat,
@@ -760,6 +761,8 @@ class DiscardRecorder {
     List<PaifuTile> uraIndicators = const [],
     String note = '',
     PaifuResult? result,
+    List<int>? startScores,
+    int? kyotaku,
   }) {
     int seatOf(Side s) => (bottomSeat + s.index) % 4;
     final line = timeline();
@@ -814,6 +817,8 @@ class DiscardRecorder {
       note: note,
       events: events,
       result: result,
+      startScores: startScores == null ? null : List.unmodifiable(startScores),
+      kyotaku: kyotaku,
     );
   }
 }

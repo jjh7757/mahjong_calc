@@ -1,7 +1,10 @@
 // tenhou.net/6 한 판 → 국마다 · 자리마다(그 자리를 hero 로) 재생해 hero 버림마다 엔진 값 JSON 한 줄.
 // 설계서 docs/mxplainer_fit_design_1121.md 7절 1번(①값 뽑기). 화면 없이 도는 순수 Dart(Flutter 를 쓰지 않음).
 //
-//   dart run tool/tenhou6_features.dart <tenhou6.json> [--seats 0,1,2,3] [--out <파일.jsonl>]
+//   dart run tool/tenhou6_features.dart <tenhou6.json> [--seats 0,1,2,3] [--out <파일.jsonl>] [--mask-tsumogiri]
+//
+// --mask-tsumogiri: 입력 가림(0단계, 설계서 docs/paifu_fill_scores_tsumogiri_design_1122.md 3절) — [kyokuToPaifu] 참고.
+// 없으면 출력은 전과 같다(요약 줄에 `maskTsumogiri` 칸도 안 붙음).
 //
 // 엔진 입력은 lib/paifu/mh_context.dart · paifu_review.dart 와 같은 뜻이 되게, 천봉 한 국을 hero 시점의 [Paifu] 로
 // 바꿔(hero 손패 · 뽑기 · 네 자리 버림(쯔모기리 · 리치 진짜 값) · 울기) [discardContextAt] · [riskContextAt] 를 그대로 쓴다.
@@ -78,7 +81,11 @@ String _roundName(int kidx) => '${const ['동', '남', '서', '북'][(kidx ~/ 4)
 
 /// 천봉 한 국(log 한 칸) → hero 시점 [Paifu]. 남의 손패 · 뽑은 패는 넣지 않는다.
 /// 차례 규칙은 mortal_local.py `to_mjai` 와 같다(버림 뒤 울기 찾기는 퐁 · 깡이 치보다 먼저).
-Paifu kyokuToPaifu(List log, int hero, {String id = ''}) {
+///
+/// [maskTsumogiri](입력 가림 0단계, 설계서 docs/paifu_fill_scores_tsumogiri_design_1122.md 3절): hero 아닌 자리의 버림
+/// `tsumogiri` 를 매장 패보가 아는 만큼만 남긴다 — 그 자리가 리치 선언패를 낸 **뒤**의 버림은 그대로, 그 밖(선언패 포함)은
+/// null(모름 → [riskContextAt] 의 기본 정책 `UnknownTsumogiri.tedashi`). hero 버림은 그대로.
+Paifu kyokuToPaifu(List log, int hero, {String id = '', bool maskTsumogiri = false}) {
   final head = log[0] as List;
   final kidx = head[0] as int, honba = head[1] as int;
   final doras = [for (final d in log[2] as List) tenhouTile(d as int)];
@@ -90,6 +97,7 @@ Paifu kyokuToPaifu(List log, int hero, {String id = ''}) {
   if (hand.length != 13) throw ReplayError('hero 배패가 ${hand.length}장');
   final events = <PaifuEvent>[];
   final ti = [0, 0, 0, 0], di = [0, 0, 0, 0];
+  final declared = [false, false, false, false]; // 리치 선언패를 이미 냈다([maskTsumogiri] 용)
   var actor = oya;
   var calledIn = false;
   for (var guard = 0; guard < 400; guard++) {
@@ -127,11 +135,13 @@ Paifu kyokuToPaifu(List log, int hero, {String id = ''}) {
     if (actor == hero) {
       if (!hand.remove(pt)) throw ReplayError('hero 가 손에 없는 ${pt.code} 를 버림');
     }
+    final bool? tgOut = (maskTsumogiri && actor != hero && !declared[actor]) ? null : tg;
+    if (reach) declared[actor] = true;
     events.add(PaifuEvent(
       type: PaifuEventType.discard,
       seat: actor,
       tile: pt,
-      tsumogiri: tg,
+      tsumogiri: tgOut,
       riichi: reach,
       hand: actor == hero ? List.unmodifiable(hand) : null,
     ));
@@ -219,10 +229,11 @@ List<int> riskSeatsOf(RiskTable table, PaifuState st) => [
     ]..sort();
 
 /// 한 국 · 한 자리의 hero 버림마다 한 줄. [engineAfterRiichi] 면 hero 리치 뒤 버림에도 엔진 값을 채운다(시험용).
+/// [maskTsumogiri] 는 [kyokuToPaifu] 로 넘긴다(줄의 칸은 같고 값만 바뀔 수 있음).
 /// 검사가 어긋나면 [ReplayError].
 List<Map<String, Object?>> kyokuSeatRows(List log, int hero,
-    {required String game, required int kyoku, bool engineAfterRiichi = false}) {
-  final p = kyokuToPaifu(log, hero, id: game);
+    {required String game, required int kyoku, bool engineAfterRiichi = false, bool maskTsumogiri = false}) {
+  final p = kyokuToPaifu(log, hero, id: game, maskTsumogiri: maskTsumogiri);
   final states = p.states;
   final head = log[0] as List;
   final kidx = head[0] as int;
@@ -372,7 +383,10 @@ List<Map<String, Object?>> kyokuSeatRows(List log, int hero,
 
 /// 한 판 전체. [onRows] 에 국 · 자리마다 줄을 넘기고 요약을 돌려준다.
 Map<String, Object?> gameFeatures(Map<String, dynamic> json,
-    {required String game, List<int> seats = const [0, 1, 2, 3], void Function(List<Map<String, Object?>>)? onRows}) {
+    {required String game,
+    List<int> seats = const [0, 1, 2, 3],
+    void Function(List<Map<String, Object?>>)? onRows,
+    bool maskTsumogiri = false}) {
   final logs = json['log'] as List;
   var kanSkipped = 0, errors = 0, rowsN = 0;
   final errorList = <String>[];
@@ -387,7 +401,7 @@ Map<String, Object?> gameFeatures(Map<String, dynamic> json,
     for (final seat in seats) {
       final sw = Stopwatch()..start();
       try {
-        final rows = kyokuSeatRows(l, seat, game: game, kyoku: ki);
+        final rows = kyokuSeatRows(l, seat, game: game, kyoku: ki, maskTsumogiri: maskTsumogiri);
         rowsN += rows.length;
         onRows?.call(rows);
       } on ReplayError catch (err) {
@@ -411,17 +425,22 @@ Map<String, Object?> gameFeatures(Map<String, dynamic> json,
     'rows': rowsN,
     'kyokuSeatSecs': ksSecs,
     'secs': total.elapsedMicroseconds / 1e6,
+    if (maskTsumogiri) 'maskTsumogiri': true,
   };
 }
 
-const _usage = '쓰는 법: dart run tool/tenhou6_features.dart <tenhou6.json> [--seats 0,1,2,3] [--out <파일.jsonl>]';
+const _usage =
+    '쓰는 법: dart run tool/tenhou6_features.dart <tenhou6.json> [--seats 0,1,2,3] [--out <파일.jsonl>] [--mask-tsumogiri]';
 
 Future<void> main(List<String> args) async {
   String? src, out;
   var seats = [0, 1, 2, 3];
+  var maskTsumogiri = false;
   for (var i = 0; i < args.length; i++) {
     final a = args[i];
-    if (a == '--seats' || a == '--out') {
+    if (a == '--mask-tsumogiri') {
+      maskTsumogiri = true;
+    } else if (a == '--seats' || a == '--out') {
       if (i + 1 >= args.length) {
         stderr.writeln('$a 뒤에 값이 없습니다\n$_usage');
         exitCode = 64;
@@ -462,7 +481,7 @@ Future<void> main(List<String> args) async {
   var game = f.uri.pathSegments.last;
   if (game.endsWith('.json')) game = game.substring(0, game.length - 5);
   final IOSink sink = out == null ? stdout : File(out).openWrite(encoding: utf8);
-  final summary = gameFeatures(json, game: game, seats: seats, onRows: (rows) {
+  final summary = gameFeatures(json, game: game, seats: seats, maskTsumogiri: maskTsumogiri, onRows: (rows) {
     for (final r in rows) {
       sink.add(utf8.encode('${jsonEncode(r)}\n'));
     }

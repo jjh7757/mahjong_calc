@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mahjong_calc/paifu/discard_recorder.dart';
 import 'package:mahjong_calc/paifu/paifu.dart';
@@ -193,6 +195,15 @@ void main() {
       // 패보에도 울기 사건이 안 생긴다.
       final p = f.rec.toPaifu(id: 'x', bottomSeat: 0, dealerSeat: 0, hero: 0);
       expect(p.events.where((e) => e.type == PaifuEventType.call), isEmpty);
+      // 국 시작 점수 · 공탁: 안 주면 없음(열쇠도 안 생김), 주면 패보 머리에.
+      expect(p.startScores, isNull);
+      expect(p.kyotaku, isNull);
+      expect(p.toJson().containsKey('start_scores'), isFalse);
+      final q = f.rec.toPaifu(id: 'x', bottomSeat: 0, dealerSeat: 0, hero: 0, startScores: [25000, 24000, 26000, 24000], kyotaku: 1);
+      expect(q.startScores, [25000, 24000, 26000, 24000]);
+      expect(q.kyotaku, 1);
+      expect(q.toJson()['start_scores'], [25000, 24000, 26000, 24000]);
+      expect(jsonEncode(q.events.map((e) => e.toJson()).toList()), jsonEncode(p.events.map((e) => e.toJson()).toList()));
     });
 
     test('울기 상자가 한 장만 늘어난 것(낱장 헛 검출)은 울기가 아니다', () {

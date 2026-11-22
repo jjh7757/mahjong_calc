@@ -10,6 +10,36 @@ List<PaifuTile> _row(String s) => [for (final c in s.split(' ')) PaifuTile.parse
 String _codes(List<PaifuTile>? r) => r == null ? '-' : r.map((t) => t.code).join(' ');
 
 void main() {
+  test('복원한 패보도 국 시작 점수 · 공탁 · 네 자리 구역을 잃지 않는다(copyWith 길 · JSON 왕복)', () {
+    final orig = withEndHand(assetJson('r19_142013'));
+    const boxes = {
+      'bottom': [280, 713, 1000, 1000],
+      'right': [745, 0, 1000, 713],
+      'top': [0, 0, 745, 173],
+      'left': [0, 173, 280, 1000],
+    };
+    final stripped = stripHands(orig).copyWith(
+      startScores: [26000, 31000, 19000, 23000],
+      kyotaku: 1,
+      frames: const PaifuFrames(dir: '/rec', box: [280, 713, 1000, 1000], side: 'bottom', boxes: boxes),
+    );
+    final turns = planTurns(stripped);
+    final truth = truthReadings(orig);
+    final rb = rebuildHands(stripped, turns, {
+      for (final t in turns)
+        if (t.usesApi) t.index: truth[t.index]!,
+    });
+    expect(rb.restored, greaterThan(0));
+    expect(rb.paifu, isNot(same(stripped)));
+    expect(rb.paifu.startScores, [26000, 31000, 19000, 23000]);
+    expect(rb.paifu.kyotaku, 1);
+    expect(rb.paifu.frames!.boxes, boxes);
+    final back = Paifu.fromJson(rb.paifu.toJson());
+    expect(back.startScores, [26000, 31000, 19000, 23000]);
+    expect(back.kyotaku, 1);
+    expect(back.frames!.boxes, boxes);
+  });
+
   group('거꾸로 한 차례(backRow)', () {
     final after = _row('1m 2m 3m 4m 5m');
     test('D 를 끼우고 3번을 버림 → 3번 자리에 강의 패', () {
