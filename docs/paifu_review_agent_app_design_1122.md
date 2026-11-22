@@ -236,6 +236,12 @@ A ~ C 는 화면 없이 스크립트로 돌립니다(앱과 같은 요청 본문
 2. 확인 측정: 운영 주소로 질문 6개(본 판) — 6개 모두 200 · 시간 중앙 / p90 / 최대 기록. 사진 판독 라우트 한 번(예: `/v2/seat` 한 장)이 전과 같이 답하는지.
 3. `docs/metrics.md` "지금 기준값" 절에 복기 질문 줄을 더합니다.
 
+**확인 측정에 쓸 질문(11-23, 재기 전에 적음 — 사용자 "(가-4) 운영 배포 진행해 줘"):** 표 15-8 묶음 B 의 첫 질문 여섯(본 판 — 매장 예시, 이어 묻기 없이 하나씩): b1a r19 "6순에 4만 버린 게 왜 실수야?" · b2a r19 "이 판에서 제일 아까운 수는?" · b3a L16 "17순에 버린 4만 위험했어?" · b4a L16 "서 리치 뒤에 나는 어떻게 했어?" · b5a r11 "3순에 1통 버린 게 왜 큰 실수야?" · b6a r12 "북 리치 뒤에 나는 어떻게 했어?". 보내는 법: `dart run tool/review_ask_try.dart https://mahjong.ai-agent-develop.cloud <.recognizer_key> assets/paifu/<판>.json "<질문>"`(앱 클라이언트 `ReviewAskClient` · 앱과 같은 사실표, 요청 제한 분당 6 · 몰아서 3 이라 10초 넘게 띄워 하나씩). 기준: 6개 모두 답이 옴(HTTP 200 · `verified` true) · 왕복 중앙 ≤ 10초 · 최대 ≤ 60초(3단계 D 와 같은 문턱). 답은 표 15-8 때의 같은 질문 답(`results/agent_1122app/`)과 나란히 읽어 틀림이 없는지 봅니다. 사진 판독은 `experiments/speed/prod_overlap.py` 한 장(`/v2/localroles` · `localdora` · `locallast3` · `localseat` 가 200 으로 답하는지).
+
+**결과(11-23 00:18 ~ 00:29): 4단계 함 — 운영 852afee, 기준 통과(metrics 표 15-9 · "지금 기준값").** 서버 pytest 515 통과를 다시 확인하고 `feat/review-explain`(852afee)을 원격 master 로 빨리 감기 push → test · deploy 성공(run 45037529190) → 운영 `git_sha` 852afee · 라우트 24(복기 둘 포함). 질문 6개 모두 답 · `verified` 6/6 · 재시도 0 · 왕복 6.7 / 10.1 / 12.4초 · 틀린 답 0(표 15-8 때 답 · 사실표와 대조). 사진 판독 네 라우트는 200(한 장, 이어서 4장 — localroles 서버 처리 중앙 1.77초, 배포 직후 첫 장만 2.58초). 실제 Gemini 호출 6개. **안 한 것:** 앱을 운영 주소로 다시 빌드 · 태블릿 설치(사본 앱 `.ondevice` 와 확인용 `.reviewdev` 는 그대로 — `.reviewdev` 는 노트북 주소가 박힌 빌드라 운영을 안 부름), 앱 저장소 push, 운영에서 이어 묻기, 서버 로컬 `mahjong-recognizer` 작업 트리의 master 는 348f0f9 그대로(커밋 전 변경 `app/local_read.py` 가 있어 안 건드림 — 원격보다 3 뒤, `git pull --ff-only` 면 됨).
+
+**덧붙임(11-23 00:36 ~ 00:40): 운영 주소로 앱을 다시 빌드해 태블릿 확인용 앱 `.reviewdev` 에 `install -r`, 태블릿에서 운영 답 확인(사용자 "빌드해서 설치").** `REVIEW_URL` · `REVIEW_API_KEY` 없이 `RECOGNIZER_API_KEY` 만 준 release APK(패키지 이름 `aapt2` 로 확인). 사본 앱 `.ondevice` 설치 시각 그대로. 태블릿 세로 화면에서 예시 남4국 6순 → "질문" → 추천 질문 하나 → 15초 안에 운영 답이 나오고 "6순 보기" 칩이 붙음(실제 Gemini 호출 1개, 갈무리 `experiments/paifu_review/results/tablet_ask_1123_prod/`). 태블릿에서의 시간 · 직접 쓴 질문 · 이어 묻기는 운영 답으로 안 봤습니다.
+
 위험: 운영 이미지에 `langgraph` 와 딸린 패키지가 들어갑니다(이미지 크기 · 시작 시간). 복기 요청은 사진 판독과 동시 실행 칸(16)을 같이 쓰지만, 복기 제한이 분당 6 · 몰아서 3 이라 차지하는 칸은 많아야 서넛입니다. 되돌리기는 master 에 되돌림 커밋을 올리는 것입니다.
 
 ### 5단계 — 태블릿 확인 (사용자 허락 뒤)
