@@ -668,5 +668,70 @@ void main() {
       expect(find.byKey(const ValueKey('paifu-ask-suggest')), findsNothing);
       expect(find.byKey(const ValueKey('paifu-ask-close')), findsOneWidget);
     });
+
+    // 갤럭시탭 가로(논리 1280×800, 글자판 아래 약 375). PaifuScreen.build 가 kioskWrap 을 거치므로 이 크기에서는 기기처럼
+    // 어두운 테마 + 글자 1.25배가 걸린다(아래에서 배율을 확인). 상태 표시줄이 있을 때(위 24)도 같은 단언.
+    for (final (name, top) in const [('전체 화면', 0.0), ('상태 표시줄 위 24', 24.0)]) {
+      testWidgets('태블릿 가로 1280×800 + 글자판(아래 375px, $name): 말풍선 · 수 띠를 숨겨 입력 줄 · 목록이 보이고 넘침 없음', (tester) async {
+        fake.reply = (i) => Future.value(answer(long));
+        const size = Size(1280, 800);
+        const keyboard = 375.0;
+        await pump(tester, r19, size: size);
+        if (top > 0) tester.view.padding = FakeViewPadding(top: top);
+        await tester.pumpAndSettle();
+        await startReview(tester);
+        await goTo(tester, 29);
+        await tap(tester, _btn);
+        await tap(tester, const ValueKey('paifu-ask-suggest-0'));
+        await tester.tap(find.byKey(_input));
+        await tester.pump();
+        final editable = find.descendant(of: find.byKey(_input), matching: find.byType(EditableText));
+        final before = tester.state<EditableTextState>(editable);
+        tester.view.viewInsets = const FakeViewPadding(bottom: keyboard);
+        addTearDown(tester.view.resetViewInsets);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(MediaQuery.textScalerOf(tester.element(find.byKey(_panel))).scale(10), closeTo(12.5, 1e-9));
+        // 배치가 바뀌어도 입력 줄이 새로 만들어지지 않아 포커스를 잃지 않는다(기기에서는 포커스를 잃으면 글자판이 내려감).
+        expect(identical(tester.state<EditableTextState>(editable), before), isTrue);
+        expect(tester.widget<EditableText>(editable).focusNode.hasFocus, isTrue);
+
+        final screen = Offset.zero & size;
+        final panel = tester.getRect(find.byKey(_panel));
+        final list = tester.getRect(find.byKey(const ValueKey('paifu-ask-list')));
+        final input = tester.getRect(find.byKey(_input));
+        final send = tester.getRect(find.byKey(_send));
+        final go = tester.getRect(find.byKey(_go));
+        final btn = tester.getRect(find.byKey(_btn));
+        // ignore: avoid_print
+        print('$name: 질문 창 $panel · 목록 $list · 입력 줄 $input · 보내기 $send · 다음 $go');
+        for (final r in [panel, list, input, send, go, btn]) {
+          expect(
+            screen.contains(r.topLeft) && screen.contains(r.bottomRight - const Offset(0.01, 0.01)),
+            isTrue,
+            reason: '$r',
+          );
+        }
+        expect(input.top, greaterThanOrEqualTo(top));
+        expect(input.bottom, lessThanOrEqualTo(size.height - keyboard));
+        for (final r in [input, send]) {
+          expect(r.overlaps(go), isFalse, reason: '$r 가 다음 $go 와 겹침');
+          expect(r.overlaps(btn), isFalse, reason: '$r 가 질문 단추 $btn 와 겹침');
+        }
+        expect(find.byKey(const ValueKey('paifu-strip')), findsNothing);
+        expect(find.byKey(const ValueKey('paifu-ask-suggest')), findsNothing);
+        expect(find.byKey(const ValueKey('paifu-ask-close')), findsOneWidget);
+        expect(list.height, greaterThanOrEqualTo(80));
+
+        // 글자판을 내리면 그대로 돌아온다.
+        tester.view.resetViewInsets();
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(find.byKey(const ValueKey('paifu-strip')), findsOneWidget);
+        expect(find.byType(ReviewBubble), findsOneWidget);
+        expect(find.byKey(const ValueKey('paifu-ask-suggest')), findsOneWidget);
+        expect(identical(tester.state<EditableTextState>(editable), before), isTrue);
+      });
+    }
   });
 }

@@ -1004,6 +1004,8 @@ class _PaifuScreenState extends State<PaifuScreen> {
     final wide = box.maxWidth > box.maxHeight * 1.2;
     if (wide) {
       final panelW = (box.maxWidth * 0.34).clamp(320.0, 460.0);
+      // 질문 창 + 글자판: 패널이 짧아지므로 말풍선 · 막대 설명 · 수 띠를 숨기고 추천 질문 줄도 접는다(단추 줄은 남김).
+      final typing = _askOpen && _keyboardUp;
       return Row(
         children: [
           Expanded(child: Padding(padding: const EdgeInsets.all(8), child: Center(child: table))),
@@ -1014,11 +1016,17 @@ class _PaifuScreenState extends State<PaifuScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _bubble(state),
-                  if (info != null) Padding(padding: const EdgeInsets.only(top: 6), child: _barInfo(theme, info)),
+                  if (!typing) _bubble(state),
+                  if (!typing && info != null)
+                    Padding(padding: const EdgeInsets.only(top: 6), child: _barInfo(theme, info)),
+                  // 키: 위아래 칸이 빠졌다 돌아와도 이 칸(질문 창 입력 줄)을 새로 만들지 않아 포커스 · 글자판이 유지된다.
                   Expanded(
+                    key: const ValueKey('paifu-wide-main'),
                     child: _askOpen
-                        ? Padding(padding: const EdgeInsets.only(top: 8), child: _askPanel(t, fill: true))
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: _askPanel(t, fill: true, compact: typing),
+                          )
                         : folded
                         ? const SizedBox.shrink()
                         : SingleChildScrollView(
@@ -1027,7 +1035,7 @@ class _PaifuScreenState extends State<PaifuScreen> {
                             child: _foldContent(t),
                           ),
                   ),
-                  strip,
+                  if (!typing) strip,
                   buttons,
                 ],
               ),
