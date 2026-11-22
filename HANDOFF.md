@@ -2,50 +2,59 @@
 
 새 세션은 이 문서와 각 README 만 읽으면 이어갈 수 있다. 앱 저장소의 README.md 는 2026-11-09 부터 프로젝트 소개·개발 과정 문서이고, 개발 환경·빌드 명령·화면 기능은 `docs/development.md` 로 옮겼다. 기획서(Claude Docs): https://claude.ai/artifact/P1oNCR1CQgHSWgwW7wiym1
 
-## ★ 다음 세션은 여기부터 (2026-11-23 적음)
+## ★ 다음 세션은 여기부터 (2026-11-22 밤 적음 — 이 컴퓨터 시계 기준. 앞 세션은 같은 날을 11-23 으로 적었다)
 
-**진행 중: (가) 복기 에이전트를 앱에서 쓰게 하기 — 1 · 2 · 3단계 통과 · 커밋함(11-22 밤, 시계 기준 — 앱은 이 절을 담은 커밋, 서버 worktree 는 e56cbe7 다음 커밋, 둘 다 push 안 함 · 아래 줄들의 "커밋 전" 은 그때 상태).** 설계서 `docs/paifu_review_agent_app_design_1122.md`(맨 위 "진행" 셋에 결과). **다음은 4단계(운영 배포 — 사용자가 말할 때만) 또는 5단계(태블릿 확인 — 묻고 `adb install -r`).**
-- 3단계 결과(실제 Gemini 42개, metrics 표 15-8 · problem_log 74 덧붙임): 앱이 만드는 질문 꼴로 — 새 안 본 판 12 검증 12/12 · 틀림 0 · 근거 없는 판정 0, 이어 묻기 둘째 답 6/6 · 잘못 이은 답 0(→ 이어 묻기 켠 채로), 기존 12 새 틀림 0, 앱 화면(웹 빌드 → 노트북 서버 → Gemini) 6개 모두 답 · 중앙 6.8 / 최대 10.5초. 서버 `app/` · 지시문 a5 는 안 고침. 새 도구: `tool/tenhou6_ask_questions.dart` · `experiments/paifu_review/agent_defense/app_questions.py` · `experiments/paifu_review/agent_run_1122_app.py`(이어 묻기 · `--fake` · `--dry-run`), 고친 것 `agent_defense/pick_games.py`(다섯째 묶음 dx). 실제 Gemini 로 앱 화면을 다시 보려면 preview `review-dev-real`(8321, `.env` 에서 `GEMINI_API_KEY` 한 줄만 읽음) + `web`.
-- **커밋에 넣은 것(11-22 밤, 사용자 "커밋하세요"):** 앱은 새 파일들(`lib/paifu/review_chat.dart` · `lib/services/review_ask_client.dart` · `lib/ui/paifu/review_ask_panel.dart` · 시험 셋 · `tool/review_ask_bodies.dart` · `tool/review_ask_try.dart` · `tool/tenhou6_ask_questions.dart` · 실험 스크립트 둘 · 질문 파일 · 설계서) + `lib/ui/paifu/paifu_screen.dart` · `agent_defense/pick_games.py` + 문서 셋의 이번 작업 덩어리(HANDOFF 는 이 "★" 절 통째 · metrics 표 15-8 · problem_log 74 덧붙임). `.claude/launch.json` 과 다른 세션의 덩어리는 뺐다(작업 트리에 그대로 남아 있음). 서버 worktree 는 `scripts/review_dev_server.py` 하나(새 파일).
-- 2단계 결과: 새 `lib/ui/paifu/review_ask_panel.dart` · `test/paifu_ask_ui_test.dart`, 고친 것은 `lib/ui/paifu/paifu_screen.dart` 하나. analyze(lib · test · tool) 0 · 앱 시험 1,529. 세션이 웹 빌드 + 가짜 답 서버로 400×800 · 360×740 · 1280×800 눈 확인(추천 질문 · 직접 입력 · 요청 제한 문구 · "다시" · 걸음 옮김). 실제 기기 글자판 · 전체 화면 고정은 안 봄(5단계).
-- 눈 확인 다시 하려면: `flutter build web --dart-define=REVIEW_URL=http://127.0.0.1:8321 --dart-define=REVIEW_API_KEY=dev-key` → preview `review-dev-fake`(8321) + `web`(8765) → 지난 대국 → 패보 예시. **지금 `build/web` 은 이 개발용 주소가 박힌 빌드다**(다른 눈 확인에 쓰려면 다시 빌드). `.claude/launch.json` 에 `review-dev-fake` 항목을 더했다(이 파일은 다른 세션 변경이 섞여 있고 작업 트리에서 CRLF — 커밋에서 뺌).
-- 줄 끝 확인은 `grep -c $'\r'` 로 하지 말 것 — Git Bash 의 grep 은 CR 을 못 세어 늘 0 이 나온다(이번에 걸림). 바이트로 센다(Python `count(b"\r\n")`).
-- 1단계 결과: 새 파일만(앱 `lib/paifu/review_chat.dart` · `lib/services/review_ask_client.dart` · 시험 둘 · `tool/review_ask_bodies.dart` · `tool/review_ask_try.dart`, 서버 worktree `scripts/review_dev_server.py`). analyze(lib · test · tool) 0 · 앱 시험 1,509 · 서버 pytest 515. 세션이 따로 대조 — 예시 11판 질문 467개 서버 규격 거절 0 · 추천 질문 글 어긋남 0 · fixture 낡음 0. 개발용 서버는 `python scripts/review_dev_server.py --fake --port 8321 --api-key dev-key`(Gemini 호출 0). **Git Bash 에서 띄운 python 은 `kill $!` 로 안 죽는다 — `netstat -ano` 로 PID 를 찾아 `taskkill //F //PID`.**
-- 사용자가 정한 것: ① 서버는 노트북에서 먼저, 통과 뒤 운영 ② 요청 제한은 서버 기본 그대로(하루 200) ③ 질문 창은 복기 화면 단추 줄 ④ 손패 없는 판엔 단추 없음 · 서버 실패는 까닭 한 줄 + "다시".
-- 확인된 것: 앱은 지금 서버 복기 라우트를 **전혀 안 부른다**("한 문장" 은 코드가 만듦, `agentFacts` 는 도구 · 시험에서만) → 서버를 부르는 코드부터 새로. 서버 `app/` · 지시문 a5 는 안 바꾼다(지금 보는 차례는 질문 글에 "N순" 을 넣어 전함). 이어 묻기(`history`)는 한 번도 안 쟀다.
-- 단계: 1 서버를 부르는 코드 + 개발용 서버 스크립트(돈 0) → 2 질문 창 화면(가짜 답, 돈 0) → 3 노트북 서버 + 실제 Gemini 약 42개(허락 뒤, metrics 표 15-8) → 4 운영 배포(말할 때만) → 5 태블릿(`adb install -r`, 묻고).
-- 가장 큰 한계: 기기에 저장되는 판은 대부분 "버림만" 이라 질문 단추가 안 보인다 — 쓸 수 있는 판은 예시와 손패가 든 판뿐.
+**지금 진행 중인 작업은 없다(돌고 있는 명령 · 서버 · 하위 에이전트 없음).** 사용자가 11-22 밤 "새 세션에서 진행하게 준비해줘" — 무엇을 할지는 아직 안 골랐다. **아래 "고를 것" 중 무엇을 할지 사용자에게 먼저 묻는다.** 세션의 권고는 (가-5) → (가-4) 순서.
 
-아래 표의 (나) ~ (마)는 그대로 남아 있다(사용자가 고르면 그쪽으로).
+**방금 끝난 것 — 복기 에이전트를 앱에서 쓰게 하기 1 ~ 3단계(커밋함, push 안 함)**
+- 복기 화면 단추 줄에 "질문" 이 생겼다. 앱이 사실표(`agentFacts`)와 질문을 서버 `POST /v2/review/ask` 에 보내고 답을 보여 준다. 설계서 `docs/paifu_review_agent_app_design_1122.md`(맨 위 "진행" 셋에 단계별 결과, 6절에 4 · 5단계 방법과 기준).
+- 코드: `lib/services/review_ask_client.dart`(서버 호출) · `lib/paifu/review_chat.dart`(추천 질문 · "N순에 대해: " 붙이기 · 이어 묻기) · `lib/ui/paifu/review_ask_panel.dart` + `lib/ui/paifu/paifu_screen.dart`(화면). 서버 `app/` · 지시문 a5 는 안 고쳤다.
+- 측정(실제 Gemini 42개, metrics 표 15-8 · problem_log 74 덧붙임): 앱이 만드는 질문 꼴로 새 안 본 판 12 검증 12/12 · 틀림 0 · 근거 없는 판정 0, 이어 묻기 둘째 답 6/6(→ 이어 묻기 켠 채로), 기존 12 새 틀림 0, 앱 화면(웹 빌드 → 노트북 서버 → Gemini) 6개 모두 답 · 중앙 6.8 / 최대 10.5초.
+- 사용자가 정한 것(11-22): ① 서버는 노트북에서 먼저, 통과 뒤 운영 ② 요청 제한은 서버 기본 그대로(분당 6 · 하루 200) ③ 질문 창은 복기 화면 단추 줄 ④ 손패 없는 판엔 단추 없음 · 서버 실패는 까닭 한 줄 + "다시".
+- **가장 큰 한계:** 기기에 저장되는 판은 대부분 "버림만" 이라 복기 화면도 질문 단추도 안 보인다. 지금 질문할 수 있는 판은 예시 11판(지난 대국 → 패보 예시)과 손패가 든 판뿐.
 
 **저장소 상태**
-- 앱 `C:\Users\jjh7757\dev\mahjong_calc`: 브랜치 `exp/on-device-read`, 끝 커밋 = 이 절을 담은 커밋(`f6a5f46` 다음, 원격보다 5 앞 — **push 안 함**). `flutter analyze`(lib · test · tool) 0 · `flutter test` 1,529 통과.
-- 서버 worktree `C:\Users\jjh7757\dev\mahjong-recognizer-review`: 브랜치 `feat/review-explain`, 끝 커밋 = `e56cbe7` 다음 커밋(개발용 서버 스크립트 하나, **원격에 없음 · 운영 배포 없음**). pytest 515 통과. 복기 에이전트(`app/review_agent.py`, 지시문 a5)와 라우트 `/v2/review/ask` · `/v2/review/explain` 은 이 브랜치에만 있다.
-- 앱 작업 트리에는 **다른 세션이 커밋하지 않은 변경**이 남아 있다(`.claude/launch.json` · `docs/license_check.md` · `docs/paifu_review_plan_1113.md` · `handtrack/opusread.py` · `sam2track.py` · `turncut.py`, 그리고 `docs/metrics.md` · `problem_log.md` · `HANDOFF.md` 안의 덩어리). 건드리지 말고, 커밋할 때는 내 덩어리만 올린다(기억 `commit-own-hunks-shared-tree`).
+- 앱 `C:\Users\jjh7757\dev\mahjong_calc`: 브랜치 `exp/on-device-read`, 끝 커밋 = 이 절을 담은 문서 커밋(코드는 그 앞 `9c69e0a`, 원격보다 6 앞 — **push 안 함**). `flutter analyze lib test tool` 0 · `flutter test` 1,529 통과(`9c69e0a` 의 내용만 따로 내보낸 폴더에서 확인).
+- 서버 worktree `C:\Users\jjh7757\dev\mahjong-recognizer-review`: 브랜치 `feat/review-explain`, 끝 커밋 `852afee`(개발용 서버 스크립트, **원격에 없음 · 운영 배포 없음**). pytest 515 통과. master 보다 3커밋 앞 · 0 뒤(11-22 확인 — 올리기 전에 `git fetch` 뒤 다시 확인). 복기 에이전트(`app/review_agent.py`)와 라우트 `/v2/review/ask` · `/v2/review/explain` 은 이 브랜치에만 있다 — **지금 운영 서버에 질문을 보내면 404("이 서버에는 복기 질문 기능이 없습니다")가 난다.**
+- 앱 작업 트리에는 **다른 세션이 커밋하지 않은 변경**이 남아 있다(`.claude/launch.json` · `docs/license_check.md` · `docs/paifu_review_plan_1113.md` · `handtrack/opusread.py` · `sam2track.py` · `turncut.py`, 그리고 `docs/metrics.md` · `problem_log.md` · `HANDOFF.md` 안의 덩어리). 건드리지 말고, 커밋할 때는 내 덩어리만 올린다(기억 `commit-own-hunks-shared-tree`). 이번에 쓴 방법: 섞인 문서는 `git diff -U0` 덩어리를 번호로 골라 HEAD 에 줄 번호대로 얹어 `git update-index --cacheinfo`, 그다음 `git checkout-index -a --prefix=<폴더>/` 로 내보내 그 폴더에서 analyze · test.
+- `.claude/launch.json` 에 이번에 더한 항목 둘(커밋 안 함): `review-dev-fake`(가짜 답 서버, 8321 · 키 `dev-key`) · `review-dev-real`(실제 Gemini, `.env` 에서 `GEMINI_API_KEY` 한 줄만 읽음). `build/web` 은 지금 `REVIEW_URL=http://127.0.0.1:8321` 이 박힌 빌드다(다른 눈 확인에 쓰려면 다시 빌드).
 
 **고를 것**
 
 | | 할 일 | 지금 상태 | 먼저 볼 것 |
 | --- | --- | --- | --- |
-| (가) 권고 | **복기 에이전트를 앱에서 쓰게 하기** — 재생 화면에 질문 창, 앱이 사실표를 만들어 서버에 묻기 | 에이전트는 스크립트(`scripts/review_ask.py`)로만 돈다. 수비 질문까지 시험 통과(새 안 본 판 12/12 · 틀림 0, metrics 표 15-7). 앱에 질문 창 없음, 서버는 브랜치에만 | `docs/paifu_review_agent_design_1121.md` · `docs/paifu_review_agent_defense_design_1122.md` · `docs/paifu_review_ui_design_1121.md`, 앱 `lib/paifu/agent_facts.dart` · `lib/ui/paifu/` |
-| (나) | 작은 마무리 | ① push(사용자가 말할 때만) ② 점수판에서 이미 리치한 자리를 또 누를 수 있어 국 시작 점수가 1000 틀리게 저장됨(`lib/ui/game/game_screen.dart` `showRiichiPicker` → `_pickSeat`) ③ r16 위쪽 자리 17버림 순번 맞춤(`handtrack/tsumofill.py` — 패보의 손으로 넣은 첫 버림 때문에 N번째 짝이 밀림) | 아래 "2026-11-22 오후 ~ 11-23" 절 |
+| (가-5) 권고 | **태블릿에서 질문 창 확인** — 실제 글자판(한글 입력기) · 전체 화면 고정 상태에서 입력 줄이 보이는지, 답이 나오는지, "N순 보기" | 위젯 시험 · 웹 빌드로만 봤다. 운영 전이면 노트북 서버를 `adb reverse tcp:8321 tcp:8321` 로 물리고 APK 를 `--dart-define=REVIEW_URL=http://127.0.0.1:8321 --dart-define=REVIEW_API_KEY=dev-key`(+ 기존 `RECOGNIZER_API_KEY`)로 빌드. 가짜 답 서버로 하면 돈 0. **설치는 사용자에게 묻고 `adb install -r`**(`flutter install` · `flutter drive` 금지 — 대국 · 격자가 지워진다) | 설계서 6절 "5단계", 기억 `apk-install-keep-data` · `dev-tool-paths` |
+| (가-4) | **운영 배포** — 서버 `feat/review-explain` 을 master 에 빨리 감기로 올려 push(워크플로가 pytest · 배포 · 라우트 확인) → 운영에 질문 6개로 확인 측정 → metrics "지금 기준값" 에 복기 질문 줄 | **사용자가 말할 때만.** 운영 이미지에 `langgraph` 가 들어간다. 앱은 `REVIEW_URL` 을 안 주면 운영 주소를 쓴다(다시 빌드 필요 — 지금 `build/web` 은 개발용 주소) | 설계서 6절 "4단계", 서버 `.github/workflows/deploy.yml` |
+| (가-그 밖) | 질문 창 다듬기 | 말투(평가 말 "사실상 밀었다" · "무난하게 진행한 판", 묻지 않은 "판정하지 않는다"), 남이 쓴 질문 · 오타 · 한글 수사 차례 · 셋째 넘는 이어 묻기는 안 쟀다, 요약 화면의 판 전체 질문 줄(사용자가 이번엔 안 고름), 기존 칩 셋이 좁은 폭에서 납작해진 것 | 설계서 7절 · 맨 위 "진행" 의 "남은 흠" |
+| (나) | 작은 마무리 | ① push(사용자가 말할 때만 — 앱 6커밋 · 서버 worktree 브랜치는 원격에 없음) ② 점수판에서 이미 리치한 자리를 또 누를 수 있어 국 시작 점수가 1000 틀리게 저장됨(`lib/ui/game/game_screen.dart` `showRiichiPicker` → `_pickSeat`) ③ r16 위쪽 자리 17버림 순번 맞춤(`handtrack/tsumofill.py`) ④ 손패 없는 판(r20) 재생 화면이 400×800 에서 아래로 37px 넘친다는 보고(이번 변경 전부터로 보임 — 확인 안 함) | 아래 "2026-11-22 오후 ~ 11-23" 절 |
 | (다) | 리치 받았을 때 밀기 · 접기 판정 1단계 | 설계서만. 통과하면 에이전트 사실표의 `fold_spot` 을 채워 "접었어야 했다" 를 말할 수 있다 | `docs/push_fold_design_1122.md` 9절 |
 | (라) | 패보 기록 정합성 검사 · 차례 규칙으로 엮기 | 설계서만(에이전트 없이 규칙으로) | `docs/record_consistency_design_1122.md` |
 | (마) | 매장에서만 되는 확인 | 점수 · 공탁(`start_scores` · `kyotaku`)과 `frames.boxes` 가 실제 기기에서 패보에 남는지 — 단위 시험만 했다 | `docs/visit_supervision.md`, 아래 절의 "A 함" 줄 |
 
-**(가)를 시작한다면 정할 것(설계 전에 사용자에게):** ① 서버를 어떻게 띄울지 — 운영 배포는 master push 로만 되고 지금 라우트는 브랜치에만 있다(운영에 넣을지 · 따로 띄울지). ② Gemini 비용 · 요청 제한(a5 실제 호출 72개 기준 질문 하나에 LLM 2 ~ 3회가 보통 · 중앙 6초 · 입력 약 6,700토큰 — metrics 표 15-7). ③ 질문 창 위치(재생 화면의 리뷰 보기 안인지). ④ 손패 기록 없는 판 · 서버가 안 될 때의 화면.
+**질문 창을 다시 띄워 보는 법(노트북, 돈 0)**
+1. `flutter build web --dart-define=REVIEW_URL=http://127.0.0.1:8321 --dart-define=REVIEW_API_KEY=dev-key`(지금 `build/web` 이 이미 이 빌드다).
+2. preview `review-dev-fake`(8321) + `web`(8765) → 홈 → 지난 대국 → 패보 예시 → 남4국 → 배울 장면 "6순 4만 버림" → 단추 줄 "질문".
+3. 실제 Gemini 답으로 보려면 `review-dev-fake` 대신 `review-dev-real`(질문마다 돈이 든다 — 사용자 허락 뒤).
+- 화면 없이 한 번: `dart run tool/review_ask_try.dart http://127.0.0.1:8321 dev-key assets/paifu/r19_142013.json "6순에 4만 버린 게 왜 실수야?"`.
+- 실제 호출 묶음 다시 돌리기: `python -X utf8 experiments/paifu_review/agent_run_1122_app.py`(`--dry-run` 으로 먼저 확인, `--fake` 는 Gemini 없이).
 
-**권하지 않는 것(이번 세션의 결과):** 남의 쯔모기리를 더 채우기 · 채운 사본(`_work/tsumo_b4_1122/filled_read/`)을 앱 예시로 올리기 — 채워도 추천이 거의 안 바뀐다(천봉 200판에서 S42 첫째 버림 1.43%, 예시 9판 수비 14차례에서 가장 안전한 패 바뀜 0 — metrics 표 16-12 · 12-113). 예시를 바꾸면 리뷰 화면 시험 · 서버 fixture · 에이전트 질문 기대값이 줄줄이 바뀐다. 사용자가 다시 꺼낼 때만.
+**권하지 않는 것(앞 세션들의 결과):** 남의 쯔모기리를 더 채우기 · 채운 사본(`_work/tsumo_b4_1122/filled_read/`)을 앱 예시로 올리기 — 채워도 추천이 거의 안 바뀐다(metrics 표 16-12 · 12-113). 예시를 바꾸면 리뷰 화면 시험 · 서버 fixture · 에이전트 질문 기대값 · 질문 창 시험이 줄줄이 바뀐다. 서버 `app/review_agent.py` · 지시문을 고치는 것도 같다 — 고치면 새 안 본 판으로 다시 재야 한다(표 15-7 · 15-8 의 기준). 사용자가 다시 꺼낼 때만.
 
 **지킬 것(이 세션에서 다시 확인된 것)**
-- 설계 · 검토는 Fable 세션, 구현은 Opus 5.5 높음 하위 에이전트, 검토는 시험을 다시 돌리고 따로 쓴 계산으로 대조.
-- **그림 · 영상을 읽어 판정 · 정답을 만드는 에이전트는 Opus 5.5 높음**(11-22 "높음을 써"). 수집 · 정리 같은 기계적 자료 만들기는 중간.
-- Claude API 금지(하위 에이전트로). Gemini 실제 호출은 사용자 허락 뒤. `flutter drive` · `flutter install` 금지.
-- 기준 · 문턱 · 시험 판은 재기 전에 문서에 적는다. 측정하면 같은 턴에 `docs/metrics.md`(번호는 쓰기 전에 grep) · `docs/problem_log.md`(마지막 번호 76).
+- 설계 · 검토는 Fable 세션, 구현은 Opus 5.5 높음 하위 에이전트(측정 준비 스크립트도), 검토는 시험을 다시 돌리고 따로 쓴 계산으로 대조. 맡길 때 고쳐도 되는 파일을 이름으로 못 박는다(작업 트리가 섞여 있어서).
+- **그림 · 영상을 읽어 판정 · 정답을 만드는 에이전트는 Opus 5.5 높음.** 수집 · 정리 같은 기계적 자료 만들기는 중간.
+- Claude API 금지(하위 에이전트로). Gemini 실제 호출 · 운영 배포 · push · 태블릿 설치는 사용자가 말한 뒤. `flutter drive` · `flutter install` 금지.
+- 기준 · 문턱 · 시험 판은 재기 전에 문서에 적는다. 측정하면 같은 턴에 `docs/metrics.md`(번호는 쓰기 전에 grep — 복기 에이전트의 다음 표는 15-9) · `docs/problem_log.md`(마지막 번호 76, 복기 에이전트는 74 에 덧붙임).
 - 사용자에게 확인을 부탁할 때는 잘라 만든 영상으로, **그 차례의 처음(뽑기)부터** 자른다.
-- 여러 줄 Python 은 파일로 써서 돌린다(`python -c` 여러 줄 · 빈 stdin heredoc 은 이 환경에서 멈춘다 — 이번 세션에서도 한 번 더 걸림).
+- 여러 줄 Python 은 파일로 써서 돌린다(`python -c` 여러 줄 · 빈 stdin heredoc 은 이 환경에서 멈춘다 — 이번 세션에서도 두 번 걸림).
+- 줄 끝 확인은 `grep -c $'\r'` 로 하지 말 것 — Git Bash 의 grep 은 CR 을 못 세어 CRLF 파일에도 0 이 나온다. Python 으로 바이트를 센다(`count(b"\r\n")`).
+- Git Bash 에서 띄운 python 서버는 `kill $!` 로 안 죽는다 — `netstat -ano` 로 PID 를 찾아 `taskkill //F //PID`. 서버는 되도록 preview(`.claude/launch.json`)로 띄우고 끈다.
+- Flutter 웹 화면은 canvas 라 preview 에서 좌표로 누른다(먼저 갈무리 한 장). 한글 입력도 `type` 으로 된다.
 
-**이번 세션(11-21 밤 ~ 11-23)에서 한 것 — 아래 절들에 자세히**
+**이번 세션(11-22 저녁 ~ 밤)에서 한 것**
+- 복기 에이전트 앱 질문 창: 설계 → 1단계(서버를 부르는 코드 · 개발용 서버 스크립트) → 2단계(화면, 웹 빌드 눈 확인) → 3단계(실제 Gemini 42개, 표 15-8) → 커밋(앱 `9c69e0a` · 서버 `852afee`).
+
+**그 앞 세션(11-21 밤 ~ 11-22 오후)에서 한 것 — 아래 절들에 자세히**
 - Mortal-S42 버림에 엔진 값 가중치 맞추기: 시험 200판 64.0% → 68.1% = "사이", 앱은 안 바꿈(표 16-5 ~ 16-9). 기대값 식 ✗ · 에이전트가 버림 고르기 ✗.
 - 버림 기록기 헛 칸 고침 + 예시 r13 · r15 · r19 다시 만듦(표 12-107).
 - 복기 에이전트 수비 확장: 사실표 v2 · 지시문 a3 → a5, 기준 모두 통과(표 15-5 ~ 15-7).
