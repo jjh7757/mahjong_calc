@@ -6,6 +6,9 @@
 ///
 /// 패 표기는 해설 규격 A-1([Tiles.toCode], 적5 도 `5m`). 플레이어 이름 · 패보 id · 제목 · note 는 넣지 않는다.
 /// 뽑기만 한 걸음 · 남의 버림 하나하나도 넣지 않는다(크기). 남의 사건은 리치 · 울기 · 화료만.
+///
+/// v2(2026-11-22, `docs/paifu_review_agent_defense_design_1122.md` 2절): 차례마다 `defense`(방총 위험의 단계 · 순서).
+/// 엔진 리뷰(`reviewPaifu(withEngine: true)`)일 때만 채워지고, 엔진의 % 값 자체는 넣지 않는다.
 library;
 
 import '../engine/efficiency.dart';
@@ -15,7 +18,61 @@ import 'paifu.dart';
 import 'paifu_review.dart';
 
 /// 사실표 판. 서버가 `facts.version` 으로 검사한다.
-const agentFactsVersion = 1;
+const agentFactsVersion = 2;
+
+// ── 방총 위험 단계(설계서 1122 1절) ──
+//
+// 근거: metrics 표 16-11 — 개발 200판, 남이 리치한 차례의 내 버림 14,711개에서 엔진 합친 위험(`mixed34`)별 실제 방총이
+// 안전(모두에게 안전패) 0/2,499 · 3% 미만 0.5% · 3~8% 3.4% · 8~18% 8.5% · 18% 이상 14.6%. 엔진 값은 순서는 맞고 크기는
+// 1.5배쯤 커서 % 대신 이 다섯 단계로만 말한다. 문턱은 그 표를 보고 정한 값이라 바꾸지 않는다.
+
+/// 이 값 미만이면 "낮음"(엔진 위험 %).
+const riskLevelLowBelow = 3.0;
+
+/// 이 값 미만이면 "보통".
+const riskLevelMidBelow = 8.0;
+
+/// 이 값 미만이면 "높음", 이상이면 "매우 높음".
+const riskLevelHighBelow = 18.0;
+
+/// 다섯 단계(안전한 순).
+const riskLevels = ['안전', '낮음', '보통', '높음', '매우 높음'];
+
+// 밀기 · 접기의 "사실"(판정 아님): 버린 패 위험 − 손 안 가장 낮은 위험(%p). 근거: docs/push_fold_design_1122.md 3절
+// (맞춤 140판을 보고 고정한 값, 이후 바꾸지 않음).
+// a4(11-22, 설계서 1122 "a4" F1): 차이만으로는 '높음' 패를 버리고도 가장 안전한 '보통' 패와 차이가 2 미만이면 "folded" 로
+// 적혔다(천봉 du2a) → folded 는 차이 2 미만이고 두 위험이 같은 구간(위 3 · 8 · 18 문턱으로 나눈 넷)일 때만.
+
+/// 이 차 이상이면 "pushed".
+const stancePushedAtLeast = 5.0;
+
+/// 이 차 미만이고 버린 패와 가장 안전한 패의 위험이 같은 구간이면 "folded". 구간이 다르거나 차가 그 사이면 "between".
+const stanceFoldedBelow = 2.0;
+
+/// 패 하나의 위험 단계. [safeForAll] = 엔진의 "모두에게 안전패"(`RiskTable.safeForAll34`).
+String riskLevel(double risk, {required bool safeForAll}) {
+  if (safeForAll) return riskLevels[0];
+  if (risk < riskLevelLowBelow) return riskLevels[1];
+  if (risk < riskLevelMidBelow) return riskLevels[2];
+  if (risk < riskLevelHighBelow) return riskLevels[3];
+  return riskLevels[4];
+}
+
+/// 버린 패의 위험과 손 안 가장 낮은 위험(엔진 %) → pushed · folded · between.
+///
+/// 차 d = [actualRisk] − [minRisk]. d ≥ [stancePushedAtLeast] 면 pushed. d < [stanceFoldedBelow] 이고 두 위험이
+/// 같은 구간([riskLevelLowBelow] · [riskLevelMidBelow] · [riskLevelHighBelow] 로 나눈 넷)이면 folded, 구간이 다르면
+/// between. 그 밖은 between. 구간은 '안전'(모두에게 안전패) 표시와 상관없이 숫자로만 본다
+/// (= `riskLevel(risk, safeForAll: false)` 가 같은가).
+String defenseStance(double actualRisk, double minRisk) {
+  final d = actualRisk - minRisk;
+  if (d >= stancePushedAtLeast) return 'pushed';
+  if (d < stanceFoldedBelow &&
+      riskLevel(actualRisk, safeForAll: false) == riskLevel(minRisk, safeForAll: false)) {
+    return 'folded';
+  }
+  return 'between';
+}
 
 const _windNames = ['동', '남', '서', '북'];
 
@@ -119,6 +176,62 @@ Map<String, dynamic> _turn(Paifu p, TurnReview t) {
     'riichi_winds': [for (final s in t.riichiSeats) _wind(p, s)],
     'genbutsu': t.genbutsu,
     'safe_tiles': [for (final k in t.safeTiles) _code(k)],
+    'defense': _defense(p, t),
+  };
+}
+
+/// 설계서 1122 2절의 `defense`. 리치한 다른 자리가 있고 · 손패를 알고 · 엔진 위험표가 있을 때만(아니면 null).
+/// `threat_winds` 는 엔진이 위험을 합친 자리(리치 · 텐파이율 높은 울기, [TurnReview.riskSeats]).
+/// 내가 리치 중인 차례(forced)는 `stance` · `efficient` 가 null.
+Map<String, dynamic>? _defense(Paifu p, TurnReview t) {
+  final table = t.riskTable;
+  final byKind = t.riskByKind;
+  if (t.riichiSeats.isEmpty || t.before == null || table == null || byKind == null || byKind.isEmpty) return null;
+  final discard = t.discard.tile;
+  final actualRisk = byKind[discard];
+  if (actualRisk == null) return null;
+  final kinds = byKind.keys.toList()
+    ..sort((a, b) {
+      final c = byKind[a]!.compareTo(byKind[b]!);
+      return c != 0 ? c : a - b;
+    });
+  String level(int k) => riskLevel(byKind[k]!, safeForAll: table.safeForAll34[k]);
+  final safe = t.safeTiles.toSet();
+  final minRisk = byKind[kinds.first]!;
+  // 내가 리치 중(forced)인 차례는 패를 고를 수 없었다 — "밀었다 · 접었다" · 효율대로 버릴 패는 뜻이 없어 null(11-22 보완).
+  // 버린 패가 얼마나 위험했나(tiles · actual · safest)는 사실이라 남긴다.
+  final canChoose = t.status != ReviewStatus.forced;
+  Map<String, dynamic>? efficient;
+  final mh = t.mh;
+  if (canChoose && mh != null) {
+    int? e;
+    for (final d in mh) {
+      if (!d.isBackward) {
+        e = d.tile;
+        break;
+      }
+    }
+    e ??= t.mhBest;
+    if (e != null && byKind.containsKey(e)) efficient = {'tile': _code(e), 'level': level(e)};
+  }
+  return {
+    'threat_winds': [for (final s in t.riskSeats) _wind(p, s)],
+    'tiles': [
+      for (final k in kinds) {'tile': _code(k), 'level': level(k), 'genbutsu': safe.contains(k)},
+    ],
+    'actual': {
+      'tile': _code(discard),
+      'level': level(discard),
+      'rank': 1 + kinds.where((k) => byKind[k]! < actualRisk).length,
+      'of': kinds.length,
+    },
+    'safest': [
+      for (final k in kinds)
+        if (byKind[k] == minRisk) _code(k),
+    ],
+    'efficient': efficient,
+    'stance': canChoose ? defenseStance(actualRisk, minRisk) : null,
+    'fold_spot': null,
   };
 }
 

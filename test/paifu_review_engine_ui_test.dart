@@ -25,8 +25,8 @@ const _pending = ValueKey('paifu-review-engine-pending');
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  // r19(손패 있음, hero 자리 1): 걸음 29 = 6번째 버림 4만(실수 · 위협 차례), 38 = 8번째 버림 3삭(리치 선언 · 텐파이),
-  // 24 = 5번째 버림 2통(엔진 1위 5통과 값이 같음), 43 = 리치 뒤(forced).
+  // r19(손패 있음, hero 자리 1): 걸음 29 = 6번째 버림 4만(실수 · 위협 차례), 39 = 8번째 버림 3삭(리치 선언 · 텐파이),
+  // 23 = 5번째 버림 2통(엔진 1위 5통과 값이 같음), 44 = 리치 뒤(forced).
   late Paifu r19;
   late PaifuReview r19Engine;
   setUpAll(() {
@@ -62,22 +62,22 @@ void main() {
     test('r19 걸음 29(실수 · 위협): 실제 버림 숫자 · 샹텐 지키는 추천 · 위험', () {
       final l = engineLines(at(r19Engine, 29), seatLabel: seat);
       expect(l, [
-        '실제 버림 4만: 개량 뒤 유효패 평균 10.9장 · 속도 15.3 · 국수지 3132',
-        '점수 · 화료까지 본 추천: 3만 (개량 뒤 유효패 평균 15.2장 · 속도 26.4)',
-        '위협 자리: 자리0 · 이 패 방총 위험 약 1.7%',
-        '가장 안전: 5통 (0.9%)',
+        '실제 버림 4만: 개량 뒤 유효패 평균 10.8장 · 속도 15.5 · 국수지 3132',
+        '점수 · 화료까지 본 추천: 3만 (개량 뒤 유효패 평균 15.2장 · 속도 26.8)',
+        '위협 자리: 자리0 · 이 패 방총 위험 약 1.8%',
+        '가장 안전: 5통 (1.0%)',
       ]);
     });
 
-    test('r19 걸음 38(텐파이): 화료율 · 리치 기준 기대 점수, 추천은 실제 버림과 같음', () {
-      final l = engineLines(at(r19Engine, 38), seatLabel: seat);
-      expect(l[0], '실제 버림 3삭: 개량 뒤 대기 평균 3.5장 · 화료율 33.3% · 기대 8276점(리치 기준) · 국수지 1755');
+    test('r19 걸음 39(텐파이): 화료율 · 리치 기준 기대 점수, 추천은 실제 버림과 같음', () {
+      final l = engineLines(at(r19Engine, 39), seatLabel: seat);
+      expect(l[0], '실제 버림 3삭: 개량 뒤 대기 평균 3.4장 · 화료율 33.3% · 기대 8276점(리치 기준) · 국수지 1755');
       expect(l[1], '점수 · 화료까지 본 추천: 실제 버림과 같음');
-      expect(l[2], '위협 자리: 자리0 · 이 패 방총 위험 약 3.0%');
+      expect(l[2], '위협 자리: 자리0 · 이 패 방총 위험 약 3.5%');
     });
 
-    test('r19 걸음 24: 엔진 1위와 값이 모두 같으면 "값이 같음"', () {
-      expect(engineRecommendLine(at(r19Engine, 24)), '점수 · 화료까지 본 추천: 5통 — 실제 버림과 값이 같음');
+    test('r19 걸음 23: 엔진 1위와 값이 모두 같으면 "값이 같음"', () {
+      expect(engineRecommendLine(at(r19Engine, 23)), '점수 · 화료까지 본 추천: 5통 — 실제 버림과 값이 같음');
     });
 
     test('위협 없는 차례엔 위험 줄이 없음 · 엔진 없이 낸 평가엔 줄이 하나도 없음', () {
@@ -91,14 +91,14 @@ void main() {
     });
 
     test('참고값 세 줄(engineFoldLines): 추천은 말풍선의 최선(동률 포함)과 같으면 그렇게 적고, 위협 없으면 추천 한 줄', () {
-      // 걸음 29: 최선 3만(또는 3삭), 엔진 추천 3만 · 위협 자리 0 · 방총 1.7% · 가장 안전 5통(위 engineLines 시험과 같은 값).
+      // 걸음 29: 최선 3만(또는 3삭), 엔진 추천 3만 · 위협 자리 0 · 방총 1.8% · 가장 안전 5통(위 engineLines 시험과 같은 값).
       expect(engineFoldLines(at(r19Engine, 29), seatLabel: seat), [
         '점수 · 화료까지 본 추천: 3만 — 말풍선의 최선과 같음',
-        '이 패 방총 위험: 약 1.7% (위협: 자리0)',
+        '이 패 방총 위험: 약 1.8% (위협: 자리0)',
         '가장 안전한 패: 5통',
       ]);
-      // 걸음 24: 최선 2통(또는 5통), 엔진 추천 5통.
-      expect(engineFoldLines(at(r19Engine, 24)).first, '점수 · 화료까지 본 추천: 5통 — 말풍선의 최선과 같음');
+      // 걸음 23: 최선 2통(또는 5통), 엔진 추천 5통.
+      expect(engineFoldLines(at(r19Engine, 23)).first, '점수 · 화료까지 본 추천: 5통 — 말풍선의 최선과 같음');
       // 걸음 9(2번째 버림 동): 위협 없음 → 추천 한 줄.
       expect(engineFoldLines(at(r19Engine, 9)), hasLength(1));
       // 짐작 손패 차례(걸음 4)는 엔진 순위가 없다.
@@ -108,7 +108,7 @@ void main() {
 
     test('"자세히" 표 머리: 텐파이 후보가 있으면 화료율, 위협이 있으면 방총 위험', () {
       expect(EngineCandidateTable.headOf(at(r19Engine, 29)), ['버릴 패', '샹텐', '유효패', '개량 뒤 평균', '방총 위험', '국수지']);
-      expect(EngineCandidateTable.headOf(at(r19Engine, 38)),
+      expect(EngineCandidateTable.headOf(at(r19Engine, 39)),
           ['버릴 패', '샹텐', '유효패', '개량 뒤 평균', '화료율', '방총 위험', '국수지']);
       expect(EngineCandidateTable.headOf(at(r19Engine, 9)), ['버릴 패', '샹텐', '유효패', '개량 뒤 평균', '국수지']);
     });
@@ -203,7 +203,7 @@ void main() {
       expect(inEngine(engineFoldTitle), findsOneWidget);
       // 자리 표시는 재생 화면 그대로(바람 + 이름).
       expect(inEngine('점수 · 화료까지 본 추천: 3만 — 말풍선의 최선과 같음'), findsOneWidget);
-      expect(inEngine('이 패 방총 위험: 약 1.7% (위협: 남 플레이어 1)'), findsOneWidget);
+      expect(inEngine('이 패 방총 위험: 약 1.8% (위협: 남 플레이어 1)'), findsOneWidget);
       expect(inEngine('가장 안전한 패: 5통'), findsOneWidget);
       // 개량 뒤 평균 · 속도 · 국수지는 "자세히" 안으로.
       expect(inEngine('개량 뒤'), findsNothing);
@@ -226,14 +226,14 @@ void main() {
       await tester.pumpAndSettle();
       await openFold(tester);
 
-      await goTo(tester, 38);
+      await goTo(tester, 39);
       expect(inEngine('점수 · 화료까지 본 추천: 3삭 — 말풍선의 최선과 같음'), findsOneWidget);
-      expect(inEngine('이 패 방총 위험: 약 3.0%'), findsOneWidget);
+      expect(inEngine('이 패 방총 위험: 약 3.5%'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('paifu-engine-detail')));
       await tester.pumpAndSettle();
       expect(inEngine('화료율'), findsOneWidget);
 
-      await goTo(tester, 43);
+      await goTo(tester, 44);
       expect(inEngine('이 걸음은 참고값이 없습니다'), findsOneWidget);
       expect(find.byKey(_pending), findsNothing);
       expect(find.byKey(const ValueKey('paifu-engine-detail')), findsNothing);

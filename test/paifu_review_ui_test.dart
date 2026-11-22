@@ -143,7 +143,7 @@ void main() {
       await pump(tester, _load('r19_142013'));
       await tester.ensureVisible(find.byKey(const ValueKey('paifu-summary-lesson-1')));
       await tap(tester, const ValueKey('paifu-summary-lesson-1'));
-      expect(step(tester), 33);
+      expect(step(tester), 34);
       expect(title(tester), '1삭 버림 · 부정확');
       await tap(tester, const ValueKey('paifu-open-summary'));
       expect(find.byKey(const ValueKey('paifu-summary')), findsOneWidget);
@@ -188,16 +188,16 @@ void main() {
       expect(seen, [
         (4, '북 버림 · 짐작 손패'),
         (9, '동 버림 · 최선입니다'),
-        (15, '발 버림 · 최선입니다'),
-        (19, '7통 버림 · 최선입니다'),
-        (24, '2통 버림 · 최선입니다'),
+        (14, '발 버림 · 최선입니다'),
+        (18, '7통 버림 · 최선입니다'),
+        (23, '2통 버림 · 최선입니다'),
         (29, '4만 버림 · 실수'),
-        (33, '1삭 버림 · 부정확'),
-        (38, '리치'),
-        (38, '3삭 버림 · 최선입니다'),
-        (43, '4삭 버림 · 리치 중'),
-        (48, '1만 버림 · 리치 중'),
-        (52, '끝'),
+        (34, '1삭 버림 · 부정확'),
+        (39, '리치'),
+        (39, '3삭 버림 · 최선입니다'),
+        (44, '4삭 버림 · 리치 중'),
+        (49, '1만 버림 · 리치 중'),
+        (53, '끝'),
       ]);
       expect(sentence(tester), startsWith('론'));
       expect(sentence(tester), endsWith('\n이 판 패효율 93'));
@@ -213,7 +213,7 @@ void main() {
       expect(corner(tester), '−5장');
       expect(sentence(tester), '3만(또는 3삭)을 버렸다면 유효패가 5장 더 많았습니다. 차이가 큽니다.');
 
-      await goTo(tester, 33);
+      await goTo(tester, 34);
       expect(lines(tester), ['내 버림 1삭 · 유효패 10장', '최선 3삭 · 유효패 12장']);
       expect(corner(tester), '−2장');
       expect(sentence(tester), '3삭을 버렸다면 유효패가 2장 더 많았습니다.');
@@ -224,12 +224,12 @@ void main() {
       expect(sentence(tester), '유효패가 가장 많은 버림입니다.');
 
       // 방향키로 온 리치 걸음은 수 말풍선(텐파이라 "대기"). 단계는 "다음" · 단계 아이콘으로.
-      await goTo(tester, 38);
+      await goTo(tester, 39);
       expect(title(tester), '3삭 버림 · 최선입니다');
       expect(lines(tester), ['내 버림 3삭 · 대기 3장']);
       expect(sentence(tester), '대기가 가장 많은 버림입니다.');
       await tap(tester, const ValueKey('paifu-stage-riichi'));
-      expect(step(tester), 38);
+      expect(step(tester), 39);
       expect(title(tester), '리치');
       expect(sentence(tester), '8순에 리치했습니다. 그 뒤 2번은 뽑은 패를 그대로 버렸습니다.');
 
@@ -274,7 +274,7 @@ void main() {
       expect(tester.widget<ReviewGradeIcon>(badge).grade, ReviewGrade.mistake);
       await goTo(tester, 28);
       expect(badge, findsNothing);
-      await goTo(tester, 43); // 리치 중
+      await goTo(tester, 44); // 리치 중
       expect(badge, findsNothing);
       await goTo(tester, 4); // 짐작
       expect(badge, findsNothing);
@@ -304,11 +304,11 @@ void main() {
       expect(step(tester), 31);
 
       await tap(tester, const ValueKey('paifu-review-next'));
-      expect(step(tester), 33);
+      expect(step(tester), 34);
       await tap(tester, const ValueKey('paifu-review-next'));
       expect(step(tester), 29);
       await tap(tester, const ValueKey('paifu-stage-end'));
-      expect(step(tester), 52);
+      expect(step(tester), 53);
       expect(title(tester), '끝');
       await tap(tester, const ValueKey('paifu-review-next'));
       expect(step(tester), 29);
@@ -342,7 +342,7 @@ void main() {
           '3만을 버리면 유효패: 2만 5만 3삭 4삭 8삭 (15장)');
 
       // 걸음을 넘기면 한 줄은 닫히고 막대는 그 걸음 것으로(켜 둔 채).
-      await goTo(tester, 33);
+      await goTo(tester, 34);
       expect(find.byKey(const ValueKey('paifu-bar-info')), findsNothing);
       expect(heroTiles(), findsNWidgets(14));
       expect(tester.widgetList<TileView>(heroTiles()).where((t) => t.dimmed).map((t) => t.tile), [18]); // 1삭
@@ -385,7 +385,7 @@ void main() {
       expect(find.descendant(of: fold, matching: find.byType(TileView)), findsNWidgets(4));
       expect(find.descendant(of: fold, matching: find.text('실제')), findsOneWidget);
       expect(find.descendant(of: fold, matching: find.text('최선')), findsNWidgets(2));
-      await goTo(tester, 33);
+      await goTo(tester, 34);
       expect(find.descendant(of: fold, matching: find.byType(TileView)), findsNWidgets(3));
       await goTo(tester, 30);
       expect(find.descendant(of: fold, matching: find.text('이 걸음은 후보가 없습니다')), findsOneWidget);
@@ -400,7 +400,7 @@ void main() {
       await pump(tester, _load('r19_142013'));
       await startReview(tester);
       await tap(tester, const ValueKey('paifu-review-settings'));
-      expect(find.text('0 / 52'), findsOneWidget);
+      expect(find.text('0 / 53'), findsOneWidget);
       await tap(tester, const ValueKey('paifu-settings-log'));
       expect(find.byKey(const ValueKey('paifu-log-sheet')), findsOneWidget);
       await tester.tap(find.text('6'));
@@ -506,7 +506,7 @@ void main() {
       await tap(tester, const ValueKey('paifu-fold-candidates-btn'));
       await tap(tester, const ValueKey('paifu-fold-engine-btn'));
       var checked = 0;
-      for (final s in [9, 15, 19, 24, 29, 33, 38, 43, 48]) {
+      for (final s in [9, 14, 18, 23, 29, 34, 39, 44, 49]) {
         await goTo(tester, s);
         expect(tester.takeException(), isNull, reason: '걸음 $s');
         final tileW = tester.getSize(heroTiles().first).width;

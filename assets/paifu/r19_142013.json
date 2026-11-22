@@ -157,13 +157,6 @@
   },
   {
    "type": "discard",
-   "seat": 3,
-   "tile": "9s",
-   "tsumogiri": null,
-   "riichi": false
-  },
-  {
-   "type": "discard",
    "seat": 0,
    "tile": "2p",
    "tsumogiri": null,
@@ -281,7 +274,7 @@
   {
    "type": "discard",
    "seat": 3,
-   "tile": "3z",
+   "tile": "9s",
    "tsumogiri": null,
    "riichi": false
   },
@@ -344,9 +337,20 @@
   {
    "type": "discard",
    "seat": 3,
-   "tile": "9s",
+   "tile": "6s",
    "tsumogiri": null,
    "riichi": false
+  },
+  {
+   "type": "call",
+   "seat": 0,
+   "kind": "pon",
+   "from": 3,
+   "tiles": [
+    "6s",
+    "6s",
+    "6s"
+   ]
   },
   {
    "type": "discard",
@@ -401,6 +405,13 @@
    "type": "discard",
    "seat": 2,
    "tile": "9p",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "9s",
    "tsumogiri": null,
    "riichi": false
   },

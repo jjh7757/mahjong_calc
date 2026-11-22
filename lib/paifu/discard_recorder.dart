@@ -10,6 +10,8 @@
 /// - 시작: 선(親) 자리 강에 패가 두 장면 이어 보이기 전의 장면은 버린다(패 나누는 중의 헛 패).
 /// - 국의 경계: 네 강이 모두 빈 장면이 두 번 이어지면 칸을 비우고 새로 적는다(기록기 하나를 대국 내내 쓴다).
 /// - 한 장면만 보이고 사라진 패는 그 무렵 울기 상자가 늘었을 때만 울려 나간 버림으로 적는다(아니면 헛것).
+/// - 확정 안 된 칸: 한 장면만 보이고 마지막 칸이 아니게 된 칸은 "안 보이는 칸" 으로 세지 않고, 안 보이는 채 다른 칸이 붙는
+///   장면이 이어지면 지운다([DiscardRecorderConfig.dropUnconfirmed], 계획서 docs/recorder_ghost_slot_plan_1121.md).
 /// - 울려 나간 패는 그 무렵 울기 상자가 늘어난 자리가 가져간 것이고, 늘어난 상자로 묶음(퐁 · 치 · 깡)을 적는다.
 /// - 패 종류: 이어진 장면의 확신도 합 투표. 자리 안 순서 = 강 위치(줄·칸), 자리 사이 순서 = 처음 보인 장면, 같은 장면이면 차례.
 library;
@@ -61,7 +63,22 @@ class DiscardRecorderConfig {
   /// 눕힌 패(리치 선언패)로 치는 상자 가로/세로 비(그 자리에서 볼 때). 세운 패는 약 0.76, 눕힌 패는 약 1.3 이라 그 가운데.
   final double sidewaysRatio;
 
+  /// (미채택, 재생 실험용 — 기본 0 = 끔) 어느 칸에도 안 붙은 상자가 이 확신도보다 낮으면 새 칸을 만들지도, 안 보이는 칸을
+  /// 옮기지도 않는다. 이미 있는 칸에 붙는 것 · 이동량 맞춤에는 그대로 쓴다. 놓이는 중인 패가 제자리 밖에서 낮은 확신도로 한 번
+  /// 잡혀 생긴 헛 칸이 "마지막 칸만 안 보이면 울려 나감" 을 막은 것(11-14 r19 오른쪽 3z 0.40)을 겨눈 후보 B 였는데, 0.5 로는
+  /// 처음 보인 장면이 늦어져 11-07 판들의 차례 위반이 늘어 [dropUnconfirmed] 를 골랐다(계획서 docs/recorder_ghost_slot_plan_1121.md).
+  final double minNewSlotConf;
+
+  /// 확정 안 된 칸 지우기(기본 켬, 계획서 docs/recorder_ghost_slot_plan_1121.md 후보 C 채택). 한 장면만 보인 칸(n = 1)이 그 자리의
+  /// 마지막 칸이 아니게 되면 확정 안 된 칸으로 본다 — "안 보이는 칸" 을 셀 때 빼고, 그 칸이 안 보이는데 같은 자리의 다른 칸은
+  /// 하나라도 붙은 장면이 [streakNeed] 번 이어지면 칸 목록에서 지운다. 놓이는 중인 패가 제자리 밖에서 한 번 잡혀 생긴 헛 칸이
+  /// "마지막 칸만 안 보이면 울려 나감" 을 막던 것(11-14 r19 오른쪽)을 풀고, 13판 재생에서 헛 버림 · 차례 위반도 줄었다.
+  /// 마지막 칸은 그대로 둔다(버리자마자 가져가 한 장면만 보인 진짜 버림은 늘 마지막 칸이다). false 면 옛 동작(재생 비교용).
+  final bool dropUnconfirmed;
+
   const DiscardRecorderConfig({
+    this.minNewSlotConf = 0,
+    this.dropUnconfirmed = true,
     this.tol = 0.2,
     this.rowGap = 0.42 * 0.55,
     this.kindBonus = 2,
@@ -157,6 +174,9 @@ class _Slot {
   int flipFrom = 0;
   double flipC = 0;
   int sideways = 0;
+
+  /// [DiscardRecorderConfig.dropUnconfirmed]: 확정 안 된 칸이 안 보이고 다른 칸은 붙은 장면이 이어진 수.
+  int ghost = 0;
 
   _Slot(this.u, this.v, this.first, this.last, this.votes, this.best, this.n);
 
@@ -446,11 +466,13 @@ class DiscardRecorder {
         sl.n++;
         if (t.sideways) sl.sideways++;
       }
-      // 마지막 칸만 빠졌나? 다른 칸도 안 보이면 가림이라 건너뛴다.
+      // 확정 안 된 칸([DiscardRecorderConfig.dropUnconfirmed]): 한 장면만 보였고(이 장면에도 안 붙음) 그 자리의 마지막 칸이 아님.
+      bool unconfirmed(int i) => config.dropUnconfirmed && i < alive.length - 1 && alive[i].n == 1 && !ms.containsKey(i);
+      // 마지막 칸만 빠졌나? 다른 칸도 안 보이면 가림이라 건너뛴다(확정 안 된 칸은 셀 때 뺀다).
       if (alive.isNotEmpty) {
         final missing = [
           for (var i = 0; i < alive.length; i++)
-            if (!ms.containsKey(i)) i,
+            if (!ms.containsKey(i) && !unconfirmed(i)) i,
         ];
         final lastSlot = alive.last;
         if (missing.length == 1 && missing.single == alive.length - 1) {
@@ -465,6 +487,8 @@ class DiscardRecorder {
       for (var j = 0; j < seen.length; j++) {
         if (mt.containsKey(j)) continue;
         final t = seen[j];
+        // 확신도가 낮은 안 붙은 상자는 새 칸도, 옮기기도 안 한다([DiscardRecorderConfig.minNewSlotConf], 기본 0 이면 늘 통과).
+        if (t.conf < config.minNewSlotConf) continue;
         _Slot? lost;
         var lostAt = -1;
         for (var i = 0; i < alive.length - 1; i++) {
@@ -485,6 +509,19 @@ class DiscardRecorder {
           continue;
         }
         slots.add(_Slot(t.u, t.v, f, f, {t.tile: t.conf}, {t.tile: t.conf}, 1)..sideways = t.sideways ? 1 : 0);
+      }
+      // 확정 안 된 칸이 안 보이는데 다른 칸은 붙은 장면이 [DiscardRecorderConfig.streakNeed] 번 이어지면 지운다.
+      if (config.dropUnconfirmed) {
+        final drop = <_Slot>[];
+        for (var i = 0; i < alive.length; i++) {
+          final sl = alive[i];
+          if (unconfirmed(i) && ms.isNotEmpty) {
+            if (++sl.ghost >= config.streakNeed) drop.add(sl);
+          } else {
+            sl.ghost = 0;
+          }
+        }
+        slots.removeWhere(drop.contains);
       }
     }
   }

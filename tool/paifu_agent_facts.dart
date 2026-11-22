@@ -1,4 +1,4 @@
-// 패보 한 판 → 복기 에이전트 사실표(서버 POST /v2/review/ask 의 facts, 설계서 1121 2절).
+// 패보 한 판 → 복기 에이전트 사실표(서버 POST /v2/review/ask 의 facts, 설계서 1121 2절 · v2 defense 는 1122 2절).
 //
 //   dart run tool/paifu_agent_facts.dart [--compact] <패보.json> [출력.json]
 //
@@ -27,14 +27,17 @@ void main(List<String> argv) {
     return;
   }
   final p = Paifu.fromJson(jsonDecode(src.readAsStringSync(encoding: utf8)) as Map<String, dynamic>);
-  final facts = agentFacts(p, reviewPaifu(p));
+  // 사실표 v2 의 defense(방총 위험 단계)는 엔진 위험표가 있어야 채워진다 — 엔진을 켠다(한 판 수 초).
+  final facts = agentFacts(p, reviewPaifu(p, withEngine: true));
   final compact = jsonEncode(facts);
   final text = '${compactOut ? compact : const JsonEncoder.withIndent('  ').convert(facts)}\n';
   if (args.length == 2) {
     File(args[1]).writeAsBytesSync(utf8.encode(text));
     final turns = (facts['turns'] as List).cast<Map<String, dynamic>>();
     final withNumbers = turns.where((t) => (t['options'] as List).isNotEmpty).length;
-    stderr.writeln('${args[1]} — 버림 ${turns.length}번, 숫자 있는 차례 $withNumbers, 압축 ${utf8.encode(compact).length} bytes');
+    final withDefense = turns.where((t) => t['defense'] != null).length;
+    stderr.writeln('${args[1]} — 버림 ${turns.length}번, 숫자 있는 차례 $withNumbers, 수비 칸 $withDefense, '
+        '압축 ${utf8.encode(compact).length} bytes');
   } else {
     stdout.add(utf8.encode(text));
   }

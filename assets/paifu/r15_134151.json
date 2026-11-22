@@ -89,13 +89,6 @@
   },
   {
    "type": "discard",
-   "seat": 0,
-   "tile": "9s",
-   "tsumogiri": null,
-   "riichi": false
-  },
-  {
-   "type": "discard",
    "seat": 1,
    "tile": "4z",
    "tsumogiri": null,
@@ -153,7 +146,7 @@
   {
    "type": "discard",
    "seat": 0,
-   "tile": "1p",
+   "tile": "9s",
    "tsumogiri": null,
    "riichi": false
   },
@@ -216,7 +209,7 @@
   {
    "type": "discard",
    "seat": 0,
-   "tile": "7z",
+   "tile": "1p",
    "tsumogiri": null,
    "riichi": false
   },
@@ -279,7 +272,7 @@
   {
    "type": "discard",
    "seat": 0,
-   "tile": "2z",
+   "tile": "7z",
    "tsumogiri": null,
    "riichi": false
   },
@@ -342,7 +335,7 @@
   {
    "type": "discard",
    "seat": 0,
-   "tile": "8p",
+   "tile": "2z",
    "tsumogiri": null,
    "riichi": false
   },
@@ -405,7 +398,7 @@
   {
    "type": "discard",
    "seat": 0,
-   "tile": "1z",
+   "tile": "8p",
    "tsumogiri": null,
    "riichi": false
   },
@@ -468,7 +461,7 @@
   {
    "type": "discard",
    "seat": 0,
-   "tile": "2z",
+   "tile": "1z",
    "tsumogiri": null,
    "riichi": false
   },
@@ -531,7 +524,7 @@
   {
    "type": "discard",
    "seat": 0,
-   "tile": "9m",
+   "tile": "2z",
    "tsumogiri": null,
    "riichi": false
   },
@@ -594,7 +587,7 @@
   {
    "type": "discard",
    "seat": 0,
-   "tile": "7z",
+   "tile": "9m",
    "tsumogiri": null,
    "riichi": false
   },
@@ -657,7 +650,7 @@
   {
    "type": "discard",
    "seat": 0,
-   "tile": "8m",
+   "tile": "7z",
    "tsumogiri": null,
    "riichi": false
   },
@@ -720,7 +713,7 @@
   {
    "type": "discard",
    "seat": 0,
-   "tile": "5m",
+   "tile": "8m",
    "tsumogiri": null,
    "riichi": false
   },
@@ -783,7 +776,7 @@
   {
    "type": "discard",
    "seat": 0,
-   "tile": "2p",
+   "tile": "5m",
    "tsumogiri": null,
    "riichi": false
   },
@@ -846,7 +839,7 @@
   {
    "type": "discard",
    "seat": 0,
-   "tile": "3p",
+   "tile": "2p",
    "tsumogiri": null,
    "riichi": false
   },
@@ -905,6 +898,13 @@
     "5s",
     "5s"
    ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "3p",
+   "tsumogiri": null,
+   "riichi": false
   },
   {
    "type": "discard",

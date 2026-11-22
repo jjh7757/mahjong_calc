@@ -25,7 +25,8 @@ RiverSighting _at(Side side, int col, int row, String tile,
 class _Feed {
   final DiscardRecorder rec;
   var _t = DateTime(2026, 11, 17, 12);
-  _Feed({Side? dealer}) : rec = DiscardRecorder(dealer: dealer);
+  _Feed({Side? dealer, DiscardRecorderConfig config = const DiscardRecorderConfig()})
+      : rec = DiscardRecorder(dealer: dealer, config: config);
 
   /// [melds] = 그 장면의 자리별 울기 상자 수(안 주면 기록기가 울기 상자를 모르는 것으로).
   void add(List<RiverSighting> tiles, {int times = 1, Map<Side, int>? melds, Map<Side, List<String>>? meldTiles}) {
@@ -458,6 +459,93 @@ void main() {
       f.add([a], times: 2);
       final p = f.rec.toPaifu(id: 'x', bottomSeat: 0, dealerSeat: 0, hero: 0);
       expect(p.events.map((e) => e.type), [PaifuEventType.discard, PaifuEventType.discard]);
+    });
+  });
+
+  // 헛 칸 처리 후보(docs/recorder_ghost_slot_plan_1121.md). A = 옛 동작(dropUnconfirmed false), B = minNewSlotConf 0.5(미채택),
+  // C = dropUnconfirmed(채택, 기본 켬). B 만 볼 때는 C 를 명시적으로 끈다.
+  group('헛 칸 처리(C 채택, 기본 켬)', () {
+    const a = DiscardRecorderConfig(dropUnconfirmed: false);
+    const b = DiscardRecorderConfig(minNewSlotConf: 0.5, dropUnconfirmed: false);
+    const c = DiscardRecorderConfig(dropUnconfirmed: true);
+    const bc = DiscardRecorderConfig(minNewSlotConf: 0.5, dropUnconfirmed: true);
+
+    /// 11-14 r19 오른쪽 꼴: 놓이는 중인 3z 가 제자리 밖에서 0.40 으로 한 장면 → 제자리 3z → 9s → 6s 가 두 장면 보이고
+    /// 사라짐(위가 퐁) → 그 자리에 다음 9s(확신도 0.85 — r19 에서는 뒤에 생긴 다른 헛 칸 때문에 6s 칸이 마지막이 아니어서
+    /// "바뀜" 규칙이 못 걸렸다. 여기서는 확신도로 그 규칙을 비켜 간다).
+    _Feed r19(DiscardRecorderConfig config) {
+      final f = _Feed(config: config);
+      final t = [
+        _at(Side.right, 0, 0, '1z'),
+        _at(Side.right, 1, 0, '4z'),
+        _at(Side.right, 2, 0, '3z'),
+        _at(Side.right, 3, 0, '9s'),
+        _at(Side.right, 4, 0, '6s'),
+        _at(Side.right, 4, 0, '9s', conf: 0.85), // 0.9 미만 — "마지막 칸이 다른 패로 바뀜" 에는 안 걸림
+      ];
+      const none = {Side.top: <String>[]};
+      f.add(_pick(t, [0, 1]), times: 3, meldTiles: none);
+      f.add([..._pick(t, [0, 1]), _at(Side.right, 2, 0, '3z', conf: 0.40, dv: 30)], meldTiles: none); // 놓이는 중
+      f.add(_pick(t, [0, 1, 2]), times: 3, meldTiles: none);
+      f.add(_pick(t, [0, 1, 2, 3]), times: 3, meldTiles: none);
+      f.add(_pick(t, [0, 1, 2, 3, 4]), times: 2, meldTiles: none);
+      f.add(_pick(t, [0, 1, 2, 3]), times: 3, meldTiles: {
+        Side.top: ['6s', '6s', '6s'],
+      });
+      f.add(_pick(t, [0, 1, 2, 3, 5]), times: 3, meldTiles: {
+        Side.top: ['6s', '6s', '6s'],
+      });
+      return f;
+    }
+
+    test('r19 꼴: 옛 동작(A)은 헛 칸 때문에 6s 울려 나감을 놓치고 6s 칸이 다음 9s 와 합쳐진다', () {
+      expect(r19(a).river(Side.right), ['1z', '4z', '3z', '9s', '9s']);
+    });
+
+    test('기본 설정은 C(dropUnconfirmed 켬) · B 끔', () {
+      const d = DiscardRecorderConfig();
+      expect(d.dropUnconfirmed, isTrue);
+      expect(d.minNewSlotConf, 0);
+    });
+
+    for (final (name, config) in [('B', b), ('C', c), ('B+C', bc), ('기본값', const DiscardRecorderConfig())]) {
+      test('r19 꼴: $name 이면 6s 울려 나감(위가 퐁)이 적힌다', () {
+        final f = r19(config);
+        expect(f.river(Side.right), ['1z', '4z', '3z', '9s', '6s*', '9s']);
+        // 사진 아래 = 자리 0 → 오른쪽 = 1, 위 = 2.
+        final p = f.rec.toPaifu(id: 'x', bottomSeat: 0, dealerSeat: 1, hero: 0);
+        final e = p.events.singleWhere((e) => e.type == PaifuEventType.call);
+        expect('${e.seat}<${e.from} ${e.callKind} ${e.callTiles.join(' ')}', '2<1 pon 6s 6s 6s');
+      });
+    }
+
+    test('C 에서도 버리자마자 가져가 한 장면만 보인 진짜 버림(마지막 칸)은 남는다', () {
+      final a = _at(Side.top, 0, 0, '1z'), b3 = _at(Side.top, 1, 0, '3z');
+      for (final config in [c, bc]) {
+        final f = _Feed(config: config);
+        f.add([a, b3], times: 3, melds: const {});
+        f.add([a, b3, _at(Side.top, 2, 0, '0p')], melds: const {}); // 한 장면만 보임
+        f.add([a, b3], times: 3, melds: {Side.left: 3}); // 왼쪽 자리에 퐁 묶음
+        f.add([a, b3, _at(Side.top, 2, 0, '7p')], times: 2, melds: {Side.left: 3}); // 그 자리에 다음 버림
+        expect(f.river(Side.top), ['1z', '3z', '0p*', '7p']);
+      }
+    });
+
+    test('B: 확신도 낮은 상자도 이미 있는 칸에는 붙고, 어느 칸에도 안 붙으면 새 칸을 안 만든다', () {
+      final f = _Feed(config: b);
+      f.add([_at(Side.bottom, 0, 0, '4p')], times: 3);
+      f.add([_at(Side.bottom, 0, 0, '1s', conf: 0.4)], times: 2); // 놓여 있는 패가 흐리게 읽힘
+      final d = f.rec.rivers()[Side.bottom]!.single;
+      expect(d.tile, '4p');
+      expect(d.seen, 5);
+      // 떨어진 곳의 낮은 확신도 상자: B 가 없으면(A) 세 장면이면 칸이 되지만 B 는 안 만든다.
+      final low = _at(Side.bottom, 2, 0, '8s', conf: 0.4);
+      f.add([_at(Side.bottom, 0, 0, '4p'), low], times: 3);
+      expect(f.river(Side.bottom), ['4p']);
+      final g = _Feed(config: a);
+      g.add([_at(Side.bottom, 0, 0, '4p')], times: 3);
+      g.add([_at(Side.bottom, 0, 0, '4p'), low], times: 3);
+      expect(g.river(Side.bottom), ['4p', '8s']);
     });
   });
 

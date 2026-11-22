@@ -14,7 +14,7 @@
  ],
  "dora_indicators": [],
  "ura_indicators": [],
- "note": "유국(텐파이 공개). 버림은 앱 기록기가 저장된 장면에서 적은 그대로, 손패 주인은 텐파이를 공개한 사람이고 손패는 사람이 적은 정답(영상으로 고친 것 포함)으로 끝 손패에서 거꾸로 복원한 것(첫 1순은 녹화 전이라 없음). 기록기 헛 버림 하나(자리 0 마지막 7z)는 강 사진 정답으로 뺌. 기록기 시간 순서가 어긋난 버림 하나(자리 0 의 둘째 3p)는 치 뒤로 옮김(차례 장수로 정함). 표시패 기록은 없음. 녹화 전 순 손패는 짐작으로 채움(버린 뒤 손패와 14장은 확실, 뽑은 패는 14장 중 가장 많은 종류 — guess 표시).",
+ "note": "유국(텐파이 공개). 버림은 앱 기록기가 저장된 장면에서 적은 그대로, 손패 주인은 텐파이를 공개한 사람이고 손패는 사람이 적은 정답(영상으로 고친 것 포함)으로 끝 손패에서 거꾸로 복원한 것(첫 1순은 녹화 전이라 없음). 표시패 기록은 없음. 녹화 전 순 손패는 짐작으로 채움(버린 뒤 손패와 14장은 확실, 뽑은 패는 14장 중 가장 많은 종류 — guess 표시).",
  "source": "recorder+user_hand",
  "events": [
   {
@@ -573,58 +573,9 @@
    ]
   },
   {
-   "type": "draw",
-   "seat": 3,
-   "tile": "2m",
-   "hand": [
-    "1s",
-    "2s",
-    "5s",
-    "4s",
-    "6s",
-    "6s",
-    "7s",
-    "8s",
-    "7z",
-    "7z",
-    "5z",
-    "5z",
-    "5z"
-   ]
-  },
-  {
-   "type": "discard",
-   "seat": 3,
-   "tile": "2m",
-   "tsumogiri": true,
-   "riichi": false,
-   "hand": [
-    "1s",
-    "2s",
-    "5s",
-    "4s",
-    "6s",
-    "6s",
-    "7s",
-    "8s",
-    "7z",
-    "7z",
-    "5z",
-    "5z",
-    "5z"
-   ]
-  },
-  {
    "type": "discard",
    "seat": 0,
    "tile": "7z",
-   "tsumogiri": null,
-   "riichi": false
-  },
-  {
-   "type": "discard",
-   "seat": 0,
-   "tile": "3p",
    "tsumogiri": null,
    "riichi": false
   },
@@ -643,16 +594,51 @@
    "riichi": false
   },
   {
+   "type": "draw",
+   "seat": 3,
+   "tile": "2m",
+   "hand": [
+    "1s",
+    "2s",
+    "5s",
+    "4s",
+    "6s",
+    "6s",
+    "7s",
+    "8s",
+    "7z",
+    "7z",
+    "5z",
+    "5z",
+    "5z"
+   ]
+  },
+  {
    "type": "discard",
-   "seat": 0,
-   "tile": "4z",
-   "tsumogiri": null,
-   "riichi": false
+   "seat": 3,
+   "tile": "2m",
+   "tsumogiri": true,
+   "riichi": false,
+   "hand": [
+    "1s",
+    "2s",
+    "5s",
+    "4s",
+    "6s",
+    "6s",
+    "7s",
+    "8s",
+    "7z",
+    "7z",
+    "5z",
+    "5z",
+    "5z"
+   ]
   },
   {
    "type": "discard",
    "seat": 0,
-   "tile": "7p",
+   "tile": "3p",
    "tsumogiri": null,
    "riichi": false
   },
@@ -714,6 +700,13 @@
   },
   {
    "type": "discard",
+   "seat": 0,
+   "tile": "4z",
+   "tsumogiri": null,
+   "riichi": false
+  },
+  {
+   "type": "discard",
    "seat": 1,
    "tile": "2m",
    "tsumogiri": null,
@@ -767,6 +760,13 @@
     "5z",
     "5z"
    ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "7p",
+   "tsumogiri": null,
+   "riichi": false
   },
   {
    "type": "discard",
@@ -907,13 +907,6 @@
   },
   {
    "type": "discard",
-   "seat": 0,
-   "tile": "3z",
-   "tsumogiri": null,
-   "riichi": false
-  },
-  {
-   "type": "discard",
    "seat": 1,
    "tile": "1s",
    "tsumogiri": null,
@@ -971,7 +964,7 @@
   {
    "type": "discard",
    "seat": 0,
-   "tile": "1p",
+   "tile": "3z",
    "tsumogiri": null,
    "riichi": false
   },
@@ -1034,7 +1027,7 @@
   {
    "type": "discard",
    "seat": 0,
-   "tile": "9s",
+   "tile": "1p",
    "tsumogiri": null,
    "riichi": false
   },
@@ -1097,7 +1090,7 @@
   {
    "type": "discard",
    "seat": 0,
-   "tile": "3z",
+   "tile": "9s",
    "tsumogiri": null,
    "riichi": false
   },
@@ -1156,6 +1149,13 @@
     "5z",
     "5z"
    ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "3z",
+   "tsumogiri": null,
+   "riichi": false
   }
  ],
  "result": {
