@@ -8,6 +8,7 @@
 // 채점: python score.py <out.json> truth.json <판>
 // 헛 칸 처리(docs/recorder_ghost_slot_plan_1121.md): [--min-new-conf x](후보 B, 미채택) [--drop-unconfirmed | --no-drop-unconfirmed]
 //   — DiscardRecorderConfig.minNewSlotConf · dropUnconfirmed. 옵션이 없으면 기록기 기본값(C 켬). --no-drop-unconfirmed = 옛 동작.
+// [--min-side N] overlay 모드에서 긴 변이 N 미만인 프레임을 건너뜀(기본 1600, 앱과 같음). 헤드 녹화 1496 프레임은 0(11-23, headrec_run.py).
 import 'dart:convert';
 import 'dart:io';
 
@@ -72,12 +73,15 @@ void main(List<String> args) {
     // 판 초반 강의 첫 패들을 역할 모델이 wall 로 오락가락 읽어 칸이 깜박였다(11-14 r11 아래 자리).
     final anyRole = !args.contains('--river-role');
     final small = mode == 'overlay-small'; // 종류는 키워 읽은 값(t2)으로
+    // --min-side N : 이보다 긴 변이 짧은 프레임은 건너뜀(기본 1600 = 앱과 같은 지금 동작). 헤드 녹화 1496 프레임을 그대로 쓸 땐 0(11-23).
+    final ms = args.indexOf('--min-side');
+    final minSide = ms < 0 ? 1600.0 : double.parse(args[ms + 1]);
     var skipped = 0;
     for (final f in frames) {
       final w = (f['w'] as num).toDouble(), h = (f['h'] as num).toDouble();
       // 앱은 원래 크기 프레임에서만 패 인식을 돌린다(긴 변 1600 미만이면 안 함). 줄인 프레임이 섞인 묶음(11-14)은 그 프레임을 건너뛴다.
       // overlay-small(1020 프레임을 키워 읽은 종류)은 그대로 다 쓴다.
-      if (!small && (w > h ? w : h) < 1600) {
+      if (!small && (w > h ? w : h) < minSide) {
         skipped++;
         continue;
       }

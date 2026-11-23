@@ -439,7 +439,8 @@ void main() {
       await tester.pump();
       expect(find.text('2026-11-14 2반장 동1국'), findsOneWidget);
       expect(find.text('2026-11-14 2반장 남4국'), findsOneWidget);
-      expect(find.textContaining('유국'), findsNWidgets(4)); // r13 · r15 · r16 · L16(같은 국 둘째 — 제목에 손패 주인)
+      // r13 · r15 · r16 · L16(같은 국 둘째 — 제목에 손패 주인) + 3반장 동2국(h3_143539, 11-23 헤드 녹화로 복구한 판)
+      expect(find.textContaining('유국'), findsNWidgets(5));
       expect(find.text('2026-11-14 2반장 남2국 1본장 · 플레이어 2 손패'), findsOneWidget);
       await tester.tap(find.text('2026-11-14 2반장 동2국'));
       await tester.pumpAndSettle();

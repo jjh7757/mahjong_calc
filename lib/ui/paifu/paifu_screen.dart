@@ -2115,17 +2115,22 @@ class _PaifuTile extends StatelessWidget {
   }
 }
 
-/// 앱에 묶어 둔 패보 예시(assets/paifu/*.json) 목록.
+/// 앱에 묶어 둔 패보 예시(assets/paifu/*.json · assets/paifu_h3/*.json) 목록.
 class PaifuAssetListScreen extends StatefulWidget {
   const PaifuAssetListScreen({super.key});
 
-  /// 묶음에 든 패보를 파일 이름 순으로 읽는다. 못 읽는 파일은 건너뛴다.
+  /// 패보 예시를 담은 묶음 폴더. 경로 순으로 읽으므로 2반장(assets/paifu/) 뒤에 3반장(assets/paifu_h3/, 11-23 헤드 녹화로 복구).
+  static const folders = ['assets/paifu/', 'assets/paifu_h3/'];
+
+  /// 묶음에 든 패보를 경로 순으로 읽는다. 못 읽는 파일은 건너뛴다.
+  /// 같은 제목의 패보가 여럿이고 그중 손패가 있는 판이 있으면 손패 없는(버림만) 판은 뺀다
+  /// — 옛 버림만 3반장 동1국(r20_143236)이 손패까지 복구한 판에 가려진다.
   static Future<List<Paifu>> load({AssetBundle? bundle}) async {
     final b = bundle ?? rootBundle;
     final manifest = await AssetManifest.loadFromAssetBundle(b);
     final paths = [
       for (final a in manifest.listAssets())
-        if (a.startsWith('assets/paifu/') && a.endsWith('.json')) a,
+        if (a.endsWith('.json') && folders.any(a.startsWith)) a,
     ]..sort();
     final out = <Paifu>[];
     for (final a in paths) {
@@ -2133,7 +2138,14 @@ class PaifuAssetListScreen extends StatefulWidget {
         out.add(await PaifuAssetScreen.load(a, bundle: b));
       } catch (_) {}
     }
-    return out;
+    final withHands = {
+      for (final p in out)
+        if (p.title.isNotEmpty && p.hasHeroHands) p.title,
+    };
+    return [
+      for (final p in out)
+        if (p.hasHeroHands || !withHands.contains(p.title)) p,
+    ];
   }
 
   @override

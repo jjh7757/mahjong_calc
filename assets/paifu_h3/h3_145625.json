@@ -1,0 +1,1266 @@
+{
+ "version": 1,
+ "id": "h3_145625",
+ "title": "2026-11-14 3반장 동4국",
+ "round": "동4국",
+ "honba": 0,
+ "dealer": 3,
+ "hero": 2,
+ "names": [
+  "플레이어 1",
+  "플레이어 2",
+  "플레이어 3",
+  "플레이어 4"
+ ],
+ "dora_indicators": [
+  "7p"
+ ],
+ "ura_indicators": [
+  "1s"
+ ],
+ "note": "앱 기록이 없어 헤드 폰 녹화 프레임으로 복구: 버림은 앱 버림 기록기를 녹화 프레임(2배 키움)에 돌리고 근거 있는 칸만 고침(drop left 13 4z; drop left 20 2p), 내 손패는 Opus 가 영상에서 읽은 칸(정답 없음, 리치 뒤는 규칙)으로 끝 손패에서 거꾸로 복원, 결과 · 표시패는 Opus 가 프레임에서 읽고 끝 손패는 기계 판독과 같음을 확인. 녹화 전 순 손패는 짐작으로 채움(버린 뒤 손패와 14장은 확실, 뽑은 패는 14장 중 가장 많은 종류 — guess 표시). 국 시작 점수 · 공탁은 25,000점에서 앞 판들의 점수 계산으로 굴린 계산값(점봉 이동은 영상에서 읽지 않음).",
+ "source": "recorder+opus_hand",
+ "events": [
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "4z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635788005
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "7z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635794002
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "2m",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635808992
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "3z",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8m",
+    "9s",
+    "6p",
+    "7p",
+    "4p",
+    "9p",
+    "5m",
+    "6m",
+    "7z"
+   ],
+   "guess": true
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "3z",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794635814998,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8m",
+    "9s",
+    "6p",
+    "7p",
+    "4p",
+    "9p",
+    "5m",
+    "6m",
+    "7z"
+   ],
+   "guess": true
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "1p",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635823991
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "5z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635826983
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "1s",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635832985
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "9s",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8m",
+    "9s",
+    "6p",
+    "7p",
+    "4p",
+    "9p",
+    "5m",
+    "6m",
+    "7z"
+   ],
+   "guess": true
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "9s",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794635838983,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8m",
+    "9s",
+    "6p",
+    "7p",
+    "4p",
+    "9p",
+    "5m",
+    "6m",
+    "7z"
+   ],
+   "guess": true
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "2m",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635848044
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "5z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635851050
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "9m",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635857040
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "9p",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8m",
+    "9s",
+    "6p",
+    "7p",
+    "4p",
+    "9p",
+    "5m",
+    "6m",
+    "7z"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "8m",
+   "tsumogiri": false,
+   "riichi": false,
+   "at": 1794635860036,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "9s",
+    "6p",
+    "7p",
+    "4p",
+    "9p",
+    "9p",
+    "5m",
+    "6m",
+    "7z"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "4m",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635869042
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "1p",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635875032
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "3z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635881035
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "9m",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "9s",
+    "6p",
+    "7p",
+    "4p",
+    "9p",
+    "9p",
+    "5m",
+    "6m",
+    "7z"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "9m",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794635884025,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "9s",
+    "6p",
+    "7p",
+    "4p",
+    "9p",
+    "9p",
+    "5m",
+    "6m",
+    "7z"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "6m",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635893025
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "3m",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635899026
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "7z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635905028
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "8p",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "9s",
+    "6p",
+    "7p",
+    "4p",
+    "9p",
+    "9p",
+    "5m",
+    "6m",
+    "7z"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "7z",
+   "tsumogiri": false,
+   "riichi": false,
+   "at": 1794635911014,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "9s",
+    "6p",
+    "7p",
+    "4p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "3z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635917014
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "3s",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635926005
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "1m",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635929015
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "8s",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "9s",
+    "6p",
+    "7p",
+    "4p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "4p",
+   "tsumogiri": false,
+   "riichi": false,
+   "at": 1794635938006,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "6m",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635940999
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "2z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635944008
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "4s",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635955993
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "1p",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "1p",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794635961999,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "8s",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635970989
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "8m",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635979982
+  },
+  {
+   "type": "call",
+   "seat": 1,
+   "kind": "chi",
+   "from": 0,
+   "tiles": [
+    "8m",
+    "6m",
+    "7m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "6z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794635985986
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "2m",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "2m",
+   "tsumogiri": false,
+   "riichi": true,
+   "at": 1794635995049,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "9m",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636004042
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "1m",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636010041
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "7z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636019039
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "6z",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "6z",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636019039,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "2z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636028037
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "2p",
+   "tsumogiri": null,
+   "riichi": true,
+   "at": 1794636043028
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "6z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636052023
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "2p",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "2p",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636055023,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "2z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636061027
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "2p",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636064023
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "4z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636076016
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "3z",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "3z",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636079014,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "4z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636082008
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "4s",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636088006
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "4z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636094006
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "5p",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "5p",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636096995,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "6z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636106006
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "0p",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636109004
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "1z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636120997
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "8s",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "8s",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636120997,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "call",
+   "seat": 3,
+   "kind": "chi",
+   "from": 2,
+   "tiles": [
+    "8s",
+    "6s",
+    "7s"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "5p",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636132986
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "1p",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636135989
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "5z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636141985
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "6p",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "6p",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636144986,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "2p",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636157051
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "5z",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636163046
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "6p",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636166032
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "1m",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636187036
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "8p",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "8p",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636190035,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "5p",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636199023
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "9s",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636202025
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "8p",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636211030
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "8s",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "8s",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636211030,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 3,
+   "tile": "4p",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636223022
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "7p",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636223022
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "1z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636232003
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "2z",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 2,
+   "tile": "2z",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636235011,
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  },
+  {
+   "type": "discard",
+   "seat": 0,
+   "tile": "9p",
+   "tsumogiri": true,
+   "riichi": false,
+   "at": 1794636256008
+  },
+  {
+   "type": "discard",
+   "seat": 1,
+   "tile": "1z",
+   "tsumogiri": null,
+   "riichi": false,
+   "at": 1794636258997
+  },
+  {
+   "type": "draw",
+   "seat": 2,
+   "tile": "4m",
+   "hand": [
+    "1m",
+    "2m",
+    "3m",
+    "7s",
+    "8s",
+    "9s",
+    "6p",
+    "7p",
+    "8p",
+    "9p",
+    "9p",
+    "5m",
+    "6m"
+   ]
+  }
+ ],
+ "result": {
+  "type": "tsumo",
+  "winner": 2,
+  "loser": null,
+  "win_tile": "4m",
+  "hand": [
+   "1m",
+   "2m",
+   "3m",
+   "7s",
+   "8s",
+   "9s",
+   "6p",
+   "7p",
+   "8p",
+   "9p",
+   "9p",
+   "5m",
+   "6m"
+  ],
+  "melds": [],
+  "flags": {
+   "riichi": true
+  }
+ },
+ "start_scores": [
+  30900,
+  24100,
+  17900,
+  27100
+ ],
+ "kyotaku": 0
+}

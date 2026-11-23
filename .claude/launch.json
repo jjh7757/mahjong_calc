@@ -2562,6 +2562,18 @@
       ],
       "port": 8307,
       "autoPort": false
+    },
+    {
+      "name": "paifu-truth-han3",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-X",
+        "utf8",
+        "experiments/paifu_frames/handtrack/han3_truthserver.py",
+        "8313"
+      ],
+      "port": 8313,
+      "autoPort": false
     }
   ]
 }

@@ -78,6 +78,7 @@ flutter:
     - assets/table_frame/zones.json
     # 패보 예시(lib/paifu/paifu.dart 형식, experiments/paifu_frames/handtrack/paifu_export.py 가 만듦)
     - assets/paifu/
+    - assets/paifu_h3/ # 11-14 3반장 열한 판(헤드 녹화로 복구, experiments/paifu_frames/han3_install.py 가 옮김)
     # 결과 음성(Gemini TTS 로 만든 mp3, tool/make_voice.py). 목소리마다 폴더(voiceChoices 와 같게)
     - assets/voice/Kore/
     - assets/voice/Zephyr/
