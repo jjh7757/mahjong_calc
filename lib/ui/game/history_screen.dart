@@ -20,7 +20,7 @@ class HistoryScreen extends StatelessWidget {
           appBar: AppBar(
             title: const Text('지난 대국'),
             actions: [
-              // 묶어 둔 예시 판(11-14 매장 2반장 동1국~남4국 · 3반장 동1국) 목록. 대국에서 적힌 패보는 대국 줄의 패보 단추로.
+              // 묶어 둔 예시 판(11-14 매장 2반장 동1국~남4국 · 3반장 동1국~남4국, 모두 21판) 목록. 대국에서 적힌 패보는 대국 줄의 패보 단추로.
               TextButton.icon(
                 icon: const Icon(Icons.slideshow),
                 label: const Text('패보 예시'),

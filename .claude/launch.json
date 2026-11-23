@@ -2574,6 +2574,18 @@
       ],
       "port": 8313,
       "autoPort": false
+    },
+    {
+      "name": "paifu-check-han3",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-X",
+        "utf8",
+        "experiments/paifu_frames/handtrack/han3_checkserver.py",
+        "8314"
+      ],
+      "port": 8314,
+      "autoPort": false
     }
   ]
 }
