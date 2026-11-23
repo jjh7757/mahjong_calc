@@ -305,17 +305,46 @@ void main() {
       }
     });
 
-    test('서버로 가는 사실표 모양은 그대로: fold_spot null · defense 칸 일곱 · 해설 사실표에 새 칸 없음', () {
-      final p = made(discard: '8s');
-      final r = reviewPaifu(p, withEngine: true);
-      expect(r.turns.last.pushFold, isNotNull);
-      final d = ((agentFacts(p, r)['turns'] as List).last as Map<String, dynamic>)['defense'] as Map<String, dynamic>;
-      expect(d.keys, ['threat_winds', 'tiles', 'actual', 'safest', 'efficient', 'stance', 'fold_spot']);
-      expect(d['fold_spot'], isNull);
-      final text = jsonEncode(agentFacts(p, r)) + jsonEncode(reviewFacts(p, r));
-      for (final w in ['push_fold', 'pushFold', 'fold_spot":true', 'fold_spot":false', '94%', '접는 자리']) {
-        expect(text.contains(w), isFalse, reason: w);
+    // 사실표 3(11-23, docs/review_agent_foldspot_scores_design_1123.md 2-1): fold_spot 은 객체 {shanten, ai_fold_pct} 또는 null.
+    // 행동(push · fold)은 넣지 않고 stance 를 쓴다. 해설 사실표에는 새 칸 없음.
+    test('서버로 가는 사실표 3: 접는 자리면 fold_spot {shanten, ai_fold_pct} · 행동 없음 · defense 칸 일곱 · 해설 사실표에 새 칸 없음', () {
+      for (final dis in ['8s', '5p', '5z']) {
+        final p = made(discard: dis);
+        final r = reviewPaifu(p, withEngine: true);
+        final pf = r.turns.last.pushFold!;
+        final f = agentFacts(p, r);
+        expect(f['version'], 3);
+        final d = ((f['turns'] as List).last as Map<String, dynamic>)['defense'] as Map<String, dynamic>;
+        expect(d.keys, ['threat_winds', 'tiles', 'actual', 'safest', 'efficient', 'stance', 'fold_spot']);
+        expect(d['fold_spot'], {'shanten': pf.shantenBefore, 'ai_fold_pct': pushFoldAiFoldPct}, reason: dis);
+        expect(d['fold_spot'], {'shanten': 3, 'ai_fold_pct': 94}, reason: dis);
+        // 행동은 stance 하나(8삭 밂 · 5통 접음 · 백 중간).
+        expect(d['stance'], {'8s': 'pushed', '5p': 'folded', '5z': 'between'}[dis], reason: dis);
+        final text = jsonEncode(f) + jsonEncode(reviewFacts(p, r));
+        for (final w in ['push_fold', 'pushFold', '"action"', 'fold_spot":true', 'fold_spot":false', '94%', '접는 자리']) {
+          expect(text.contains(w), isFalse, reason: '$dis $w');
+        }
+        expect(jsonEncode(reviewFacts(p, r)).contains('fold_spot'), isFalse, reason: dis);
       }
+    });
+
+    test('사실표 3: 접는 자리가 아니면 fold_spot null(defense 는 있음) · 엔진 끄면 defense 째 null', () {
+      // 갈리지 않음(현물이 효율 패) — defense 는 있고 fold_spot 만 null.
+      final p = made(discard: '5p', river0: const ['1z', '7p', '5p', '2z']);
+      final r = reviewPaifu(p, withEngine: true);
+      expect(r.turns.last.pushFold, isNull);
+      final d = ((agentFacts(p, r)['turns'] as List).last as Map<String, dynamic>)['defense'] as Map<String, dynamic>?;
+      expect(d, isNotNull);
+      expect(d!.containsKey('fold_spot'), isTrue);
+      expect(d['fold_spot'], isNull);
+      // 울기 직후 버림도 null.
+      final q = made(discard: '8s', ponLast: true, river0: const ['1z', '9p', '4m', '5z']);
+      final dq = ((agentFacts(q, reviewPaifu(q, withEngine: true))['turns'] as List).last as Map<String, dynamic>)['defense']
+          as Map<String, dynamic>?;
+      expect(dq?['fold_spot'], isNull);
+      // 엔진 끔: 위험표가 없어 defense 자체가 null(그대로).
+      final off = made(discard: '8s');
+      expect(((agentFacts(off, reviewPaifu(off))['turns'] as List).last as Map<String, dynamic>)['defense'], isNull);
     });
   });
 

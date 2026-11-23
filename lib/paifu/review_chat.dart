@@ -105,17 +105,23 @@ int? _firstOtherRiichi(Paifu p) {
   return null;
 }
 
-/// 판 전체 질문(내 버림이 아닌 걸음 · 그 차례 질문이 없을 때).
+/// 점수 질문(설계서 `docs/review_agent_foldspot_scores_design_1123.md` 4절 · 5절 G ①). 패보에 국 시작 점수가 있을 때만.
+const scoresQuestion = '이 판 시작할 때 점수 상황은 어땠어?';
+
+/// 판 전체 질문(내 버림이 아닌 걸음 · 그 차례 질문이 없을 때 · 요약 화면 칩). 최대 4개.
+/// 점수 질문은 사실표 `game.scores` 가 채워지는 판(`start_scores` 4개)에만 — 없는 판에 물으면 "점수 기록이 없다" 뿐이다.
+/// "접는 자리" 칩은 만들지 않는다(설계서 4절 — 매장 예시 22판에 접는 자리가 없다).
 List<String> _gameQuestions(Paifu p) {
   final seat = _firstOtherRiichi(p);
   return [
     '이 판에서 제일 아까운 수는?',
     '이 판 총평 해 줘',
     if (seat != null) '${_windNames[p.windOf(seat)]} 리치 뒤에 나는 어떻게 했어?',
+    if (p.startScores?.length == 4) scoresQuestion,
   ];
 }
 
-/// 지금 걸음의 추천 질문(최대 3개). [t] 는 지금 걸음의 내 버림 평가(내 버림 걸음이 아니면 null).
+/// 지금 걸음의 추천 질문(차례 질문은 최대 3개, 판 전체 질문은 최대 4개). [t] 는 지금 걸음의 내 버림 평가(내 버림 걸음이 아니면 null).
 ///
 /// 문구는 평가 세트(`experiments/paifu_review/agent_questions_*.json`)의 꼴 그대로다 — 새 꼴을 지어내면 평가한 범위를
 /// 벗어난다. 패 이름은 대괄호 없이, 적5 도 "5만"(서버 표기). 순서: 수비 질문 → 등급 질문, 합쳐 3개까지,

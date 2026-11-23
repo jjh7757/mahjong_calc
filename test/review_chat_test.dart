@@ -149,6 +149,74 @@ void main() {
     });
   });
 
+  // 설계서 docs/review_agent_foldspot_scores_design_1123.md 4절: 패보에 start_scores 가 있을 때만 점수 질문 하나.
+  group('판 전체 질문 — 점수 질문(사실표 3)', () {
+    Paifu h3(String id) => Paifu.fromJson(
+        jsonDecode(File('assets/paifu_h3/$id.json').readAsStringSync(encoding: utf8)) as Map<String, dynamic>);
+
+    test('글은 평가 질문(설계서 5절 G ①) 그대로', () {
+      expect(scoresQuestion, '이 판 시작할 때 점수 상황은 어땠어?');
+      expect(questionTurns(scoresQuestion), isEmpty);
+    });
+
+    test('2반장 예시 11판(점수 없음): 판 전체 질문에 점수 질문 없음', () {
+      for (final id in games) {
+        final p = load(id);
+        expect(p.startScores, isNull, reason: id);
+        final qs = suggestedQuestions(p, reviewPaifu(p), null);
+        expect(qs, isNot(contains(scoresQuestion)), reason: id);
+        expect(qs.where((q) => q.contains('점수')), isEmpty, reason: id);
+      }
+    });
+
+    test('3반장 11판(점수 있음): 판 전체 질문 맨 끝에 점수 질문 하나', () {
+      final ids = [
+        for (final f in Directory('assets/paifu_h3').listSync().whereType<File>())
+          if (f.path.endsWith('.json')) f.uri.pathSegments.last.replaceAll('.json', ''),
+      ]..sort();
+      expect(ids, hasLength(11));
+      for (final id in ids) {
+        final p = h3(id);
+        expect(p.startScores, hasLength(4), reason: id);
+        final qs = suggestedQuestions(p, reviewPaifu(p), null);
+        expect(qs.where((q) => q == scoresQuestion), hasLength(1), reason: id);
+        expect(qs.last, scoresQuestion, reason: id);
+        expect(qs.length, inInclusiveRange(3, 4), reason: id);
+        expect(qs.where((q) => q.contains('접')), isEmpty, reason: '$id 접는 자리 칩 없음');
+      }
+    });
+
+    test('같은 판에서 점수만 빼면 점수 질문이 빠지고 나머지는 같음', () {
+      final p = h3('h3_145625');
+      final bare = Paifu.fromJson(p.toJson()..remove('start_scores')..remove('kyotaku'));
+      final withScores = suggestedQuestions(p, reviewPaifu(p), null);
+      final without = suggestedQuestions(bare, reviewPaifu(bare), null);
+      expect(without, isNot(contains(scoresQuestion)));
+      expect(withScores, [...without, scoresQuestion]);
+    });
+
+    test('점수 3개뿐인 판(규격 밖)에는 안 나옴 — 사실표 game.scores 가 null 이라', () {
+      final p = h3('h3_145625');
+      final bad = Paifu.fromJson(p.toJson()..['start_scores'] = [25000, 25000, 25000]);
+      expect(suggestedQuestions(bad, reviewPaifu(bad), null), isNot(contains(scoresQuestion)));
+      expect((agentFacts(bad, reviewPaifu(bad))['game'] as Map)['scores'], isNull);
+    });
+
+    test('차례 질문이 있는 걸음에는 판 전체 질문(점수 질문 포함)이 나오지 않음', () {
+      for (final id in ['h3_145625', 'h3_153825']) {
+        final p = h3(id);
+        final r = reviewPaifu(p);
+        for (final t in r.turns) {
+          final qs = suggestedQuestions(p, r, t);
+          if (qs.any((q) => questionTurns(q).isNotEmpty)) {
+            expect(qs, isNot(contains(scoresQuestion)), reason: '$id ${t.turn}');
+            expect(qs.length, lessThanOrEqualTo(3), reason: '$id ${t.turn}');
+          }
+        }
+      }
+    });
+  });
+
   group('historyPayload', () {
     test('5쌍 → 뒤 4쌍', () {
       final all = [for (var i = 1; i <= 5; i++) ReviewExchange('q$i', 'a$i')];

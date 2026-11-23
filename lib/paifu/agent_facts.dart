@@ -9,6 +9,9 @@
 ///
 /// v2(2026-11-22, `docs/paifu_review_agent_defense_design_1122.md` 2절): 차례마다 `defense`(방총 위험의 단계 · 순서).
 /// 엔진 리뷰(`reviewPaifu(withEngine: true)`)일 때만 채워지고, 엔진의 % 값 자체는 넣지 않는다.
+///
+/// v3(2026-11-23, `docs/review_agent_foldspot_scores_design_1123.md` 2절): 판 2 와 다른 곳은 둘 —
+/// `defense.fold_spot`(보통 접는 자리 사실, [TurnReview.pushFold] 가 있을 때만)과 `game.scores`(국 시작 점수 · 순위 · 공탁).
 library;
 
 import '../engine/efficiency.dart';
@@ -18,7 +21,7 @@ import 'paifu.dart';
 import 'paifu_review.dart';
 
 /// 사실표 판. 서버가 `facts.version` 으로 검사한다.
-const agentFactsVersion = 2;
+const agentFactsVersion = 3;
 
 // ── 방총 위험 단계(설계서 1122 1절) ──
 //
@@ -95,6 +98,7 @@ Map<String, dynamic> agentFacts(Paifu p, PaifuReview r) {
       'grades': {for (final g in ReviewGrade.values) g.name: r.gradeCount(g)},
       'statuses': {for (final s in ReviewStatus.values) s.name: r.count(s)},
       'result': _result(p),
+      'scores': _scores(p),
     },
     'turns': [for (final t in r.turns) _turn(p, t)],
     'others': _others(p),
@@ -112,6 +116,35 @@ Map<String, dynamic>? _result(Paifu p) {
     'winner': win ? _windOrNull(p, res.winner) : null,
     'loser': res.type == 'ron' ? _windOrNull(p, res.loser) : null,
     'win_tile': win && res.winTile != null ? _code(res.winTile!.tile) : null,
+  };
+}
+
+/// 설계서 1123 2-2 의 `game.scores`: 국 시작 점수(이 국의 리치봉 · 결과 반영 전) · 순위 · 나와의 차 · 공탁.
+/// 패보에 `start_scores` 가 없거나 4개가 아니면 null.
+/// - `rank` = 1 + (그 자리보다 점수가 높은 자리 수) — 같은 점수면 같은 순위.
+/// - `others` 는 hero 를 뺀 세 자리를 동 · 남 · 서 · 북 순으로. `gap` = |그 자리 − 나|, `ahead` = 그 자리 > 나(같으면 false).
+/// - `kyotaku` = 국 시작 때 걸려 있던 리치봉 수(모르면 null).
+Map<String, dynamic>? _scores(Paifu p) {
+  final sc = p.startScores;
+  if (sc == null || sc.length != 4) return null;
+  int rank(int seat) => 1 + [for (var s = 0; s < 4; s++) if (sc[s] > sc[seat]) s].length;
+  final me = sc[p.hero];
+  // 바람 순(동 · 남 · 서 · 북) = 자리 dealer, dealer+1, …
+  final byWind = [for (var w = 0; w < 4; w++) (p.dealer + w) % 4];
+  return {
+    'hero': {'wind': _wind(p, p.hero), 'score': me, 'rank': rank(p.hero)},
+    'others': [
+      for (final s in byWind)
+        if (s != p.hero)
+          {
+            'wind': _wind(p, s),
+            'score': sc[s],
+            'rank': rank(s),
+            'gap': (sc[s] - me).abs(),
+            'ahead': sc[s] > me,
+          },
+    ],
+    'kyotaku': p.kyotaku,
   };
 }
 
@@ -231,13 +264,17 @@ Map<String, dynamic>? _defense(Paifu p, TurnReview t) {
     ],
     'efficient': efficient,
     'stance': canChoose ? defenseStance(actualRisk, minRisk) : null,
-    // 앱 화면은 [TurnReview.pushFold](설계서 docs/push_fold_design_1122.md R3)로 "접는 자리" 를 판정하지만, 여기는 일부러
-    // 그대로 null 로 둔다(11-23): 운영 서버(app/review_agent.py)는 fold_spot 을 null/bool 로만 받고, 참이면 에이전트가
-    // "접었어야 했다" 같은 판정 말을 쓸 수 있게 돼 설계서 6절의 "참고" 문구(지표 3 이 70% 미만)보다 세다.
-    // 에이전트에 넣는 것은 서버를 고치고 안 본 판으로 다시 잰 뒤. 사실표의 다른 칸도 바꾸지 않는다(서버 검증이 모르는 칸을 거절).
-    'fold_spot': null,
+    // v3(설계서 1123 2-1): "보통 접는 자리" 사실 — [TurnReview.pushFold](docs/push_fold_design_1122.md 규칙 R3)가 있을
+    // 때만 객체, 아니면 null. null 은 "접는 자리 판정이 없다" 는 뜻이지 "접는 자리가 아니다 · 밀어도 된다" 가 아니다
+    // (R3 이 잡는 것은 리치 차례의 2.9% 뿐). 플레이어가 밀었나 접었나는 넣지 않는다 — 에이전트는 위 `stance` 하나만 말한다
+    // (화면의 PushFoldAction 은 위험 차만 봐 드물게 갈림). "접었어야 했다" 같은 판정 말은 서버 지시문 a7 · 검사 7 이 막는다.
+    'fold_spot': _foldSpot(t.pushFold),
   };
 }
+
+/// `defense.fold_spot`: `{"shanten": 버리기 전 샹텐(≥ 3), "ai_fold_pct": 94}` 또는 null.
+Map<String, dynamic>? _foldSpot(PushFoldSpot? s) =>
+    s == null ? null : {'shanten': s.shantenBefore, 'ai_fold_pct': pushFoldAiFoldPct};
 
 /// 남의 큰 사건(사건 순서): 리치 선언 버림 · 울기 · 화료(hero 아닌 자리가 화료했을 때, 결과 걸음).
 /// `step` 은 재생 걸음(사건 인덱스 + 1, 결과는 사건 수 + 1).

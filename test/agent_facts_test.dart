@@ -92,7 +92,10 @@ void main() {
         final text = jsonEncode(f);
         expect(jsonDecode(text), f);
         expect(utf8.encode(text).length, lessThanOrEqualTo(maxBytes), reason: '$id 압축 크기');
-        expect(f['version'], 2);
+        expect(f['version'], 3);
+        // 2반장 예시 11판에는 국 시작 점수가 없다 → game.scores 는 칸은 있고 null(v3).
+        expect((f['game'] as Map).containsKey('scores'), isTrue);
+        expect((f['game'] as Map)['scores'], isNull);
         // 엔진 없이 만든 리뷰: defense 는 전부 null(v2).
         for (final x in turnsOf(f)) {
           expect(x.containsKey('defense'), isTrue);
@@ -359,6 +362,115 @@ void main() {
     expect(x['ukeire_loss'], 0);
   });
 
+  // ── v3 game.scores(설계서 1123 2-2) ──
+
+  group('game.scores(사실표 3)', () {
+    /// 작은 판(hero 0 · dealer [dealer])에 국 시작 점수 · 공탁만 바꿔 넣은 사실표의 game.scores.
+    Map<String, dynamic>? scoresOf({int dealer = 0, int hero = 0, List<int>? sc, int? kyotaku}) {
+      final p = Paifu.fromJson({
+        'version': 1,
+        'id': 's',
+        'round': '동1국',
+        'dealer': dealer,
+        'hero': hero,
+        'start_scores': ?sc,
+        'kyotaku': ?kyotaku,
+        'events': [
+          {'type': 'draw', 'seat': hero, 'tile': '1z', 'hand': h('123m11456p789s23z')},
+          {'type': 'discard', 'seat': hero, 'tile': '1z', 'tsumogiri': true, 'riichi': false, 'hand': h('123m11456p789s23z')},
+        ],
+      });
+      final f = agentFacts(p, reviewPaifu(p));
+      expect(jsonDecode(jsonEncode(f)), f);
+      expect(f['version'], 3);
+      return (f['game'] as Map<String, dynamic>)['scores'] as Map<String, dynamic>?;
+    }
+
+    test('점수 없음 → null(칸은 있음) · 4개가 아니면 null', () {
+      expect(scoresOf(), isNull);
+      expect(scoresOf(sc: [25000, 25000, 25000]), isNull);
+      expect(scoresOf(sc: [25000, 25000, 25000, 25000, 0]), isNull);
+      expect(scoresOf(kyotaku: 2), isNull, reason: '공탁만 있고 점수가 없으면 null');
+    });
+
+    test('설계서 2-2 예시: 서 22000(3위) · 동 25000 · 남 31000 · 북 22000(같은 점수 같은 순위) · 공탁 1', () {
+      // dealer 2 → 자리 2 동 · 3 남 · 0 서 · 1 북. hero 0 = 서.
+      expect(scoresOf(dealer: 2, hero: 0, sc: [22000, 22000, 25000, 31000], kyotaku: 1), {
+        'hero': {'wind': '서', 'score': 22000, 'rank': 3},
+        'others': [
+          {'wind': '동', 'score': 25000, 'rank': 2, 'gap': 3000, 'ahead': true},
+          {'wind': '남', 'score': 31000, 'rank': 1, 'gap': 9000, 'ahead': true},
+          {'wind': '북', 'score': 22000, 'rank': 3, 'gap': 0, 'ahead': false},
+        ],
+        'kyotaku': 1,
+      });
+    });
+
+    test('넷 다 같은 점수 → 모두 1위 · 차 0 · ahead 없음, 공탁 모르면 null', () {
+      final s = scoresOf(dealer: 1, hero: 3, sc: [25000, 25000, 25000, 25000])!;
+      expect(s['hero'], {'wind': '서', 'score': 25000, 'rank': 1});
+      expect(s['others'], [
+        for (final w in ['동', '남', '북']) {'wind': w, 'score': 25000, 'rank': 1, 'gap': 0, 'ahead': false},
+      ]);
+      expect(s.containsKey('kyotaku'), isTrue);
+      expect(s['kyotaku'], isNull);
+    });
+
+    test('others 순서는 동 · 남 · 서 · 북(hero 빼고) — dealer · hero 모든 짝', () {
+      for (var dealer = 0; dealer < 4; dealer++) {
+        for (var hero = 0; hero < 4; hero++) {
+          final sc = [10000, 20000, 30000, 40000];
+          final s = scoresOf(dealer: dealer, hero: hero, sc: sc, kyotaku: 0)!;
+          final why = 'dealer $dealer hero $hero';
+          final heroWind = winds[(hero - dealer) % 4];
+          expect(s['hero'], {'wind': heroWind, 'score': sc[hero], 'rank': 4 - hero}, reason: why);
+          final others = (s['others'] as List).cast<Map<String, dynamic>>();
+          expect([for (final o in others) o['wind']], [for (final w in winds) if (w != heroWind) w], reason: why);
+          for (final o in others) {
+            final seat = (dealer + winds.indexOf(o['wind'] as String)) % 4;
+            expect(o, {
+              'wind': o['wind'],
+              'score': sc[seat],
+              'rank': 4 - seat,
+              'gap': (sc[seat] - sc[hero]).abs(),
+              'ahead': seat > hero,
+            }, reason: '$why ${o['wind']}');
+          }
+          expect(s['kyotaku'], 0, reason: why);
+        }
+      }
+    });
+
+    test('3반장 h3_145625(남4국 · dealer 3 · hero 2 = 북) 손으로 본 값', () {
+      final p = Paifu.fromJson(
+          jsonDecode(File('assets/paifu_h3/h3_145625.json').readAsStringSync(encoding: utf8)) as Map<String, dynamic>);
+      expect([p.dealer, p.hero, p.startScores, p.kyotaku], [3, 2, [30900, 24100, 17900, 27100], 0]);
+      final f = agentFacts(p, reviewPaifu(p));
+      expect((f['game'] as Map)['hero_wind'], '북');
+      // 자리 3 동 27100 · 0 남 30900 · 1 서 24100 · 2 북(hero) 17900.
+      expect((f['game'] as Map)['scores'], {
+        'hero': {'wind': '북', 'score': 17900, 'rank': 4},
+        'others': [
+          {'wind': '동', 'score': 27100, 'rank': 2, 'gap': 9200, 'ahead': true},
+          {'wind': '남', 'score': 30900, 'rank': 1, 'gap': 13000, 'ahead': true},
+          {'wind': '서', 'score': 24100, 'rank': 3, 'gap': 6200, 'ahead': true},
+        ],
+        'kyotaku': 0,
+      });
+    });
+
+    test('판 2 의 다른 칸은 그대로: 점수를 넣어도 game 의 scores 밖 · turns · others 같음', () {
+      final p = load('r19_142013');
+      final q = p.copyWith(startScores: [25000, 31000, 19000, 25000], kyotaku: 2);
+      final a = agentFacts(p, reviewPaifu(p)), b = agentFacts(q, reviewPaifu(q));
+      expect({...(b['game'] as Map)}..remove('scores'), {...(a['game'] as Map)}..remove('scores'));
+      expect(b['turns'], a['turns']);
+      expect(b['others'], a['others']);
+      expect((b['game'] as Map).keys.last, 'scores');
+      expect((b['game'] as Map)['scores'], isNotNull);
+    });
+  });
+
   // ── v2 defense(설계서 1122 2절) ──
 
   group('defense 단계 · stance 경계(순수 함수)', () {
@@ -414,7 +526,7 @@ void main() {
         // ignore: avoid_print
         print('$id 엔진 켠 사실표 압축 $bytes bytes');
         expect(bytes, lessThanOrEqualTo(maxBytes), reason: '$id 압축 크기');
-        expect(f['version'], 2);
+        expect(f['version'], 3);
 
         // 엔진 켠 리뷰 · 끈 리뷰의 다른 칸은 같다(defense 만 다름).
         final plain = agentFacts(p, reviewPaifu(p));
@@ -443,7 +555,11 @@ void main() {
           }
 
           noDouble(d);
-          expect(d['fold_spot'], isNull, reason: why);
+          // v3: 접는 자리(pushFold)일 때만 객체. 예시 11판에는 접는 자리가 없어(설계서 1123 6절) 전부 null.
+          expect(d['fold_spot'],
+              tr.pushFold == null ? isNull : {'shanten': tr.pushFold!.shantenBefore, 'ai_fold_pct': pushFoldAiFoldPct},
+              reason: why);
+          expect(tr.pushFold, isNull, reason: why);
           expect(d['threat_winds'], [for (final s in tr.riskSeats) winds[p.windOf(s)]], reason: why);
 
           // tiles: 손의 패 종류 전부, 합친 위험 오름차순 · 같으면 패 번호 순. 단계는 문턱을 여기서 다시 적어 맞댐.
@@ -572,7 +688,7 @@ void main() {
         final direct = agentFacts(p, engineReview(p, id));
         final ex = toTenhou6(p);
         final viaT6 = t6.tenhouAgentFacts(jsonDecode(jsonEncode(ex.json)) as Map<String, dynamic>, 0, ex.heroIndex);
-        expect(viaT6['version'], 2);
+        expect(viaT6['version'], 3);
         final g1 = direct['game'] as Map<String, dynamic>, g2 = viaT6['game'] as Map<String, dynamic>;
         for (final k in ['round', 'honba', 'hero_wind']) {
           expect(g2[k], g1[k], reason: k);
@@ -605,6 +721,41 @@ void main() {
         }
       });
     }
+    test('점수 없는 판을 천봉으로 내보내면 25000 넷 · 공탁 0 이 실려 game.scores 가 채워짐', () {
+      final p = load('r19_142013');
+      final ex = toTenhou6(p);
+      final f = t6.tenhouAgentFacts(jsonDecode(jsonEncode(ex.json)) as Map<String, dynamic>, 0, ex.heroIndex);
+      final s = (f['game'] as Map)['scores'] as Map<String, dynamic>;
+      expect(s['hero'], {'wind': '서', 'score': 25000, 'rank': 1});
+      expect([for (final o in s['others'] as List) o['score']], [25000, 25000, 25000]);
+      expect(s['kyotaku'], 0);
+    });
+
+    // 3반장(국 시작 점수 · 공탁 있음, dealer ≠ 0): 패보 → toTenhou6(우리 자리 → 천봉 자리로 돌림) → 천봉 길(log[1] 을 그대로
+    // 천봉 자리 = kyokuToPaifu 의 자리로) 의 game.scores 가 직접 낸 것과 같은가 — 두 자리 매김이 서로 맞는지의 대조.
+    for (final id in ['h3_144427', 'h3_145625', 'h3_153825']) {
+      test('$id: 천봉 길 game.scores = 직접', () {
+        final p = Paifu.fromJson(
+            jsonDecode(File('assets/paifu_h3/$id.json').readAsStringSync(encoding: utf8)) as Map<String, dynamic>);
+        final direct = (agentFacts(p, reviewPaifu(p))['game'] as Map)['scores'];
+        expect(direct, isNotNull);
+        final ex = toTenhou6(p);
+        final log = (ex.json['log'] as List).first as List;
+        expect((log[0] as List)[2], p.kyotaku ?? 0);
+        final viaT6 = t6.tenhouAgentFacts(jsonDecode(jsonEncode(ex.json)) as Map<String, dynamic>, 0, ex.heroIndex);
+        expect((viaT6['game'] as Map)['scores'], direct, reason: id);
+        expect((viaT6['game'] as Map)['hero_wind'], (agentFacts(p, reviewPaifu(p))['game'] as Map)['hero_wind']);
+      });
+    }
+
+    test('천봉 국 머리 → start_scores · kyotaku(꼴이 다르면 null)', () {
+      expect(t6.tenhouStartScores([[3, 1, 2], [25000, 26000, 24000, 23000]]), [25000, 26000, 24000, 23000]);
+      expect(t6.tenhouKyotaku([[3, 1, 2], [25000, 26000, 24000, 23000]]), 2);
+      expect(t6.tenhouStartScores([[3, 1, 2], [25000, 26000, 24000]]), isNull);
+      expect(t6.tenhouStartScores([[3, 1, 2], 'x']), isNull);
+      expect(t6.tenhouKyotaku([[3, 1], [25000, 26000, 24000, 23000]]), isNull);
+    });
+
     test('깡 든 국은 거절', () {
       final p = load('r19_142013');
       final j = jsonDecode(jsonEncode(toTenhou6(p).json)) as Map<String, dynamic>;

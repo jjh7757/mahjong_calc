@@ -1,4 +1,5 @@
-// 천봉(tenhou.net/6) 한 국 · 한 자리 → 복기 에이전트 사실표(v2, 엔진 켬). 설계서 docs/paifu_review_agent_defense_design_1122.md 3절.
+// 천봉(tenhou.net/6) 한 국 · 한 자리 → 복기 에이전트 사실표(v3, 엔진 켬). 설계서 docs/paifu_review_agent_defense_design_1122.md 3절
+// · 사실표 3 은 docs/review_agent_foldspot_scores_design_1123.md 2절.
 //
 //   dart run tool/tenhou6_agent_facts.dart [--compact] <tenhou6.json> <국 번호(log 배열 0부터)> <자리(천봉 0~3)> [출력.json]
 //
@@ -7,6 +8,7 @@
 // - 깡이 든 국은 오류로 거절한다(종료 코드 65). 재생 검사가 어긋나도 오류.
 // - 결과(和了 · 流局)는 log 끝 칸에서 읽어 [PaifuResult] 로 붙인다(화료자 · 방총자 · 화료패). 더블 론은 첫 화료자만.
 //   kyokuToPaifu 는 결과를 넣지 않으므로 이 도구가 더한다(사실표의 game.result · others 의 화료 줄).
+// - 국 시작 점수(`log[1]`) · 공탁(`log[0][2]`)도 패보의 start_scores · kyotaku 로 싣는다(사실표 3 의 game.scores).
 // 출력 경로가 없으면 stdout. 기본은 들여쓰기 2칸, --compact 면 한 줄. UTF-8 · LF. 화면 없이 도는 순수 Dart.
 import 'dart:convert';
 import 'dart:io';
@@ -43,6 +45,22 @@ PaifuResult? tenhouResult(List log, Paifu p) {
   return PaifuResult(type: 'ron', winner: winner, loser: from, winTile: win);
 }
 
+/// 천봉 한 국의 국 시작 점수(`log[1]`, 천봉 자리 순 4개) → 패보 `start_scores`. 꼴이 다르면 null.
+/// kyokuToPaifu 는 천봉 자리 번호를 그대로 패보 자리로 쓴다(dealer = 국 번호 % 4 — `toTenhou6` 의
+/// `ts(s) = (s − dealer + 국 번호 % 4) % 4` 가 항등이 되는 자리 매김) — 그래서 돌리지 않고 그대로 싣는다.
+List<int>? tenhouStartScores(List log) {
+  final sc = log.length > 1 ? log[1] : null;
+  if (sc is! List || sc.length != 4 || sc.any((v) => v is! num)) return null;
+  return [for (final v in sc) (v as num).toInt()];
+}
+
+/// 천봉 한 국의 공탁(`log[0][2]`, 국 시작 때 걸려 있던 리치봉 수) → 패보 `kyotaku`. 없으면 null.
+int? tenhouKyotaku(List log) {
+  final head = log.isEmpty ? null : log[0];
+  if (head is! List || head.length < 3 || head[2] is! num) return null;
+  return (head[2] as num).toInt();
+}
+
 /// 천봉 한 판(JSON) · 국 번호 · 자리 → 사실표. 깡이 든 국 · 범위 밖 · 재생 실패는 [ReplayError].
 Map<String, dynamic> tenhouAgentFacts(Map<String, dynamic> json, int kyoku, int seat) {
   final logs = json['log'] as List;
@@ -60,6 +78,8 @@ Map<String, dynamic> tenhouAgentFacts(Map<String, dynamic> json, int kyoku, int 
     doraIndicators: bare.doraIndicators,
     events: bare.events,
     result: tenhouResult(log, bare),
+    startScores: tenhouStartScores(log),
+    kyotaku: tenhouKyotaku(log),
   );
   return agentFacts(p, reviewPaifu(p, withEngine: true));
 }
