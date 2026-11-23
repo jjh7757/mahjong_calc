@@ -412,7 +412,9 @@ class Game {
   // ---------- 사건 ----------
 
   /// [fromPhoto] 면 점수판에서 누른 게 아니라 화료 사진에서 읽어 자동으로 넣은 리치다.
+  /// 이미 이 국에 리치한 자리([riichiSeats])면 아무것도 안 한다 — 두 번 누르면 1000점이 또 빠져 국 시작 점수([handStart])가 어긋난다.
   void declareRiichi(int seat, {bool fromPhoto = false}) {
+    if (riichiSeats.contains(seat)) return;
     final delta = List.filled(4, 0);
     delta[seat] = -1000;
     _apply(delta);

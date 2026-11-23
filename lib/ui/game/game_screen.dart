@@ -627,12 +627,15 @@ class _Board extends StatelessWidget {
 
 // ---------------- 점수판·테이블 화면 공용 대화상자 ----------------
 
-/// 리치한 자리를 골라 리치봉을 공탁에 넣는다.
+/// 리치한 자리를 골라 리치봉을 공탁에 넣는다. 이 국에 이미 리치한 자리는 "리치함" 으로 흐리게 두고 못 누른다.
 Future<void> showRiichiPicker(BuildContext context, Game g) => _pickSeat(context, g, '누가 리치?', (s) {
       gameStore.mutate((g) => g.declareRiichi(s));
-    });
+    }, disabled: {...g.riichiSeats}, disabledLabel: '리치함', allDisabledNote: '네 자리 모두 리치했습니다.');
 
-Future<void> _pickSeat(BuildContext context, Game g, String title, void Function(int seat) onPick) async {
+/// 자리 하나를 고른다. [disabled] 자리는 흐리게 [disabledLabel] 을 붙이고 못 누른다.
+/// 네 자리 모두 [disabled] 면 창은 열되 [allDisabledNote] 를 아래에 보인다(닫기는 바깥 누르기·뒤로).
+Future<void> _pickSeat(BuildContext context, Game g, String title, void Function(int seat) onPick,
+    {Set<int> disabled = const {}, String disabledLabel = '', String? allDisabledNote}) async {
   final seat = await showDialog<int>(
     context: context,
     builder: (ctx) => kioskWrap(ctx, SimpleDialog(
@@ -640,8 +643,19 @@ Future<void> _pickSeat(BuildContext context, Game g, String title, void Function
       children: [
         for (var s = 0; s < 4; s++)
           SimpleDialogOption(
-            onPressed: () => Navigator.pop(ctx, s),
-            child: Text('${Tiles.name(g.seatWindOf(s))}  ${g.names[s]}'),
+            key: ValueKey('pick-seat-$s'),
+            onPressed: disabled.contains(s) ? null : () => Navigator.pop(ctx, s),
+            child: disabled.contains(s)
+                ? Text(
+                    '${Tiles.name(g.seatWindOf(s))}  ${g.names[s]}${disabledLabel.isEmpty ? '' : '  · $disabledLabel'}',
+                    style: TextStyle(color: Theme.of(ctx).disabledColor),
+                  )
+                : Text('${Tiles.name(g.seatWindOf(s))}  ${g.names[s]}'),
+          ),
+        if (allDisabledNote != null && disabled.length >= 4)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+            child: Text(allDisabledNote, style: Theme.of(ctx).textTheme.bodySmall),
           ),
       ],
     )),

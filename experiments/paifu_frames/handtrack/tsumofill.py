@@ -4,14 +4,20 @@ LLM 호출 없음. assets/paifu/ · 기존 config · 정답 · B0 · B1 결과�
   python -X utf8 tsumofill.py plan                 # 자리 번호 ↔ 쪽 대응(코드로 확인) · 기록기 강 ↔ 패보 버림 맞붙이기 · 새 자리 목록
   python -X utf8 tsumofill.py cfg                  # 새 자리 config(handtrack/config/x_<판>_<쪽>.json, 없을 때만 — tsumokind.cmd_cfg 그대로, 위쪽은 occ_rows face 자동)
   python -X utf8 tsumofill.py detect <판…>         # 그 판의 새 자리 + hero 자리 검출 · 가림 → tsumo_b4_1122/raw4_<판>.json · det/det_<자리>.json
-  python -X utf8 tsumofill.py fill                 # 값 정하기 → filled/<판>.json · <판>.fill.json · summary.md · selfcheck.json(확인 ① ②)
+  python -X utf8 tsumofill.py fill [--out filled_v2] [--align order|nth]
+                                                   # 값 정하기 → <out>/<판>.json · <판>.fill.json · summary.md · selfcheck.json(확인 ① ②)
+                                                   #   11-23 기본 = filled_v2 · order(어긋난 자리만 패 종류 순서 맞춤). 11-22 옛 filled/ 는 --out filled --align nth 로 다시 남(summary · selfcheck 는 tsumo_b4_1122/ 바로 아래)
+  python -X utf8 tsumofill.py merge-read [--src filled_v2] [--out filled_read_v2]
+                                                   # read_pack/answers/R 의 읽기 답을 사본에 합침(11-23 옛 = --src filled --out filled_read)
   (확인 ③ ④ 는 experiments/paifu_frames/tsumofill_check.dart)
 
 값을 정하는 순서(명세 1 → 4, 자리 · 버림마다):
   1 rule       패보 기준: 그 자리가 리치를 선언한 뒤의 버림 = 참, 그 자리 울기(call 사건) 바로 뒤 버림 = 거짓
   2 truth_b1   시험 자리 여섯(_work/tsumo_b1_1122_key/truth_b1.json, 뺀 3개는 unknown) · truth_hero = r16 판 왼쪽(assets/paifu/L16_135321.json 의 hero 값 = L16 정답)
   3 code_T / code_H   M1: tsumokind.judge == '쯔모기리 확정' → 참 · '읽어야 함' 이고 run2_fs_s 시작이 −4 ~ 0초인 것이 있으면 거짓
-  4 unknown    그 밖(읽어야 함 · 시작 줄 없음 · 녹화 전 · 친의 첫 버림 · 맞붙이기 어긋남)
+  4 unknown    그 밖(읽어야 함 · 시작 줄 없음 · 녹화 전 · 친의 첫 버림 · 맞붙이기 어긋남(nth) / 짝 없음(order))
+맞붙이기(pair_discards): 패보 그 자리 N번째 버림 ↔ 기록기 강 N번째 차례. --align order(11-23 기본)는 N번째끼리 다 같으면 그대로,
+  어긋난 자리만 difflib 로 패 종류 순서를 맞춰 같은 패끼리 짝짓는다(r16 위쪽 — 패보에만 있는 울려 간 첫 버림 1z 로 한 칸씩 밀림).
 """
 from __future__ import annotations
 
@@ -228,11 +234,42 @@ def load_det4(nm: str):
     return tk.load_det(nm, prefer_saved=False)           # 시험 자리 = B0 · B1 때의 det(바꾸지 않음)
 
 
+def pair_discards(ptiles: list, otiles: list, align: str) -> tuple:
+    """패보 그 자리 버림(ptiles) ↔ 기록기 그 자리 강 차례(otiles) 짝.
+    돌려줌: (pair, bad_from, nomatch_why) — pair[n] = 패보 n번째(0부터)에 짝지은 기록기 차례 번호 또는 None.
+      nth   : 11-22 B4 명세 그대로 — N번째 ↔ N번째, 처음 어긋난 곳(bad_from)부터 그 자리 끝까지 None.
+      order : 두 줄이 N번째끼리 모두 같으면(bad_from 없음) nth 와 똑같이 둔다. 어긋날 때만 패 종류 순서를 맞춰(difflib 일치 블록)
+              같은 패끼리만 짝짓고, 짝 없는 패보 버림은 None(11-23, r16 위쪽 — 패보에만 있는 울려 간 첫 버림 1z)."""
+    m = min(len(ptiles), len(otiles))
+    bad_from = next((k for k in range(m) if ptiles[k] != otiles[k]), None)
+    if bad_from is None and len(ptiles) != len(otiles):
+        bad_from = m
+    if bad_from is None:
+        return list(range(len(ptiles))), None, None
+    if align == "nth":
+        return [n if n < bad_from else None for n in range(len(ptiles))], bad_from, f"맞붙이기 어긋남({bad_from + 1}번째부터)"
+    pair = [None] * len(ptiles)
+    for b in difflib.SequenceMatcher(None, ptiles, otiles, autojunk=False).get_matching_blocks():
+        for k in range(b.size):
+            pair[b.a + k] = b.b + k
+    assert all(ptiles[n] == otiles[k] for n, k in enumerate(pair) if k is not None), "다른 패를 짝지음"
+    ks = [k for k in pair if k is not None]
+    assert ks == sorted(ks) and len(set(ks)) == len(ks), "짝 순서가 꼬임"
+    return pair, bad_from, "맞붙이기 짝 없음(순서 맞춤 — 기록기 강에 이 버림이 없음)"
+
+
+def out_paths(name: str) -> tuple:
+    """fill 출력 — 옛 'filled' 는 summary · selfcheck 를 tsumo_b4_1122/ 바로 아래(11-22 그대로), 그 밖은 출력 폴더 안."""
+    d = OUT4 / name
+    return d, (OUT4 if name == "filled" else d)
+
+
 def cmd_fill(a):
     truth_b1 = {x["turn"]: x["kind"] for x in hc.jload(KEYD / "truth_b1.json")["items"]}
     L16 = load_paifu("L16_135321")
     rows_all, mism, sc2 = [], [], []
-    (OUT4 / "filled").mkdir(parents=True, exist_ok=True)
+    outd, metad = out_paths(a.out)
+    outd.mkdir(parents=True, exist_ok=True)
     for gid in GAMES:
         p = load_paifu(gid)
         q = copy.deepcopy(p)
@@ -246,16 +283,17 @@ def cmd_fill(a):
             ts = turns_of_seat(gid, side)
             ptiles = [p["events"][i]["tile"] for i in idx]
             otiles = [t["tile"] for t in ts]
-            # 맞붙이기: N번째 ↔ N번째, 처음 어긋난 곳부터 그 자리 끝까지 안 채움
-            bad_from = next((k for k in range(min(len(ptiles), len(otiles))) if ptiles[k] != otiles[k]), None)
-            if bad_from is None and len(ptiles) != len(otiles):
-                bad_from = min(len(ptiles), len(otiles))
+            # 맞붙이기(pair_discards): nth = N번째 ↔ N번째(처음 어긋난 곳부터 끝까지 안 채움) · order = 어긋날 때만 패 종류 순서 맞춤
+            pair, bad_from, nomatch_why = pair_discards(ptiles, otiles, a.align)
             if bad_from is not None:
                 mism.append({"game": gid, "seat": s, "side": side, "name": nm, "hero": s == p["hero"], "from_n": bad_from + 1,
                              "paifu": ptiles[bad_from] if bad_from < len(ptiles) else None, "recorder": otiles[bad_from] if bad_from < len(otiles) else None,
                              "count_paifu": len(ptiles), "count_recorder": len(otiles), "ov_side_count": len(ov.get(side, [])),
-                             # 참고(안 씀): 순서 맞춤(difflib)으로 이었다면 같은 패로 짝지어지는 버림 수
-                             "aligned_if_difflib": sum(b.size for b in difflib.SequenceMatcher(None, ptiles, otiles, autojunk=False).get_matching_blocks())})
+                             # 참고: 순서 맞춤(difflib)으로 이었을 때 같은 패로 짝지어지는 버림 수
+                             "aligned_if_difflib": sum(b.size for b in difflib.SequenceMatcher(None, ptiles, otiles, autojunk=False).get_matching_blocks()),
+                             "align": a.align, "paired": sum(k is not None for k in pair),
+                             "unpaired_paifu_n": [n + 1 for n, k in enumerate(pair) if k is None],
+                             "pairs": [[n + 1, k + 1] for n, k in enumerate(pair) if k is not None]})
             det = None if (nm in TEST.values() or nm.startswith("L16")) else load_det4(nm)
             l16_idx = seat_discards(L16)[s] if nm.startswith("L16") else None
             riichi, last_call = False, False
@@ -263,14 +301,17 @@ def cmd_fill(a):
                 e = p["events"][ei]
                 prev = next((p["events"][j] for j in range(ei - 1, -1, -1) if p["events"][j]["seat"] == s), None)
                 after_call = prev is not None and prev["type"] == "call"
-                t = ts[n] if n < len(ts) else None
+                if a.align == "nth":
+                    t = ts[n] if n < len(ts) else None          # 11-22 그대로(어긋난 뒤 규칙 행의 turn 도 N번째)
+                else:
+                    t = ts[pair[n]] if pair[n] is not None else None
                 row = {"game": gid, "seat": s, "side": side, "name": nm, "n": n + 1, "tile": e["tile"], "orig": e.get("tsumogiri"), "hero": s == p["hero"]}
                 if riichi:
                     v, src, why = True, "rule", "그 자리 리치 선언 뒤"
                 elif after_call:
                     v, src, why = False, "rule", "울기 바로 뒤 버림"
-                elif bad_from is not None and n >= bad_from:
-                    v, src, why = None, "unknown", f"맞붙이기 어긋남({bad_from + 1}번째부터)"
+                elif pair[n] is None:
+                    v, src, why = None, "unknown", nomatch_why
                 elif s == p["dealer"] and n == 0:
                     v, src, why = None, "unknown", "친의 첫 버림(뽑은 패 없음 — 정의 밖)"
                 elif nm.startswith("L16"):
@@ -283,7 +324,7 @@ def cmd_fill(a):
                     v, src, why = m1_of(t, det) if t else (None, "unknown", "차례 없음")
                 row.update(value=v, source=src, why=why, turn=t["id"] if t else None)
                 # 확인용: 시험 자리 · hero 의 M1(값을 덮어쓰기 전)
-                if t and (nm in TEST.values() or s == p["hero"]) and src not in ("rule",) and not (bad_from is not None and n >= bad_from) and not (s == p["dealer"] and n == 0):
+                if t and (nm in TEST.values() or s == p["hero"]) and src not in ("rule",) and pair[n] is not None and not (s == p["dealer"] and n == 0):
                     d_ = load_det4(nm) if nm in TEST.values() else det
                     row["m1"] = m1_of(t, d_)[:2]
                 if e.get("riichi"):
@@ -299,15 +340,16 @@ def cmd_fill(a):
                 elif e.get("tsumogiri") is not None and v is not None and e["tsumogiri"] != v:
                     row["conflict"] = f"패보 원래 값 {e['tsumogiri']} 와 다름 — 원래 값 그대로 둠"
                 fill_rows.append(row)
-        (OUT4 / "filled" / f"{gid}.json").write_bytes((json.dumps(q, ensure_ascii=False, indent=1) + "\n").encode("utf-8"))
-        hc.jsave(OUT4 / "filled" / f"{gid}.fill.json", fill_rows)
+        (outd / f"{gid}.json").write_bytes((json.dumps(q, ensure_ascii=False, indent=1) + "\n").encode("utf-8"))
+        hc.jsave(outd / f"{gid}.fill.json", fill_rows)
         rows_all += fill_rows
         print(gid, "끝", flush=True)
-    summary(rows_all, mism, sc2)
+    summary(rows_all, mism, sc2, metad, a)
 
 
-def summary(rows, mism, sc2):
-    L = ["# B4 채우기 요약 (tsumofill.py fill)", ""]
+def summary(rows, mism, sc2, metad=OUT4, a=None):
+    align = getattr(a, "align", "nth")
+    L = ["# B4 채우기 요약 (tsumofill.py fill" + (f" --align {align} --out {a.out}" if a else "") + ")", ""]
     nh = [r for r in rows if not r["hero"]]
     srcs = ["rule", "truth_b1", "truth_hero", "code_T", "code_H", "unknown"]
     L.append("| 판 | 자리(쪽 · 이름) | 버림 | " + " | ".join(srcs) + " | 채움 |")
@@ -325,10 +367,17 @@ def summary(rows, mism, sc2):
     L.append("unknown 내역: " + " · ".join(f"{k} {v}" for k, v in uk.most_common()))
     conf = [r for r in nh if r.get("conflict")]
     L.append(f"원래 값과 다른 값(원래 값 그대로 둠): {len(conf)}" + (" — " + ", ".join(f"{r['game'][:3]} 자리 {r['seat']} {r['n']}번째" for r in conf) if conf else ""))
-    L += ["", "## 맞붙이기 어긋남(기록기 새 기본값 강 N번째 ↔ 패보 그 자리 N번째 버림)", ""]
+    if align == "nth":
+        L += ["", "## 맞붙이기 어긋남(기록기 새 기본값 강 N번째 ↔ 패보 그 자리 N번째 버림)", ""]
+    else:
+        L += ["", "## 맞붙이기 어긋남(N번째끼리가 어긋난 자리 — 이 자리만 패 종류 순서 맞춤으로 짝지음, 다른 자리는 N번째 그대로)", ""]
     for m in mism:
-        L.append(f"- {m['game']} 자리 {m['seat']}({m['side']}{' · hero' if m['hero'] else ''}): {m['from_n']}번째부터 — 기록기 {m['recorder']} / 패보 {m['paifu']} · 장수 기록기 {m['count_recorder']} / 패보 {m['count_paifu']}"
-                 f" · (참고: 순서 맞춤으로 이었다면 같은 패 짝 {m['aligned_if_difflib']} — 명세대로 쓰지 않음)")
+        head = f"- {m['game']} 자리 {m['seat']}({m['side']}{' · hero' if m['hero'] else ''}): {m['from_n']}번째부터 — 기록기 {m['recorder']} / 패보 {m['paifu']} · 장수 기록기 {m['count_recorder']} / 패보 {m['count_paifu']}"
+        if align == "nth":
+            L.append(head + f" · (참고: 순서 맞춤으로 이었다면 같은 패 짝 {m['aligned_if_difflib']} — 명세대로 쓰지 않음)")
+        else:
+            L.append(head + f" · 순서 맞춤 짝 {m['paired']} · 짝 없는 패보 버림 {m['unpaired_paifu_n']}번째"
+                     f" · 짝(패보 n → 기록기 k) " + ", ".join(f"{x}→{y}" for x, y in m["pairs"]))
     if not mism:
         L.append("- 없음")
     # 확인 ①
@@ -345,8 +394,8 @@ def summary(rows, mism, sc2):
           f"- M1 이 값을 낸 hero 버림 {len(sc2)}(쯔모기리 {sum(x['m1'] for x in sc2)} · 손에서 {sum(not x['m1'] for x in sc2)}) · **틀리게 정한 것 {len(bad)}**"]
     for x in bad:
         L.append(f"  - {x['game']} {x['n']}번째 {x['tile']}: 패보 {x['paifu']} · M1 {x['m1']}({x['src']})")
-    hc.jsave(OUT4 / "selfcheck.json", {"check1": {"m1": dict(c1), "b3": b3}, "check2": sc2, "mismatch": mism})
-    tk.save_lf(OUT4 / "summary.md", "\n".join(L) + "\n")
+    hc.jsave(metad / "selfcheck.json", {"check1": {"m1": dict(c1), "b3": b3}, "check2": sc2, "mismatch": mism})
+    tk.save_lf(metad / "summary.md", "\n".join(L) + "\n")
     print("\n".join(L))
 
 
@@ -622,9 +671,11 @@ def cmd_merge_read(a):
             ans[d.get("id", f.stem)] = d
         except Exception as e:  # noqa: BLE001
             print("답 파일 읽기 실패", f.name, e)
-    OUTR = OUT4 / "filled_read"
+    SRC = OUT4 / a.src
+    OUTR = OUT4 / a.out
+    META = OUT4 if a.out == "filled_read" else OUTR         # 옛 filled_read 는 read_summary · check_dart_read 를 tsumo_b4_1122/ 바로 아래(11-23 그대로)
     OUTR.mkdir(parents=True, exist_ok=True)
-    L = ["# B4 + 남은 차례 읽기 합치기 (tsumofill.py merge-read)", "",
+    L = [f"# B4 + 남은 차례 읽기 합치기 (tsumofill.py merge-read --src {a.src} --out {a.out})", "",
          "받는 규칙(읽기 전에 정함): kind 가 tsumogiri / hand 이고 confidence 가 high · mid → 값(출처 read, 추적 전 버림은 read_pre). low · unsure → 모름 그대로(까닭에 읽기 답).", ""]
     # 확인용
     L += ["## 확인용(정답 아는 hero) — 합치지 않음", "", "| id | 정답 | 답 | 확신 | 맞음 |", "|---|---|---|---|---|"]
@@ -640,9 +691,11 @@ def cmd_merge_read(a):
             by_game[it["game"]][it["event_index"]] = (i, it)
     rows_all = []
     missing = []
+    base_uk = 0
     for gid in GAMES:
-        p = json.loads((OUT4 / "filled" / f"{gid}.json").read_text(encoding="utf-8"))
-        rows = hc.jload(OUT4 / "filled" / f"{gid}.fill.json")
+        p = json.loads((SRC / f"{gid}.json").read_text(encoding="utf-8"))
+        rows = hc.jload(SRC / f"{gid}.fill.json")
+        base_uk += sum(1 for r in rows if not r["hero"] and r["source"] == "unknown")
         sd = seat_discards(p)
         for r in rows:
             if r["hero"]:
@@ -677,10 +730,10 @@ def cmd_merge_read(a):
     n = len(rows_all)
     uk = sum(r["source"] == "unknown" for r in rows_all)
     c = Counter(r["source"] for r in rows_all)
-    L += ["", f"출처 합: " + " · ".join(f"{k} {v}" for k, v in c.most_common()), f"**채움 {n - uk}/{n} = {(n - uk) / max(1, n):.0%}**(합치기 전 B4 = filled/ 기준 301/359)",
+    L += ["", f"출처 합: " + " · ".join(f"{k} {v}" for k, v in c.most_common()), f"**채움 {n - uk}/{n} = {(n - uk) / max(1, n):.0%}**(합치기 전 B4 = {a.src}/ 기준 {n - base_uk}/{n})",
           f"읽기 답 없는 대상: {missing or '없음'}"]
     # check() · 채운 효과(합친 사본)
-    out = OUT4 / "check_dart_read.json"
+    out = META / "check_dart_read.json"
     cmd = [r"C:\Users\jjh7757\flutter\bin\dart.bat", "run", "experiments/paifu_frames/tsumofill_check.dart", "--filled",
            str(OUTR.relative_to(ROOT)).replace("\\", "/")] + GAMES
     with open(out, "w", encoding="utf-8") as fo:
@@ -697,7 +750,7 @@ def cmd_merge_read(a):
         L.append(f"| **합** | | {t['turns']} | {t['tiles_changed']}/{t['tiles']} | {t['safest_changed']} | {t['actual_changed']} | {t['risk_changed_turns']} |")
     else:
         L.append(f"\n!! tsumofill_check.dart 실패(종료 코드 {rc}) — {out} 참고. lib 를 다른 작업이 고치는 중이면 몇 분 뒤 다시: python -X utf8 tsumofill.py merge-read")
-    tk.save_lf(OUT4 / "read_summary.md", "\n".join(L) + "\n")
+    tk.save_lf(META / "read_summary.md", "\n".join(L) + "\n")
     print("\n".join(L))
 
 
@@ -709,11 +762,15 @@ def main():
     d = sp.add_parser("detect")
     d.add_argument("games", nargs="+")
     d.add_argument("--workers", type=int, default=4)
-    sp.add_parser("fill")
+    fp = sp.add_parser("fill")
+    fp.add_argument("--out", default="filled_v2", help="tsumo_b4_1122/ 아래 출력 폴더(11-22 옛 산출물 = filled — 덮어쓰지 말 것)")
+    fp.add_argument("--align", choices=["order", "nth"], default="order", help="order = 어긋난 자리만 패 종류 순서 맞춤(11-23) · nth = 11-22 명세(N번째끼리)")
     rp = sp.add_parser("read-pack")
     rp.add_argument("--workers", type=int, default=6)
     rp.add_argument("--force", action="store_true", help="read_pack 을 지우고 새로(answers 도 지워짐 — 답이 들어오기 전에만)")
-    sp.add_parser("merge-read")
+    mp = sp.add_parser("merge-read")
+    mp.add_argument("--src", default="filled_v2", help="읽기를 합칠 코드 채움 사본 폴더(11-23 옛 = filled)")
+    mp.add_argument("--out", default="filled_read_v2", help="출력 폴더(11-23 옛 = filled_read — 덮어쓰지 말 것)")
     sp.add_parser("read-pack-extra")
     a = ap.parse_args()
     {"plan": cmd_plan, "cfg": cmd_cfg, "detect": cmd_detect, "fill": cmd_fill, "read-pack": cmd_read_pack, "merge-read": cmd_merge_read,

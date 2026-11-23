@@ -1409,9 +1409,10 @@ class _PaifuScreenState extends State<PaifuScreen> {
   /// 리뷰가 붙는 판: 패널의 끝 두 칸(구분선 + 사건 목록 Expanded) 위의 칸들을 높이 상한 + 스크롤로 묶는다.
   /// 카드가 들어가도 좁은 화면에서 넘치지 않고(위 칸을 스크롤해 카드에 닿음), 사건 목록은 적어도 두세 줄 남는다.
   /// 다 들어가면 위 칸은 제 높이 그대로라 스크롤이 생기지 않는다. 패널 폭이 단추 7개 줄보다 좁으면(넓은 배치의
-  /// 최소 폭 300) 위 칸을 그 폭으로 그려 줄여 보인다. 리뷰 없는 판은 [panel] 그대로.
+  /// 최소 폭 300) 위 칸을 그 폭으로 그려 줄여 보인다.
+  /// 리뷰 없는 판(손패 없는 판 — 시작 손패 입력 단추가 더 붙는다)도 높이 상한 + 스크롤만은 같게 건다: 400×800 세로에서
+  /// r20 이 아래로 37px 넘쳤다(11-23). 다 들어가는 화면에서는 위 칸이 제 높이 그대로라 모양이 같다. 폭 줄이기는 리뷰 판만.
   Widget _fitPanel(Column panel) {
-    if (!_review.hasNumbers) return panel;
     const minW = 340.0;
     final n = panel.children.length;
     assert(panel.children.last is Expanded, '패널의 마지막 칸은 사건 목록(Expanded)이어야 합니다');
@@ -1421,7 +1422,7 @@ class _PaifuScreenState extends State<PaifuScreen> {
       builder: (context, box) {
         final minLog = (box.maxHeight * 0.2).clamp(2 * _rowH, 4 * _rowH);
         Widget top = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: head);
-        if (box.maxWidth < minW) {
+        if (_review.hasNumbers && box.maxWidth < minW) {
           top = FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.topLeft,
