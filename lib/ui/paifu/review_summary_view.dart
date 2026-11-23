@@ -1,5 +1,5 @@
 /// 패보 판 요약 화면(설계서 `docs/paifu_review_ui_design_1121.md` 3-1): 패효율 큰 숫자, 등급별 개수 세로 표,
-/// 평가 안 함 네 묶음, 배울 장면(최대 3), "복기 시작" · "처음부터 보기".
+/// 평가 안 함 네 묶음, 배울 장면(최대 3), 판 전체 질문 칩(묻는 곳이 있을 때만), "복기 시작" · "처음부터 보기".
 ///
 /// 손패가 있는 패보를 열면 재생 화면보다 먼저 보인다(9절 ②). 계산은 [PaifuReview] 의 getter 가 하고 여기서는 그리기만 한다.
 library;
@@ -31,6 +31,12 @@ class PaifuReviewSummary extends StatelessWidget {
   /// 배울 장면을 눌렀을 때: 그 걸음(버린 뒤 걸음 = eventIndex + 1).
   final ValueChanged<int> onLesson;
 
+  /// 판 전체 질문(복기 질문 창의 추천 질문과 같은 글). [onAsk] 가 있고 비어 있지 않을 때만 칩 줄을 그린다.
+  final List<String> questions;
+
+  /// 질문 칩을 눌렀을 때: 그 글(복기 화면의 질문 창에서 답한다). null 이면(키 없는 빌드) 칩 줄을 그리지 않는다.
+  final ValueChanged<String>? onAsk;
+
   const PaifuReviewSummary({
     super.key,
     required this.paifu,
@@ -40,6 +46,8 @@ class PaifuReviewSummary extends StatelessWidget {
     required this.onStart,
     required this.onPlay,
     required this.onLesson,
+    this.questions = const [],
+    this.onAsk,
   });
 
   @override
@@ -51,6 +59,7 @@ class PaifuReviewSummary extends StatelessWidget {
     final muted = theme.textTheme.bodySmall?.copyWith(color: scheme.onSurfaceVariant);
     final head = paifu.title.isNotEmpty ? paifu.title : paifu.round;
     final lessons = r.lessons();
+    final ask = onAsk;
 
     Widget gradeRow(ReviewGrade g) {
       final n = r.gradeCount(g);
@@ -162,6 +171,32 @@ class PaifuReviewSummary extends StatelessWidget {
                       ),
                     ),
                   ),
+              if (ask != null && questions.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Column(
+                  key: const ValueKey('paifu-summary-ask'),
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('질문', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final (i, q) in questions.indexed)
+                          ActionChip(
+                            key: ValueKey('paifu-summary-ask-$i'),
+                            label: Text(q),
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () => ask(q),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text('누르면 복기 화면의 질문 창에서 답합니다.', style: muted),
+                  ],
+                ),
+              ],
               const SizedBox(height: 20),
               FilledButton(
                 key: const ValueKey('paifu-summary-start'),

@@ -3,7 +3,7 @@
 파일에 적힌 순서대로 하나씩 돌린다.
 
   python -X utf8 experiments/paifu_review/agent_run_1122_app.py [--questions 파일] [--out 폴더] [--only a1,b2] [--set unseen4]
-                                                               [--facts-dir 폴더] [--fake | --dry-run]
+                                                               [--facts-dir 폴더] [--server 폴더] [--fake | --dry-run]
 
 질문 항목: {"id", "q", "game"?, "facts"?, "after"?, "set"?, …}
 - "facts": 사실표 파일 하나(저장소 뿌리 기준 상대 경로 또는 절대 경로). 없으면 --facts-dir(없으면 서버 fixture)/<game>.json.
@@ -17,6 +17,9 @@
 키: 실제 모드에서만 GEMINI_API_KEY 를 .env 파일(HANDOFF "Gemini 키" 줄)에서 읽어 자식 프로세스 환경에만 넣는다 — 찍지 않고 복사하지 않는다.
 --fake: review_ask.py --fake(대본 가짜 LLM)로 돌린다. .env 를 읽지 않고 자식 환경에서 GEMINI_API_KEY 를 뺀다(돈 0).
 --dry-run: 아무것도 부르지 않고 쓰지 않는다 — 질문마다 돌릴 명령 · 사실표 경로 · history 유무만 찍는다(.env 도 안 읽음).
+--server: review_ask.py 를 돌릴 서버 폴더(기본 SERVER). 지시문 판끼리 같은 시각에 번갈아 재려면 판마다 worktree 를 두고
+  질문마다 --only <id> --server <판 폴더> --out <판마다 다른 폴더> 로 번갈아 부른다(11-23 a5 · a6). 질문에 facts 칸도
+  --facts-dir 도 없으면 사실표는 그 서버의 fixture 에서 읽는다. 행 · summary 에 server · prompt_version 을 남긴다.
 결과: results/<out>/<id>.json(응답) · <id>.log(도구 · 답 · 검증 기록) · <id>.history.json(넘긴 history) · summary.json.
 """
 import argparse
@@ -69,6 +72,7 @@ def history(q: dict, by_id: dict) -> tuple[list[dict] | None, str]:
 
 
 def main() -> int:
+    global OUT, SERVER
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", default="")
@@ -76,14 +80,17 @@ def main() -> int:
     ap.add_argument("--out", default="agent_1122app", help="results/ 아래 폴더 이름")
     ap.add_argument("--facts-dir", default="", help="질문에 facts 칸이 없을 때의 사실표 폴더(없으면 서버 fixture). 파일 이름 = <game>.json")
     ap.add_argument("--set", default="", help="질문의 set 칸이 이 값인 것만")
+    ap.add_argument("--server", default=str(SERVER), help="review_ask.py 를 돌릴 서버 폴더(기본: 지금 상수 SERVER)")
     ap.add_argument("--fake", action="store_true", help="review_ask.py --fake(가짜 LLM, 키 없이)")
     ap.add_argument("--dry-run", action="store_true", help="부르지 않고 명령 · 사실표 · history 유무만 찍음(--fake 와 같이 주면 가짜 명령을 찍음)")
     args = ap.parse_args()
     qs = json.loads((HERE / args.questions).read_text(encoding="utf-8"))["questions"]
     by_id = {q["id"]: q for q in qs}
     only = {x for x in args.only.split(",") if x}
-    global OUT
     OUT = HERE / "results" / args.out
+    SERVER = Path(args.server).resolve()
+    if not (SERVER / "scripts" / "review_ask.py").exists():
+        sys.exit(f"서버 폴더에 scripts/review_ask.py 가 없음: {SERVER}")
     run = [q for q in qs if (not only or q["id"] in only) and (not args.set or q.get("set") == args.set)]
     if args.dry_run:
         env = None
@@ -116,7 +123,7 @@ def main() -> int:
             if args.fake:
                 cmd.append("--fake")
             ran.add(q["id"])
-            print(json.dumps({"id": q["id"], "cmd": cmd, "facts": str(facts), "facts_exists": bool(facts and facts.exists()),
+            print(json.dumps({"id": q["id"], "server": str(SERVER), "cmd": cmd, "facts": str(facts), "facts_exists": bool(facts and facts.exists()),
                               "history": "없음" if not after else
                               (f"{min(len(after), HISTORY_MAX)}쌍 넘길 예정" if ok else "못 만듦 → rc -1 예정"),
                               "after": src}, ensure_ascii=False), flush=True)
@@ -126,7 +133,7 @@ def main() -> int:
             cmd += ["--history", str(hist_file)]
         if args.fake:
             cmd.append("--fake")
-        row = {"id": q["id"]}
+        row = {"id": q["id"], "server": str(SERVER)}
         if facts is None or not facts.exists():
             row.update(rc=-1, reason=f"사실표 없음: {facts}", history_n=0)
         elif hist is None:
@@ -142,7 +149,7 @@ def main() -> int:
             row.update(rc=p.returncode, wall_s=wall, history_n=len(hist))
             if p.returncode == 0 and out.exists():
                 r = json.loads(out.read_text(encoding="utf-8"))
-                row.update(outcome=r["outcome"], retries=r.get("retries"), tools=len(r["tool_calls"]),
+                row.update(prompt_version=r.get("prompt_version"), outcome=r["outcome"], retries=r.get("retries"), tools=len(r["tool_calls"]),
                            llm=r["usage"].get("llm_calls"), tin=r["usage"].get("input_tokens"),
                            tout=r["usage"].get("output_tokens"), elapsed=r["elapsed_s"])
         rows.append(row)

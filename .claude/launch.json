@@ -14,6 +14,18 @@
       "port": 8765
     },
     {
+      "name": "web-ask",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8766",
+        "--directory",
+        "C:\\Users\\jjh7757\\dev\\mahjong_calc-ask\\build\\web"
+      ],
+      "port": 8766
+    },
+    {
       "name": "web-alt",
       "runtimeExecutable": "python",
       "runtimeArgs": [

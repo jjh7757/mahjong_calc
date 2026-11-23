@@ -641,6 +641,9 @@ class _PaifuScreenState extends State<PaifuScreen> {
         result: _resultShort(),
         onStart: _startReview,
         onPlay: _startPlay,
+        // 판 전체 질문(복기 화면의 내 버림 아닌 걸음과 같은 글). 키 없는 빌드면 줄을 그리지 않는다.
+        questions: suggestedQuestions(_p, _review.review, null),
+        onAsk: _askConfigured ? _askFromSummary : null,
         onLesson: (step) {
           setState(() => _view = PaifuView.review);
           _go(step);
@@ -752,6 +755,15 @@ class _PaifuScreenState extends State<PaifuScreen> {
     setState(() => _view = PaifuView.review);
     final s0 = _stageAt(0);
     _go(0, stage: s0 == null ? null : 0);
+  }
+
+  /// 요약의 질문 칩: "복기 시작" 과 같은 첫 걸음으로 가서 질문 창을 열고 그 글을 그대로 보낸다(판 전체 질문이라 차례를
+  /// 붙이지 않음). 엔진 계산 중이면 컨트롤러가 기다렸다 보낸다. 글자판은 띄우지 않는다. 앞 답을 기다리는 중이면(busy)
+  /// 보내지 않고 창만 연다.
+  void _askFromSummary(String q) {
+    _startReview();
+    _setAskOpen(true);
+    _ask.send(q);
   }
 
   /// 요약의 "처음부터 보기": 말풍선 없는 재생 화면의 첫 걸음.
@@ -920,13 +932,20 @@ class _PaifuScreenState extends State<PaifuScreen> {
   /// 단추 줄: 최선 보기 · 후보 · 참고값(펼침 토글) + 큰 "다음".
   Widget _reviewButtons(ThemeData theme, TurnReview? t) => SizedBox(
         height: 48,
-        // 토글 넷이 기본 여백이면 시험 글꼴로 329px — 줄 폭이 440 보다 좁으면(폰 세로 · 가로 오른쪽 패널) 칩 여백을 줄여
-        // 233px 로, "다음" 이 360 폭에서도 100px 넘게 남게 한다.
+        // 토글 넷이 기본 여백이면 시험 글꼴로 329px — 줄 폭이 440 보다 좁으면(폰 세로 · 가로 오른쪽 패널) 칩의 가로 여백만
+        // 줄여 233px 로, "다음" 이 360 폭에서도 100px 넘게 남게 한다. 세로 여백은 기본값 그대로라 칩 높이는 넓은 폭과 같다.
         child: LayoutBuilder(builder: (context, box) => _reviewButtonRow(theme, t, tight: box.maxWidth < 440)),
       );
 
   Widget _reviewButtonRow(ThemeData theme, TurnReview? t, {required bool tight}) {
     final scheme = theme.colorScheme;
+    // 좁을 때 가로 여백만 0 으로. 세로는 칩 기본(테마 값, 없으면 M3 기본 8)을 그대로 둔다 — EdgeInsets.zero 를 주면
+    // 세로 여백까지 없어져 칩 높이가 34 → 30 으로 납작해졌다(11-23).
+    EdgeInsets? tightPad;
+    if (tight) {
+      final base = (theme.chipTheme.padding ?? const EdgeInsets.all(8)).resolve(Directionality.of(context));
+      tightPad = EdgeInsets.only(top: base.top, bottom: base.bottom);
+    }
     Widget toggle(String label, Key key, bool on, VoidCallback onTap, {bool dim = false}) => Padding(
           padding: const EdgeInsets.only(right: 6),
           child: FilterChip(
@@ -936,7 +955,7 @@ class _PaifuScreenState extends State<PaifuScreen> {
             showCheckmark: false,
             visualDensity: VisualDensity.compact,
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            padding: tight ? EdgeInsets.zero : null,
+            padding: tightPad,
             labelPadding: tight ? const EdgeInsets.symmetric(horizontal: 4) : null,
             onSelected: (_) => onTap(),
           ),
