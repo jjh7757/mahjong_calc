@@ -8,7 +8,11 @@
 2단계(설계서 12절): test_games() = 개발 200판을 뺀 시험 799판(ID 순), test200_games() = 그 앞 200판.
 test200_path() 는 시험 200판만 경로를 준다(그 밖이면 오류). log_path() 의 개발 판 보호는 그대로.
 
-쓰기: python -X utf8 split.py [--check]   # --check: waitsuit.load_split() 과 dev 집합이 같은지 대조
+위험 보정 다시 재기(docs/risk_calibration_design_1123.md 8절, 11-23): test599_games() = 시험 799판 ID 순 뒤 599판,
+test599_path() 는 그 599판만 경로를 준다(밖이면 오류).
+
+쓰기: python -X utf8 split.py [--check] [--check599]   # --check: waitsuit.load_split() 과 dev 집합이 같은지 대조
+                                                       # --check599: 새 시험 599판이 개발 200 · 시험 200 과 겹침 0 인지
 """
 from __future__ import annotations
 
@@ -97,6 +101,42 @@ def test200_path(game: str) -> Path:
     return LOGS / f'{game}.json'
 
 
+def test599_games() -> list[str]:
+    """위험 보정 다시 재기 새 시험 599판(docs/risk_calibration_design_1123.md 8절): 시험 799판 ID 순 뒤 599판."""
+    return test_games()[N_TEST200:]
+
+
+def test599_path(game: str) -> Path:
+    """새 시험 599판만 경로를 준다(그 밖 — 시험 200판 · 개발 판 — 이면 오류)."""
+    if game not in set(test599_games()):
+        raise ValueError(f'새 시험 599판 밖의 판: {game}')
+    return LOGS / f'{game}.json'
+
+
+def check599() -> bool:
+    """599판 나눔 검사: 599판 · 개발 200판 · 시험 200판과 겹침 0 · 셋 합이 전체."""
+    dev, t200, t599, alls = set(dev_games()), set(test200_games()), test599_games(), all_games()
+    s599 = set(t599)
+    ok = (len(t599) == 599 and len(s599) == 599 and not (s599 & dev) and not (s599 & t200)
+          and (s599 | dev | t200) == set(alls) and t599 == sorted(t599) and min(t599) > max(t200))
+    print(f'새 시험 599판: {len(t599)}판({t599[0]} ~ {t599[-1]}) · 개발 200판과 교집합 {len(s599 & dev)} · '
+          f'시험 200판과 교집합 {len(s599 & t200)} · 개발 + 시험 200 + 599 = 전체 {len(alls)}판 {(s599 | dev | t200) == set(alls)} · '
+          f'시험 200판 뒤 {min(t599) > max(t200)} · 통과 {ok}')
+    try:
+        test599_path(sorted(t200)[0])
+        print('  test599_path(시험 200판) 막힘: 아니오')
+        ok = False
+    except ValueError:
+        print('  test599_path(시험 200판) 막힘: 예')
+    try:
+        test599_path(sorted(dev)[0])
+        print('  test599_path(개발 판) 막힘: 아니오')
+        ok = False
+    except ValueError:
+        print('  test599_path(개발 판) 막힘: 예')
+    return ok
+
+
 def main():
     dev = dev_games()
     print(f'전체 {len(all_games())}판 · 개발 {len(dev)}판 · 맞춤 {N_FIT} · 검증 {len(dev) - N_FIT} · 0단계 {N_STAGE0}')
@@ -121,6 +161,9 @@ def main():
               f'1단계 나눔 판과 교집합 {len(set(t200) & {g for v in s1.values() for g in v})} · '
               f'뒤 599판과 교집합 {len(set(t200) & set(wtest[N_TEST200:]))}')
         if not (same and ok_test and ok_200 and inter == 0):
+            sys.exit(1)
+    if '--check599' in sys.argv:
+        if not check599():
             sys.exit(1)
 
 

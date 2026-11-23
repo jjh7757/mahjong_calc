@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/material.dart';
 
 import '../../engine/efficiency.dart';
+import '../../engine/risk_calibration.dart' show calibrateRisk;
 import '../../engine/tile.dart';
 import '../../paifu/paifu.dart';
 import '../../paifu/paifu_review.dart';
@@ -30,7 +31,8 @@ String _tileName(PaifuTile t) => tileText(t);
 // 「샹텐을 지키는 후보 중 엔진 1위」. 아래 engineLines 계열(실제 버림 · 추천 · 위험 줄)은 예전 상자의 글로, 시험과 사실 비교에 남긴다.
 
 const engineReviewPending = '참고값 계산 중…';
-const engineReviewTooltip = '화료율과 방총 위험은 mahjong-helper 의 통계표로 낸 어림값입니다. '
+const engineReviewTooltip = '화료율은 mahjong-helper 의 통계표로 낸 어림값입니다. '
+    '방총 위험은 그 엔진 값을 천봉 고수 대국의 실제 방총률에 맞춰 고친 어림값이고, 모두에게 안전한 패는 "안전" 으로 적습니다. '
     '등급(패효율)과는 따로 셉니다. 국수지는 이 손의 화료 가치를 점수로 어림한 값입니다.';
 
 /// 엔진 참고값 계산 상태. off = 계산하지 않는 판(숫자 있는 차례가 없음).
@@ -102,18 +104,65 @@ bool _mhSameValues(RankedDiscard a, RankedDiscard b) {
       eq(a.raw.discardTileValue, b.raw.discardTileValue);
 }
 
-/// 위협 차례의 위험 줄들: "위협 자리: 동 가 · 이 패 방총 위험 약 1.7%", "가장 안전: 5통 (0.9%)". 위협이 없으면 빈 목록.
+// ── 화면에 보이는 방총 위험(설계서 docs/risk_calibration_design_1123.md 6절) ──
+//
+// 엔진 값(TurnReview.riskOfActual · riskByKind)은 순서는 맞지만 값이 커서, 보일 때만 위협 종류(리치 / 울기만)별
+// 보정표(lib/engine/risk_calibration.dart)를 거친다. 모두에게 안전패(RiskTable.safeForAll34)는 숫자 대신 "안전".
+// "가장 안전" 패는 원래 값으로 고른다(보정이 단조라 순서가 같다). 복기 에이전트 사실표는 원래 값 그대로 쓴다.
+
+/// 모두에게 안전패를 숫자 대신 적는 말.
+const riskSafeWord = '안전';
+
+/// 화면에 보이는 [tile] 의 방총 위험(%): 모두에게 안전패면 0, 아니면 엔진 값 [engine] 을 이 차례 위협 종류의 보정표로
+/// 바꾼 값. 위협이 없는 차례(보정표를 못 고름)면 엔진 값 그대로.
+double shownRisk(TurnReview t, int tile, double engine) {
+  if (t.riskSafeForAll(tile)) return 0;
+  final k = t.riskThreat;
+  return k == null ? engine : calibrateRisk(engine, k);
+}
+
+/// 화면에 "가장 안전" 으로 보여 줄 패. 고르는 기준은 원래 값([TurnReview.minRiskTile] — 손 안에서 엔진 값이 가장 작은 패)
+/// 그대로이고, 원래 값이 그와 같은 손 안 패들(동률 묶음) 중 모두에게 안전패가 있으면 그 패를 보여 준다 — 보정 뒤에는
+/// 안전패만 0("안전")이고 나머지 엔진 0 패는 첫 점 값(0.1 ~ 0.2%)이라, 번호 순으로 고르면 "가장 안전: 2통 (0.2%)" 옆에
+/// "안전" 패가 있는 모순이 생긴다(11-23). 안전패가 여럿이면 실제 버림을 먼저, 아니면 번호 작은 패. 안전패가 없으면
+/// [TurnReview.minRiskTile]. minRiskTile · 사실표는 바꾸지 않는다(복기 에이전트는 원래 값으로 본다).
+int? shownSafestTile(TurnReview t) {
+  final m = t.minRiskTile;
+  final byKind = t.riskByKind;
+  if (m == null || byKind == null) return m;
+  final w = byKind[m];
+  if (w == null) return m;
+  final d = t.discard.tile;
+  if (byKind[d] == w && t.riskSafeForAll(d)) return d;
+  if (t.riskSafeForAll(m)) return m;
+  final ties = [
+    for (final e in byKind.entries)
+      if (e.value == w && t.riskSafeForAll(e.key)) e.key,
+  ]..sort();
+  return ties.isEmpty ? m : ties.first;
+}
+
+/// [shownRisk] 의 글: "안전" 또는 "1.2%".
+String shownRiskText(TurnReview t, int tile, double engine) =>
+    t.riskSafeForAll(tile) ? riskSafeWord : '${_f1(shownRisk(t, tile, engine))}%';
+
+/// 위협 차례의 위험 줄들: "위협 자리: 동 가 · 이 패 방총 위험 약 1.2%"(모두에게 안전패면 "… · 이 패는 모두에게 안전"),
+/// "가장 안전: 5통 (0.2%)"(모두에게 안전패면 "(모두에게 안전)"). 숫자는 보정값. 위협이 없으면 빈 목록.
 List<String> engineRiskLines(TurnReview t, {String Function(int seat)? seatLabel}) {
   final r = t.riskOfActual;
   if (r == null) return const [];
   final label = seatLabel ?? (s) => '${s + 1}번 자리';
+  final seats = t.riskSeats.map(label).join(', ');
   final out = <String>[
-    '위협 자리: ${t.riskSeats.map(label).join(', ')} · 이 패 방총 위험 약 ${_f1(r)}%',
+    t.riskSafeForAll(t.discard.tile)
+        ? '위협 자리: $seats · 이 패는 모두에게 $riskSafeWord'
+        : '위협 자리: $seats · 이 패 방총 위험 약 ${shownRiskText(t, t.discard.tile, r)}',
   ];
-  final m = t.minRiskTile;
+  final m = shownSafestTile(t);
   final w = m == null ? null : t.riskByKind?[m];
   if (m != null && w != null) {
-    out.add('가장 안전: ${Tiles.name(m)} (${_f1(w)}%)${m == t.discard.tile ? ' — 실제 버림' : ''}');
+    final v = t.riskSafeForAll(m) ? '모두에게 $riskSafeWord' : shownRiskText(t, m, w);
+    out.add('가장 안전: ${Tiles.name(m)} ($v)${m == t.discard.tile ? ' — 실제 버림' : ''}');
   }
   return out;
 }
@@ -671,7 +720,8 @@ class ReviewCandidates extends StatelessWidget {
 /// 참고값 제목(공개 도구 이름 + 등급과 따로 셈).
 const engineFoldTitle = '참고값 (공개 마작 도구 mahjong-helper 계산 · 등급과 따로 셈)';
 
-/// 참고값 세 줄: 점수 · 화료까지 본 추천 / 이 패 방총 위험(위협이 있을 때) / 가장 안전한 패(위협이 있을 때).
+/// 참고값 세 줄: 점수 · 화료까지 본 추천 / 이 패 방총 위험(위협이 있을 때 — 보정값, 모두에게 안전패면 "안전") /
+/// 가장 안전한 패(위협이 있을 때).
 /// 추천은 샹텐을 지키는 후보 중 엔진 1위(후퇴 권장은 보이지 않음 — [engineRecommendLine] 과 같은 고름).
 /// 그 패가 말풍선의 최선(동률 포함)과 같으면 "말풍선의 최선과 같음". 엔진 칸이 없으면 빈 목록.
 List<String> engineFoldLines(TurnReview t, {String Function(int seat)? seatLabel}) {
@@ -695,8 +745,9 @@ List<String> engineFoldLines(TurnReview t, {String Function(int seat)? seatLabel
   final r = t.riskOfActual;
   if (r != null) {
     final label = seatLabel ?? (s) => '${s + 1}번 자리';
-    out.add('이 패 방총 위험: 약 ${_f1(r)}% (위협: ${t.riskSeats.map(label).join(', ')})');
-    final m = t.minRiskTile;
+    final v = t.riskSafeForAll(t.discard.tile) ? riskSafeWord : '약 ${shownRiskText(t, t.discard.tile, r)}';
+    out.add('이 패 방총 위험: $v (위협: ${t.riskSeats.map(label).join(', ')})');
+    final m = shownSafestTile(t);
     if (m != null) out.add('가장 안전한 패: ${Tiles.name(m)}${m == t.discard.tile ? ' — 실제 버림' : ''}');
   }
   return out;
@@ -781,7 +832,7 @@ class _EngineReviewFoldState extends State<EngineReviewFold> {
 }
 
 /// "자세히": 엔진 후보마다 한 줄인 표(숙련자용). 열은 버릴 패 · 샹텐 · 유효패 · 개량 뒤 평균 · 화료율(텐파이 후보가
-/// 있을 때) · 이 패 방총 위험(위협이 있을 때) · 국수지. AI 선택 확률 열은 없다.
+/// 있을 때) · 이 패 방총 위험(위협이 있을 때 — 보정값, 모두에게 안전패면 "안전") · 국수지. AI 선택 확률 열은 없다.
 class EngineCandidateTable extends StatelessWidget {
   final TurnReview turn;
   const EngineCandidateTable(this.turn, {super.key});
@@ -828,7 +879,7 @@ class EngineCandidateTable extends StatelessWidget {
                 cell('${d.waitsCount}장'),
                 cell(num1(d.avgImproveWaitsCount)),
                 if (tenpai) cell(d.shanten <= 0 ? '${num1(d.agariRate)}%' : '—'),
-                if (risk != null) cell(risk[d.tile] == null ? '—' : '${_f1(risk[d.tile]!)}%'),
+                if (risk != null) cell(risk[d.tile] == null ? '—' : shownRiskText(t, d.tile, risk[d.tile]!)),
                 cell(d.roundPoint.isFinite && d.roundPoint > 0 ? '${d.roundPoint.round()}' : '—'),
               ],
             ),

@@ -7,6 +7,7 @@ library;
 import '../engine/discard_rank.dart' show RankedDiscard, analyzeDiscards;
 import '../engine/efficiency.dart';
 import '../engine/risk.dart' show MeldKind, RiskTable, riskOf;
+import '../engine/risk_calibration.dart' show RiskThreat;
 import '../engine/shanten.dart';
 import '../engine/tile.dart';
 import 'mh_context.dart';
@@ -14,6 +15,7 @@ import 'paifu.dart';
 
 export '../engine/discard_rank.dart' show RankedDiscard;
 export '../engine/risk.dart' show RiskTable;
+export '../engine/risk_calibration.dart' show RiskThreat;
 
 /// 등급 문턱(임시). 유효패 손실이 최선의 몇 % 이하인가.
 class ReviewThresholds {
@@ -187,6 +189,19 @@ class TurnReview {
 
   /// 실제 버림의 국수지(원본 MixedRoundPoint).
   double? get mhActualRoundPoint => mhActual?.roundPoint;
+
+  /// 화면 보정표(lib/engine/risk_calibration.dart)를 고르는 위협 종류. 위협 자리([riskSeats])가 없으면 null.
+  /// [riichiSeats](hero 아닌 리치 자리)가 하나라도 있으면 리치 위협(R), 없으면 울기 위협만(C) — 실험
+  /// (`tool/tenhou6_features.dart` 의 `riichiSeats` · `risk_calibrate.py` 의 `kind`)과 같은 정의.
+  /// 리치 자리는 텐파이율 100 이라 언제나 [riskSeats] 에 든다.
+  RiskThreat? get riskThreat =>
+      riskSeats.isEmpty ? null : (riichiSeats.isNotEmpty ? RiskThreat.riichi : RiskThreat.callOnly);
+
+  /// [tile] 이 모두에게 안전패인가(엔진 `RiskTable.safeForAll34` — 실험의 `safeAll` 칸과 같은 값). 위험표가 없으면 false.
+  bool riskSafeForAll(int tile) {
+    final tb = riskTable;
+    return tb != null && _valid(tile) && tb.safeForAll34[tile];
+  }
 }
 
 class PaifuReview {

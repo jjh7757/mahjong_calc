@@ -64,8 +64,9 @@ void main() {
       expect(l, [
         '실제 버림 4만: 개량 뒤 유효패 평균 10.8장 · 속도 15.5 · 국수지 3132',
         '점수 · 화료까지 본 추천: 3만 (개량 뒤 유효패 평균 15.2장 · 속도 26.8)',
-        '위협 자리: 자리0 · 이 패 방총 위험 약 1.8%',
-        '가장 안전: 5통 (1.0%)',
+        // 위험 % 는 화면 보정값(울기 위협만 C 표, lib/engine/risk_calibration.dart — 11-23): 엔진 1.85 → 2.1, 5통 0.95 → 0.9.
+        '위협 자리: 자리0 · 이 패 방총 위험 약 2.1%',
+        '가장 안전: 5통 (0.9%)',
       ]);
     });
 
@@ -73,7 +74,7 @@ void main() {
       final l = engineLines(at(r19Engine, 39), seatLabel: seat);
       expect(l[0], '실제 버림 3삭: 개량 뒤 대기 평균 3.4장 · 화료율 33.3% · 기대 8276점(리치 기준) · 국수지 1755');
       expect(l[1], '점수 · 화료까지 본 추천: 실제 버림과 같음');
-      expect(l[2], '위협 자리: 자리0 · 이 패 방총 위험 약 3.5%');
+      expect(l[2], '위협 자리: 자리0 · 이 패 방총 위험 약 3.3%'); // 엔진 3.47 → C 표 보정 3.3(11-23)
     });
 
     test('r19 걸음 23: 엔진 1위와 값이 모두 같으면 "값이 같음"', () {
@@ -91,10 +92,10 @@ void main() {
     });
 
     test('참고값 세 줄(engineFoldLines): 추천은 말풍선의 최선(동률 포함)과 같으면 그렇게 적고, 위협 없으면 추천 한 줄', () {
-      // 걸음 29: 최선 3만(또는 3삭), 엔진 추천 3만 · 위협 자리 0 · 방총 1.8% · 가장 안전 5통(위 engineLines 시험과 같은 값).
+      // 걸음 29: 최선 3만(또는 3삭), 엔진 추천 3만 · 위협 자리 0 · 방총 2.1%(보정값) · 가장 안전 5통(위 engineLines 시험과 같은 값).
       expect(engineFoldLines(at(r19Engine, 29), seatLabel: seat), [
         '점수 · 화료까지 본 추천: 3만 — 말풍선의 최선과 같음',
-        '이 패 방총 위험: 약 1.8% (위협: 자리0)',
+        '이 패 방총 위험: 약 2.1% (위협: 자리0)',
         '가장 안전한 패: 5통',
       ]);
       // 걸음 23: 최선 2통(또는 5통), 엔진 추천 5통.
@@ -203,7 +204,7 @@ void main() {
       expect(inEngine(engineFoldTitle), findsOneWidget);
       // 자리 표시는 재생 화면 그대로(바람 + 이름).
       expect(inEngine('점수 · 화료까지 본 추천: 3만 — 말풍선의 최선과 같음'), findsOneWidget);
-      expect(inEngine('이 패 방총 위험: 약 1.8% (위협: 남 플레이어 1)'), findsOneWidget);
+      expect(inEngine('이 패 방총 위험: 약 2.1% (위협: 남 플레이어 1)'), findsOneWidget);
       expect(inEngine('가장 안전한 패: 5통'), findsOneWidget);
       // 개량 뒤 평균 · 속도 · 국수지는 "자세히" 안으로.
       expect(inEngine('개량 뒤'), findsNothing);
@@ -213,6 +214,9 @@ void main() {
       expect(find.byKey(const ValueKey('paifu-engine-table')), findsOneWidget);
       expect(inEngine('개량 뒤 평균'), findsOneWidget);
       expect(inEngine('4만 (실제)'), findsOneWidget);
+      // 표의 "방총 위험" 칸도 보정값(4만 엔진 1.85 → 2.1%, 5통 0.95 → 0.9% — 0.9% 칸은 5통 말고도 있음).
+      expect(find.descendant(of: find.byKey(const ValueKey('paifu-engine-table')), matching: find.text('2.1%')), findsOneWidget);
+      expect(find.descendant(of: find.byKey(const ValueKey('paifu-engine-table')), matching: find.text('0.9%')), findsWidgets);
       // 말풍선(등급)은 그대로.
       expect(tester.widget<Text>(find.byKey(const ValueKey('paifu-bubble-title'))).data, '4만 버림 · 실수');
       expect(calls, 1);
@@ -228,7 +232,7 @@ void main() {
 
       await goTo(tester, 39);
       expect(inEngine('점수 · 화료까지 본 추천: 3삭 — 말풍선의 최선과 같음'), findsOneWidget);
-      expect(inEngine('이 패 방총 위험: 약 3.5%'), findsOneWidget);
+      expect(inEngine('이 패 방총 위험: 약 3.3%'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('paifu-engine-detail')));
       await tester.pumpAndSettle();
       expect(inEngine('화료율'), findsOneWidget);

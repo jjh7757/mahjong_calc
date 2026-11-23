@@ -6,6 +6,7 @@
 쓰기: python -X utf8 run_features.py --stage0 --procs 12 --dill <dill> --out-dir <features 폴더> --timing <timing.json>
       python -X utf8 run_features.py --dev --gzip ...   # 1단계: 개발 200판, 판마다 끝나면 <판>.jsonl.gz 로 압축(원본 지움)
       python -X utf8 run_features.py --test200 --gzip ...   # 2단계: 시험 200판(split.test200_path 로만 연다)
+      python -X utf8 run_features.py --test599 --gzip ...   # 위험 보정 다시 재기(11-23): 새 시험 599판(split.test599_path 로만 연다)
       python -X utf8 run_features.py --dev --gzip --mask-tsumogiri ...   # 입력 가림(0단계, 설계서
                      docs/paifu_fill_scores_tsumogiri_design_1122.md 3절): dart 에 --mask-tsumogiri 를 넘김
 """
@@ -76,6 +77,8 @@ def main():
     ap.add_argument('--stage0', action='store_true')
     ap.add_argument('--dev', action='store_true', help='개발 200판 전체(1단계)')
     ap.add_argument('--test200', action='store_true', help='시험 200판(2단계, 설계서 12절) — split.test200_path 로만 연다')
+    ap.add_argument('--test599', action='store_true',
+                    help='새 시험 599판(docs/risk_calibration_design_1123.md 8절) — split.test599_path 로만 연다')
     ap.add_argument('--gzip', action='store_true', help='판마다 끝나면 .jsonl.gz 로 압축')
     ap.add_argument('--games')
     ap.add_argument('--procs', type=int, default=12)
@@ -85,11 +88,15 @@ def main():
     ap.add_argument('--mask-tsumogiri', action='store_true',
                     help='남의 쯔모기리 가림(리치 선언 뒤 버림만 남김) — tool/tenhou6_features.dart --mask-tsumogiri')
     a = ap.parse_args()
-    if a.mask_tsumogiri and a.test200:
+    if a.mask_tsumogiri and (a.test200 or a.test599):
         raise SystemExit('--mask-tsumogiri 는 개발 판에만(0단계 설계서: 시험 판은 열지 않음)')
     path_fn = split.log_path
+    if a.test200 and a.test599:
+        raise SystemExit('--test200 과 --test599 는 같이 쓰지 않는다')
     if a.test200:
         games, path_fn = split.test200_games(), split.test200_path
+    elif a.test599:
+        games, path_fn = split.test599_games(), split.test599_path
     else:
         games = split.stage0_games() if a.stage0 else (split.dev_games() if a.dev else a.games.split(','))
     out_dir = Path(a.out_dir)

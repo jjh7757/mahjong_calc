@@ -72,6 +72,17 @@ void main() {
         final wantSeats = [for (final s in t.riskSeats) (s + off) % 4]..sort();
         final gotSeats = (r['riskSeats'] as List? ?? const []).cast<int>();
         if (wantSeats.join(',') != gotSeats.join(',')) diff('riskSeats(천봉 자리)', wantSeats, gotSeats);
+        // 화면 위험 보정(lib/engine/risk_calibration.dart)이 쓰는 두 칸이 보정표 실험의 정의와 같은지:
+        // 위협 종류 = riichiSeats 가 비었는가(risk_calibrate.py `kind`), 모두에게 안전패 = 후보의 safeAll.
+        final wantRiichi = [for (final s in t.riichiSeats) (s + off) % 4]..sort();
+        final gotRiichi = (r['riichiSeats'] as List? ?? const []).cast<int>().toList()..sort();
+        if (wantRiichi.join(',') != gotRiichi.join(',')) diff('riichiSeats(천봉 자리)', wantRiichi, gotRiichi);
+        if (t.riskTable != null) {
+          for (final c in cands) {
+            final k = Tiles.parse(c['tile'] as String);
+            if (t.riskSafeForAll(k) != c['safeAll']) diff('safeAll ${c['tile']}', t.riskSafeForAll(k), c['safeAll']);
+          }
+        }
       }
       final report = '$id: 비교 $n차례 · 어긋남 ${mism.length}건${mism.isEmpty ? '' : '\n  ${mism.join('\n  ')}'}';
       // ignore: avoid_print
