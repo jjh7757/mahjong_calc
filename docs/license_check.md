@@ -80,3 +80,27 @@ Hugging Face で公開されている「HaseLab/mahjong-models」（regions-yolo
 3. **모델은 서버에서만 돌린다** — 앱에 넣으면 앱도 AGPL 파생물로 볼 여지가 생긴다. 앱은 서버와 HTTP 로만 통신.
 4. HaseLab YOLO26 은 운영에 쓰지 않는다(로컬 실험 기록만).
 나중에 상업으로 바꾸면 Ultralytics Enterprise 또는 Ultralytics 를 안 쓰는 검출기로 다시 학습해야 한다.
+
+# 외부 마작 AI — 패보 리뷰의 채점자로만 쓰기 (2026-11-18)
+
+법률 자문이 아니라 공개 자료를 정리한 것이다. 사용자 결정(11-18): 외부 AI 는 제품에 넣지 않고 **우리 등급이 맞는지 재는 채점자로만** 쓴다.
+
+## 확인한 것 (웹 페이지 · 저장소 README · LICENSE 를 읽은 범위)
+
+| 것 | 라이선스 · 조건 | 채점자로 쓸 때 |
+| --- | --- | --- |
+| **Mortal**(Equim-chan) — 강화학습 AI | 코드 AGPL-3.0-or-later. **학습된 가중치는 공개 계획 없음**(저자 gist, 2022-08-19 갱신 — 온라인 서비스가 이미 그 몫을 한다는 까닭). 제3자가 올린 가중치(Hugging Face 등)는 배포 조건이 불분명 — **쓰지 않는다.** | 로컬로는 못 돌림(가중치 없음). 아래 온라인 서비스로만. |
+| **mjai.ekyu.moe** — 저자가 운영하는 Mortal · akochan 온라인 리뷰 | 무료, "AS IS", 예고 없이 끝날 수 있음, 결과 페이지 15일 보관. **이용 약관 · 호출 제한 · 자동 이용에 대한 문구는 페이지에 없음.** | 입력: 천봉 · 작혼 대국 URL, Riichi City · Hime 로그 id, **tenhou.net/6 JSON 직접 입력**(대상 플레이어 지정). Mortal 은 **반장전만.** 결과는 HTML 페이지(차례마다 플레이어 수 · Mortal 수 · 후보별 Q 값과 확률, 위에 rating · 일치 수/전체). 사람이 쓰는 만큼(몇 판)만, 천천히. 봇 확인(CAPTCHA)이 있으면 사람이 넣어야 한다 — 확인 안 함. |
+| **mjai-reviewer**(Equim-chan) — 리뷰 도구 | Apache-2.0. | 로컬 실행에 엔진이 필요: Mortal(가중치 필요) 또는 akochan. 입력은 천봉 로그 id/URL 또는 tenhou.net/6 JSON 파일 + 플레이어 번호. |
+| **akochan**(critter-mj) | 일본어 독자 라이선스: **개인 · 연구 · 교육 목적 이용 허용**, 그 밖의 상업 이용은 저자 사전 허락, 재배포는 표기 + 같은 조건(AI 부분을 크게 바꾼 재배포는 원칙 금지), 분석 결과의 권리는 저자, 조건은 예고 없이 바뀔 수 있음. | 로컬 채점에 쓸 수 있어 보임(개인 · 연구). C++ + Boost 빌드가 필요하고 느리다(온라인 서비스 기준 한 판 10 ~ 60분). 결과를 이력서 · 글에 싣는 것이 "그 밖의 이용" 인지는 문구로 판단이 안 됨 — 싣기 전에 저자에게 묻는 편이 안전. |
+| **NAGA**(드왕고) | 비공개, 유료 웹 서비스. 요금 · 지원 범위는 이번에 확인 못 함. | 후보에서 뺌(유료 · 입력 형식 미확인). |
+| **천봉 패보** | 공개돼 있고 연구에 널리 쓰인다는 2차 자료(논문)만 확인. **천봉의 이용 약관 원문은 못 찾음.** | 몇 판을 내려받아 로컬 실험에 쓰는 정도로 한정, 재배포 안 함. |
+
+## 그래서
+
+- **쓸 길은 둘:** ① mjai.ekyu.moe 의 Mortal 로 몇 판(사람이 쓰는 양) ② akochan 을 로컬에 빌드. ①이 가볍고 Mortal 이 더 강하다고 알려져 있어 ①부터.
+- 가중치를 구해 로컬에서 Mortal 을 돌리는 길은 **안 간다**(배포 조건 불분명).
+- 채점 결과(숫자)는 내부 판단 재료로 쓰고, 밖에 낼 때(README · 이력서)는 "Mortal 리뷰 서비스와 비교" 임을 밝히고 페이지 · 값을 옮겨 싣지 않는다.
+- 못 본 것: 천봉 약관 원문, mjai.ekyu.moe 에 봇 확인이 있는지, 결과 HTML 을 기계로 읽을 수 있는지(패가 그림이라 글 추출로는 패 이름이 안 보였다).
+
+출처: https://github.com/Equim-chan/mjai-reviewer · https://gist.github.com/Equim-chan/cf3f01735d5d98f1e7be02e94b288c56 · https://mjai.ekyu.moe/ · https://gh.ekyu.moe/mjai-reviewer-demo.html · https://github.com/critter-mj/akochan (LICENSE) · https://dmv.nico/en/articles/mahjong_ai_naga/

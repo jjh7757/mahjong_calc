@@ -31,7 +31,7 @@ import htcommon as hc  # noqa: E402
 BASE = hc.WORK / "testtruth_1116"
 OUTF = BASE / "turns_cut.json"
 # 11-19 r15 · L16 넓히기: 두 판의 새 묶음은 turns_cut.json 을 안 건드리려고 따로 씀(build --out). 읽을 땐 OUTF 먼저, 같은 판이 겹치면 앞 파일 것.
-EXTRA = [BASE / "turns_cut_r15L16_1119.json"]
+EXTRA = [BASE / "turns_cut_r15L16_1119.json", BASE / "turns_cut_r18_1120.json"]   # 11-20: r18(남3국) — 앱 패보 예시 손패 복원용, 정답 없음
 EDGE_MS = 300
 
 

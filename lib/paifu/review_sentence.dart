@@ -131,15 +131,61 @@ String? reviewCorner(TurnReview t) {
   return '−${t.ukeireLoss ?? 0}장';
 }
 
+// ── 밀기 · 접기(설계서 docs/push_fold_design_1122.md 6절) ──
+//
+// 판정은 [TurnReview.pushFold](규칙 R3)가 있을 때만. 민 것은 "참고" 문구(지표 3 = 65.2% < 70%, metrics 표 16-15) —
+// "틀렸다 · 실수 · 접었어야" 같은 지적 말은 쓰지 않는다. 접은 것은 지표 4 = 97.2% ≥ 90% 라 "잘 접었습니다.".
+// 그 사이(중간)는 아무 말도 붙이지 않는다.
+
+/// 밀기 · 접기 앞말. 밂 → "보통은 접는 자리입니다. 강한 AI 는 이런 자리의 약 94% 에서 접습니다." · 접음 → "잘 접었습니다."
+/// · 중간 · 판정 없음 → null.
+String? pushFoldHeadline(TurnReview t) => switch (t.pushFold?.action) {
+      PushFoldAction.push =>
+        '보통은 접는 자리입니다. 강한 AI 는 이런 자리의 약 $pushFoldAiFoldPct% 에서 접습니다.',
+      PushFoldAction.fold => '잘 접었습니다.',
+      _ => null,
+    };
+
+/// 위험 % 글의 기본 꼴: 엔진 값 소수 한 자리에 "약"(재생 화면 위험 줄 "이 패 방총 위험 약 1.7%" 와 같은 꼴).
+String _riskPlain(int tile, double risk) => '약 ${risk.toStringAsFixed(1)}%';
+
+/// 근거 숫자(6절: 내 손 몇 샹텐 · 버린 패의 방총 위험 · 가장 안전했던 패와 그 위험):
+/// "내 손 3샹텐 · 방총 위험: 버린 7만(약 9.6%), 가장 안전 5통(약 0.0%)". 버린 패가 가장 안전한 패면
+/// "… 버린 5통(약 0.0%) = 가장 안전". 앞말이 없는 차례(중간 · 판정 없음)는 null.
+/// [riskText] 는 패 하나의 위험 글(기본 [_riskPlain] — 엔진 값). 화면은 보정값 글을 넘긴다.
+/// [safest] 는 "가장 안전" 으로 적을 패. 없거나 [PushFoldSpot.safest] 밖이면: 버린 패가 그 안에 있으면 버린 패, 아니면
+/// 첫째(번호 작은 패).
+String? pushFoldEvidence(TurnReview t, {String Function(int tile, double risk)? riskText, int? safest}) {
+  final s = t.pushFold;
+  if (s == null || pushFoldHeadline(t) == null) return null;
+  final rt = riskText ?? _riskPlain;
+  final safe = safest != null && s.safest.contains(safest)
+      ? safest
+      : (s.safest.contains(s.discard) ? s.discard : s.safest.first);
+  final mine = '버린 ${tileText(t.discard)}(${rt(s.discard, s.discardRisk)})';
+  final tail = safe == s.discard ? '$mine = 가장 안전' : '$mine, 가장 안전 ${Tiles.name(safe)}(${rt(safe, s.minRisk)})';
+  return '내 손 ${shantenText(s.shantenBefore)} · 방총 위험: $tail';
+}
+
+/// 앞말 + 근거: "잘 접었습니다. 내 손 3샹텐 · 방총 위험: …". 중간 · 판정 없음은 null.
+String? pushFoldSentence(TurnReview t, {String Function(int tile, double risk)? riskText, int? safest}) {
+  final head = pushFoldHeadline(t);
+  if (head == null) return null;
+  return '$head ${pushFoldEvidence(t, riskText: riskText, safest: safest)}';
+}
+
 /// 본문 한 문장(3-8 의 틀). LLM 해설이 없을 때 쓰는 코드 문장.
-String reviewSentence(TurnReview t) {
+/// 수비 차례가 "접는 자리"(밂 · 접음)면 끝에 [pushFoldSentence] 를 붙인다. [withPushFold] 가 거짓이면 붙이지 않는다
+/// (재생 말풍선은 그 글을 제목 아래 따로 보인다).
+String reviewSentence(TurnReview t, {bool withPushFold = true}) {
   switch (t.status) {
     case ReviewStatus.forced:
       return '리치 중이라 뽑은 패를 그대로 버립니다.';
     case ReviewStatus.defense:
       final g = t.genbutsu;
       final tail = g == null ? '현물인지 판단하지 않습니다.' : (g ? '버린 패는 현물입니다.' : '버린 패는 현물이 아닙니다.');
-      return '다른 자리가 리치 중입니다. $tail';
+      final pf = withPushFold ? pushFoldSentence(t) : null;
+      return '다른 자리가 리치 중입니다. $tail${pf == null ? '' : ' $pf'}';
     case ReviewStatus.complete:
       return '화료 형태에서 버렸습니다. 화료하지 않은 까닭은 판단하지 않습니다.';
     case ReviewStatus.unknownHand:

@@ -2576,6 +2576,65 @@
       "autoPort": false
     },
     {
+      "name": "paifu-truth",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-X",
+        "utf8",
+        "experiments/paifu_frames/handtrack/truthserver.py",
+        "8311"
+      ],
+      "port": 8311,
+      "autoPort": false
+    },
+    {
+      "name": "paifu-truth-test",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-X",
+        "utf8",
+        "experiments/paifu_frames/handtrack/truthserver.py",
+        "8312",
+        "--ans",
+        "C:\\Users\\jjh7757\\AppData\\Local\\Temp\\claude\\0788729d86c3eef5\\c69bf5e8-d88c-407e-a2a1-7f704ff33405\\scratchpad\\answers_test.json"
+      ],
+      "port": 8312,
+      "autoPort": false
+    },
+    {
+      "name": "review-dev-fake",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-X",
+        "utf8",
+        "C:\\Users\\jjh7757\\dev\\mahjong-recognizer-review\\scripts\\review_dev_server.py",
+        "--fake",
+        "--port",
+        "8321",
+        "--api-key",
+        "dev-key"
+      ],
+      "port": 8321,
+      "autoPort": false
+    },
+    {
+      "name": "review-dev-real",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-X",
+        "utf8",
+        "C:\\Users\\jjh7757\\dev\\mahjong-recognizer-review\\scripts\\review_dev_server.py",
+        "--port",
+        "8321",
+        "--api-key",
+        "dev-key",
+        "--env-file",
+        "C:\\Users\\jjh7757\\Downloads\\부트캠프\\.env"
+      ],
+      "port": 8321,
+      "autoPort": false
+    },
+    {
       "name": "paifu-truth-han3",
       "runtimeExecutable": "python",
       "runtimeArgs": [
@@ -2597,6 +2656,19 @@
         "8314"
       ],
       "port": 8314,
+      "autoPort": false
+    },
+    {
+      "name": "web-riskcal",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8781",
+        "--directory",
+        "build/web_riskcal"
+      ],
+      "port": 8781,
       "autoPort": false
     }
   ]

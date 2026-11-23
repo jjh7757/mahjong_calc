@@ -231,6 +231,10 @@ Map<String, dynamic>? _defense(Paifu p, TurnReview t) {
     ],
     'efficient': efficient,
     'stance': canChoose ? defenseStance(actualRisk, minRisk) : null,
+    // 앱 화면은 [TurnReview.pushFold](설계서 docs/push_fold_design_1122.md R3)로 "접는 자리" 를 판정하지만, 여기는 일부러
+    // 그대로 null 로 둔다(11-23): 운영 서버(app/review_agent.py)는 fold_spot 을 null/bool 로만 받고, 참이면 에이전트가
+    // "접었어야 했다" 같은 판정 말을 쓸 수 있게 돼 설계서 6절의 "참고" 문구(지표 3 이 70% 미만)보다 세다.
+    // 에이전트에 넣는 것은 서버를 고치고 안 본 판으로 다시 잰 뒤. 사실표의 다른 칸도 바꾸지 않는다(서버 검증이 모르는 칸을 거절).
     'fold_spot': null,
   };
 }

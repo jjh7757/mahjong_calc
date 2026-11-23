@@ -243,6 +243,95 @@ def prep_fromplan(tid: str):
     print(tid, f"n={p['n']}", len(fl), "장(원본만) · 사건 목록", len(ev), "자 →", d, flush=True)
 
 
+# 11-20 사용자 "m2b설정으로 opus모델 하위에이전트써서 안본판 재봐" — API m2b(claudeagent --variant motion2, 표 12-84)를 하위 에이전트 꼴로.
+# 지시문 = claudeagent.PROMPT_MOTION2 그대로에서 "도구" 절만 Read · PIL 로 바꾸고(view · zoom · strip · check 와 같은 일을 스스로),
+# 첫 메시지의 사건 목록 → events.txt, answer 도구 → answer.json, "보면 안 되는 것" 절을 더함. color 그림 = FloatTurn 이 다시 그린 것(떠 있는 숫자 표시),
+# check = 표시 전 그대로(m2b 와 같음). 원본 · color 는 이 폴더 raw/ · color/ 로(SAM 2 결과 폴더에 마스크가 같이 있어서).
+M2B_TOOLS = """## 보는 법(도구 대신)
+- 그림은 `Read` 로 연다. `frames.txt` 의 셋째 칸이 color, 넷째 칸이 raw 다(그림 크기 {W} × {H}).
+- 확대 · 이어 보기는 Bash 에서 `python -X utf8 -c "..."`(PIL)로 직접 만들어 `{work}` 아래에만 저장해 연다 — 예: 한 프레임 일부를 잘라 3배로 키우기, **같은 영역**을 여러 프레임에서 잘라 시간순으로 위아래로 쌓기(줄마다 프레임 번호를 적으면 패 하나가 손 밑에서 어떻게 움직였는지 이어서 볼 수 있다).
+- 확인 그림은 `check/` 에서 `Read` 로 연다.
+
+"""
+M2B_ANSWER = """## 보면 안 되는 것(보면 이 읽기는 못 쓴다)
+- 이 폴더(`{dir}`)의 `TASK.md` · `frames.txt` · `events.txt` · `color/` · `raw/` · `check/`, 그리고 네가 만든 `{work}` 말고는 아무 파일도 열거나 검색하지 않는다(Grep · Glob · ls 로 다른 폴더를 뒤지지 않는다). 특히 `docs/` · `HANDOFF.md` · `truth*` · `answers*` · `read_*` · `opusread_*` · `rawread_*` · `rawhand_*` · `claudeagent_*` · `geminiagent_*` · `sam2*` 폴더 · 다른 차례 폴더는 열지 않는다. 화소 규칙 · 추적 스크립트를 돌려 답을 얻지 않는다 — 눈으로 읽는다.
+
+## 답
+`{dir}/answer.json` 한 파일만 쓴다:
+```json
+{{"id": "{tid}", "kind": "hand 또는 tsumogiri", "k": 버린 패가 원래 줄 {n}장에서 왼쪽부터 몇 번째였나(D 는 세지 않음, tsumogiri 면 null),
+ "j": 차례가 끝났을 때 D 가 줄({n}장)의 왼쪽부터 몇 번째인가(끝 그대로면 {n}, tsumogiri 면 null),
+ "end_order": ["끝 줄 왼쪽부터 실제 패 — 원래 번호 \\"1\\" ~ \\"{n}\\" 또는 \\"D\\"(tsumogiri 면 \\"1\\" ~ \\"{n}\\")"], "unsure": 맞을 가능성 70% 밑이면 true,
+ "tracking_errors": "추적이 틀린 곳과 근거(프레임 번호)", "why": "근거 3 ~ 5문장(프레임 번호와 함께)"}}
+```
+마지막 답변은 "kind · k · j 와 확신 여부" 한 줄이면 된다.
+"""
+
+
+def m2b_task(T, d: Path, work: Path) -> str:
+    import claudeagent as ca
+    F = len(T.rows)
+    p = ca.PROMPT_MOTION2.format(n=T.n, F=F, last=F - 1, mv=ca.MAX_VIEW, W=T.W, H=T.H, sr=0, sm=0)
+    a0, a1 = p.index("## 도구"), p.index("## 하는 법")
+    p = p[:a0] + M2B_TOOLS.format(W=T.W, H=T.H, work=work.as_posix()) + p[a1:]
+    subs = [("## 재료(도구로 본다)\n",
+             "## 재료(이 폴더 밖의 파일은 열지 않는다)\n- `frames.txt` — 프레임 목록: `번호 · 시각 · color 그림 경로 · raw 그림 경로`.\n- `events.txt` — 칸 틀 사건 목록(아래 \"패가 실제로 움직인 때부터\" 절).\n"),
+            ("첫 메시지의 **칸 틀 사건 목록**", "`events.txt` 의 **칸 틀 사건 목록**")]
+    for x, y in subs:
+        assert p.count(x) == 1, x
+        p = p.replace(x, y)
+    a2 = p.index("## 답(answer 도구)")
+    p = p[:a2] + M2B_ANSWER.format(dir=d.as_posix(), work=work.as_posix(), tid=T.tid, n=T.n)
+    assert "answer 도구" not in p and "view(" not in p and "첫 메시지" not in p, p
+    return "# 손패 줄 한 차례 읽기\n\n" + p
+
+
+def prep_m2b(tid: str):
+    import json
+    import os
+    import shutil
+    import claudeagent as ca
+    import geminiagent as ga
+    d = OUT / tid
+    for sub in ("raw", "color", "check", "work"):
+        (d / sub).mkdir(parents=True, exist_ok=True)
+    meta = hc.jload(si.frame_dir(tid, "M") / "meta.json")
+    run = s1.run_dir(tid, si.V1)
+    labs = [hc.mss(ms) for ms in meta["frames"]]
+    for i in range(len(labs)):
+        p = d / "raw" / f"{i:05d}.jpg"
+        if not p.exists():
+            try:
+                os.link(run / "frames" / f"{i:05d}.jpg", p)
+            except OSError:
+                shutil.copyfile(run / "frames" / f"{i:05d}.jpg", p)
+    # FloatTurn 은 ga.SRC/<id>/frames.txt 를 읽음 — 먼저 저장된 color(sam2img M) 경로로 써서 크기만 잡고, 다시 그린 color 로 바꿔 씀
+    ga.SRC = OUT
+    lines = [f"{i:03d} {labs[i]} {(si.frame_dir(tid, 'M') / f'{i:05d}.jpg').as_posix()} {(d / 'raw' / f'{i:05d}.jpg').as_posix()}" for i in range(len(labs))]
+    (d / "frames.txt").write_bytes(("\n".join(lines) + "\n").encode("utf-8"))
+    T = ca.FloatTurn(tid)
+    for i in range(len(labs)):
+        T.img(i, "color").save(d / "color" / f"{i:05d}.jpg", quality=92)
+    lines = [f"{i:03d} {labs[i]} {(d / 'color' / f'{i:05d}.jpg').as_posix()} {(d / 'raw' / f'{i:05d}.jpg').as_posix()}" for i in range(len(labs))]
+    (d / "frames.txt").write_bytes(("\n".join(lines) + "\n").encode("utf-8"))
+    for k, mo in enumerate(sv.moments(tid), 1):
+        pr = " · ".join(f"{a}·{b}" for a, b in mo["pairs"])
+        for role, fi in (("겹치기전", mo["start"] - 1), ("첫", mo["start"]), ("풀림", mo["end"])):
+            if fi < 0:
+                continue
+            title = f"확인 {k} — {labs[mo['start']]} 숫자 {pr} 한 패에 겹침 · 이 그림 = {role} {labs[fi]} (프레임 {fi:03d})"
+            Image.open(io.BytesIO(sv.check_image(tid, fi, title))).save(d / "check" / f"m{k}_{role}_{fi:03d}.jpg", quality=90)
+    ev = ca.events_text(T)
+    assert ev.startswith(f"== {tid} ·"), ev[:80]
+    (d / "events.txt").write_bytes((ev + "\n").encode("utf-8"))
+    (d / "TASK.md").write_bytes(m2b_task(T, d, d / "work").encode("utf-8"))
+    side = OUT / "_float"   # 감사용(하위 에이전트 폴더 밖)
+    side.mkdir(exist_ok=True)
+    (side / f"{tid}.json").write_text(json.dumps(T.float_log), encoding="utf-8")
+    nfl = sum(1 for v in T.float_log.values() if v)
+    print(tid, len(labs), "장 · 확인", len(list((d / "check").glob("*.jpg"))), "장 · 떠 있는 숫자 프레임", nfl, "→", d)
+
+
 def _ids(s):
     return list(R15L16) if s == "r15L16" else sv.ids_of(s)
 
@@ -274,6 +363,7 @@ def main():
             q.add_argument("--raw", action="store_true", help="SAM 2 없이 원본 띠만(추가 39 — r19 4순)")
             q.add_argument("--nosam", action="store_true", help="SAM 2 없이 원본 + 칸 틀 사건 목록(11-20, --root rawread_1120)")
             q.add_argument("--hands", action="store_true", help="--nosam 에 손 관절 사건 더함(11-20, --root rawhand_1120)")
+            q.add_argument("--m2b", action="store_true", help="API m2b(motion2) 꼴을 하위 에이전트로(11-20, --root m2bsub_1120)")
             q.add_argument("--fromplan", action="store_true", help="--nosam 꼴을 SAM 2 추적 없이 plan 틀에서 바로(11-20, --ids r15L16 --root rawread_r15L16_1120)")
     a = ap.parse_args()
     global OUT
@@ -282,6 +372,8 @@ def main():
         for tid in _ids(a.ids):
             if a.fromplan:
                 prep_fromplan(tid)
+            elif a.m2b:
+                prep_m2b(tid)
             elif a.nosam:
                 prep_nosam(tid, a.hands)
             elif a.raw:

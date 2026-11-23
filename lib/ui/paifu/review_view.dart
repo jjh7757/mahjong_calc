@@ -146,6 +146,14 @@ int? shownSafestTile(TurnReview t) {
 String shownRiskText(TurnReview t, int tile, double engine) =>
     t.riskSafeForAll(tile) ? riskSafeWord : '${_f1(shownRisk(t, tile, engine))}%';
 
+/// 말풍선의 밀기 · 접기 근거([pushFoldEvidence]): 위험 % 는 아래 위험 줄과 같은 꼴 — 보정값 "약 1.2%", 모두에게
+/// 안전패면 "모두에게 안전", "가장 안전" 패는 [shownSafestTile]. 판정(밂 · 접음)은 보정 전 엔진 값으로 이미 정해져 있다.
+String? pushFoldNoteDetail(TurnReview t) => pushFoldEvidence(
+      t,
+      riskText: (k, v) => t.riskSafeForAll(k) ? '모두에게 $riskSafeWord' : '약 ${shownRiskText(t, k, v)}',
+      safest: shownSafestTile(t),
+    );
+
 /// 위협 차례의 위험 줄들: "위협 자리: 동 가 · 이 패 방총 위험 약 1.2%"(모두에게 안전패면 "… · 이 패는 모두에게 안전"),
 /// "가장 안전: 5통 (0.2%)"(모두에게 안전패면 "(모두에게 안전)"). 숫자는 보정값. 위협이 없으면 빈 목록.
 List<String> engineRiskLines(TurnReview t, {String Function(int seat)? seatLabel}) {
@@ -361,6 +369,14 @@ class ReviewBubble extends StatelessWidget {
   final List<String> lines;
   final String? sentence;
 
+  /// 밀기 · 접기 한 줄(설계서 docs/push_fold_design_1122.md 7절 — 수비 제목 바로 아래): 앞말([pushFoldHeadline], 굵게)
+  /// + 근거([pushFoldNoteDetail]). 접는 자리에서 밀었거나 접은 차례만, 그 밖은 null.
+  final String? pushFoldNote;
+  final String? pushFoldDetail;
+
+  /// 밂: 앞말이 길어 좁은 화면에서 두 줄로 접히므로 근거까지 석 줄, 문장은 한 줄. 접음: 두 줄 · 문장 두 줄. 합은 늘 넷.
+  final bool pushFoldLong;
+
   /// 내 버림이 아닌 걸음: 한 줄 회색.
   final bool muted;
 
@@ -372,19 +388,29 @@ class ReviewBubble extends StatelessWidget {
     this.corner,
     this.lines = const [],
     this.sentence,
+    this.pushFoldNote,
+    this.pushFoldDetail,
+    this.pushFoldLong = false,
     this.muted = false,
   });
 
   /// 내 버림 걸음. [sentence] 를 주면(LLM 해설 등) 코드 문장 대신 그것을 쓴다.
-  factory ReviewBubble.turn(TurnReview t, {Key? key, required int step, String? sentence}) => ReviewBubble(
-        key: key,
-        step: step,
-        icon: t.status == ReviewStatus.graded && t.grade != null ? ReviewGradeIcon(t.grade!, size: 22) : null,
-        title: reviewTitle(t),
-        corner: reviewCorner(t),
-        lines: reviewCompareLines(t),
-        sentence: sentence ?? reviewSentence(t),
-      );
+  /// 접는 자리(밂 · 접음)면 밀기 · 접기 한 줄을 제목 아래 따로 보이고, 코드 문장에는 붙이지 않는다(겹치지 않게).
+  factory ReviewBubble.turn(TurnReview t, {Key? key, required int step, String? sentence}) {
+    final pf = pushFoldHeadline(t);
+    return ReviewBubble(
+      key: key,
+      step: step,
+      icon: t.status == ReviewStatus.graded && t.grade != null ? ReviewGradeIcon(t.grade!, size: 22) : null,
+      title: reviewTitle(t),
+      corner: reviewCorner(t),
+      lines: reviewCompareLines(t),
+      sentence: sentence ?? reviewSentence(t, withPushFold: false),
+      pushFoldNote: pf,
+      pushFoldDetail: pf == null ? null : pushFoldNoteDetail(t),
+      pushFoldLong: t.pushFold?.action == PushFoldAction.push,
+    );
+  }
 
   /// 단계 걸음.
   factory ReviewBubble.stage(ReviewStage s, {Key? key, required int step, required String sentence}) => ReviewBubble(
@@ -451,13 +477,25 @@ class ReviewBubble extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: body?.copyWith(fontWeight: FontWeight.w500)),
+            if (pushFoldNote != null)
+              Text.rich(
+                TextSpan(children: [
+                  TextSpan(text: pushFoldNote, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  if (pushFoldDetail != null)
+                    TextSpan(text: ' $pushFoldDetail', style: TextStyle(color: scheme.onSurfaceVariant)),
+                ]),
+                key: const ValueKey('paifu-bubble-pushfold'),
+                maxLines: pushFoldLong ? 3 : 2,
+                overflow: TextOverflow.ellipsis,
+                style: body,
+              ),
             if (sentence != null)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(
                   sentence!,
                   key: const ValueKey('paifu-bubble-sentence'),
-                  maxLines: 2,
+                  maxLines: pushFoldNote == null ? 2 : (pushFoldLong ? 1 : 2),
                   overflow: TextOverflow.ellipsis,
                   style: body,
                 ),

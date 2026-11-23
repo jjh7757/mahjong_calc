@@ -118,6 +118,12 @@ class TurnReview {
   /// 버리기 전 손패 종류 → 합친 위험(%). 위협이 있고 손패를 알 때만.
   final Map<int, double>? riskByKind;
 
+  // ---- 밀기 · 접기(docs/push_fold_design_1122.md) ----
+
+  /// 이 차례가 "접는 자리"(규칙 R3)일 때만 값, 아니면 null. 조건 · 행동은 [pushFoldSpotOf].
+  /// 등급 · 패효율 점수 · 요약 집계에는 넣지 않는다(설계서 6절 — 지표 3 이 70% 미만이라 "참고").
+  final PushFoldSpot? pushFold;
+
   const TurnReview({
     required this.eventIndex,
     required this.turn,
@@ -148,6 +154,7 @@ class TurnReview {
     this.riskOfActual,
     this.minRiskTile,
     this.riskByKind,
+    this.pushFold,
   });
 
   /// 실제 버림의 엔진 평가 항목. [mh] 가 없으면 null.
@@ -202,6 +209,132 @@ class TurnReview {
     final tb = riskTable;
     return tb != null && _valid(tile) && tb.safeForAll34[tile];
   }
+}
+
+// ── 밀기 · 접기: 리치를 받은 차례가 "접는 자리" 였나(설계서 docs/push_fold_design_1122.md 3 · 4 · 6 · 7절) ──
+//
+// 규칙 R3(버리기 전 3샹텐 이상)만 통과했다 — metrics 표 16-15: 시험 2(안 연 599판의 앞 200판)에서 이 자리의 93.5%
+// (90.8 ~ 95.8) 를 강한 AI(S42)가 접음, 민 것만 보면 65.2%(< 70% → "참고" 문구 · 등급 반영 안 함), 접은 것만 보면 97.2%
+// (≥ 90% → "잘 접었습니다."). 정의는 측정 스크립트 experiments/paifu_review/pushfold/pf_eval.py 와 같다(`extract` ·
+// `rule_hits` · `label`). 문턱은 맞춤 140판을 보고 고정한 값이라 바꾸지 않는다.
+
+/// "접는 자리" 의 버리기 전 샹텐 하한(R3). pf_eval `rule_hits` 의 `sh >= 3`.
+const pushFoldMinShanten = 3;
+
+/// 갈리는 차례: 효율 패 위험 − 최소 위험(%p)이 이 값 이상. 버린 패가 이만큼 이상이면 "밂". pf_eval `GAP_SPLIT`.
+const pushFoldPushGap = 5.0;
+
+/// 버린 패 위험 − 최소 위험(%p)이 이 값 미만이면 "접음", [pushFoldPushGap] 과 그 사이는 "중간". pf_eval `GAP_FOLD`.
+const pushFoldFoldGap = 2.0;
+
+/// 문구의 N(설계서 6절 "강한 AI 는 이런 자리의 약 N% 에서 접습니다"): 지표 1 = 93.5%(metrics 표 16-15) 의 반올림.
+const pushFoldAiFoldPct = 94;
+
+/// 접는 자리에서 한 행동. pf_eval `label`: 밂(push) · 접음(fold) · 그 사이(between, pf_eval 의 'mid').
+enum PushFoldAction { push, fold, between }
+
+/// "접는 자리" 한 차례의 판정과 근거. 위험은 엔진의 합친 방총 위험(`RiskTable.mixed34`, %, 보정 전 값).
+class PushFoldSpot {
+  final PushFoldAction action;
+
+  /// 버리기 전 샹텐(≥ [pushFoldMinShanten]).
+  final int shantenBefore;
+
+  /// 버린 패(종류)와 그 위험.
+  final int discard;
+  final double discardRisk;
+
+  /// 손 안 가장 낮은 위험과, 그 값인 패 종류 전부(오름차순).
+  final double minRisk;
+  final List<int> safest;
+
+  /// 효율 패(엔진 순위에서 샹텐을 물리지 않는 첫 후보, 없으면 엔진 최선)와 그 위험.
+  final int efficient;
+  final double efficientRisk;
+
+  const PushFoldSpot({
+    required this.action,
+    required this.shantenBefore,
+    required this.discard,
+    required this.discardRisk,
+    required this.minRisk,
+    required this.safest,
+    required this.efficient,
+    required this.efficientRisk,
+  });
+
+  /// 버린 패 위험 − 최소 위험(%p).
+  double get discardGap => discardRisk - minRisk;
+
+  /// 효율 패 위험 − 최소 위험(%p). ≥ [pushFoldPushGap].
+  double get efficientGap => efficientRisk - minRisk;
+}
+
+/// 차 [gap] (%p) → 행동. pf_eval `label` 과 같다.
+PushFoldAction pushFoldActionOf(double gap) => gap >= pushFoldPushGap
+    ? PushFoldAction.push
+    : (gap < pushFoldFoldGap ? PushFoldAction.fold : PushFoldAction.between);
+
+/// 엔진 순위 [mh] 에서 샹텐을 물리지 않는 첫 후보, 없으면 [mhBest] — 측정의 `mhForwardBest or mhBest`
+/// (tool/tenhou6_features.dart: `r.forward.first` 또는 `r.best`, [RankedDiscard] 목록은 지키는 버림 → 물러나는 버림 순)이자
+/// agent_facts.dart `_defense` 의 `efficient` 와 같은 고름(표 16-5 의 B1, 후퇴 권장 끔).
+int? pushFoldEfficientTile(List<RankedDiscard>? mh, int? mhBest) {
+  if (mh == null) return null;
+  for (final d in mh) {
+    if (!d.isBackward) return d.tile;
+  }
+  return mhBest;
+}
+
+/// "접는 자리" 판정(설계서 3절 정의 + 4절 R3). 모두 맞을 때만 값, 아니면 null:
+/// - [status] == defense(남이 리치 중 · 내가 리치 전 · 손패를 앎 · 화료 형태 아님 — forced 는 빠짐),
+/// - 울기 직후 버림이 아님([afterCall] 거짓),
+/// - 위험표가 있고([riskByKind] — 엔진 리뷰일 때만) 손에 있는 패 종류가 2종류 이상,
+/// - 버리기 전 샹텐 ≥ [pushFoldMinShanten],
+/// - 효율 패([efficient])의 위험 − 최소 위험 ≥ [pushFoldPushGap](갈리는 차례).
+/// 행동은 버린 패([discard])의 위험 − 최소 위험으로 [pushFoldActionOf].
+/// 유한하지 않은 위험은 0 으로 친다(측정 쪽 `c.get('risk') or 0.0` — 값 뽑기가 NaN · 무한을 null 로 적음).
+/// 효율 패 · 버린 패가 손에 없으면(위험표에 없으면) null(측정 쪽 "후보에 없는 패" 거르기).
+PushFoldSpot? pushFoldSpotOf({
+  required ReviewStatus status,
+  required bool afterCall,
+  required int? shantenBefore,
+  required Map<int, double>? riskByKind,
+  required int discard,
+  required int? efficient,
+}) {
+  if (status != ReviewStatus.defense || afterCall) return null;
+  final sh = shantenBefore;
+  if (sh == null || sh < pushFoldMinShanten) return null;
+  final byKind = riskByKind;
+  if (byKind == null || byKind.length < 2 || efficient == null) return null;
+  double risk(int k) {
+    final v = byKind[k]!;
+    return v.isFinite ? v : 0.0;
+  }
+
+  if (!byKind.containsKey(discard) || !byKind.containsKey(efficient)) return null;
+  var minRisk = double.infinity;
+  for (final k in byKind.keys) {
+    final v = risk(k);
+    if (v < minRisk) minRisk = v;
+  }
+  final effRisk = risk(efficient);
+  if (effRisk - minRisk < pushFoldPushGap) return null;
+  final actRisk = risk(discard);
+  return PushFoldSpot(
+    action: pushFoldActionOf(actRisk - minRisk),
+    shantenBefore: sh,
+    discard: discard,
+    discardRisk: actRisk,
+    minRisk: minRisk,
+    safest: List.unmodifiable([
+      for (final k in byKind.keys.toList()..sort())
+        if (risk(k) == minRisk) k,
+    ]),
+    efficient: efficient,
+    efficientRisk: effRisk,
+  );
 }
 
 class PaifuReview {
@@ -517,6 +650,14 @@ TurnReview _review(Paifu p, List<PaifuState> states, int i, int turn, List<int?>
 
   final m = engine ? _mhAt(p, i, discard, beforeTiles, visible) : null;
   final rk = engine ? _riskAt(p, i, discard, beforeTiles, visible) : _noRisk;
+  final riskByKind = rk.table == null
+      ? null
+      : Map<int, double>.unmodifiable({
+          for (var t = 0; t < Tiles.count; t++)
+            if (before[t] > 0) t: rk.table!.mixed34[t],
+        });
+  // 울기 직후 버림: 이 버림 앞 hero 사건이 울기(측정 쪽 `afterCall` = 앞 hero 사건이 call).
+  final afterCall = draw == null && call != null;
 
   return TurnReview(
     eventIndex: i,
@@ -551,12 +692,15 @@ TurnReview _review(Paifu p, List<PaifuState> states, int i, int turn, List<int?>
     riskTable: rk.table,
     riskOfActual: rk.actual,
     minRiskTile: rk.table == null ? null : _minRisk(rk.table!, before),
-    riskByKind: rk.table == null
-        ? null
-        : Map.unmodifiable({
-            for (var t = 0; t < Tiles.count; t++)
-              if (before[t] > 0) t: rk.table!.mixed34[t],
-          }),
+    riskByKind: riskByKind,
+    pushFold: pushFoldSpotOf(
+      status: status,
+      afterCall: afterCall,
+      shantenBefore: shantenBefore,
+      riskByKind: riskByKind,
+      discard: discard.tile,
+      efficient: pushFoldEfficientTile(m?.list, m?.best),
+    ),
   );
 }
 
