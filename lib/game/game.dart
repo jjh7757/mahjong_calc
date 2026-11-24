@@ -266,6 +266,10 @@ class Game {
   /// 끝난 뒤에는 정산만 할 수 있다(토비는 [anyBusted]).
   String? endedBy;
 
+  /// 동호회 사이트 '마블리'에 결과를 올린(등록 성공을 본) 때. 안 올렸거나 옛 기록이면 null.
+  /// 되돌리기·다시 실행([rewindTo]·[restoreFrom])과 상관없이 그대로 둔다(앱 밖에서 일어난 일이다).
+  DateTime? mavelyUploadedAt;
+
   Game({
     required this.id,
     required this.startedAt,
@@ -283,6 +287,7 @@ class Game {
     List<GameCheckpoint>? checkpoints,
     this.finished = false,
     this.endedBy,
+    this.mavelyUploadedAt,
   })  : scores = scores ?? List.filled(4, settings.startPoints),
         riichiSeats = riichiSeats ?? {},
         carriedStickSeats = carriedStickSeats ?? {},
@@ -441,17 +446,32 @@ class Game {
     return rankOf(dealer) == 1 && scores[dealer] >= settings.returnPoints;
   }
 
+  /// 대국이 끝날 때 남은 공탁을 1위에게 준 'adjust' 사건의 설명 앞머리([_endBy]). 옛 기록도 같은 글로 시작한다.
+  static const leftoverStickNote = '남은 공탁';
+
+  /// [events] 의 [i] 번째가 [_endBy] 가 남긴 '남은 공탁 → 1위' 사건인가.
+  /// 글 앞머리만 보지 않고, 바로 앞이 'end' 사건이며 한 자리만 1000점 단위로 받은 모양인지도 본다
+  /// (사용자가 정정 사유로 같은 글을 적은 수동 조정과 헷갈리지 않게). 옛 기록도 같은 모양이라 그대로 가려진다.
+  static bool isLeftoverStickEvent(List<GameEvent> events, int i) {
+    if (i <= 0 || i >= events.length) return false;
+    final e = events[i];
+    if (e.kind != 'adjust' || events[i - 1].kind != 'end') return false;
+    if (!e.description.startsWith('$leftoverStickNote ')) return false;
+    final gains = [for (final d in e.delta) if (d != 0) d];
+    return e.delta.length == 4 && gains.length == 1 && gains.first > 0 && gains.first % 1000 == 0;
+  }
+
   void _endBy(String kind) {
     endedBy = kind;
     riichiSeats.clear();
     final who = kind == '아가리야메' || kind == '텐파이야메' ? '${names[dealer]} 1위로 종료' : '1위 ${names[topSeat]} ${scores[topSeat]}';
     events.add(GameEvent('end', '$kind — $who', List.filled(4, 0), roundLabel));
-    // 남은 공탁은 1위가 가져간다(작혼·텐호).
+    // 남은 공탁은 1위가 가져간다(작혼·텐호). 설명은 [leftoverStickNote] 로 시작한다([isLeftoverStickEvent] 가 가려낸다).
     if (riichiSticks > 0) {
       final top = topSeat;
       final delta = List.filled(4, 0)..[top] = riichiSticks * 1000;
       _apply(delta);
-      events.add(GameEvent('adjust', '남은 공탁 $riichiSticks → 1위 ${names[top]}', delta, roundLabel));
+      events.add(GameEvent('adjust', '$leftoverStickNote $riichiSticks → 1위 ${names[top]}', delta, roundLabel));
       riichiSticks = 0;
       carriedStickSeats.clear();
     }
@@ -875,6 +895,7 @@ class Game {
         'checkpoints': checkpoints.map((c) => c.toJson()).toList(),
         'finished': finished,
         'endedBy': endedBy,
+        if (mavelyUploadedAt != null) 'mavelyUploadedAt': mavelyUploadedAt!.toIso8601String(),
       };
 
   factory Game.fromJson(Map<String, dynamic> j) => Game(
@@ -898,6 +919,7 @@ class Game {
             .toList(),
         finished: j['finished'] as bool,
         endedBy: j['endedBy'] as String?,
+        mavelyUploadedAt: j['mavelyUploadedAt'] == null ? null : DateTime.parse(j['mavelyUploadedAt'] as String),
       );
 }
 

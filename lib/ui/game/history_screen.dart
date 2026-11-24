@@ -42,7 +42,9 @@ class HistoryScreen extends StatelessWidget {
                     return ListTile(
                       title: Text(rows.map((r) => '${r.name} ${_fmt(r.score)}').join('  ')),
                       // 직접 입력한 대국은 국·건수가 뜻이 없고 패보도 없다.
-                      subtitle: Text(g.isManual ? '$date · 직접 입력' : '$date · ${g.roundLabel} · ${g.events.length}건'),
+                      // 마블리에 올린 대국은 끝에 작은 표시.
+                      subtitle: Text('${g.isManual ? '$date · 직접 입력' : '$date · ${g.roundLabel} · ${g.events.length}건'}'
+                          '${g.mavelyUploadedAt != null ? ' · 마블리 ✓' : ''}'),
                       trailing: g.isManual ? null : IconButton(
                         tooltip: '패보',
                         icon: const Icon(Icons.slideshow),

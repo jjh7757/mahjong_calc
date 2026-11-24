@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../../game/game.dart';
 import '../../game/game_store.dart';
+import '../../game/mavely_upload.dart';
 import '../kiosk.dart';
+import 'mavely_upload_screen.dart';
 import 'record_edit.dart';
 
 /// 대국 종료(정산) 화면. 작혼의 종국 화면 구조를 따른다(그림·글꼴은 우리 것).
@@ -242,6 +244,7 @@ class _SettlementScreenState extends State<SettlementScreen> with SingleTickerPr
       runSpacing: 8,
       alignment: WrapAlignment.end,
       children: [
+        _mavelyButton(context, g, wide),
         if (live) ...[
           // 잘못 기록해서 끝났으면 바로 되돌린다(종료가 풀리면 이 화면을 닫는다).
           if (g.canUndo && identical(gameStore.current, g))
@@ -287,7 +290,52 @@ class _SettlementScreenState extends State<SettlementScreen> with SingleTickerPr
     }
     return Row(children: [Expanded(child: rules), buttons]);
   }
+
+  /// '마블리에 올리기'(끝난 대국 · 진행 중 대국 둘 다). 올린 대국은 라벨이 바뀌고, 다시 올리려면 중복 확인을 받는다.
+  /// 올릴 수 없으면(시작점 ≠ 25000 등) 사유를 스낵바로.
+  Widget _mavelyButton(BuildContext context, Game g, bool wide) {
+    final uploaded = g.mavelyUploadedAt != null;
+    return OutlinedButton.icon(
+      key: const ValueKey('settle-mavely'),
+      style: OutlinedButton.styleFrom(
+        padding: EdgeInsets.symmetric(horizontal: wide ? 24 : 14, vertical: wide ? 18 : 12),
+        textStyle: TextStyle(fontSize: wide ? 18 : 15),
+      ),
+      icon: Icon(uploaded ? Icons.cloud_done : Icons.cloud_upload),
+      label: Text(uploaded ? '마블리에 올림 ✓(다시 올리기)' : '마블리에 올리기'),
+      onPressed: () async {
+        final entry = mavelyEntryFor(g);
+        if (!entry.ok) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('마블리에 올릴 수 없습니다: ${entry.problem}')));
+          return;
+        }
+        if (g.mavelyUploadedAt != null) {
+          final again = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => kioskWrap(ctx, AlertDialog(
+              title: const Text('이미 올렸습니다'),
+              content: const Text('이미 올렸습니다. 또 올리면 중복됩니다.'),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('그만두기')),
+                FilledButton(
+                    key: const ValueKey('settle-mavely-again'),
+                    onPressed: () => Navigator.pop(ctx, true),
+                    child: const Text('그래도 올리기')),
+              ],
+            )),
+          );
+          if (again != true || !context.mounted) return;
+        }
+        await Navigator.of(context).push(MaterialPageRoute(builder: (_) => mavelyUploadScreenBuilder(g)));
+        if (mounted) setState(() {});
+      },
+    );
+  }
 }
+
+/// 마블리 올리기 화면을 만든다. 위젯 시험에서는 WebView(플랫폼 구현 없음) 대신 다른 화면으로 바꿔 끼운다.
+@visibleForTesting
+Widget Function(Game g) mavelyUploadScreenBuilder = (g) => MavelyUploadScreen(game: g);
 
 /// 순위 띠 하나(사선 평행사변형). 순위 · 이름(기동 자리·화료 기록) · 최종 점수 · 득점.
 class _RankBanner extends StatelessWidget {

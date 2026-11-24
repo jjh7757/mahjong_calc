@@ -159,6 +159,24 @@ class GameStore extends ChangeNotifier {
     if (history.length > maxHistory) history.removeRange(maxHistory, history.length);
   }
 
+  /// 대국 [gameId](지난 대국 또는 진행 중 대국)에 '마블리에 올림' 표시를 남긴다([Game.mavelyUploadedAt]).
+  /// 찾으면 저장·알림하고 true, 없으면 false.
+  bool markMavelyUploaded(String gameId, {DateTime? at}) {
+    Game? g;
+    for (final h in history) {
+      if (h.id == gameId) {
+        g = h;
+        break;
+      }
+    }
+    if (g == null && current?.id == gameId) g = current;
+    if (g == null) return false;
+    g.mavelyUploadedAt = at ?? DateTime.now();
+    _save();
+    notifyListeners();
+    return true;
+  }
+
   void discardCurrent() {
     current = null;
     _save();
