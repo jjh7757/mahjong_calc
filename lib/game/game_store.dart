@@ -10,6 +10,9 @@ class GameStore extends ChangeNotifier {
   static const _currentKey = 'game.current';
   static const _historyKey = 'game.history';
 
+  /// 지난 대국을 몇 개까지 남기나. 멤버 순위가 오래된 기록을 잃지 않게 넉넉히 둔다(옛 100).
+  static const maxHistory = 1000;
+
   Game? current;
   List<Game> history = [];
   bool loaded = false;
@@ -133,10 +136,27 @@ class GameStore extends ChangeNotifier {
     g.checkpoints.clear(); // 끝난 대국은 되돌리지 않는다.
     _redo = null;
     history.insert(0, g);
-    if (history.length > 100) history.removeRange(100, history.length);
+    _trimHistory();
     current = null;
     _save();
     notifyListeners();
+  }
+
+  /// 앱 밖에서 친 대국(직접 입력, [Game.manual])처럼 이미 끝난 대국을 지난 대국에 넣는다.
+  /// 진행 중 대국은 건드리지 않는다. 목록은 시작 시각 내림차순 자리에 끼운다(같은 시각이면 앞에).
+  void addFinished(Game g) {
+    g.finished = true;
+    g.checkpoints.clear();
+    var i = history.indexWhere((h) => !h.startedAt.isAfter(g.startedAt));
+    if (i < 0) i = history.length;
+    history.insert(i, g);
+    _trimHistory();
+    _save();
+    notifyListeners();
+  }
+
+  void _trimHistory() {
+    if (history.length > maxHistory) history.removeRange(maxHistory, history.length);
   }
 
   void discardCurrent() {

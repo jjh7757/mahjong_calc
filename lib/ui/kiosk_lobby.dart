@@ -4,6 +4,7 @@ import '../game/game.dart';
 import '../game/game_store.dart';
 import 'game/game_screen.dart';
 import 'game/history_screen.dart';
+import 'game/member_screens.dart';
 import 'game/settlement_screen.dart';
 import 'hand_editor.dart';
 import 'input_screen.dart';
@@ -251,7 +252,7 @@ class KioskLobby extends StatelessWidget {
             SizedBox(width: compact ? 8 : 12),
             Expanded(
               child: Text(
-                '${d.month}/${d.day} ${d.hour}:${d.minute.toString().padLeft(2, '0')} · ${g.roundLabel}',
+                '${d.month}/${d.day} ${d.hour}:${d.minute.toString().padLeft(2, '0')} · ${g.isManual ? '직접 입력' : g.roundLabel}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: compact ? 12 : 14, color: Colors.white54),
@@ -306,6 +307,7 @@ class KioskLobby extends StatelessWidget {
   List<(String, IconData, String, Widget Function())> get _menuItems => [
       ('calc', Icons.calculate_outlined, '점수 계산', () => InputScreen(editor: editor)),
       ('history', Icons.history, '지난 대국', () => const HistoryScreen()),
+      ('members', Icons.leaderboard, '멤버 순위', () => const MemberRankingScreen()),
       ('table', Icons.table_chart_outlined, '점수표', () => ScoreTableScreen(rules: editor.rules)),
       ('quiz', Icons.school_outlined, '점수 계산 연습', () => QuizScreen(rules: editor.rules)),
       ('settings', Icons.tune, '룰 설정', () => SettingsScreen(editor: editor)),
@@ -317,7 +319,9 @@ class KioskLobby extends StatelessWidget {
     return LayoutBuilder(builder: (context, c) {
       const gap = 16.0;
       final w = (c.maxWidth - gap) / 2;
-      final h = (c.maxHeight - gap * 2) / 3;
+      // 2열, 행 수는 타일 수에 맞춘다(7개면 4행) — 고정 3행이면 넘친 타일이 잘린다.
+      final rows = (items.length / 2).ceil();
+      final h = (c.maxHeight - gap * (rows - 1)) / rows;
       return Wrap(
         spacing: gap,
         runSpacing: gap,

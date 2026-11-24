@@ -31,7 +31,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const ValueKey('lobby-start')), findsOneWidget);
     expect(find.text('아직 기록한 대국이 없습니다'), findsOneWidget);
-    for (final k in ['calc', 'history', 'table', 'quiz', 'settings', 'head']) {
+    for (final k in ['calc', 'history', 'members', 'table', 'quiz', 'settings', 'head']) {
       expect(find.byKey(ValueKey('lobby-$k')), findsOneWidget);
     }
 
@@ -93,7 +93,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('lobby-start')), findsOneWidget);
       expect(find.text('아직 기록한 대국이 없습니다'), findsOneWidget);
-      for (final k in ['calc', 'history', 'table', 'quiz', 'settings', 'head']) {
+      for (final k in ['calc', 'history', 'members', 'table', 'quiz', 'settings', 'head']) {
         await tester.ensureVisible(find.byKey(ValueKey('lobby-$k')));
         expect(find.byKey(ValueKey('lobby-$k')), findsOneWidget);
       }

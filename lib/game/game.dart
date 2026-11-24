@@ -298,6 +298,39 @@ class Game {
     return g;
   }
 
+  /// 앱으로 기록하지 않고 친 대국의 최종 점수만 직접 넣는다(멤버 순위용).
+  /// 끝난 대국으로 만들고, 점수 차이는 '대국 결과 직접 입력' 사건 하나로 남긴다. 국은 올라스(반장전 남4국 · 동풍전 동4국)로 둔다.
+  factory Game.manual({
+    required String id,
+    required DateTime playedAt,
+    required GameSettings settings,
+    required List<String> names,
+    required List<int> scores,
+  }) {
+    if (scores.length != 4) throw ArgumentError('점수는 4개여야 합니다');
+    final g = Game(
+      id: id,
+      startedAt: playedAt,
+      settings: settings,
+      names: List.of(names),
+      scores: List.of(scores),
+      roundWind: settings.eastOnly ? 0 : 1,
+      roundNumber: 4,
+      dealer: 3,
+      finished: true,
+      endedBy: manualEndedBy,
+    );
+    g.events.add(GameEvent(
+        'adjust', '대국 결과 직접 입력', [for (var s = 0; s < 4; s++) scores[s] - settings.startPoints], g.roundLabel));
+    return g;
+  }
+
+  /// [Game.manual] 로 만든 대국의 [endedBy].
+  static const manualEndedBy = '직접 입력';
+
+  /// 최종 점수만 직접 넣은 대국인가([Game.manual]).
+  bool get isManual => endedBy == manualEndedBy;
+
   static const windNames = ['동', '남', '서', '북'];
 
   String get roundLabel => '${windNames[roundWind]}$roundNumber국'
@@ -340,7 +373,9 @@ class Game {
   }
 
   /// 점수판 머리글의 짧은 표시.
-  String get endLabel => anyBusted
+  String get endLabel => isManual
+      ? '직접 입력한 대국'
+      : anyBusted
       ? '토비 — 종료'
       : switch (endedBy) {
           '종료' => '대국 종료',

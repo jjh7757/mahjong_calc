@@ -41,8 +41,9 @@ class HistoryScreen extends StatelessWidget {
                     final date = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
                     return ListTile(
                       title: Text(rows.map((r) => '${r.name} ${_fmt(r.score)}').join('  ')),
-                      subtitle: Text('$date · ${g.roundLabel} · ${g.events.length}건'),
-                      trailing: IconButton(
+                      // 직접 입력한 대국은 국·건수가 뜻이 없고 패보도 없다.
+                      subtitle: Text(g.isManual ? '$date · 직접 입력' : '$date · ${g.roundLabel} · ${g.events.length}건'),
+                      trailing: g.isManual ? null : IconButton(
                         tooltip: '패보',
                         icon: const Icon(Icons.slideshow),
                         onPressed: () => Navigator.of(context).push(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'game/game_store.dart';
+import 'game/member_store.dart';
 import 'services/on_device_bench.dart';
 import 'ui/game/settlement_screen.dart';
 import 'ui/hand_editor.dart';
@@ -34,6 +35,7 @@ class _MahjongAppState extends State<MahjongApp> with WidgetsBindingObserver {
     if (widget.loadSavedRules) {
       RulesStore.load().then(editor.setRules);
       gameStore.load();
+      memberStore.load();
       FullscreenMode.load();
       WidgetsBinding.instance.addObserver(this);
     }
