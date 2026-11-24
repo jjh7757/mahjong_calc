@@ -1,0 +1,110 @@
+{
+ "seed": 20261124,
+ "scenes": [
+  {
+   "game": "h3_143158",
+   "wind": "북",
+   "step": 25,
+   "why": "deal_in",
+   "id": "sc01"
+  },
+  {
+   "game": "h3_151410",
+   "wind": "북",
+   "step": 45,
+   "why": "deal_in",
+   "id": "sc02"
+  },
+  {
+   "game": "h3_151953",
+   "wind": "서",
+   "step": 65,
+   "why": "deal_in",
+   "id": "sc03"
+  },
+  {
+   "game": "h3_153825",
+   "wind": "서",
+   "step": 69,
+   "why": "deal_in",
+   "id": "sc04"
+  },
+  {
+   "game": "r11_130921",
+   "wind": "동",
+   "step": 83,
+   "why": "deal_in",
+   "id": "sc05"
+  },
+  {
+   "game": "r12_131655",
+   "wind": "북",
+   "step": 72,
+   "why": "deal_in",
+   "id": "sc06"
+  },
+  {
+   "game": "r19_142013",
+   "wind": "남",
+   "step": 52,
+   "why": "deal_in",
+   "id": "sc07"
+  },
+  {
+   "game": "r12_131655",
+   "wind": "남",
+   "step": 59,
+   "why": "risky_after_riichi",
+   "id": "sc08"
+  },
+  {
+   "game": "h3_145625",
+   "wind": "남",
+   "step": 43,
+   "why": "risky_after_riichi",
+   "id": "sc09"
+  },
+  {
+   "game": "h3_143539",
+   "wind": "북",
+   "step": 74,
+   "why": "risky_after_riichi",
+   "id": "sc10"
+  },
+  {
+   "game": "r15_134151",
+   "wind": "동",
+   "step": 87,
+   "why": "risky_after_riichi",
+   "id": "sc11"
+  },
+  {
+   "game": "h3_145625",
+   "wind": "북",
+   "step": 61,
+   "why": "risky_after_riichi",
+   "id": "sc12"
+  },
+  {
+   "game": "h3_144748",
+   "wind": "서",
+   "step": 70,
+   "why": "risky_after_riichi",
+   "id": "sc13"
+  },
+  {
+   "game": "r11_130921",
+   "wind": "북",
+   "step": 46,
+   "why": "risky_after_riichi",
+   "id": "sc14"
+  },
+  {
+   "game": "r18_141259",
+   "wind": "서",
+   "step": 48,
+   "why": "risky_after_riichi",
+   "id": "sc15"
+  }
+ ]
+}

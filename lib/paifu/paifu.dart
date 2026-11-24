@@ -18,7 +18,8 @@
 ///                         "hand": [...] | null              ← hero 만}
 ///   ],
 ///   "result": {"type": "ron" | "tsumo" | "draw", "winner", "loser", "win_tile", "hand": [끝 손패 줄],
-///              "melds": [{"kind": "chi" | "pon" | "kan" | "ankan", "tiles": [...]}], "flags": {"riichi": true, ...} | 없음} }
+///              "melds": [{"kind": "chi" | "pon" | "kan" | "ankan", "tiles": [...]}], "flags": {"riichi": true, ...} | 없음,
+///              "tenpai": [자리] | 없음   ← 유국만} }
 /// ```
 /// 선택 칸(2026-11-21, 손패 복원 `docs/paifu_hand_restore_api_1121.md` — 없어도 같은 버전 1):
 /// - 사건 `"at"`: 버림 기록기가 그 패를 처음 본 시각(epoch ms). `"guess": true`: 그 사건의 손패 · 뽑은 패가 짐작(울기 뒤 순서 등).
@@ -31,6 +32,10 @@
 ///   (앞 국에서 넘어온 것). 둘 다 없으면 모름(옛 파일 · 점수판 없이 적은 판).
 /// - `"frames"` 의 `"boxes"`: `{"bottom" | "right" | "top" | "left": [xmin, ymin, xmax, ymax](0~1000)}` — 저장 때 격자의 네 자리 구역
 ///   (B4, 설계서 5절). `box` · `side` 는 그대로 화료자 자리. 없으면 옛 패보.
+///
+/// 선택 칸(2026-11-24, 유국 저장 `docs/postgame_review_chat_design_1124.md` 10절 ② — 없어도 같은 버전 1):
+/// - `"result"` 의 `"tenpai"`: [자리 번호, 오름차순] — 보통 유국(`"type": "draw"`)에서 텐파이한 자리(유국 창에서 고른 값).
+///   모두 노텐이면 빈 목록. 없으면 모름(화료 패보 · 옛 파일).
 /// hero 의 사건은 그때의 손패 줄(`hand`)을 싣는다. null 이면 "그때 손패를 모름"(녹화 전 등)이다.
 library;
 
@@ -255,7 +260,10 @@ class PaifuResult {
   /// null 이면 재생할 때 사건에서 헤아린다(`paifu_score.dart` [situationOf]).
   final Map<String, bool>? flags;
 
-  const PaifuResult({required this.type, this.winner, this.loser, this.winTile, this.hand, this.melds = const [], this.flags});
+  /// 유국(draw)에서 텐파이한 자리(오름차순, 모두 노텐이면 빈 목록). 모르면 null(화료 · 옛 파일).
+  final List<int>? tenpai;
+
+  const PaifuResult({required this.type, this.winner, this.loser, this.winTile, this.hand, this.melds = const [], this.flags, this.tenpai});
 
   factory PaifuResult.fromJson(Map<String, dynamic> j) => PaifuResult(
         type: j['type'] as String,
@@ -267,6 +275,7 @@ class PaifuResult {
           for (final m in (j['melds'] as List? ?? const [])) ?PaifuResultMeld.fromJson(m),
         ],
         flags: j['flags'] == null ? null : {for (final e in (j['flags'] as Map).entries) e.key as String: e.value == true},
+        tenpai: j['tenpai'] is List ? [for (final v in j['tenpai'] as List) (v as num).toInt()] : null,
       );
 
   Map<String, dynamic> toJson() => {
@@ -277,6 +286,7 @@ class PaifuResult {
         'hand': hand == null ? null : [for (final t in hand!) t.code],
         'melds': [for (final m in melds) m.toJson()],
         if (flags != null) 'flags': flags,
+        if (tenpai != null) 'tenpai': tenpai,
       };
 }
 

@@ -17,6 +17,7 @@ import '../../services/capture_log.dart';
 import '../../services/head_camera.dart';
 import '../../engine/tile.dart';
 import '../../paifu/discard_recorder.dart';
+import '../../paifu/draw_paifu.dart';
 import '../../paifu/paifu.dart';
 import '../../paifu/paifu_store.dart';
 import '../../services/on_device_reader.dart';
@@ -1550,6 +1551,9 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
     final seats = SeatMap(g.settings.bottomSeat);
     final url = _remoteUrl;
     final revealed = url != null && _useGrid && _tableConfirmed ? _drawReveal(g, url, seats) : null;
+    // 유국 패보: 국 값은 창을 열기 **전에** 잡는다 — 확인을 누르면 [showDrawDialog] 가 대국 기록에 유국을 먼저 반영해(같은 객체 [g])
+    // 국 이름 · 본장 · 친 · 국 시작 점수가 다음 국 것으로 바뀌고, 판 열쇠 · 도라 추적도 다음 국으로 비워진다.
+    final saveDraw = _drawPaifuSaver(g);
     final chosen = await showDrawDialog(context, g, trackedRiichi: {for (final s in _trackedRiichi()) seats.seatOf(s)}, revealed: revealed);
     if (revealed != null && _logEnabled) {
       final dir = _drawLogDir;
@@ -1557,6 +1561,72 @@ class _MountScreenState extends State<MountScreen> with WidgetsBindingObserver {
         unawaited(CaptureLog.saveFile(dir, 'chosen.json', CaptureLog.jsonBytes({'tenpai_seats': chosen?.toList()?..sort(), 'canceled_or_abortive': chosen == null}), 'application/json'));
       }
     }
+    // 보통 유국만 남긴다. null = 취소 또는 도중 유국(구종구패 · 사풍연타 · 사깡산료 · 사가리치) — 저장하지 않는다.
+    // 도중 유국 · 트리플론 유국(이 창으로 오지 않음)은 이번 범위 밖(2026-11-24).
+    // 기록 폴더는 이번 창의 공개 손패 판정 폴더(있으면 — 지난 유국 폴더가 남아 있을 수 있어 revealed 가 있을 때만).
+    if (chosen != null && saveDraw != null) unawaited(saveDraw(chosen, revealed != null ? _drawLogDir : null));
+  }
+
+  /// 유국 창을 열기 전에 이 국의 값을 잡아 두고, 보통 유국이 확인되면 그 값으로 이 국의 버림 기록을 패보로 남기는 함수를 돌려준다
+  /// ([drawPaifu], 대국별 [PaifuStore] + 촬영 기록 paifu.json). 판 중 버림 기록([_paifuRecord])이 꺼져 있으면 null.
+  /// 화료 때([_savePaifu])와 달리 사진을 한 번 더 읽지 않는다 — 쓸 수 있는 최근 프레임 [_lastShot] 은 줄인 미리보기(긴 변 약 1020)라
+  /// 패 인식이 만수 한자를 틀리고(metrics 표 4-8), 창이 열린 사이에도 배경 판독이 원래 크기 프레임으로 버림을 계속 넣는다.
+  /// 버림이 0 이면 남기지 않는다. 실패는 로그만 — 흐름을 막지 않는다.
+  Future<void> Function(Set<int> tenpai, String? logDir)? _drawPaifuSaver(Game g) {
+    if (!_paifuRecord) return null;
+    final start = g.handStart;
+    final gameId = g.id;
+    final roundLabel = g.roundLabel;
+    final honba = g.honba;
+    final dealer = g.dealer;
+    final bottomSeat = g.settings.bottomSeat;
+    final names = List<String>.of(g.names);
+    final id = _trackRoundKey ?? '$gameId/$roundLabel/$honba';
+    // 판 중 확정한 도라 표시패(유국엔 화료 판독이 없다). 반영 뒤 [_syncTrackerRound] 가 도라 추적을 비우므로 지금 잡는다.
+    final doraRead = _trackedDora();
+    final dora = doraRead == null ? null : PaifuTile(doraRead.tile, red: doraRead.red);
+    List<PaifuEvent> eventsOf(DiscardRecorder rec) => rec.toPaifu(id: id, bottomSeat: bottomSeat, dealerSeat: dealer, hero: dealer).events;
+    // 창이 열린 사이에도 배경 판독이 버림(마지막 버림 등)을 더 넣는다. 그런데 손패를 펼치거나 강을 치우기 시작하면 기록기가 탁자를
+    // 비웠다고 보고 새로 적거나(resets) 버림을 잃을 수 있다 → 열기 전 사본을 잡아 두고, 닫은 뒤 같은 기록기가 비우지 않았고
+    // 버림 수가 줄지 않았을 때만 닫은 뒤 것을 쓴다.
+    final rec0 = _discardRec;
+    final resets0 = rec0?.resets;
+    final count0 = rec0?.count ?? 0;
+    var events0 = const <PaifuEvent>[];
+    try {
+      if (rec0 != null && count0 > 0) events0 = eventsOf(rec0);
+    } catch (e) {
+      debugPrint('[paifu] 유국 사본 실패: $e');
+    }
+    return (tenpai, logDir) async {
+      try {
+        if (!_paifuRecord) return;
+        final rec = _discardRec;
+        final useAfter = rec != null && identical(rec, rec0) && rec.resets == resets0 && rec.count >= count0;
+        final paifu = drawPaifu(
+          events: useAfter ? eventsOf(rec) : events0,
+          id: id,
+          dealerSeat: dealer,
+          tenpai: tenpai,
+          round: roundLabel,
+          honba: honba,
+          names: names,
+          startScores: start?.scores,
+          kyotaku: start?.kyotaku,
+          dora: dora,
+        );
+        if (paifu == null) return;
+        await PaifuStore.put(gameId, paifu);
+        debugPrint('[paifu] ${paifu.title} 유국 텐파이 ${paifu.result?.tenpai} 버림 ${paifu.events.where((e) => e.type == PaifuEventType.discard).length}장'
+            ' (${useAfter ? '창 닫은 뒤' : '창 열기 전'} 기록) 검사 ${paifu.check()}');
+        if (_logEnabled) {
+          final dir = logDir ?? '${CaptureLog.newDir()}_draw';
+          unawaited(CaptureLog.saveFile(dir, 'paifu.json', CaptureLog.jsonBytes(paifu.toJson()), 'application/json'));
+        }
+      } catch (e) {
+        debugPrint('[paifu] 유국 저장 실패: $e');
+      }
+    };
   }
 
   /// 마지막 유국 사진 기록 폴더(실제 유국 사진을 모아 나중에 채점하려고 남긴다).

@@ -128,16 +128,19 @@ DiscardContext? discardContextAt(
   );
 }
 
-/// [eventIndex] 번 사건 직전(그 사건은 넣지 않음) 탁자 → [RiskContext]. 나 = hero.
+/// [eventIndex] 번 사건 직전(그 사건은 넣지 않음) 탁자 → [RiskContext]. 나 = hero([selfSeat] 를 주면 그 자리).
 ///
 /// - 버림: 네 자리 버림 사건을 실제 순서대로(쯔모기리 bool? · 리치 선언 표시 그대로).
 /// - 울기: 시점 `at` = 그 울기 앞에 놓인 버림 수. 가깡은 앞서 한 퐁을 찾아 kind = kakan · `at` = 퐁한 때 ·
 ///   `upgradedAt` = 가깡한 때로 바꾼다(퐁을 못 찾으면 가깡한 때를 `at` 으로). 적5 는 묶음 안의 적5 표시.
 /// - [handBefore]: hero 닫힌 손패(뽑은 패 포함). 모르면 null — 그러면 남은 장수에 hero 손패가 빠진다.
 /// - [visible34]: hero 손패 밖에 보이는 패(지금 평가기와 같은 셈). 주면 `hand + visible` 을 엔진에 직접 넘긴다.
+/// - [selfSeat]: 위험을 보는 자리(기본 hero). 탁자 사실표(`table_facts.dart`)가 남의 버림을 그 사람 시점으로 볼 때 쓴다
+///   — 그 사람 손패는 모르므로 [handBefore] 없이.
 RiskContext riskContextAt(
   Paifu p,
   int eventIndex, {
+  int? selfSeat,
   List<PaifuTile>? handBefore,
   List<int>? visible34,
   UnknownTsumogiri unknownTsumogiri = UnknownTsumogiri.tedashi,
@@ -195,7 +198,7 @@ RiskContext riskContextAt(
     v = [for (var t = 0; t < Tiles.count; t++) visible34[t] + (hand34?[t] ?? 0)];
   }
   return RiskContext(
-    selfSeat: p.hero,
+    selfSeat: selfSeat ?? p.hero,
     dealer: p.dealer,
     roundWindTile: roundWindOf(p.round),
     discards: discards,

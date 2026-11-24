@@ -2635,6 +2635,23 @@
       "autoPort": false
     },
     {
+      "name": "review-table-real",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-X",
+        "utf8",
+        "C:\\Users\\jjh7757\\dev\\mahjong-recognizer-table\\scripts\\review_dev_server.py",
+        "--port",
+        "8331",
+        "--api-key",
+        "dev-key",
+        "--env-file",
+        "C:\\Users\\jjh7757\\Downloads\\부트캠프\\.env"
+      ],
+      "port": 8331,
+      "autoPort": false
+    },
+    {
       "name": "paifu-truth-han3",
       "runtimeExecutable": "python",
       "runtimeArgs": [

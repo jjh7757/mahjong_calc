@@ -1,0 +1,1084 @@
+{
+ "written_by": "independent subagent",
+ "utterances": [
+  {
+   "id": "u01",
+   "scene": "sc01",
+   "kind": "true",
+   "text": "7s는 그때까지 한 장도 안 나왔었어",
+   "gold": [
+    {
+     "type": "visible",
+     "tile": "7s",
+     "wind": null,
+     "count": 0
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "강·울기·표시패(4z)에 7s 0장"
+    }
+   ]
+  },
+  {
+   "id": "u02",
+   "scene": "sc01",
+   "kind": "false",
+   "text": "4s가 남 현물이라 7s는 스지인 줄 알았지",
+   "gold": [
+    {
+     "type": "genbutsu",
+     "tile": "4s",
+     "wind": "남"
+    },
+    {
+     "type": "suji",
+     "tile": "7s",
+     "wind": "남"
+    }
+   ],
+   "intent": [
+    {
+     "result": "다름",
+     "why": "남 강·리치 뒤 통과패에 4s 없음(4s는 어디에도 안 보임)"
+    },
+    {
+     "result": "다름",
+     "why": "7s 스지 4s 가 남 현물 아님"
+    }
+   ]
+  },
+  {
+   "id": "u03",
+   "scene": "sc01",
+   "kind": "unverifiable",
+   "text": "손에 안전패가 없어서 7s밖에 없었어",
+   "gold": [
+    {
+     "type": "no_safe",
+     "tile": null,
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "확인 불가",
+     "why": "손패 필요"
+    }
+   ]
+  },
+  {
+   "id": "u04",
+   "scene": "sc01",
+   "kind": "verdict",
+   "text": "7s 버린 거 내 잘못이야?",
+   "gold": [],
+   "intent": []
+  },
+  {
+   "id": "u05",
+   "scene": "sc02",
+   "kind": "true",
+   "text": "동이 2p 8p 다 버렸으니까 5p는 스지라고 봤어",
+   "gold": [
+    {
+     "type": "suji",
+     "tile": "5p",
+     "wind": "동"
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "동 강에 2p·8p 둘 다 있음(동은 리치 없이 백 퐁·789p 치로 화료한 자리)"
+    }
+   ]
+  },
+  {
+   "id": "u06",
+   "scene": "sc02",
+   "kind": "false",
+   "text": "동 두 번 울었어도 아직 텐파이 아닌 줄 알았지",
+   "gold": [
+    {
+     "type": "not_tenpai",
+     "tile": null,
+     "wind": "동"
+    }
+   ],
+   "intent": [
+    {
+     "result": "다름",
+     "why": "동이 바로 그 5p로 론 — 텐파이였음"
+    }
+   ]
+  },
+  {
+   "id": "u07",
+   "scene": "sc02",
+   "kind": "unverifiable",
+   "text": "점수 생각하면 여기선 밀어야 한다고 봤어",
+   "gold": [
+    {
+     "type": "pushed_on_purpose",
+     "tile": null,
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "확인 불가",
+     "why": "마음·손패 판단"
+    }
+   ]
+  },
+  {
+   "id": "u08",
+   "scene": "sc02",
+   "kind": "verdict",
+   "text": "5p 끊은 게 너무 위험했나?",
+   "gold": [],
+   "intent": []
+  },
+  {
+   "id": "u09",
+   "scene": "sc03",
+   "kind": "true",
+   "text": "남이 4s 버렸으니까 7s는 스지잖아",
+   "gold": [
+    {
+     "type": "suji",
+     "tile": "7s",
+     "wind": "남"
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "남 강 9번째에 4s(남은 리치 없이 123p 치로 화료한 자리)"
+    }
+   ]
+  },
+  {
+   "id": "u10",
+   "scene": "sc03",
+   "kind": "false",
+   "text": "남 강에 7s 한 장 있었던 거 같은데",
+   "gold": [
+    {
+     "type": "genbutsu",
+     "tile": "7s",
+     "wind": "남"
+    }
+   ],
+   "intent": [
+    {
+     "result": "다름",
+     "why": "남 강엔 7p·7z·7m 은 있어도 7s 없음"
+    }
+   ]
+  },
+  {
+   "id": "u11",
+   "scene": "sc03",
+   "kind": "unverifiable",
+   "text": "중 퐁하고 나서는 접을 생각 없었어",
+   "gold": [
+    {
+     "type": "pushed_on_purpose",
+     "tile": null,
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "확인 불가",
+     "why": "마음"
+    }
+   ]
+  },
+  {
+   "id": "u12",
+   "scene": "sc03",
+   "kind": "verdict",
+   "text": "그 상황에서 7s 버린 거 맞는 선택이었어?",
+   "gold": [],
+   "intent": []
+  },
+  {
+   "id": "u13",
+   "scene": "sc04",
+   "kind": "true",
+   "text": "3p가 네 장 다 나와 있었잖아",
+   "gold": [
+    {
+     "type": "visible",
+     "tile": "3p",
+     "wind": null,
+     "count": 4
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "동 1 · 남 2 · 북 1 = 3p 4장"
+    }
+   ]
+  },
+  {
+   "id": "u14",
+   "scene": "sc04",
+   "kind": "false",
+   "text": "4p는 동 현물이었잖아",
+   "gold": [
+    {
+     "type": "genbutsu",
+     "tile": "4p",
+     "wind": "동"
+    }
+   ],
+   "intent": [
+    {
+     "result": "다름",
+     "why": "동 강엔 4m 은 있어도 4p 없음, 리치 뒤 통과패에도 4p 없음"
+    }
+   ]
+  },
+  {
+   "id": "u15",
+   "scene": "sc04",
+   "kind": "unverifiable",
+   "text": "오라스라 순위 땜에 밀 수밖에 없었어",
+   "gold": [
+    {
+     "type": "pushed_on_purpose",
+     "tile": null,
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "확인 불가",
+     "why": "순위 판단·손패 필요"
+    }
+   ]
+  },
+  {
+   "id": "u16",
+   "scene": "sc04",
+   "kind": "verdict",
+   "text": "여기선 접었어야 했나?",
+   "gold": [],
+   "intent": []
+  },
+  {
+   "id": "u17",
+   "scene": "sc05",
+   "kind": "true",
+   "text": "서가 6m으로 리치했으니까 6m은 현물이었지",
+   "gold": [
+    {
+     "type": "genbutsu",
+     "tile": "6m",
+     "wind": "서"
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "서 리치 선언패 6m"
+    }
+   ]
+  },
+  {
+   "id": "u18",
+   "scene": "sc05",
+   "kind": "false",
+   "text": "5m 북 현물이라 8m 스지로 봤어",
+   "gold": [
+    {
+     "type": "genbutsu",
+     "tile": "5m",
+     "wind": "북"
+    },
+    {
+     "type": "suji",
+     "tile": "8m",
+     "wind": "북"
+    }
+   ],
+   "intent": [
+    {
+     "result": "다름",
+     "why": "5m 은 도라 표시패일 뿐 북 강·통과패에 없음"
+    },
+    {
+     "result": "다름",
+     "why": "8m 스지 5m 이 북 현물 아님"
+    }
+   ]
+  },
+  {
+   "id": "u19",
+   "scene": "sc05",
+   "kind": "unverifiable",
+   "text": "친이라 연짱하고 싶어서 일부러 밀었어",
+   "gold": [
+    {
+     "type": "pushed_on_purpose",
+     "tile": null,
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "확인 불가",
+     "why": "마음"
+    }
+   ]
+  },
+  {
+   "id": "u20",
+   "scene": "sc05",
+   "kind": "verdict",
+   "text": "리치 둘인데 8m 민 거 무리였어?",
+   "gold": [],
+   "intent": []
+  },
+  {
+   "id": "u21",
+   "scene": "sc06",
+   "kind": "true",
+   "text": "나도 리치 중이라 뽑은 적5 그대로 버린 거야",
+   "gold": [
+    {
+     "type": "other",
+     "tile": null,
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "북이 9p 로 리치 선언한 뒤(남 리치 다음), 이번 패는 쯔모기리"
+    }
+   ]
+  },
+  {
+   "id": "u22",
+   "scene": "sc06",
+   "kind": "false",
+   "text": "남은 리치 안 했었잖아",
+   "gold": [
+    {
+     "type": "riichi",
+     "tile": null,
+     "wind": "남",
+     "negated": true
+    }
+   ],
+   "gold_original": [
+    {
+     "type": "unaware_riichi",
+     "tile": null,
+     "wind": "남"
+    }
+   ],
+   "intent": [
+    {
+     "result": "다름",
+     "why": "남 3p 로 리치 선언"
+    }
+   ]
+  },
+  {
+   "id": "u23",
+   "scene": "sc06",
+   "kind": "unverifiable",
+   "text": "남 리치 무서웠는데 손이 좋아서 추격 리치 건 거야",
+   "gold": [
+    {
+     "type": "pushed_on_purpose",
+     "tile": null,
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "확인 불가",
+     "why": "손패·마음"
+    }
+   ]
+  },
+  {
+   "id": "u24",
+   "scene": "sc06",
+   "kind": "verdict",
+   "text": "추격 리치 건 게 잘못이었나?",
+   "gold": [],
+   "intent": []
+  },
+  {
+   "id": "u25",
+   "scene": "sc07",
+   "kind": "true",
+   "text": "3m 도라인 거 알면서 버렸어",
+   "gold": [
+    {
+     "type": "dora",
+     "tile": "3m",
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "표시패 2m → 도라 3m"
+    }
+   ]
+  },
+  {
+   "id": "u26",
+   "scene": "sc07",
+   "kind": "false",
+   "text": "4m이 서 현물이니까 3m도 스지라고 생각했지",
+   "gold": [
+    {
+     "type": "genbutsu",
+     "tile": "4m",
+     "wind": "서"
+    },
+    {
+     "type": "suji",
+     "tile": "3m",
+     "wind": "서"
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "서 강 6번째 4m"
+    },
+    {
+     "result": "다름",
+     "why": "3m 의 스지는 6m, 6m 은 서 현물 아님"
+    }
+   ]
+  },
+  {
+   "id": "u27",
+   "scene": "sc07",
+   "kind": "unverifiable",
+   "text": "퐁 두 번 해서 텐파이였으니까 밀었지",
+   "gold": [
+    {
+     "type": "pushed_on_purpose",
+     "tile": null,
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "확인 불가",
+     "why": "손패 필요"
+    }
+   ]
+  },
+  {
+   "id": "u28",
+   "scene": "sc07",
+   "kind": "verdict",
+   "text": "도라를 리치한테 던진 거 실수지?",
+   "gold": [],
+   "intent": []
+  },
+  {
+   "id": "u29",
+   "scene": "sc08",
+   "kind": "true",
+   "text": "리치 걸어놔서 뽑은 5s 그대로 버린 거야",
+   "gold": [
+    {
+     "type": "other",
+     "tile": null,
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "남은 3p 로 리치 중, 5s 는 쯔모기리"
+    }
+   ]
+  },
+  {
+   "id": "u30",
+   "scene": "sc08",
+   "kind": "false",
+   "text": "5s는 북이 리치 전에 버렸던 패잖아",
+   "gold": [
+    {
+     "type": "genbutsu",
+     "tile": "5s",
+     "wind": "북"
+    }
+   ],
+   "intent": [
+    {
+     "result": "다름",
+     "why": "북 강에 5s 없음(5s 는 아무 데도 안 보임)"
+    }
+   ]
+  },
+  {
+   "id": "u31",
+   "scene": "sc08",
+   "kind": "unverifiable",
+   "text": "북 리치는 대기 나쁠 거라고 생각했어",
+   "gold": [
+    {
+     "type": "other",
+     "tile": null,
+     "wind": "북"
+    }
+   ],
+   "intent": [
+    {
+     "result": "확인 불가",
+     "why": "상대 손패 필요"
+    }
+   ]
+  },
+  {
+   "id": "u32",
+   "scene": "sc08",
+   "kind": "verdict",
+   "text": "5s 통과한 건 그냥 운 좋았던 거야?",
+   "gold": [],
+   "intent": []
+  },
+  {
+   "id": "u33",
+   "scene": "sc09",
+   "kind": "true",
+   "text": "2m이 벌써 3장이나 보여서 1m은 덜 위험하다 봤어",
+   "gold": [
+    {
+     "type": "visible",
+     "tile": "2m",
+     "wind": null,
+     "count": 3
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "동 2m · 서 2m · 북 선언패 2m = 3장"
+    }
+   ]
+  },
+  {
+   "id": "u34",
+   "scene": "sc09",
+   "kind": "false",
+   "text": "1m 북 현물이었잖아",
+   "gold": [
+    {
+     "type": "genbutsu",
+     "tile": "1m",
+     "wind": "북"
+    }
+   ],
+   "intent": [
+    {
+     "result": "다름",
+     "why": "북 강엔 1p 뿐 1m 없음, 리치 뒤 통과패는 9m 하나"
+    }
+   ]
+  },
+  {
+   "id": "u35",
+   "scene": "sc09",
+   "kind": "unverifiable",
+   "text": "북 리치한 거 솔직히 늦게 봤어",
+   "gold": [
+    {
+     "type": "unaware_riichi",
+     "tile": null,
+     "wind": "북"
+    }
+   ],
+   "intent": [
+    {
+     "result": "확인 불가",
+     "why": "마음"
+    }
+   ]
+  },
+  {
+   "id": "u36",
+   "scene": "sc09",
+   "kind": "verdict",
+   "text": "1m 말고 딴 거 버렸어야 했어?",
+   "gold": [],
+   "intent": []
+  },
+  {
+   "id": "u37",
+   "scene": "sc10",
+   "kind": "true",
+   "text": "1s 네 장 다 보여서 13 간짱은 없다고 봤어",
+   "gold": [
+    {
+     "type": "visible",
+     "tile": "1s",
+     "wind": null,
+     "count": 4
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "북 1s 2 · 서 1s 1 · 표시패 1s 1 = 4장"
+    }
+   ]
+  },
+  {
+   "id": "u38",
+   "scene": "sc10",
+   "kind": "false",
+   "text": "2s 도라도 아니라서 그냥 버렸지",
+   "gold": [
+    {
+     "type": "dora",
+     "tile": "2s",
+     "wind": null,
+     "negated": true
+    }
+   ],
+   "gold_original": [
+    {
+     "type": "dora",
+     "tile": "2s",
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "다름",
+     "why": "표시패 1s → 도라 2s"
+    }
+   ]
+  },
+  {
+   "id": "u39",
+   "scene": "sc10",
+   "kind": "unverifiable",
+   "text": "손에 현물이 하나도 안 남아 있었어",
+   "gold": [
+    {
+     "type": "no_safe",
+     "tile": null,
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "확인 불가",
+     "why": "손패 필요"
+    }
+   ]
+  },
+  {
+   "id": "u40",
+   "scene": "sc10",
+   "kind": "verdict",
+   "text": "리치한테 도라 던진 거 괜찮았던 거야?",
+   "gold": [],
+   "intent": []
+  },
+  {
+   "id": "u41",
+   "scene": "sc11",
+   "kind": "true",
+   "text": "1p 2p 세 장씩 보여서 12 쪽 기다림은 적다고 봤지",
+   "gold": [
+    {
+     "type": "visible",
+     "tile": "1p",
+     "wind": null,
+     "count": 3
+    },
+    {
+     "type": "visible",
+     "tile": "2p",
+     "wind": null,
+     "count": 3
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "1p: 동 1 · 서 2 = 3장"
+    },
+    {
+     "result": "맞음",
+     "why": "2p: 동 1 · 서 2 = 3장"
+    }
+   ]
+  },
+  {
+   "id": "u42",
+   "scene": "sc11",
+   "kind": "false",
+   "text": "6p가 북 현물이라 3p 스지인 줄",
+   "gold": [
+    {
+     "type": "genbutsu",
+     "tile": "6p",
+     "wind": "북"
+    },
+    {
+     "type": "suji",
+     "tile": "3p",
+     "wind": "북"
+    }
+   ],
+   "intent": [
+    {
+     "result": "다름",
+     "why": "6p 는 북 강·통과패에 없음(어디에도 안 보임)"
+    },
+    {
+     "result": "다름",
+     "why": "3p 스지 6p 가 북 현물 아님"
+    }
+   ]
+  },
+  {
+   "id": "u43",
+   "scene": "sc11",
+   "kind": "unverifiable",
+   "text": "친이라 쉽게 안 접으려고 했어",
+   "gold": [
+    {
+     "type": "pushed_on_purpose",
+     "tile": null,
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "확인 불가",
+     "why": "마음"
+    }
+   ]
+  },
+  {
+   "id": "u44",
+   "scene": "sc11",
+   "kind": "verdict",
+   "text": "친이라도 여기선 접는 게 맞았나",
+   "gold": [],
+   "intent": []
+  },
+  {
+   "id": "u45",
+   "scene": "sc12",
+   "kind": "true",
+   "text": "남이 2p로 리치해서 2p는 현물이었어",
+   "gold": [
+    {
+     "type": "genbutsu",
+     "tile": "2p",
+     "wind": "남"
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "남 리치 선언패 2p"
+    }
+   ]
+  },
+  {
+   "id": "u46",
+   "scene": "sc12",
+   "kind": "false",
+   "text": "8p가 남 현물이었잖아",
+   "gold": [
+    {
+     "type": "genbutsu",
+     "tile": "8p",
+     "wind": "남"
+    }
+   ],
+   "intent": [
+    {
+     "result": "다름",
+     "why": "남 강·통과패에 8p 없음(8p 는 도라)"
+    }
+   ]
+  },
+  {
+   "id": "u47",
+   "scene": "sc12",
+   "kind": "unverifiable",
+   "text": "남 리치 봤을 때 내 대기가 더 좋다고 생각했어",
+   "gold": [
+    {
+     "type": "other",
+     "tile": null,
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "확인 불가",
+     "why": "손패·상대 대기 필요"
+    }
+   ]
+  },
+  {
+   "id": "u48",
+   "scene": "sc12",
+   "kind": "verdict",
+   "text": "이거 내가 뭘 할 수 있었음?",
+   "gold": [],
+   "intent": []
+  },
+  {
+   "id": "u49",
+   "scene": "sc13",
+   "kind": "true",
+   "text": "1p는 도라도 아니었어",
+   "gold": [
+    {
+     "type": "dora",
+     "tile": "1p",
+     "wind": null,
+     "negated": true
+    }
+   ],
+   "gold_original": [
+    {
+     "type": "dora",
+     "tile": "1p",
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "도라는 8m·1z, 1p 아님"
+    }
+   ]
+  },
+  {
+   "id": "u50",
+   "scene": "sc13",
+   "kind": "false",
+   "text": "2p 네 장 다 보여서 1p 노찬스라 생각했어",
+   "gold": [
+    {
+     "type": "visible",
+     "tile": "2p",
+     "wind": null,
+     "count": 4
+    },
+    {
+     "type": "wall",
+     "tile": "1p",
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "다름",
+     "why": "2p 는 한 장도 안 보임"
+    },
+    {
+     "result": "다름",
+     "why": "1p 를 기다리는 23p 양면의 2p·3p 어느 것도 4장 안 보임"
+    }
+   ]
+  },
+  {
+   "id": "u51",
+   "scene": "sc13",
+   "kind": "unverifiable",
+   "text": "내 대기 좋아서 리치한 거라 후회 없어",
+   "gold": [
+    {
+     "type": "other",
+     "tile": null,
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "확인 불가",
+     "why": "손패 필요"
+    }
+   ]
+  },
+  {
+   "id": "u52",
+   "scene": "sc13",
+   "kind": "verdict",
+   "text": "선제 리치한 내가 잘못한 건 없지?",
+   "gold": [],
+   "intent": []
+  },
+  {
+   "id": "u53",
+   "scene": "sc14",
+   "kind": "true",
+   "text": "서가 도라 6m을 리치 선언으로 버렸잖아",
+   "gold": [
+    {
+     "type": "dora",
+     "tile": "6m",
+     "wind": null
+    },
+    {
+     "type": "genbutsu",
+     "tile": "6m",
+     "wind": "서"
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "표시패 5m → 도라 6m"
+    },
+    {
+     "result": "맞음",
+     "why": "서 리치 선언패 6m"
+    }
+   ]
+  },
+  {
+   "id": "u54",
+   "scene": "sc14",
+   "kind": "false",
+   "text": "7m 서 현물이니까 4m 스지잖아",
+   "gold": [
+    {
+     "type": "genbutsu",
+     "tile": "7m",
+     "wind": "서"
+    },
+    {
+     "type": "suji",
+     "tile": "4m",
+     "wind": "서"
+    }
+   ],
+   "intent": [
+    {
+     "result": "다름",
+     "why": "서 강·통과패에 7m 없음"
+    },
+    {
+     "result": "다름",
+     "why": "4m 스지 1m·7m 둘 다 서 현물 아님"
+    }
+   ]
+  },
+  {
+   "id": "u55",
+   "scene": "sc14",
+   "kind": "unverifiable",
+   "text": "리치 안 걸면 역이 없어서 추격한 거야",
+   "gold": [
+    {
+     "type": "pushed_on_purpose",
+     "tile": null,
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "확인 불가",
+     "why": "손패 필요"
+    }
+   ]
+  },
+  {
+   "id": "u56",
+   "scene": "sc14",
+   "kind": "verdict",
+   "text": "추격 리치 판단 괜찮았어?",
+   "gold": [],
+   "intent": []
+  },
+  {
+   "id": "u57",
+   "scene": "sc15",
+   "kind": "true",
+   "text": "1s는 리치 뒤에 남이 버려서 현물이었지",
+   "gold": [
+    {
+     "type": "genbutsu",
+     "tile": "1s",
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "맞음",
+     "why": "북 리치 뒤 남이 1s 버리고 론 없이 지나감"
+    }
+   ]
+  },
+  {
+   "id": "u58",
+   "scene": "sc15",
+   "kind": "false",
+   "text": "2s 벌써 세 장 보였었는데",
+   "gold": [
+    {
+     "type": "visible",
+     "tile": "2s",
+     "wind": null,
+     "count": 3
+    }
+   ],
+   "intent": [
+    {
+     "result": "다름",
+     "why": "2s 는 내 강 1장뿐"
+    }
+   ]
+  },
+  {
+   "id": "u59",
+   "scene": "sc15",
+   "kind": "unverifiable",
+   "text": "남 퐁하고 텐파이여서 밀었어ㅋㅋ",
+   "gold": [
+    {
+     "type": "pushed_on_purpose",
+     "tile": null,
+     "wind": null
+    }
+   ],
+   "intent": [
+    {
+     "result": "확인 불가",
+     "why": "손패 필요"
+    }
+   ]
+  },
+  {
+   "id": "u60",
+   "scene": "sc15",
+   "kind": "verdict",
+   "text": "이 판 나 너무 막 버렸나?",
+   "gold": [],
+   "intent": []
+  }
+ ]
+}
