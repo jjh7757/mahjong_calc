@@ -20,6 +20,10 @@ init 옵션
   --hand-settings <폴더>  11-23 손 파일(rounds_meta.json · recorder_fix.json, 반장 설정의 paifu.event_fix · hand.call_turns)을 "설정" 으로 쓴다.
                           S5 는 늘 자동 규칙으로 따로 만들고 손 파일과 몇 칸 다른지 s5/compare.json · report.md 에 적는다(무인 흐름의 구멍 목록).
                           안 주면 자동 규칙이 낸 것을 그대로 쓴다.
+  --s6-games <판,…>       시험용: S6 칸 틀 검출 · 차례 꾸러미를 그 판들만(차례 목록 · 차례 수 검사는 모든 판). S7 뒤로는 못 감.
+  --s6a-rules             견줌용: S6a 를 옛 화소 규칙(handtrack_auto.py conf, 표 12-124)으로. 기본은 준비 읽기(설계서 8-8).
+replay 는 S1 · S4(3반장 result_read · 앱 유국 공개 읽기 s4/<판>/<a|b|c>/reveal_read.json) · S6a(<from>/s6a/<판>/answer.json ·
+  <from>/<판>/answer.json · <from>/<판>.json 중 먼저 있는 것) · S6 · S7 꾸러미에 답을 넣는다.
 
 단계(설계서 3절): S0 준비 · S1 판 경계(LLM) · S2 프레임 · S3 버림 기록 · S4 판 결과(LLM, 둘이 따로) · S5 대조 · 고침 ·
   S6 손패 차례 재료 + 읽기(LLM) · S7 앞뒤 검사 · 다시 읽기(LLM, 한 판 2회) · S8 조립 · S9 질문 목록 · 영향 · 보고서.
@@ -43,7 +47,19 @@ S9 차례 질문(8-3절 v2): 답의 unsure 또는 확신 말(HEDGE_*)에 걸리�
       han3 recfix 는 안 돌림) · recorder_fix.json(고침 기록) · rounds_meta.json(앱 선 · 아래 자리 · 국 · 결과, 손패 주인 = 화료자 / 유국 텐파이 —
       둘 이상이면 APP_HERO_RULE) · 앞뒤 검사(app_checks: 4장 · 론 패 · 리치 · 울기 묶음 · 엮임 · 사건 순서 · 5장) → 어긋나면 앱 값 둔 채 질문.
       W5 의 record 질문은 S5 질문(app5_*)으로 바꿈. 사건 순서가 차례 규칙과 어긋나고 헤드 순서는 맞으면 헤드 순서(order).
-  S6  앱 기록 판은 손 추적 판별 출력(handtrack/config/<판>.json · results/handtrack/<판>/ · _work/<판>_feat.npz)이 없으면 멈춤(공용 폴더에 안 씀).
+  S6a 손 추적 설정(설계서 8-8, 11-24 저녁 — 준비 읽기): 손 설정(handtrack/config/<판>.json + 판별 출력)이 공용 자리에 없는 판은
+      S6a-1 꾸러미(handtrack_prep.py pack → s6a/<판>/TASK.md · 재료, pending.json 꾸러미 id s6a_<판>)를 내고 멈춘다 — 읽기 에이전트가 영역(band · river ·
+      meld · reveal_region · search) · t_ready · 공개(t_reveal · reveal_frame, 유국 t_reveal 은 S4 값)를 정해 s6a/<판>/answer.json 에 쓴다.
+      (8-9, 11-24 밤) 에이전트는 초안 답을 handtrack_prep.py try 로 그 꾸러미 안 시험 자리(s6a/<판>/try/<n>/)에서 판별 · 차례 나누기까지 돌려 보고
+      고친다(판당 5번까지 — 답의 tries 칸). 이 흐름은 try 결과를 쓰지 않고 마지막 answer.json 만 아래 S6a-3 으로 다시 적용한다.
+      S6a-3(handtrack_prep.py apply): 답 → 판별 설정(실행 폴더 handtrack/config) + features + 검사(t_ready 뒷면 상자 덩어리 = 닫힌 장수 · band 안,
+      공개 프레임 앞면 상자 · reveal_region, 좌표 꼴, 시각 순서). 어긋남 · 답의 unsure 는 questions_s6a(값은 답 그대로). 설정이 바뀌면 그 판의 옛 판별 출력 ·
+      칸 틀 캐시 · turn_fix 몫을 지움. 화소 규칙(handtrack_auto.py conf)은 견줌용으로만 남김(init --s6a-rules 일 때 s6a_rules). 손 설정이 다 있는 판(3반장)은 그대로 씀.
+      결과는 실행 폴더 handtrack/(config · <판>/ · _work/) — 실행 설정 handtrack 칸으로 han3 · han3_paifu 가 경로를 돌림(handtrack/ht_redirect.py).
+  S6b 손 추적 판별: handtrack_auto.py run = segment · river · game(run.py 의 features 뒤, sheets 뺌) + bandfit --write(sheet_band). 있으면 건너뜀.
+  S6  판별 설정 · 출력(손 설정 판은 공용 자리, S6a 판은 실행 폴더)이 없으면 멈춤. 칸 틀 캐시(det_<판>.json)도 S6a 판은 실행 폴더 handtrack/_work/slotgrid_1117.
+      han3 turns · fix · turncut 뒤 차례 수 검사(s6_turn_check): 차례 목록(turn_fix 끼움 포함) ↔ 고친 기록의 손패 주인 버림 중 t_ready 뒤 것.
+      차례 0 인 판이 있으면 멈춤(오류), 다르면 질문 <판>_s6_turns(questions_s6). init --s6-games 면(시험용) 칸 틀 검출 · 차례 꾸러미를 그 판만.
   멈출 때마다(꾸러미 · 오류) report.md(진행 보고서: 앱 판 목록 · W5 · 창 앞당기기 · S5)를 씀.
 기존 스크립트는 하위 프로세스로 부른다: headrec_dump.py · headrec_run.py(--hanchan) · handtrack/han3.py(--hanchan) · han3_paifu.py(--hanchan --out).
 공용 모듈(htcommon · turncut · opusread · sam2track · rebuild_opus · paifu_examples · truthprep)은 고치지 않는다. 보호 폴더에는 쓰지 않는다:
@@ -75,9 +91,9 @@ import hanchan_cfg as hcfg  # noqa: E402
 PY = sys.executable
 KST = timezone(timedelta(hours=9))
 SIDES = ["bottom", "right", "top", "left"]
-STAGES = ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9"]
+STAGES = ["S0", "S1", "S2", "S3", "S4", "S5", "S6a", "S6b", "S6", "S7", "S8", "S9"]
 STAGE_NAME = {"S0": "준비", "S1": "판 경계", "S2": "프레임", "S3": "버림 기록", "S4": "판 결과", "S5": "대조 · 고침",
-              "S6": "손패 차례", "S7": "앞뒤 검사 · 다시 읽기", "S8": "조립", "S9": "질문 목록 · 보고서"}
+              "S6a": "손 추적 설정", "S6b": "손 추적 판별", "S6": "손패 차례", "S7": "앞뒤 검사 · 다시 읽기", "S8": "조립", "S9": "질문 목록 · 보고서"}
 MAX_REREAD = 2          # S7: 한 판 다시 읽기 횟수
 GAP_S = 30              # S0: 이만큼 넘는 녹화 빈 구간은 보고서에
 TOKENS_PER_HANCHAN = 15_000_000   # 11-23 3반장 손 작업 실측(하위 에이전트) — 예산 안내용
@@ -271,6 +287,8 @@ def cmd_init(a):
         cfg["hand"]["call_turns"] = []
     if raw.get("app_record"):   # 앱 기록 우선(설계서 8-5 · 8-6) — 칸이 없는 설정(3반장)은 실행 설정에도 넣지 않음
         cfg["app_record"] = copy.deepcopy(raw["app_record"])
+    if raw.get("frame"):        # 녹화 틀(S6a 가 손 설정 없는 판의 판별 설정 영역으로 씀) — 칸이 없는 설정은 넣지 않음
+        cfg["frame"] = copy.deepcopy(raw["frame"])
     wj(r.cfg_f, cfg)
     human = {"turns": list(src_cfg.truth_ids), "items": [{"id": x["id"], "kind": x["kind"], "game": x["game"]} for x in src_cfg.items]}
     r.state = {"_note": "paifu_auto.py 상태 — 단계 · 꾸러미 · 다시 읽기 · 질문", "created": now(), "source_cfg": rel(src_cfg.path),
@@ -278,6 +296,10 @@ def cmd_init(a):
                "hand_settings": rel(hand) if hand else None, "src_event_fix": (raw.get("paifu") or {}).get("event_fix") or {},
                "src_call_turns": list((raw.get("hand") or {}).get("call_turns") or []), "human_picked_1123": human,
                "stages": {s: {"status": "todo"} for s in STAGES}, "reread": {}, "timing": {}, "events": []}
+    if a.s6_games:      # 시험용: S6 칸 틀 검출 · 차례 꾸러미를 이 판들만(차례 목록 · 차례 수 검사는 모든 판)
+        r.state["s6_games"] = [x for x in a.s6_games.split(",") if x]
+    if a.s6a_rules:     # 견줌용: S6a 를 옛 화소 규칙(handtrack_auto.py conf)으로 — 기본 흐름은 준비 읽기
+        r.state["s6a_mode"] = "rules"
     r.save()
     r.cfg()   # 겹침 검사
     print(f"→ {rel(r.d)} (state.json · hanchan.json) · 판 {len(r.games())}")
@@ -2073,6 +2095,338 @@ def s5_app(r: Run):
     return []
 
 
+# ------------------------------------------------------------------ S6a · S6b 손 추적 설정 · 판별(11-24 저녁)
+# S6 재료(han3 turns → truthprep · turncut · slotgrid)는 판마다 손 추적 판별 설정(handtrack/config/<판>.json)과 그 판별 출력
+# (results/handtrack/<판>/segments.json · river_states.json · game.json, _work/<판>_feat.npz)을 읽는다. 3반장은 11-23 에 손으로 만든 것이 공용 자리에 있다.
+# 그것이 없는 판은 S6a 가 준비 읽기 꾸러미를 내고(handtrack_prep.py pack — 설계서 8-8), 읽기 답을 판별 설정으로 써 검사한 뒤(handtrack_prep.py apply)
+# S6b 가 판별을 돌린다(handtrack_auto.py run). 옛 화소 규칙(handtrack_auto.py conf)은 s6a_rules 로 남김(견줌용 — init --s6a-rules 일 때만).
+# 둘 다 실행 폴더 <실행>/handtrack/ 에 쓰고(공용 자리는 안 씀), 실행 설정 hanchan.json 의 handtrack 칸(dir · games)으로 han3 · han3_paifu 가
+# 그 판의 경로를 실행 폴더로 돌린다(handtrack/ht_redirect.py). 손 설정이 공용 자리에 다 있는 판(3반장)은 그대로 쓴다.
+HT_READY_LATE_S = 90    # (s6a_rules) t_ready 가 첫 버림(헤드 시계) 뒤 이만큼 넘으면 질문(2반장 손 설정은 +5 ~ +57초)
+S6_TURN_NEAR_MS = 3000  # 차례 수 검사: t_ready 와 이만큼 안에 기록기가 처음 본 손패 주인 버림은 "경계에 걸침" 으로 질문 글에 적음(기록기는 3초 간격 프레임)
+
+
+def ht_shared(g: str) -> list:
+    """공용 자리의 손 설정 · 판별 출력 다섯(S6 가 읽는 것)."""
+    o = HERE / "results" / "handtrack"
+    return [HT / "config" / f"{g}.json", o / g / "segments.json", o / g / "river_states.json", o / g / "game.json", o / "_work" / f"{g}_feat.npz"]
+
+
+def ht_run_files(r: Run, g: str) -> list:
+    d = r.d / "handtrack"
+    return [d / "config" / f"{g}.json", d / g / "segments.json", d / g / "river_states.json", d / g / "game.json", d / "_work" / f"{g}_feat.npz"]
+
+
+def ht_spec(gid: str, mrow: dict, bottom: int, events: list, rr: dict, regions: dict, prev_last_ms, t_reveal_read_ms, frame_from: str,
+            events_title: str) -> dict:
+    """S6a 준비 꾸러미 · 답 적용에 쓰는 판 사실(handtrack_prep.py 머리말의 spec). events = 고친 기록(_prep/rec/<판>/paifu_rec.json — 시각은 헤드 녹화 시계)."""
+    hero = mrow["hero"]
+    side = SIDES[(hero - bottom) % 4]
+    hd, calls, last_at, after_call = [], [], None, False
+    for e in events:
+        if e["type"] == "discard":
+            if e.get("at") is not None:
+                last_at = e["at"]
+            if e["seat"] == hero:
+                hd.append({"n": len(hd) + 1, "tile": e["tile"], "at": e.get("at"), "riichi": bool(e.get("riichi")), "after_call": after_call})
+                after_call = False
+        elif e["type"] == "call" and e["seat"] == hero:
+            calls.append({"kind": e.get("kind"), "tiles": list(e.get("tiles") or []), "at": last_at})
+            after_call = True
+    ats = [e["at"] for e in events if e["type"] == "discard" and e.get("at") is not None]
+    n_calls = sum(1 for c in calls if c["kind"] != "kakan")
+    end = mrow["end"]
+    return {"gid": gid, "round_label": f"{mrow.get('round', '')} {mrow.get('honba', 0)}본장", "side": side, "hero": hero, "bottom": bottom,
+            "dealer": mrow.get("dealer"), "end": "draw" if end == "draw" else "win", "win_type": None if end == "draw" else end,
+            "loser_side": rr.get("loser_side") if rr.get("loser_side") not in (None, "None") else None,
+            "n_calls": n_calls, "n_closed_end": 13 - 3 * n_calls, "hero_riichi": any(x["riichi"] for x in hd),
+            "regions": {k: list(regions[k]) for k in ("band", "river", "meld", "reveal_region", "wide", "search")}, "frame_from": frame_from,
+            "prev_last_ms": prev_last_ms, "first_ms": min(ats), "last_ms": max(ats), "hero_discards": hd, "hero_calls": calls,
+            "t_reveal_read_ms": t_reveal_read_ms if end == "draw" else None, "events_title": events_title,
+            "side_rule": f"rounds_meta 손패 주인 {hero}({mrow.get('hero_rule', '')}) − 아래 자리 {bottom} → {side}",
+            "result_how": f"rounds_meta end {end} · {mrow.get('source', '')}"}
+
+
+def s6a_frame(r: Run, cfg):
+    frame, frame_from = cfg.frame, "실행 설정"
+    if not frame:
+        frame = hcfg.load(r.state["source_cfg"], check=False).frame
+        frame_from = r.state["source_cfg"]
+    return frame, frame_from
+
+
+def s6a_setup(r: Run, cfg, auto: list):
+    """S6a 공통 준비: 손패 주인 자리 · 녹화 틀 확인, 실행 설정에 handtrack 칸(dir · games) 쓰기. → (frame, frame_from, meta)."""
+    frame, frame_from = s6a_frame(r, cfg)
+    meta = jl(r.d / cfg.meta_file.name)
+    bottom = meta["bottom_seat"]
+    mrow = {x["id"]: x for x in meta["rounds"]}
+    bad = []
+    for g in auto:
+        h = mrow[g].get("hero")
+        if h is None:
+            bad.append(f"{g}: 손패 주인 없음(rounds_meta hero null)")
+            continue
+        sd = SIDES[(h - bottom) % 4]
+        if not frame or sd not in (frame.get("sides") or {}):
+            bad.append(f"{g}: 손패 주인 자리 {sd} 의 녹화 틀 없음(반장 설정 frame.sides.{sd} — band · river · meld · reveal_region · wide · search)")
+    if bad:
+        raise SystemExit("S6a 멈춤 — " + "; ".join(bad))
+    raw = jl(r.cfg_f)
+    want = {"dir": rel(r.d / "handtrack"), "games": auto,
+            "_note": "paifu_auto S6a: 이 판들의 손 추적 판별 설정 · 출력은 dir 아래(config/ · <판>/ · _work/) — handtrack/ht_redirect.py 가 실행 중에 경로를 돌림"}
+    if raw.get("handtrack") != want or not raw.get("frame"):
+        raw["handtrack"] = want
+        raw.setdefault("frame", frame)
+        wj(r.cfg_f, raw)
+    return frame, frame_from, meta
+
+
+def purge_fix(r: Run, cfg, g: str) -> int:
+    """판별 설정이 바뀐 판의 turn_fix 몫(차례 id 칸 · __insert__)을 지운다 — han3 fix --write 는 칸을 덧붙이기만 해서 옛 kind 등이 남음."""
+    f = cfg.fix_file
+    if not f.exists():
+        return 0
+    fx = jl(f)
+    n0 = len(fx) + len(fx.get("__insert__") or [])
+    fx = {k: v for k, v in fx.items() if k.startswith("__") or not cfg.owns(k, g)}
+    if "__insert__" in fx:
+        fx["__insert__"] = [x for x in fx["__insert__"] if not cfg.owns(x["id"], g)]
+    n1 = len(fx) + len(fx.get("__insert__") or [])
+    if n1 != n0:
+        wj(f, fx)
+    return n0 - n1
+
+
+def s6a(r: Run):
+    """손 추적 설정 — 준비 읽기(설계서 8-8). 판마다: 공용 자리에 손 설정 · 판별 출력이 다 있으면 그대로(3반장). 아니면
+    S6a-1 꾸러미(handtrack_prep.py pack, 꾸러미 id s6a_<판>) → 답(s6a/<판>/answer.json)이 다 오면 S6a-3(handtrack_prep.py apply): 판별 설정 + features + 검사.
+    검사에 걸린 것 · 답의 unsure 는 questions_s6a(값은 답 그대로). 답 꼴이 틀린 판(시각 없음 등)은 멈춤 — 답 파일을 지우고 next 하면 같은 꾸러미가 다시 나옴."""
+    if r.state.get("s6a_mode") == "rules":
+        return s6a_rules(r)
+    cfg = r.cfg()
+    st = r.stage("S6a")
+    hand = [g for g in r.games() if all(p.exists() for p in ht_shared(g))]
+    auto = [g for g in r.games() if g not in hand]
+    if not auto:
+        r.done("S6a", hand_settings=hand, auto=[], note="판마다 공용 자리에 손 설정 · 판별 출력이 있음 — 그대로 씀(준비 읽기 안 함)")
+        return []
+    frame, frame_from, meta = s6a_setup(r, cfg, auto)
+    bottom = meta["bottom_seat"]
+    mrow = {x["id"]: x for x in meta["rounds"]}
+    date = cfg.recording["date"]
+    s1r = {x["id"]: x for x in jl(r.d / "s1" / "rounds.json")["rounds"]} if (r.d / "s1" / "rounds.json").exists() else {}
+    title = "앱 기록에서 온 시각(헤드 녹화 시계로 바꾼 것)" if cfg.app_record and r.app() else "헤드 녹화 버림 기록기에서 온 시각(헤드 녹화 시계)"
+    specs, prev_last = {}, None
+    for g in r.games():
+        ev = jl(r.prep / "rec" / g / "paifu_rec.json")["events"]
+        ats = [e["at"] for e in ev if e["type"] == "discard" and e.get("at") is not None]
+        if g in auto:
+            rr = jl(r.d / g / "result_read.json")
+            trr = None
+            if mrow[g]["end"] == "draw":
+                t = rr.get("t_reveal_read") or (s1r.get(g) or {}).get("t_reveal")
+                trr = to_ms(date, t) if t else None
+            sd = SIDES[(mrow[g]["hero"] - bottom) % 4]
+            specs[g] = ht_spec(g, mrow[g], bottom, ev, rr, frame["sides"][sd], prev_last, trr, frame_from, title)
+            wj(r.d / "s6a" / "_spec" / f"{g}.json", specs[g])
+        prev_last = max(ats) if ats else prev_last
+    # S6a-1 꾸러미
+    pend, packed = [], dict(st.get("packed") or {})
+    for g in auto:
+        d = r.d / "s6a" / g
+        if not (d / "pack.json").exists():
+            t0 = time.time()
+            p = run([PY, "-X", "utf8", HERE / "handtrack_prep.py", "pack", "--cfg", r.cfg_f, "--spec", r.d / "s6a" / "_spec" / f"{g}.json", "--out", d],
+                    log=r.log(f"s6a_pack_{g}.log"))
+            o = json.loads(p.stdout[p.stdout.rindex("JSON") + 4:].strip())
+            packed[g] = {"window_ready": o["window_ready"], "window_reveal": o["window_reveal"], "overview": len(o["overview"]), "backs_rows": o["backs_rows"],
+                         "wall_s": round(time.time() - t0, 1)}
+        p = pkg("S6a", f"s6a_{g}", d, d / "TASK.md", d / "answer.json", game=g, kind="ht_prep")
+        if not answered(p):
+            pend.append(p)
+    st.update(packed=packed, auto=auto, hand_settings=hand, frame_from=frame_from, mode="read")
+    r.save()
+    if pend:
+        return pend
+    # S6a-3 답 적용 · 검사
+    qs, res, fatal = [], {}, []
+    for g in auto:
+        pre = cfg.prefix_of(g)
+        out_f = r.d / "s6a" / "_applied" / f"{g}.json"
+        t0 = time.time()
+        p = run([PY, "-X", "utf8", HERE / "handtrack_prep.py", "apply", "--cfg", r.cfg_f, "--spec", r.d / "s6a" / "_spec" / f"{g}.json",
+                 "--answer", r.d / "s6a" / g / "answer.json", "--out", out_f], log=r.log(f"s6a_apply_{g}.log"))
+        o = jl(out_f)
+        if o["fatal"]:
+            fatal.append(f"{g}: {'; '.join(o['fatal'])}")
+            continue
+        purged_fix = purge_fix(r, cfg, g) if o.get("config_written") else 0
+        for q in o["questions"]:
+            qs.append({"id": f"{pre}_s6a_{q['check']}", "kind": "boundary", "stage": "S6a", "game": g, "current": o["config"].get("t_ready") if "ready" in q["check"] else None,
+                       "why": q["why"], "clip": q.get("clip"), "covered_by_setting": False})
+        for n, u in enumerate(o.get("unsure") or [], 1):
+            what = u.get("what") if isinstance(u, dict) else None
+            why = u.get("why") if isinstance(u, dict) else str(u)
+            qs.append({"id": f"{pre}_s6a_unsure_{n}", "kind": "boundary", "stage": "S6a", "game": g, "signal": "unsure", "current": what,
+                       "why": f"준비 읽기 unsure — {what}: {why}" if what else f"준비 읽기 unsure — {why}", "covered_by_setting": False})
+        res[g] = {"side": o["config"]["side"], "t_ready": o["config"]["t_ready"], "t_reveal": o["config"]["t_reveal"], "reveal_frame": o["config"]["reveal_frame"],
+                  "post_sec": o["config"]["post_sec"], "changed": o["changed_regions"], "failed": [c["name"] for c in o["checks"] if not c["ok"]],
+                  "unsure": len(o.get("unsure") or []), "pre_ready": o.get("hero_discards_before_ready"), "config_written": o.get("config_written"),
+                  "purged": len(o.get("purged") or []), "purged_fix": purged_fix, "wall_s": round(time.time() - t0, 1)}
+    if fatal:
+        raise SystemExit("S6a 답 꼴 이상 — " + " / ".join(fatal) + " (그 판의 s6a/<판>/answer.json 을 지우고 next 하면 같은 꾸러미가 다시 나옴)")
+    r.state["questions_s6a"] = qs
+    r.done("S6a", mode="read", hand_settings=hand, auto=auto, games=res, frame_from=frame_from, questions=len(qs))
+    return []
+
+
+def s6a_rules(r: Run):
+    """(견줌용 — 기본 흐름에서 안 씀, init --s6a-rules) 옛 화소 규칙 자동 설정(handtrack_auto.py conf, 표 12-124 — 3반장에서 t_ready 2/11).
+    손 추적 설정. 판마다: 공용 자리에 손 설정 · 판별 출력이 다 있으면 그대로(3반장). 아니면 자동 설정(handtrack_auto.py conf):
+    side = rounds_meta 손패 주인 − 아래 자리, 영역 = 반장 설정 frame.sides[side](없으면 멈춤), t_start · t_reveal · reveal_frame · t_ready = 규칙
+    (handtrack_auto.py 머리말). 그 안에서 features 도 돈다(t_ready 규칙이 띠 특징을 씀). 못 찾은 것은 최선 값을 넣고 질문(questions_s6a)."""
+    cfg = r.cfg()
+    st = r.stage("S6a")
+    hand = [g for g in r.games() if all(p.exists() for p in ht_shared(g))]
+    auto = [g for g in r.games() if g not in hand]
+    if not auto:
+        r.done("S6a", hand_settings=hand, auto=[], note="판마다 공용 자리에 손 설정 · 판별 출력이 있음 — 그대로 씀(자동 준비 안 함)")
+        return []
+    if not (cfg.app_record and r.app()):
+        raise SystemExit(f"S6a: 손 설정이 없는 판 {auto} — 자동 판별 설정은 지금 앱 기록 판(W5 헤드 시각)만 된다")
+    frame = cfg.frame
+    frame_from = "실행 설정"
+    if not frame:
+        frame = hcfg.load(r.state["source_cfg"], check=False).frame
+        frame_from = r.state["source_cfg"]
+    date = cfg.recording["date"]
+    meta = jl(r.d / cfg.meta_file.name)
+    bottom = meta["bottom_seat"]
+    mrow = {x["id"]: x for x in meta["rounds"]}
+    w5 = jl(r.d / "w5" / "align.json")["rounds"]
+    s1r = {x["id"]: x for x in jl(r.d / "s1" / "rounds.json")["rounds"]}
+    side_of, bad = {}, []
+    for g in auto:
+        h = mrow[g].get("hero")
+        if h is None:
+            bad.append(f"{g}: 손패 주인 없음(rounds_meta hero null)")
+            continue
+        side_of[g] = SIDES[(h - bottom) % 4]
+        if not frame or side_of[g] not in (frame.get("sides") or {}):
+            bad.append(f"{g}: 손패 주인 자리 {side_of[g]} 의 녹화 틀 없음(반장 설정 frame.sides.{side_of[g]} — band · river · meld · reveal_region · wide · search)")
+    if bad:
+        raise SystemExit("S6a 멈춤 — " + "; ".join(bad))
+    raw = jl(r.cfg_f)
+    want = {"dir": rel(r.d / "handtrack"), "games": auto,
+            "_note": "paifu_auto S6a: 이 판들의 손 추적 판별 설정 · 출력은 dir 아래(config/ · <판>/ · _work/) — handtrack/ht_redirect.py 가 실행 중에 경로를 돌림"}
+    if raw.get("handtrack") != want or not raw.get("frame"):
+        raw["handtrack"] = want
+        raw.setdefault("frame", frame)
+        wj(r.cfg_f, raw)
+    qs = [q for q in r.state.get("questions_s6a") or [] if q.get("game") not in auto]
+    res = dict(st.get("games") or {})
+    prev_last = None
+    for g in r.games():
+        wr = w5.get(g) or {}
+        hi = wr.get("head_interval") or {}
+        s1 = s1r.get(g) or {}
+        first = to_ms(date, hi["first"]) if hi.get("first") else to_ms(date, s1["t_start"]) + APP_START_LEAD_MS
+        last = to_ms(date, hi["last"]) if hi.get("last") else to_ms(date, s1["t_end_play"])
+        if g in auto:
+            out_f = r.d / "s6a" / f"{g}.json"
+            if not (out_f.exists() and all(p.exists() for p in ht_run_files(r, g)[:1] + ht_run_files(r, g)[4:])):
+                side = side_of[g]
+                m = mrow[g]
+                F = jl(r.d / "s5" / "record" / f"{g}.json")["events"]
+                hero = m["hero"]
+                calls = sum(1 for e in F if e["type"] == "call" and e["seat"] == hero and e.get("kind") != "kakan")
+                riichi = any(e["type"] == "discard" and e["seat"] == hero and e.get("riichi") for e in F)
+                rr = jl(r.d / g / "result_read.json")
+                spec = {"gid": g, "side": side, "regions": {k: frame["sides"][side][k] for k in ("band", "river", "meld", "reveal_region", "wide", "search")},
+                        "side_rule": f"rounds_meta 손패 주인 {hero}({m.get('hero_rule')}) − 아래 자리 {bottom} → {side}",
+                        "prev_last_ms": prev_last, "first_ms": first, "last_ms": last,
+                        "t_reveal_read_ms": to_ms(date, rr["t_reveal_read"]) if m["end"] == "draw" and rr.get("t_reveal_read") else None,
+                        "n_closed": 13 - 3 * calls, "result": {"draw": "draw_tenpai"}.get(m["end"], m["end"]), "riichi": riichi,
+                        "result_how": f"rounds_meta end {m['end']} · {m.get('source')}", "frame_from": frame_from}
+                wj(r.d / "s6a" / f"{g}_spec.json", spec)
+                t0 = time.time()
+                p = run([PY, "-X", "utf8", HERE / "handtrack_auto.py", "conf", "--cfg", r.cfg_f, "--spec", r.d / "s6a" / f"{g}_spec.json"],
+                        log=r.log(f"s6a_{g}.log"))
+                o = json.loads(p.stdout[p.stdout.rindex("JSON") + 4:].strip())
+                o["wall_s"] = round(time.time() - t0, 1)
+                wj(out_f, o)
+            o = jl(out_f)
+            c, rd, rv = o["config"], o["ready"], o["reveal"]
+            pre = cfg.prefix_of(g)
+            if not rd["ok"] or to_ms(date, c["t_ready"]) - first > HT_READY_LATE_S * 1000:
+                why = (f"t_ready 규칙이 못 찾음 — {rd['rule']}" if not rd["ok"] else
+                       f"t_ready {c['t_ready']} 가 첫 버림 {hms_of(first)} 뒤 {HT_READY_LATE_S}초 넘음")
+                qs.append({"id": f"{pre}_s6a_ready", "kind": "boundary", "stage": "S6a", "game": g, "current": c["t_ready"], "why": why,
+                           "clip": {"t0": c["t_start"], "t1": hms_of(to_ms(date, c["t_ready"]) + 10000)}, "covered_by_setting": False})
+            if rd.get("arrange_flag"):
+                qs.append({"id": f"{pre}_s6a_ready_arrange", "kind": "boundary", "stage": "S6a", "game": g, "current": c["t_ready"],
+                           "why": f"t_ready {c['t_ready']} 바로 뒤 활동({rd.get('after_until')} 까지)에서 손패 띠가 {rd.get('after_moved_s')}초 움직임 — "
+                                  "배패 정리 전 줄을 t_ready 로 잡았을 수 있음(그러면 첫 차례 창에 정렬 동작이 들어감)",
+                           "clip": {"t0": c["t_ready"], "t1": rd.get("after_until") or hms_of(to_ms(date, c["t_ready"]) + 30000)}, "covered_by_setting": False})
+            if not rv["ok"]:
+                qs.append({"id": f"{pre}_s6a_reveal", "kind": "boundary", "stage": "S6a", "game": g, "current": c["reveal_frame"],
+                           "why": f"공개 프레임을 못 찾아 짐작 — {rv.get('why')}", "clip": {"t0": hms_of(last), "t1": hms_of(last + 30000)},
+                           "covered_by_setting": False})
+            res[g] = {"side": c["side"], "t_start": c["t_start"], "t_ready": c["t_ready"], "ready_rule": rd["rule"], "t_reveal": c["t_reveal"],
+                      "reveal_frame": c["reveal_frame"], "post_sec": c["post_sec"], "timing": o["timing"], "wall_s": o.get("wall_s")}
+        prev_last = last
+    r.state["questions_s6a"] = qs
+    r.done("S6a", hand_settings=hand, auto=auto, games=res, frame_from=frame_from, questions=len(qs))
+    return []
+
+
+def s6b(r: Run):
+    """손 추적 판별(run.py 의 segment · river · game — features 는 S6a 가 돌림, sheets 는 대조표 그림이라 뺌) + bandfit --write(sheet_band).
+    S6a 가 자동으로 설정을 만든 판만. 판마다 결과가 있으면 그 단계는 건너뜀(handtrack_auto.run_one)."""
+    a = r.stage("S6a")
+    res = dict(r.stage("S6b").get("games") or {})
+    for g in a.get("auto") or []:
+        t0 = time.time()
+        p = run([PY, "-X", "utf8", HERE / "handtrack_auto.py", "run", "--cfg", r.cfg_f, g], log=r.log(f"s6b_{g}.log"))
+        o = json.loads(p.stdout[p.stdout.rindex("JSON") + 4:].strip())
+        o["wall_s"] = round(time.time() - t0, 1)
+        if o["ran"] or g not in res:
+            res[g] = o
+        wj(r.d / "s6b" / f"{g}.json", res[g])
+    miss = {g: [rel(p) for p in ht_run_files(r, g) if not p.exists()] for g in a.get("auto") or []}
+    miss = {g: v for g, v in miss.items() if v}
+    if miss:
+        raise SystemExit(f"S6b: 판별 출력이 없음 {miss}")
+    r.done("S6b", games={g: {"ran": v["ran"], "timing": v["timing"], "wall_s": v["wall_s"], "sheet_band": v["sheet_band"]} for g, v in res.items()})
+    return []
+
+
+def ht_report_lines(r: Run) -> list:
+    a, b = r.stage("S6a"), r.stage("S6b")
+    if not a.get("auto"):
+        return []
+    if a.get("mode") == "read" or a.get("status") != "done":
+        L = ["", "## S6a · S6b 손 추적 설정(준비 읽기 — 설계서 8-8) · 판별", "",
+             f"- 손 설정(공용 자리) 그대로: {a.get('hand_settings')} · 준비 읽기: {a.get('auto')} · 틀 출처 {a.get('frame_from')} · S6a 상태 {a.get('status')}", "",
+             "| 판 | 자리 | t_ready(읽기) | t_ready 앞 손패 주인 버림 | t_reveal | reveal_frame | 고친 영역 | 검사 실패 | unsure | S6b 초 | sheet_band |",
+             "|---|---|---|---|---|---|---|---|---|---|---|"]
+        for g, v in (a.get("games") or {}).items():
+            bb = (b.get("games") or {}).get(g) or {}
+            L.append(f"| {g} | {v['side']} | {v['t_ready']} | {v.get('pre_ready')} | {v['t_reveal']} | {v['reveal_frame']} | {v.get('changed')} | {v.get('failed')} | "
+                     f"{v.get('unsure')} | {bb.get('wall_s', '')} | {bb.get('sheet_band', '')} |")
+        if a.get("status") != "done" and a.get("packed"):
+            L += ["", "꾸러미(답 기다림): " + ", ".join(f"{g}(프레임 {v['window_ready'][2]} + {v['window_reveal'][2]}, 그림 {v['overview']})" for g, v in a["packed"].items())]
+        return L
+    L = ["", "## S6a · S6b 손 추적 설정 · 판별(자동 — 옛 화소 규칙, 견줌용)", "", f"- 손 설정(공용 자리) 그대로: {a.get('hand_settings')} · 자동: {a.get('auto')} · 틀 출처 {a.get('frame_from')}", "",
+         "| 판 | 자리 | t_start | t_ready(규칙) | t_reveal | reveal_frame | S6a 초 | S6b 초 | sheet_band |", "|---|---|---|---|---|---|---|---|---|"]
+    for g, v in (a.get("games") or {}).items():
+        bb = (b.get("games") or {}).get(g) or {}
+        L.append(f"| {g} | {v['side']} | {v['t_start']} | {v['t_ready']}({v['ready_rule']}) | {v['t_reveal']} | {v['reveal_frame']} | {v.get('wall_s')} | "
+                 f"{bb.get('wall_s', '')} | {bb.get('sheet_band', '')} |")
+    return L
+
+
 # ------------------------------------------------------------------ S6 손패 차례
 def han3(r: Run, *args, log=None, check=True):
     return run([PY, "-X", "utf8", HT / "han3.py", *args, "--hanchan", r.cfg_f], log=log, check=check)
@@ -2113,34 +2467,112 @@ def slotgrid_todo(r: Run) -> dict:
     return json.loads(s[s.index("JSON") + 4:].strip())
 
 
+def turns_after_fix(cfg, g: str) -> list:
+    """han3 차례 목록(cfg.turns_file 의 그 판) + turn_fix(칸 고침 · __insert__ 끼움) — han3.apply_fix 와 같은 셈(han3 를 이 프로세스에 import 하지 않으려고 따로)."""
+    T = jl(cfg.turns_file) if cfg.turns_file.exists() else {"games": []}
+    gg = next((x for x in T["games"] if x["id"] == g), None)
+    if gg is None:
+        return []
+    fx = jl(cfg.fix_file) if cfg.fix_file.exists() else {}
+    turns = [dict(t) for t in gg["turns"]]
+    for ins in fx.get("__insert__") or []:
+        if not cfg.owns(ins["id"], g) or any(t["id"] == ins["id"] for t in turns):
+            continue
+        k = next((i for i, t in enumerate(turns) if t["id"] == ins["after"]), None)
+        if k is None:
+            continue
+        turns.insert(k + 1, {"id": ins["id"], "label": ins["id"].split("_d")[1], "tile": ins["tile"], "sideways": ins.get("sideways", False), "synthetic": True})
+    for t in turns:
+        f = fx.get(t["id"]) or {}
+        for k in ("tile", "sideways"):
+            if k in f:
+                t[k] = f[k]
+    return turns
+
+
+def turn_check_one(g: str, turns: list, events: list, hero: int, t_ready_ms: int) -> dict:
+    """차례 수 검사 한 판. 차례가 되는 손패 주인 버림 = 고친 기록의 손패 주인 버림 중 기록기가 처음 본 때가 t_ready 뒤인 것
+    (truthprep: t_ready 때 강에 이미 있던 버림은 '판 구간 전' — 차례 아님 · 리치 뒤 버림도 차례(읽기만 안 함) · 울려 나간 버림은 han3 fix 가 끼움)."""
+    hd = [e for e in events if e["type"] == "discard" and e["seat"] == hero]
+    exp = [e for e in hd if e.get("at") is not None and e["at"] > t_ready_ms]
+    near = [f"{e['tile']}@{hms_of(e['at'])}" for e in hd if e.get("at") is not None and abs(e["at"] - t_ready_ms) <= S6_TURN_NEAR_MS]
+    no_at = [e["tile"] for e in hd if e.get("at") is None]
+    tt = [norm(t.get("tile")) if t.get("tile") else None for t in turns]
+    et = [norm(e["tile"]) for e in exp]
+    return {"turns": len(turns), "expected": len(exp), "same": len(turns) == len(exp), "tiles_same": tt == et, "turn_tiles": tt, "expected_tiles": et,
+            "hero_discards": len(hd), "before_ready": len(hd) - len(exp) - len(no_at), "near_ready": near, "no_at": no_at,
+            "synthetic": [t["id"] for t in turns if t.get("synthetic")], "t_ready": hms_of(t_ready_ms)}
+
+
+def s6_turn_check(r: Run) -> dict:
+    """S6 뒤 차례 수 검사(설계서 8-8): 판마다 차례 목록(han3 turns + turn_fix) 수 ↔ 고친 기록(_prep/rec/<판>/paifu_rec.json)의 손패 주인 버림 중 t_ready 뒤 것의 수.
+    0 이면 zero(멈춤), 다르면 질문 <판>_s6_turns."""
+    cfg = r.cfg()
+    date = cfg.recording["date"]
+    meta = {x["id"]: x for x in jl(r.d / cfg.meta_file.name)["rounds"]}
+    ht_games = set(cfg.ht_games)
+    games, qs, zero = {}, [], []
+    for g in r.games():
+        hero = meta[g].get("hero")
+        if hero is None:
+            continue
+        cf_p = (cfg.ht_dir / "config" / f"{g}.json") if g in ht_games else (HT / "config" / f"{g}.json")
+        t_ready = to_ms(date, jl(cf_p)["t_ready"])
+        ev = jl(r.prep / "rec" / g / "paifu_rec.json")["events"]
+        v = turn_check_one(g, turns_after_fix(cfg, g), ev, hero, t_ready)
+        v["config"] = rel(cf_p)
+        games[g] = v
+        if v["turns"] == 0:
+            zero.append(g)
+        elif not v["same"]:
+            qs.append({"id": f"{cfg.prefix_of(g)}_s6_turns", "kind": "boundary", "stage": "S6", "game": g, "current": v["turns"], "candidates": [v["expected"]],
+                       "why": f"차례 목록 {v['turns']}차례 ≠ 고친 기록의 손패 주인 버림 중 t_ready({v['t_ready']}) 뒤 {v['expected']}장"
+                              + (f" · t_ready 앞뒤 {S6_TURN_NEAR_MS // 1000}초 안 버림 {v['near_ready']}" if v["near_ready"] else "")
+                              + f" — 차례 패 {v['turn_tiles']} / 기록 {v['expected_tiles']}",
+                       "clip": {"t0": hms_of(t_ready - 10000), "t1": hms_of(t_ready + 30000)}, "covered_by_setting": False})
+    return {"games": games, "questions": qs, "zero": zero}
+
+
 def s6(r: Run):
     cfg = r.cfg()
     st = r.stage("S6")
-    if not st.get("prepared") and cfg.app_record and r.app():
-        # S6 재료(han3 turns → truthprep · turncut · slotgrid)는 판마다 손 추적 판별 출력을 읽는다 — 공용 폴더(handtrack/config · results/handtrack/<판>/ ·
-        # _work/<판>_feat.npz)에 있고 손으로 만든 판별 설정(손패 주인 자리 · 영역 · t_ready)에서 handtrack run.py 가 만든 것. 없으면 여기서 멈춤(공용 폴더에 쓰지 않음).
-        need = {g: [p for p in (HT / "config" / f"{g}.json", HERE / "results" / "handtrack" / g / "segments.json",
-                                HERE / "results" / "handtrack" / g / "river_states.json", HERE / "results" / "handtrack" / g / "game.json",
-                                HERE / "results" / "handtrack" / "_work" / f"{g}_feat.npz") if not p.exists()] for g in r.games()}
+    if not st.get("prepared"):
+        # S6 재료(han3 turns → truthprep · turncut · slotgrid)는 판마다 손 추적 판별 설정 · 출력을 읽는다 — 손 설정 판은 공용 자리, S6a 가 자동으로
+        # 만든 판은 실행 폴더 handtrack/(실행 설정 handtrack 칸 — han3 가 경로를 돌림). 어느 쪽에도 없으면 멈춤.
+        ht_games = set(cfg.ht_games)
+        need = {g: [p for p in (ht_run_files(r, g) if g in ht_games else ht_shared(g)) if not p.exists()] for g in r.games()}
         miss = {g: [rel(p) for p in v] for g, v in need.items() if v}
+        st.pop("missing_handtrack", None)
         if miss:
             st["missing_handtrack"] = miss
             r.save()
-            raise SystemExit("S6 재료(손패 차례 나누기 · 칸 틀 · 차례 꾸러미)는 판마다 손 추적 판별 출력이 있어야 한다 — 판 "
-                             f"{len(miss)}/{len(r.games())} 에 없음(공용 폴더 · 이 흐름이 만들지 않음): "
-                             + "; ".join(f"{g}: {', '.join(v)}" for g, v in miss.items())
-                             + " — 손패 주인 자리(rounds_meta hero)로 handtrack/config/<판>.json(판별 설정)을 만들고 handtrack run.py 를 돌리는 단계가 앱 기록 흐름에 아직 없다.")
+            raise SystemExit("S6 재료(손패 차례 나누기 · 칸 틀 · 차례 꾸러미)는 판마다 손 추적 판별 설정 · 출력이 있어야 한다 — 판 "
+                             f"{len(miss)}/{len(r.games())} 에 없음: " + "; ".join(f"{g}: {', '.join(v)}" for g, v in miss.items())
+                             + " — S6a · S6b(손 추적 설정 · 판별)를 먼저(next --redo S6a).")
+        r.save()
     if not st.get("prepared"):
         t0 = time.time()
         han3(r, "turns", log=r.log("s6_turns.log"))
         han3(r, "fix", "--write", log=r.log("s6_fix.log"))
         han3(r, "turncut", "build", *r.games(), log=r.log("s6_turncut.log"))
+        # 차례 수 검사(설계서 8-8 "S6 뒤 검사") — han3 fix 는 차례 목록이 빈 판을 조용히 건너뛰므로 여기서 드러냄
+        tc = s6_turn_check(r)
+        st["turn_check"] = tc["games"]
+        r.state["questions_s6"] = tc["questions"]
+        r.save()
+        if tc["zero"]:
+            raise SystemExit(f"S6 차례 수 검사: 차례 목록이 빈 판 {tc['zero']} — 판별 설정(t_ready · band · river)이 틀렸을 수 있음. "
+                             + "; ".join(f"{g}: 차례 0 · 고친 기록의 손패 주인 버림(t_ready 뒤) {tc['games'][g]['expected']}" for g in tc["zero"])
+                             + " (S6a 답을 고치고 next --redo S6a)")
+        only = r.state.get("s6_games")   # 시험용(init --s6-games): 칸 틀 검출 · 차례 꾸러미를 이 판들만
         todo = slotgrid_todo(r)
         st["slotgrid"] = todo
-        miss = [g for g, v in todo.items() if v["missing"]]
+        miss = [g for g, v in todo.items() if v["missing"] and (not only or g in only)]
         if miss:   # 새 반장이면 detect 가 캐시 폴더(_work/slotgrid_1117)에 쓴다 — 3반장 재생에서는 0 이어야 함
             han3(r, "slotgrid", "detect", *miss, log=r.log("s6_slotgrid_detect.log"))
         plan = read_plan(r)
+        if only:
+            plan = {"hand": {g: v for g, v in plan["hand"].items() if g in only}, "call": [t for t in plan["call"] if cfg.game_of(t) in only], "only": only}
         all_hand = [t for g in r.games() for t in plan["hand"].get(g, [])]
         # 울기 차례: 설정 call_turns(손) ↔ turn_fix 의 kind call(자동)
         src_calls = r.state.get("src_call_turns") or []
@@ -2658,7 +3090,7 @@ def s9(r: Run):
             q["clip"] = {"t0": d["t_reveal"], "t1": hms_of(to_ms(cfg.recording["date"], d["t_reveal"]) + 15000)}
         q["impact_summary"] = summarize_impact(q.get("impact") or [])
         (hidden if q["impact_summary"]["zero"] else asked).append(q)
-    for key in ("questions_s0", "questions_s1", "questions_w5", "questions_s4", "questions_s5"):   # s0 · w5 = 앱 기록 우선 반장만(3반장은 없음)
+    for key in ("questions_s0", "questions_s1", "questions_w5", "questions_s4", "questions_s5", "questions_s6a", "questions_s6"):   # s0 · w5 · s6a = 앱 기록 우선 반장만(3반장은 없음) · s6 = 차례 수 검사
         for q in r.state.get(key) or []:
             if q.get("kind") == "record" and "_rec_" in q["id"]:
                 # 남의 강 한 칸 — 손패 주인 손패 · 결과 점수는 안 바뀌고 패보의 그 버림 한 칸만 바뀜. 영상 = 그 칸을 기록기가 처음 본 때 −5 ~ +10초
@@ -2893,15 +3325,16 @@ def write_progress_report(r: Run, stage: str, pend: list, error: str | None = No
         v = st.get(s) or {}
         keep = {k: v[k] for k in v if k not in ("status", "detail", "checks", "plan", "slotgrid", "history", "games", "same_as_reuse", "final_bad", "summary", "verify", "call_turns", "app", "how", "advance", "error")}
         L.append(f"| {s} {STAGE_NAME[s]} | {v.get('status')} | {json.dumps(keep, ensure_ascii=False)[:300]} |")
-    qn = {k: len(r.state.get(k) or []) for k in ("questions_s0", "questions_s1", "questions_w5", "questions_s4", "questions_s5")}
+    qn = {k: len(r.state.get(k) or []) for k in ("questions_s0", "questions_s1", "questions_w5", "questions_s4", "questions_s5", "questions_s6a", "questions_s6")}
     L += ["", f"- 지금까지 질문 후보: {qn}(S9 에서 questions.jsonl 로 모음 — W5 것은 w5_questions.jsonl 에 먼저 씀, S5 가 W5 의 record 질문을 대신함)", ""]
     L += app_report_lines(r)
+    L += ht_report_lines(r)
     L += ["", "## 정답", "", "정답 없음. 이 보고서까지 LLM 호출 0 · 하위 에이전트 0.", ""]
     wt(r.d / "report.md", "\n".join(L))
 
 
 # ------------------------------------------------------------------ next · replay · apply · status
-STEP = {"S0": s0, "S1": s1, "S2": s2, "S3": s3, "S4": s4, "S5": s5, "S6": s6, "S7": s7, "S8": s8, "S9": s9}
+STEP = {"S0": s0, "S1": s1, "S2": s2, "S3": s3, "S4": s4, "S5": s5, "S6a": s6a, "S6b": s6b, "S6": s6, "S7": s7, "S8": s8, "S9": s9}
 
 
 def cmd_next(a):
@@ -2950,7 +3383,8 @@ def cmd_next(a):
 
 
 def cmd_replay(a):
-    """pending.json 의 꾸러미에 3반장의 이미 있는 답을 넣는다(LLM 0). 답이 없는 꾸러미는 비워 두고 보고."""
+    """pending.json 의 꾸러미에 이미 있는 답을 넣는다(LLM 0) — 3반장 결과 폴더 · 다른 실행 폴더(S4 앱 유국 공개 읽기 · S6a 준비 읽기) · 답 폴더(S6a).
+    답이 없는 꾸러미는 비워 두고 보고."""
     r = Run(a.run)
     src = hcfg._p(a.src)
     src_cfg = hcfg.load(r.state["source_cfg"], check=False)
@@ -2974,9 +3408,14 @@ def cmd_replay(a):
                      "rounds": lst})
             put += 1
             continue
-        if p["stage"] == "S4":
+        if p["stage"] == "S4" and p.get("kind") == "app_draw_reveal":   # 앱 유국 공개 손패 읽기(다른 실행 폴더의 s4/<판>/<a|b|c>/reveal_read.json)
+            f = src / "s4" / p["game"] / p["id"].rsplit("_", 1)[1] / "reveal_read.json"
+        elif p["stage"] == "S4":
             g = p["id"].split("_", 1)[1].rsplit("_", 1)[0]
             f = src / g / "result_read.json"
+        elif p["stage"] == "S6a":   # 준비 읽기 답(다른 실행 폴더의 s6a/<판>/answer.json · 답 폴더의 <판>/answer.json · <판>.json)
+            g = p["game"]
+            f = next((c for c in (src / "s6a" / g / "answer.json", src / g / "answer.json", src / f"{g}.json") if c.exists()), None)
         elif p["stage"] in ("S6", "S7"):
             tid = p["turn"]
             d = work / src_cfg.read_root / tid
@@ -3118,6 +3557,8 @@ def main():
     p.add_argument("--reuse")
     p.add_argument("--hand-settings")
     p.add_argument("--verify-dump")
+    p.add_argument("--s6-games", help="시험용: S6 칸 틀 검출 · 차례 꾸러미를 이 판들만(쉼표) — 차례 목록 · 차례 수 검사는 모든 판")
+    p.add_argument("--s6a-rules", action="store_true", help="견줌용: S6a 를 옛 화소 규칙(handtrack_auto.py conf)으로")
     for name in ("status", "unapply"):
         sp.add_parser(name).add_argument("--run", required=True)
     p = sp.add_parser("next")

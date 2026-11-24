@@ -183,8 +183,11 @@ def build(gid, meta, want_hands):
         raise SystemExit(f"{gid}: 기록기 선 {rec['dealer']} ≠ rounds_meta {meta['dealer']}")
     hero = meta["hero"]
     res = result_of(rr, bottom)
+    tp_seats = [seat_of(s, bottom) for s in rr.get("tenpai_revealed") or []]
     if res["type"] == "draw":
-        if [seat_of(s, bottom) for s in rr.get("tenpai_revealed") or []] != [hero]:
+        # 11-24: 텐파이가 둘 이상인 유국(앱 기록 판 w16 — paifu_auto s5_app 이 APP_HERO_RULE 로 하나를 손패 주인으로 고름)은 손패 주인이 그 안에 있으면 됨.
+        # 혼자 텐파이(3반장)는 옛 검사 그대로(손패 주인 하나와 같아야 함).
+        if (tp_seats != [hero]) if len(tp_seats) <= 1 else (hero not in tp_seats):
             raise SystemExit(f"{gid}: 유국 텐파이 공개 {rr.get('tenpai_revealed')} 가 손패 주인 {hero} 와 다름")
     elif res["winner"] != hero:
         raise SystemExit(f"{gid}: 화료자 {res['winner']} ≠ 손패 주인 {hero}")
@@ -213,7 +216,8 @@ def build(gid, meta, want_hands):
     note = ("앱 기록이 없어 헤드 폰 녹화 프레임으로 복구: 버림은 앱 버림 기록기를 녹화 프레임(2배 키움)에 돌리고 근거 있는 칸만 고침"
             f"({fx}), {hand_txt}, 결과 · 표시패는 Opus 가 프레임에서 읽고 끝 손패는 기계 판독과 같음을 확인.")
     if res["type"] == "draw":
-        note = "유국(텐파이 공개 — 손패 주인은 혼자 텐파이를 공개한 사람). " + note
+        note = ("유국(텐파이 공개 — 손패 주인은 혼자 텐파이를 공개한 사람). " if len(tp_seats) <= 1 else
+                f"유국(텐파이 공개 {len(tp_seats)}자리 — 손패 주인은 그중 규칙으로 고른 자리 {hero}, 나머지 텐파이 자리의 손패는 없음). ") + note
     if hands and n_fill:
         import paifu_examples as px
         note += px.PRE_NOTE

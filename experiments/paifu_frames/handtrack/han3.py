@@ -44,6 +44,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import htcommon as hc  # noqa: E402
 import hanchan_cfg as hcfg  # noqa: E402
+import ht_redirect as htr  # noqa: E402
 
 RES = hc.OUT.parent                       # experiments/paifu_frames/results
 TURNS_ORIG = hc.WORK / "testtruth_1116" / "turns.json"
@@ -79,11 +80,20 @@ def configure(cfg: "hcfg.Hanchan"):
     RECFIX, META, EXE, STICKS = cfg.recfix_file, cfg.meta_file, cfg.exe, cfg.sticks
     CALL_TURNS = list(cfg.call_turns)
     cfg.apply_recording(hc)
+    # 11-24 자동 패보 S6a · S6b: 설정에 handtrack.dir 이 있으면 그 판의 판별 설정 · 출력(config · results/handtrack/<판> · <판>_feat.npz)을 실행 폴더에서
+    # (ht_redirect — 공용 모듈은 안 고침). 없으면(3반장 · 손 설정) 아무것도 안 바꿈.
+    if cfg.ht_dir or htr._ST["installed"]:
+        htr.install(hc, cfg.ht_dir, cfg.ht_games)
 
 
 configure(hcfg.load(check=False))   # import 만 한 쪽(han3_paifu 등)도 값이 있게 — 겹침 검사는 main · han3_paifu.main 이 설정을 다시 읽을 때
 
-_orig_jload = hc.jload
+_base_jload = hc.jload
+
+
+def _orig_jload(p):
+    """htcommon.jload 원래 것(+ ht_redirect 경로 바꾸기 — handtrack.dir 이 없으면 그대로)."""
+    return _base_jload(htr.remap(p))
 _row_gid = None
 ANCHOR_RELAXED: list = []   # 가림을 안 따지고 시작 줄을 잡은 프레임 시각(ms) — patch 의 anchor 참고
 _cur_tid = [None]
@@ -179,6 +189,8 @@ def patch():
     # 가림을 따지지 않고 "상자 n개가 한 덩어리" 인 첫 프레임을 쓴다(검출기가 뒷면 n장을 다 봤다 = 손이 줄을 덮지는 않음). 쓴 때는 ANCHOR_RELAXED 에 남김.
     import slotgrid as sg
     import numpy as np
+    if htr.active():   # 11-24: 판별 출력을 실행 폴더로 돌린 반장은 칸 틀 검출 캐시(det_<판>.json)도 실행 폴더에(공용 _work/slotgrid_1117 에 안 씀)
+        sg.OUT = htr._ST["dir"] / "_work" / "slotgrid_1117"
     _an = sg.anchor
 
     def relaxed(frs, n, before=None):
@@ -261,6 +273,16 @@ def patch():
         tc.EXTRA.append(CUT_H3)
     _rd = tc.rec_dir
     tc.rec_dir = lambda gid: (PREP / "rec" / gid) if gid in H3 else _rd(gid)
+    # 11-24: 판별 출력을 실행 폴더로 돌린 판(ht_redirect)은 turncut build 의 대조 그림(_work/testtruth_1116/frames/<판>/ — 공용 · 보호 폴더)을 그리지 않는다.
+    # S6 읽기 재료(opusread prep --fromplan · callprep)는 원본 프레임에서 직접 자르므로 이 그림을 안 씀.
+    _rm = tc.render_missing
+
+    def render_missing(g):
+        if g["id"] in htr.games():
+            print(f"  {g['id']}: 판별 출력이 실행 폴더(handtrack.dir)라 대조 그림(testtruth_1116/frames)은 안 그림", flush=True)
+            return 0
+        return _rm(g)
+    tc.render_missing = render_missing
     import sam2track as s1
     # sam2track.turn_of 는 GAMES 를 앞에서부터 보며 차례 id 앞 세 글자가 같은 첫 판을 고른다 — 이 반장 판의 접두사가 이미 있는 판과 겹치면 엉뚱한 판으로 감
     clash = [(g, x) for g in H3 for x in s1.GAMES if x[:3] == CFG.prefix_of(g) and not (x == g and g in CFG.replaces_base)]
@@ -538,6 +560,9 @@ def cmd_fix(games: list, write: bool):
         p = _orig_jload(s["paifu"])
         hero = hero_seat(gid, p)
         g = next(x for x in merged_turns(insert=False)["games"] if x["id"] == gid)   # 끼운 차례는 다시 셈(아래에서 이 판 몫을 새로 씀)
+        if g.get("first_i") is None:   # 11-24: 차례 목록이 빈 판(판별 출력의 강 변화가 0 — 자동 설정이 틀렸을 때)은 맞출 것이 없음(옛 코드는 TypeError)
+            print(f"\n== {gid}: 차례 목록이 비었음(first_i 없음) — 고칠 것 없이 건너뜀")
+            continue
         ev, calls, last_dis = [], 0, {}
         for e in p["events"]:
             if e["type"] == "discard":
@@ -793,8 +818,8 @@ def cmd_status(games: list):
     cut = {g["id"]: g for g in tc.cut_games()}
     det = hc.WORK / "slotgrid_1117"
     for gid in games:
-        cf = hc.CONFIG / f"{gid}.json"
-        od = hc.OUT / gid
+        cf = htr.remap(hc.CONFIG / f"{gid}.json")
+        od = htr.remap(hc.OUT / gid)
         s = rec_src(gid)
         try:
             ts = turns_h3(gid)

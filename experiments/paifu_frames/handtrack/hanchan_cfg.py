@@ -29,6 +29,11 @@ han3.py · han3_paifu.py · han3_install.py · han3_truthserver.py · han3_check
                       "sticks": (recorder.sticks) 추적 프레임 재생 --sticks, "sticks_by_track": {추적 폴더 HHMMSS: --sticks}, "id_prefix": ("a"),
                       "clock_ref": {"offset_ms", "source"}(선택 — W5 시계 차와 견줄 다른 측정), "check_windows": {판: headrec_rounds.json 키}(선택 — W5 견줌)}
                      판 목록 · 결과 · 버림 출처는 app_record.py 가 만든다(games 는 촬영 기록 판 순서와 같아야 함 — 다르면 S0 가 질문으로 올림).
+  frame              (없음) 녹화 틀 {"sides": {자리: {"band", "river", "meld", "reveal_region", "wide", "search": [x0, y0, x1, y1]}}, "how", "recording"}
+                     — 자동 패보 S6a(handtrack_auto.py)가 손 설정이 없는 판의 판별 설정 영역으로 씀(11-24). 틀이 없는 자리가 손패 주인이면 S6a 가 멈춤.
+  handtrack          (없음 = 판별 설정 · 출력은 공용 자리 handtrack/config · results/handtrack/ 그대로) {"dir": 폴더, "games": [판]} —
+                     그 판의 판별 설정 · 출력을 dir 아래(config/ · <판>/ · _work/)에서 읽고 씀(handtrack/ht_redirect.py, 실행 중에만 경로를 바꿈).
+                     paifu_auto S6a 가 실행 설정에 적는다(손 설정이 없는 판만).
 
 겹침 검사(load(check=True), 스크립트 시작 때): 이 설정의 판 id · 차례 id 접두사 · 차례 id 가 기존 판(testtruth_1116 의 turns.json · turns_cut*.json ·
 정답 파일들의 차례 id)이나 다른 반장 설정(hanchan/ 폴더와 이 설정 파일의 폴더 — 판 목록 · results_dir 이 똑같은 사본은 뺌)과 겹치면 멈춘다
@@ -130,6 +135,10 @@ class Hanchan:
         self.rerun_of = g("rerun_of")
         ar = g("app_record")
         self.app_record = dict(ar) if ar else None
+        self.frame = dict(g("frame") or {}) or None
+        ht = g("handtrack") or {}
+        self.ht_dir = _p(ht["dir"]) if ht.get("dir") else None
+        self.ht_games = list(ht.get("games") or [])
         self._validate_self()
 
     # ---------------------------------------------------------------- 차례 id ↔ 판
@@ -192,6 +201,15 @@ class Hanchan:
             for gid in self.app_record.get("check_windows") or {}:
                 if gid not in self.games:
                     err.append(f"app_record.check_windows {gid}: games 에 없는 판")
+        for gid in self.ht_games:
+            if gid not in self.games:
+                err.append(f"handtrack.games {gid}: games 에 없는 판")
+        if self.ht_games and self.ht_dir is None:
+            err.append("handtrack.games 가 있는데 handtrack.dir 이 없다")
+        for side, v in ((self.frame or {}).get("sides") or {}).items():
+            miss = [k for k in ("band", "river", "meld", "reveal_region", "wide", "search") if not (isinstance(v.get(k), list) and len(v[k]) == 4)]
+            if side not in ("bottom", "right", "top", "left") or miss:
+                err.append(f"frame.sides.{side}: 자리 이름이 아니거나 영역이 모자람 {miss}")
         if err:
             raise HanchanError(f"{name}: " + " / ".join(err))
 
