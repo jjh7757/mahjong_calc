@@ -70,6 +70,37 @@ class FakeAsker {
 }
 
 void main() {
+  // 11-24 질문 창을 접음(kReviewAskEnabled = false, 서버 라우트 POST /v2/review/ask 도 내림). 접힌 동안은 단추 · 창이
+  // 없는지만 보고, 아래 질문 창 시험(_askTests)은 플래그를 켰을 때만 돈다.
+  testWidgets('접힘: asker 가 있어도 복기 화면에 "질문" 단추 · 질문 창이 없고 묻지 않음', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final p = _load('r19_142013');
+    final r = reviewPaifu(p, withEngine: true);
+    final fake = FakeAsker();
+    tester.view.physicalSize = const Size(400, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(MaterialApp(home: PaifuScreen(paifu: p, engineReview: (_) async => r, asker: fake.call)));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pumpAndSettle();
+    const start = ValueKey('paifu-summary-start');
+    await tester.ensureVisible(find.byKey(start));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(start));
+    await tester.pumpAndSettle();
+    expect(find.byKey(_go), findsOneWidget);
+    expect(find.byKey(_btn), findsNothing);
+    expect(find.byKey(_panel), findsNothing);
+    expect(find.byKey(const ValueKey('paifu-ask-sheet')), findsNothing);
+    expect(fake.calls, isEmpty);
+    expect(tester.takeException(), isNull);
+  }, skip: kReviewAskEnabled);
+
+  group('질문 창(kReviewAskEnabled 를 켰을 때만)', _askTests, skip: !kReviewAskEnabled);
+}
+
+void _askTests() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
   late Paifu r19;

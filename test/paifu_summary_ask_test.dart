@@ -98,6 +98,19 @@ void main() {
 
   int step(WidgetTester tester) => tester.widget<ReviewBubble>(find.byType(ReviewBubble)).step;
 
+  // 11-24 질문 창을 접음(kReviewAskEnabled = false, 서버 라우트도 내림): asker 가 있어도 요약 화면에 질문 줄이 없다.
+  // 아래 "요약 화면의 판 전체 질문" 묶음은 플래그를 켰을 때만 돈다.
+  testWidgets('접힘: asker 가 있어도 요약 화면에 판 전체 질문 줄 없음, 복기 시작 · 처음부터 보기는 그대로', (tester) async {
+    await pump(tester, r19);
+    expect(find.byKey(_summary), findsOneWidget);
+    expect(find.byKey(_askRow), findsNothing);
+    expect(find.byKey(const ValueKey('paifu-summary-ask-0')), findsNothing);
+    expect(find.byKey(const ValueKey('paifu-summary-start')), findsOneWidget);
+    expect(find.byKey(const ValueKey('paifu-summary-play')), findsOneWidget);
+    expect(fake.questions, isEmpty);
+    expect(tester.takeException(), isNull);
+  }, skip: kReviewAskEnabled);
+
   group('요약 화면의 판 전체 질문', () {
     testWidgets('asker 가 있으면 판 전체 질문 칩(r19 · L16), 글은 suggestedQuestions(p, r, null) 그대로, 배울 장면 아래 · 복기 시작 위',
         (tester) async {
@@ -210,14 +223,14 @@ void main() {
         expect(tester.takeException(), isNull);
       });
     }
-  });
+  }, skip: !kReviewAskEnabled);
 
   group('단추 줄 칩 높이', () {
-    const chips = [
-      ValueKey('paifu-best-view'),
-      ValueKey('paifu-fold-candidates-btn'),
-      ValueKey('paifu-fold-engine-btn'),
-      ValueKey('paifu-ask-btn'),
+    final chips = [
+      const ValueKey('paifu-best-view'),
+      const ValueKey('paifu-fold-candidates-btn'),
+      const ValueKey('paifu-fold-engine-btn'),
+      if (kReviewAskEnabled) const ValueKey('paifu-ask-btn'), // 11-24 질문 창을 접어 단추가 없다
     ];
 
     /// 복기 화면 단추 줄의 칩 높이들 · 좁은 여백인가 · "다음" 폭.

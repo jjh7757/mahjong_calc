@@ -27,6 +27,11 @@ import 'review_view.dart';
 import 'start_hand_sheet.dart';
 import '../tile_view.dart';
 
+/// 복기 질문 창(단추 줄 "질문" · 요약 화면의 판 전체 질문 칩 → POST /v2/review/ask)을 보일지.
+/// 11-24 사용자 결정으로 접음 — 서버 라우트도 내렸다(mahjong-recognizer chore/remove-review-ask). 코드(review_chat ·
+/// review_ask_client · review_ask_panel · agent_facts)는 남겨 두어, 다시 켜려면 서버 라우트를 복구하고 이 값을 true 로.
+const bool kReviewAskEnabled = false;
+
 const _winds = ['동', '남', '서', '북'];
 
 /// 복기 · 재생 화면 단축키(→ ← ↓ ↑ space).
@@ -219,7 +224,7 @@ class _PaifuScreenState extends State<PaifuScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.asker == null) _askClient = ReviewAskClient();
+    if (kReviewAskEnabled && widget.asker == null) _askClient = ReviewAskClient();
     _ask.inputFocus.addListener(_askFocusChanged);
     _loadRules();
     _loadStartHand();
@@ -643,7 +648,7 @@ class _PaifuScreenState extends State<PaifuScreen> {
         onPlay: _startPlay,
         // 판 전체 질문(복기 화면의 내 버림 아닌 걸음과 같은 글). 키 없는 빌드면 줄을 그리지 않는다.
         questions: suggestedQuestions(_p, _review.review, null),
-        onAsk: _askConfigured ? _askFromSummary : null,
+        onAsk: kReviewAskEnabled && _askConfigured ? _askFromSummary : null,
         onLesson: (step) {
           setState(() => _view = PaifuView.review);
           _go(step);
@@ -974,7 +979,7 @@ class _PaifuScreenState extends State<PaifuScreen> {
             if (!_showEngine) _setAskOpen(false);
             setState(() => _showEngine = !_showEngine);
           }),
-          toggle('질문', const ValueKey('paifu-ask-btn'), _askOpen, () => _setAskOpen(!_askOpen)),
+          if (kReviewAskEnabled) toggle('질문', const ValueKey('paifu-ask-btn'), _askOpen, () => _setAskOpen(!_askOpen)),
           if (_playing)
             IconButton(tooltip: '멈춤', icon: const Icon(Icons.pause), onPressed: _stop),
           Expanded(
