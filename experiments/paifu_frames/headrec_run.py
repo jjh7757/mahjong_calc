@@ -6,6 +6,8 @@
   python -X utf8 experiments/paifu_frames/headrec_run.py play <A|B|C> [판 id …] [--defs 판 정의.json] [--bottom-seat 0]
                                                                             → 3반장 판: 선 없이 한 번 → 선 후보 → 그 선으로 다시(dart_overlay.json · _timeline · paifu_rec.json)
                                                                               + 엮임 검사 · 같은 종류 5장 · 울기 · 의심 칸 · river_check.jpg → han3_summary.json(판 id 를 주면 그 판만 덧씀)
+11-24(자동 패보 1단계): build · play 에 --hanchan <반장 설정 json> 을 주면 출력 폴더(OUT = results_dir) · 기록기 exe(recorder.exe) ·
+  --sticks(recorder.sticks) · 녹화 폴더(river_check.jpg 용, recording.root / recs 의 마지막)를 설정에서 읽는다. 안 주면 아래 상수 그대로(옛 동작).
 방식: A = overlay --min-side 0(1496 그대로, 종류 t) · B = overlay-small(키워 읽은 t2) · C = overlay(2배로 키운 overlay_dump_c2x.json).
 채점은 heldout_1114.py score() 와 같은 규칙: 기록기 slots 중 taken_at null 의 tile 을 정답 강과 편집 거리 정렬(score.align) → 맞음 · 틀림(적5↔5 따로) · 빠짐 · 헛것,
 눕힌 패는 남은 강 안 위치를 정답 truth_sideways 와 견줌. 엮임 검사 = interleave_check.py 와 같은 규칙(선부터 차례로, 울려 나간 패는 called_by 자리로).
@@ -340,8 +342,30 @@ def play(method, ids, defs_path, bottom_seat):
     wj(sp, summ)
 
 
+def use_hanchan(path):
+    """반장 설정으로 OUT · EXE · STICKS · REC 를 바꾼다(11-24). path 가 없으면 아무것도 안 함."""
+    global OUT, EXE, STICKS, REC
+    if not path:
+        return None
+    sys.path.insert(0, str(HERE / "handtrack"))
+    import hanchan_cfg as hcfg
+    cfg = hcfg.load(path)
+    OUT = cfg.results_dir
+    EXE = cfg.exe
+    if cfg.sticks:
+        STICKS = str(cfg.sticks)
+    r = cfg.recording or {}
+    if r.get("root") and r.get("recs"):
+        REC = hcfg._p(r["root"]) / r["recs"][-1]
+    return cfg
+
+
 def main():
     a = sys.argv[1:]
+    if "--hanchan" in a:
+        i = a.index("--hanchan")
+        use_hanchan(a[i + 1])
+        del a[i:i + 2]
     cmd = a[0]
     if cmd == "build":
         build()

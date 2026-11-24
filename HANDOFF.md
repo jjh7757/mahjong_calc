@@ -4,6 +4,50 @@
 
 ## ★ 다음 세션은 여기부터 (2026-11-22 밤 적음 — 이 컴퓨터 시계 기준. 앞 세션은 같은 날을 11-23 으로 적었다)
 
+**11-24 덧붙임 — 대국 뒤 자동 패보 에이전트(`paifu_auto.py`): 0 · 1단계 + 질문 고르기 v2 + 앱 기록 우선 W1 ~ W5(오후) 끝, 커밋 전. 새 세션은 아래 "다음 고를 것" 중 무엇을 할지부터 묻는다.**
+- **무엇:** 11-23 에 세션이 손으로 한 "헤드 녹화 → 한 반장 패보" 복원(아래 "2026-11-23 아침" 절)을 사람 없이 끝까지 도는 흐름으로 묶는다. 도는 동안에는 묻지 않고, 확신 없는 곳은 최선 답 + 질문 목록에 올린다. 끝나면 영향(바뀌는 손패 순 · 점수)이 있는 것만 한 번 묻는다(사용자 지시). **설계서 `docs/paifu_auto_agent_design_1124.md` 가 전부다** — 3절 흐름 표, 4절 띄우는 방식, 5절 질문 · 영향, 7절 구현 순서, 8-1 ~ 8-4 단계 명세, 맨 끝 "진행" 절(단계별 결과 · 검토).
+- **사용자 결정:**
+  - 하위 에이전트는 세션이 지휘한다(`claude -p` 아님). Claude API 는 금지다.
+  - 표본은 판마다 2.
+  - 앱 예시(`assets/paifu_*`)에는 사용자가 말할 때만 올린다.
+  - 재현 시험 토큰(반장당 약 1,500만 이상)은 3단계 앞에서 다시 묻는다.
+- **된 것:**
+  - 0단계 — 3반장 전용 값을 `experiments/paifu_frames/hanchan/h3_1123.json` + `handtrack/hanchan_cfg.py` 로 뺐다. 스크립트가 `--hanchan` 을 받는다.
+  - 1단계 — `experiments/paifu_frames/paifu_auto.py`(`init` · `next` · `replay` · `apply` · `unapply` · `status` · `next --redo <단계>`). 재생 읽기(11-23 답을 꾸러미에 넣음, LLM 0)로 S0 ~ S9 가 돌고 패보 14/14 가 `results/han3_1123/_prep/paifu` 와 바이트 같다.
+  - 질문 고르기 v2(8-3) — 볼 양 40(질문 19 + 표본 21, 사용자 답 반영 뒤 31). 11-23 사람이 고른 여섯 차례는 모두 잡혔다. problem_log 86 · 남은 문제 26.
+  - 실행 폴더는 `results/auto_h3_1123_replay/` · `…_before_user/` 이다.
+  - **앱 기록 우선 W1 ~ W5(11-24 오후, 설계서 8-5 · 8-6, metrics 표 12-121, problem_log 86 덧붙임):** 사용자 "처음에 녹화영상만 에이전트 넘기는건 아니지?" → "우리가 원래 패보 만들었던 방식대로 워크플로우 짜봐" → "네, 진행".
+    - 본은 2반장 예시를 만든 순서다: 버림 = 앱 기록기, 결과 = 화료 확정값 `label.json`, 손패 = 헤드 녹화에서 Opus 차례 읽기.
+    - 새 파일 `app_record.py` · 설정 `hanchan/h2_1114.json`(판 id `w11` ~ `w19`). `paifu_auto.py` 는 설정에 `app_record` 칸이 있을 때만 앱 경로를 탄다.
+    - 버림 출처는 셋: `paifu.json` → 추적 프레임 zip 을 앱 기록기로 재생(2반장) → 헤드 녹화 재생(3반장).
+    - **11-14 에는 앱 `paifu.json` 이 없다**(저장 기능이 뒤에 생김). 그 길은 꼴 시험만 했다.
+    - 결과: 3반장 되돌이 14/14 바이트 같음(`results/auto_h3_1123_replay_w5b/`). 2반장 판 결과 ↔ 예시 121/122 칸. 화료 판 읽기 꾸러미 0. 헤드 녹화 기록기 ↔ 앱 버림 475칸 맞음 · 다른 칸 1 · 울기 2판.
+  - **W4(앱 판의 S5) · 판 시작 창 앞당기기 · 유국 공개 손패 읽기(11-24 14:10 ~ 15:10, 사용자 "따로 돌려", metrics 표 12-122, 설계서 "진행" 절 마지막 항목):**
+    - `paifu_auto.py` 만 고쳤다(`advance_windows` · `s5_app` · `draw_compare` · `draw_pick`).
+    - 앱 추적이 판 중간에 시작된 판은 헤드 녹화로 앞부분을 채운다. w16 의 1z 버림 + 퐁(예시에 손으로 넣었던 것)이 자동으로 들어갔다.
+    - 결과: 자리별 버림 · 울기 · 리치 ↔ 예시 9/9, 사건 순서 8/9. **다른 w17 은 앱 예시 `r17` 쪽이 차례 규칙에 2곳 어긋난다**(예시는 안 고침 — 사용자에게 고칠지 물을 것).
+    - 유국 세 판 공개 손패는 Opus 높음 하위 에이전트 둘씩이 읽었다. w13 은 한쪽이 순서를 뒤집어 읽어, 지시문에 자리별 사진 방향을 넣고 셋째 읽기로 정했다. 감사에서 폴더 밖 접근 0/7.
+    - **2반장 본 실행 `results/auto_h2_1114/` 은 S5 까지 끝나고 S6 에서 멈춰 있다.** 남은 질문은 둘(`w12_app5_call_right_from_bottom` · `w16_app5_pre_top_1`). `results/auto_h2_1114_w4/` 는 에이전트가 시험한 사본이다(S5 뒤 사건이 본 실행과 같음).
+- **다음 고를 것(사용자에게):**
+  - ① **S6 앞 단계 자동화:** 판마다 손 추적 판별 설정(`handtrack/config/<판>.json` — 손패 주인 자리 영역 · 준비 시각)과 `handtrack` `run.py` 출력(`segments.json` · `river_states.json` · `game.json` · `_work/<판>_feat.npz`)을 자동으로 만든다. 3반장 때는 세션이 손으로 만들었다. 이게 돼야 2반장이 차례 꾸러미까지 간다. 같이 볼 것: 텐파이가 둘인 유국(w16)에서 조립(S8)이 멈출 것으로 보이는 곳, 손패 주인을 둘 다 만들지.
+  - ② 3단계 재현 시험(2반장 S6 ~ S9, 토큰 약 1,500만) — ① 뒤. 시작 전에 토큰을 다시 묻는다. 쉬움 거르기(W7)를 나란히 잴지도 그때 정한다.
+  - ③ 남은 구멍 — 표본 수(볼 양 목표 10), 쯔모기리 · 울기 차례 후보 규칙(97 중 40 영향 못 잼), 부정 꼴 헛 경보. 3반장 S4(앱 기록 없는 판)에는 방향 문구 · 셋째 읽기가 안 들어갔다.
+  - ④ 2단계 — 확인 페이지(`han3_truthserver` · `han3_checkserver` 합치기) · 영상 자르기 · 스킬 `/paifu-auto`.
+  - ⑤ 앱 고침(작음): 촬영 기록 `paifu.json` 사본에서 장수가 녹화 정보(`frames`)를 덮는 것. 다음 매장 방문 전에.
+  - ⑥ 앱 예시 `r17` 의 사건 순서 고칠지(위).
+  - ⑦ 커밋(아래 내 덩어리만).
+  - 내 권장: ⑦ → ① → ②.
+- **꼭 지킬 것:**
+  - **구현은 Opus 높음 하위 에이전트에 맡기고 세션이 검토한다**(바이트 대조를 세션이 다시 돌림). 브리프에 보호 폴더를 적는다: `results/han3_1123/` · `results/handtrack/_work/rawread_han3_1123/` · `assets/paifu_h3/` · `_work/testtruth_1116/` · `_work/slotgrid_1117/`.
+  - **0단계에서 시험 서버가 안 꺼져(pyenv shim) 진짜 사용자 답 파일 4개가 덮였다가 복원됐다** — 서버를 띄우는 일은 포트 · PID 를 확인하고 답 파일은 사본으로.
+  - 3반장 숫자는 모두 본 판이다. 판정은 4단계(다음 매장 녹화) 무작위 표본으로.
+- **커밋할 내 덩어리:**
+  - 새 파일: `experiments/paifu_frames/paifu_auto.py` · `app_record.py` · `handtrack/hanchan_cfg.py` · `hanchan/h3_1123.json` · `hanchan/h2_1114.json` · `docs/paifu_auto_agent_design_1124.md`
+  - `docs/metrics.md` 의 표 12-121 · 12-122 덩어리
+  - 고친 파일: `han3.py` · `han3_paifu.py` · `han3_install.py` · `han3_truthserver.py` · `han3_checkserver.py` · `headrec_dump.py` · `headrec_run.py`
+  - `docs/problem_log.md` 의 86 · 남은 문제 26 덩어리, 이 덧붙임
+  - 작업 트리에 다른 세션 변경이 섞여 있으니 기억 `commit-own-hunks-shared-tree` 대로 임시 인덱스로 올린다. `experiments/**/results/` 는 커밋하지 않는다.
+
 **★★★★★★★★★★★ 11-24 덧붙임 — 복기 질문 시간 원인 쪼갬(사용자 "복기 에이전트 강화 방안 브리핑" → "속도 원인부터", Gemini 호출 0 · 코드 안 바꿈).** 이미 잰 답 458개를 다시 모아 보니 시간 ≈ 1.2 + **2.7초 × LLM 왕복 수**(토큰 몫 천 토큰당 0.24초, 네트워크 0.1초). 운영 중앙 11.0초(표 15-14)는 확인 묶음에 3 ~ 4회짜리가 많고 꼬리 한 번(b3a 20.8초) · 재시도 둘이 겹친 값 — 운영 환경이 느리다는 근거 없음(metrics 표 15-15, 스크립트 `experiments/paifu_review/agent_defense/latency_breakdown.py` — 둘 다 커밋 전). **다음 고를 것:** 줄일 후보 ① 첫 도구 미리 부르기(2회 → 1회) ② 한 걸음에 도구 여럿 ③ 꼬리 대비 중복 요청 — 설계 · 품질 재측정(Gemini 호출, 사용자 허락)은 아직. 위의 "운영 시간을 다른 시각에 한 번 더 잴지" 는 이 결과로 판단할 것. **같은 날 이어서 ① 설계서 씀**(사용자 "미리 부르기 설계", 커밋 전): `docs/review_agent_prefetch_design_1124.md` — 앱 칩 꼴 8가지만, 서버가 첫 도구를 미리 부름, "제일 아까운 수" 는 앱 `lessons()` 규칙으로 코드가 고름, 앱 안 바꿈, `REVIEW_PREFETCH` 켬/끔을 같은 시각에 40문항씩 견줌. 운영 확인 8개도 모두 칩 꼴. **다음:** 설계서 10절 정할 것(범위 · 사람 읽기를 누가 · Gemini 약 150회) 묻고 → 구현(Opus 5.5 높음 하위 에이전트). **→ 같은 날 방향이 바뀜(미리 부르기 구현은 멈춤):** 사용자 "굳이 챗봇 형식일 필요가 있나" → 칩 답은 복기 화면 코드 문장과 대부분 겹침, LLM 이 정말 필요한 곳은 ① 사용자 생각을 듣고 사실과 맞춰 보기 ② 여러 판 버릇에 이름 붙이기로 정리. 상대 손패 추정은 다시 봐도 표 17-2 가 이미 "완벽한 위치 기록" 위쪽 한계(수트 수준 +4.4%p)라 새 기록으로 천장이 안 오름. 사용자가 차별점으로 **"대국 뒤 복기 대화"** 를 고름 → 초안 `docs/postgame_review_chat_design_1124.md`(매장 판 손패 없이 — 네 자리 버림의 위험 · 현물은 공개 정보로 계산됨, 장면은 코드가 고르고 LLM 은 주장 뽑기 + 맞춰 본 답, 맞장구 금지 검사, 평가 0 · 1 · 2단계(2단계 = 매장 실사용)). 커밋 전. **→ 0단계 끝(사용자 "0단계 시작", 커밋 전):** 탁자 사실표 `lib/paifu/table_facts.dart` · `tool/table_facts.dart` · `test/table_facts_test.dart` + `mh_context.dart` 의 `selfSeat` 선택 인자, 독립 Python `experiments/paifu_review/agent_defense/table_facts_check.py` 와 22판 11,346칸 불일치 0(가깡 정의 고친 뒤), analyze 0 · test 1,722(metrics 표 15-16). 장면 85개 · 장면 0 자리 28/88 · 방총 7. **다음:** 1단계(서버 그래프 · 대본 60개 · Gemini) 전에 설계서 10절 정할 것(특히 ② 유국 판 저장 — 장면 부족과 이어짐) 묻기. 작업 트리에 다른 세션의 진행 중 파일(`result_entry_screen.dart` · `member_screens.dart` 등)이 있으니 커밋은 내 파일만. **→ 유국 저장 구현(사용자 "유국도 저장", 커밋 전 · 기기 확인 전):** 보통 유국만, `mount_screen.dart` `_showDraw` · `_drawPaifuSaver` + 새 `lib/paifu/draw_paifu.dart` + `paifu.dart` `PaifuResult.tenpai` + `test/paifu_draw_save_test.dart`, analyze 0 · test 1,736(설계서 10절 ②). 이 세션의 커밋할 덩어리: `table_facts.dart` · `tool/table_facts.dart` · `test/table_facts_test.dart` · `mh_context.dart`(selfSeat) · `draw_paifu.dart` · `paifu.dart`(tenpai) · `mount_screen.dart`(유국 저장) · `test/paifu_draw_save_test.dart` · `experiments/paifu_review/agent_defense/{latency_breakdown.py,table_facts_check.py}` · 설계서 둘(`review_agent_prefetch_design_1124.md` · `postgame_review_chat_design_1124.md`) · metrics 15-15 · 15-16 · problem_log 81 · 이 덧붙임. **다음:** 태블릿 확인(묻고 `adb install -r`) 또는 1단계(서버 그래프 · 대본 · Gemini). **→ 1단계 t1 측정 끝 — ❌ 불채택(사용자 "1단계 진행", 커밋 전):** 서버 새 worktree `C:\Users\jjh7757\dev\mahjong-recognizer-table`(브랜치 `feat/review-table`, 9fe2d5e 위 — `mahjong-recognizer-review` 는 다른 세션의 a9, `mahjong-recognizer-cite` 는 다른 세션의 문장별 근거) 의 `app/review_table.py` · `app/main.py`(라우트) · `scripts/review_table.py` · `scripts/review_dev_server.py`(fake 분기) · `tests/test_review_table.py` · `tests/fixtures/table_facts/`(pytest 753). 앱 쪽 `experiments/paifu_review/{table_run_1124.py,table_scenes_1124.json,table_scene_texts_1124.json,table_utterances_1124.json}` · `agent_defense/{pick_table_scenes.py,table_scene_text.py,table_score.py}` · `.claude/launch.json` 의 `review-table-real` 한 항목. 결과 `results/table_1124/`(커밋 안 함). 맞장구 0 · 판정 말 0 · 검증 60/60 이지만 주장 뽑기 72% · 사람 읽기 틀림 4 · 시간 중앙 8.19초로 미달(metrics 표 15-19 · problem_log 83). **다음:** t2 고칠지 사용자에게 묻기(고칠 것은 problem_log 83 — 다시 잴 땐 새 장면 · 새 대본, 새 지표는 재기 전에). 개발 서버는 껐다. **→ 🗑 접음(사용자 "챗봇은 접었어"):** 복기 챗봇을 접었고(다른 세션이 `/v2/review/ask` 를 운영에서 내리는 중) 대국 뒤 복기 대화도 챗봇이라 같이 접음 — t2 안 함, 미리 부르기도 안 함. 서버 `feat/review-table` · 측정 도구 · 결과는 지우지 않고 둠(커밋 안 함). **남길 것(LLM 없음, 커밋 전 — 커밋은 사용자가 말할 때):** 탁자 사실표(`lib/paifu/table_facts.dart` · `tool/table_facts.dart` · `test/table_facts_test.dart` · `mh_context.dart` selfSeat · `table_facts_check.py`)와 보통 유국 패보 저장(`draw_paifu.dart` · `paifu.dart` tenpai · `mount_screen.dart` · `test/paifu_draw_save_test.dart`, 기기 확인 전) + 문서(metrics 15-15 · 15-16 · 15-19 · problem_log 81 · 83 · 설계서 둘). 같은 사실을 대화 없이 재생 화면 한 줄로 보이는 것은 사용자가 꺼낼 때만.
 
 **★★★★★★★★★★ 11-23 자정 직전 덧붙임 — a8 커밋 · 운영 배포 함(사용자 "커밋 + 배포"): 운영 `9fe2d5e`, 앱 `17cdebc`(push 안 함). 운영 확인은 내용 기준 통과 · 시간 기준 하나 미달.** 서버 `feat/review-explain` 9fe2d5e 를 원격 master 로 빨리 감기 push(23:25) → test · deploy 성공(run 45194128607) → 운영 `git_sha` 9fe2d5e. 운영 확인 8개(23:29 ~ 23:33, 기준은 재기 전에 설계서 9절): 모두 답 · 검증 8/8 · a8 · 틀림 0 · 묻지 않은 부정 문구 0, **왕복 중앙 11.0초(기준 ≤ 10 미달) · 최대 20.9초**, 사진 판독 네 라우트 답 · 429 0(metrics 표 15-14 · "지금 기준값" · problem_log 74 덧붙임). 통과시키려고 다시 재지 않았다. **남은 것 · 물을 것:** ① 운영 시간을 다른 시각에 한 번 더 재 볼지(따로 잰 값으로 적는다) — 되돌릴지는 사용자 결정(되돌림 = 서버 master 에 되돌림 커밋, 그러면 앱 17cdebc 의 판 3 사실표가 거절됨) ② 앱 저장소 push(사용자가 말할 때) ③ 운영 주소로 앱 새 빌드 · 태블릿 설치(묻고 `adb install -r` — 태블릿의 `.reviewdev` · `.ondevice` 는 판 2 를 보내는 옛 빌드라 지금도 동작하지만 접는 자리 · 점수는 안 나온다) · 점수 칩 태블릿 확인 ④ 서버 로컬 `C:\Users\jjh7757\dev\mahjong-recognizer` 의 master 는 여전히 옛것(쓰기 전에 `git pull --ff-only`). 이 덧붙임의 문서 고침(metrics 표 15-14 · 기준값 · problem_log · 설계서 9절 결과)은 뒤 문서 커밋에 들어감. 아래 ★ 9개 덧붙임의 "커밋 전 · 운영 배포 전" 은 이 덧붙임 전 상태.

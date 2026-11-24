@@ -11,6 +11,9 @@
      reveal_c2x → <판>/reveal_overlay_c2x.json : 같은 두 장을 2배로 키워(방식 C)
   판 id 를 안 주면 정의 파일의 판 전부. 이미 있는 출력은 건너뛴다(--force 면 다시).
   출력 폴더: results/han3_1123/<판 id>/ (--out 으로 바꿈). 녹화 폴더 --rec, 날짜 --date(기본 2026-11-14), 눈금 --step(기본 3.0).
+  11-24(자동 패보 1단계): --hanchan <반장 설정 json> 을 주면 --out · --rec · --date 의 기본값과 리치봉 구역을 설정에서 읽는다
+    (out = results_dir, rec = recording.root / recording.recs 의 마지막, date = recording.date, 리치봉 = recorder.sticks). 명시한 옵션이 이긴다.
+    --hanchan 을 안 주면 위 기본값 그대로(옛 동작).
 
 판 정의 파일 꼴(README 와 같음):
   {"<판 id>": {"t_from": "HH:MM:SS[.f]", "t_to": "HH:MM:SS[.f]", "t_reveal": "HH:MM:SS[.f]"(선택, reveal 에 필요),
@@ -245,18 +248,43 @@ def dump(args):
         print(rid, "→", od / name, len(frames), "프레임", out["wall_s"], "초", flush=True)
 
 
+def apply_hanchan(a):
+    """--hanchan 이 있으면 설정에서 기본값을 채우고, 없으면 옛 기본값(REC · OUT · 2026-11-14)."""
+    if a.hanchan:
+        sys.path.insert(0, str(HERE / "handtrack"))
+        import hanchan_cfg as hcfg
+        cfg = hcfg.load(a.hanchan)
+        r = cfg.recording or {}
+        if a.out is None:
+            a.out = str(cfg.results_dir)
+        if a.rec is None and r.get("root") and r.get("recs"):
+            a.rec = str(hcfg._p(r["root"]) / r["recs"][-1])
+        if a.date is None and r.get("date"):
+            a.date = r["date"]
+        if cfg.sticks:
+            GRID["sticks"] = [int(x) for x in str(cfg.sticks).split(",")]
+    if a.rec is None:
+        a.rec = str(REC)
+    if a.out is None:
+        a.out = str(OUT)
+    if a.date is None:
+        a.date = "2026-11-14"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["defs", "dump"])
     ap.add_argument("defs", nargs="?", default=str(HERE / "headrec_rounds.json"))
     ap.add_argument("ids", nargs="*")
     ap.add_argument("--mode", choices=["ab", "c2x", "reveal", "reveal_c2x"], default="ab")
-    ap.add_argument("--rec", default=str(REC))
-    ap.add_argument("--out", default=str(OUT))
-    ap.add_argument("--date", default="2026-11-14")
+    ap.add_argument("--rec", default=None)
+    ap.add_argument("--out", default=None)
+    ap.add_argument("--date", default=None)
     ap.add_argument("--step", type=float, default=3.0)
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--hanchan", default=None, help="반장 설정 json(11-24) — --out · --rec · --date 기본값과 리치봉 구역을 설정에서")
     a = ap.parse_args()
+    apply_hanchan(a)
     if a.cmd == "defs":
         defs()
     else:

@@ -1,4 +1,4 @@
-"""11-14 3반장 — 확실하지 않은 네 가지(뒷도라 둘 · 해저 둘)를 사용자에게 영상으로 묻는 페이지(2026-11-23). 127.0.0.1 전용.
+"""헤드 녹화 반장 — 확실하지 않은 것(처음은 11-14 3반장 네 가지: 뒷도라 둘 · 해저 둘)을 사용자에게 영상으로 묻는 페이지(2026-11-23). 127.0.0.1 전용.
 
   python -X utf8 han3_checkserver.py prep [--force]                 # 영상 넷 + 정지 그림 둘 만들기(서버를 켤 때 없으면 저절로)
   python -X utf8 han3_checkserver.py [포트 8314] [--ans <답 파일>]   # 페이지 띄우기(--ans: 시험용 — 진짜 답 파일 대신 다른 파일에 씀)
@@ -8,6 +8,8 @@
   · clips.json(프레임 시각 목록 · 크기). 영상 한 화면 = [탁자 전체(줄임, 확대 칸 테두리)] + [관심 칸 2배 확대] 나란히.
 - 답 = review2/answers_user.json(+ 저장마다 answers_log.jsonl 한 줄). --ans 로 다른 파일을 주면 기록은 <답 이름>_log.jsonl.
 - 복구 때 읽어 둔 값(뒷도라 · 해저 판단)은 페이지 · 영상 어디에도 넣지 않는다(사용자가 따로 판단하게).
+- 11-24: 확인 항목(item_check.items) · 자료 폴더(item_check.dir) · 페이지 제목 글은 반장 설정(hanchan_cfg.py)에서. 모든 명령에
+  --hanchan <json>(안 주면 ../hanchan/h3_1123.json = 3반장)을 붙일 수 있다. 위 폴더 이름은 3반장 설정 값.
 """
 from __future__ import annotations
 
@@ -23,57 +25,37 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import hanchan_cfg as hcfg  # noqa: E402
 import htcommon as hc  # noqa: E402
 
-H3 = hc.EXP / "paifu_frames" / "results" / "han3_1123"
-OUT = H3 / "review2"
-ANS_DEFAULT = OUT / "answers_user.json"
-META = OUT / "clips.json"
 FONT = "C:/Windows/Fonts/malgun.ttf"
 SRC_FPS_OUT = 5          # 출력 fps — 원본 초당 10장을 2배 느리게
 BAR = 44                 # 위 글씨 띠 높이
 GAP = 6
 COLORS = [(0, 230, 255), (255, 80, 220)]
 
-# 영역은 원본 1496² 좌표 [x0, y0, x1, y1]. 프레임을 직접 열어 보고 정함(집는 패산 자리 · 놓는 펠트 자리).
-ITEMS = [
-    {"id": "p01_ura", "no": 1, "kind": "ura", "game": "p01_143158",
-     "title": "뒷도라 표시패 — 14시 31분 판",
-     "desc": ["14:33:54 화면 왼쪽 사람이 버린 패로 화면 오른쪽 사람이 론(화료)했습니다.",
-              "14:34:00 쯤 오른쪽 사람이 왼쪽 위 ㄱ자 패산에서 도라 표시패(北)와 그 아래 패를 함께 집어 와서, "
-              "14:34:02 ~ 05 에 자기 앞 펠트에 두 장을 나란히 놓습니다. 패산에서 집는 순간은 손과 팔에 가려 잘 안 보입니다.",
-              "물음: 이때 뒤집어 본 뒷도라 표시패(도라 표시패 아래에 있던 패)는 무엇이었나요?"],
-     "t0": "14:33:49", "t1": "14:34:10",
-     "zones": [("패산(집는 곳)", [400, 370, 730, 520], 2), ("펠트(놓는 곳)", [950, 530, 1280, 790], 2)]},
-    {"id": "n08_ura", "no": 2, "kind": "ura", "game": "n08_153825",
-     "title": "뒷도라 표시패 — 15시 38분 판",
-     "desc": ["15:44:50 화면 오른쪽 사람이 버린 패로 화면 왼쪽 사람(리치)이 론했습니다(15:44:53 ~ 54 손패 공개).",
-              "15:44:55 ~ 56 왼쪽 사람이 화면 오른쪽 위 패산에서 도라 표시패(4통) 더미를 집어 와서, "
-              "15:44:57 ~ 58 에 자기 강 아래 펠트에 두 장을 놓습니다. 패산에서 집는 순간은 손에 가려 잘 안 보입니다.",
-              "물음: 이때 뒤집어 본 뒷도라 표시패(도라 표시패 아래에 있던 패)는 무엇이었나요?"],
-     "t0": "15:44:47", "t1": "15:45:03.5",
-     "zones": [("패산(집는 곳)", [1030, 610, 1270, 890], 2), ("펠트(놓는 곳)", [390, 950, 690, 1250], 2)]},
-    {"id": "n02_haitei", "no": 3, "kind": "haitei", "game": "n02_145625",
-     "title": "마지막 패(해저) 쯔모였나 — 14시 56분 판",
-     "desc": ["15:04:18.8 화면 위쪽 사람이 왼쪽 위 패산 옆에 따로 떨어져 있던 한 장을 집고, 15:04:22 ~ 23 손패를 공개합니다(쯔모).",
-              "영상은 그 25초쯤 앞부터 시작해서, 마지막 몇 번의 뽑기로 그 자리 패가 줄어드는 것이 보입니다. "
-              "아래 정지 그림은 이 뽑기 바로 전(손이 닿기 전) 탁자입니다.",
-              "물음: 이 뽑기가 패산의 마지막 패였나요?"],
-     "t0": "15:03:53.8", "t1": "15:04:26",
-     "zones": [("패산", [300, 200, 800, 560], 2)],
-     "still": {"t": "15:04:18.5", "box": [300, 320, 800, 560]}},
-    {"id": "n03_haitei", "no": 4, "kind": "haitei", "game": "n03_150528",
-     "title": "마지막 패(해저) 쯔모였나 — 15시 05분 판",
-     "desc": ["15:13:14 ~ 15 화면 왼쪽 사람이 왼쪽 아래 패산 오른쪽에 따로 놓인 한 장을 뽑아, 15:13:18 그 패를 펠트에 내려놓고 "
-              "15:13:20 ~ 22 손패를 공개합니다(쯔모).",
-              "영상은 그 25초쯤 앞부터 시작해서, 마지막 몇 번의 뽑기로 그 자리 패가 줄어드는 것이 보입니다. "
-              "아래 정지 그림은 이 뽑기 바로 전(손이 닿기 전) 탁자입니다.",
-              "물음: 이 뽑기가 패산의 마지막 패였나요?"],
-     "t0": "15:12:49", "t1": "15:13:25",
-     "zones": [("패산", [160, 920, 720, 1260], 2)],
-     "still": {"t": "15:13:13.7", "box": [300, 920, 720, 1260]}},
-]
-BY_ID = {it["id"]: it for it in ITEMS}
+# 항목(ITEMS)은 반장 설정 item_check.items — {"id", "no", "kind": "ura" | "haitei", "game", "title", "desc": [문단…, 마지막 = 물음], "t0", "t1",
+# "zones": [[이름, [x0, y0, x1, y1](원본 1496² 좌표), 확대 배수], …], "still": {"t", "box"}(해저만)}. 영역은 프레임을 직접 열어 보고 정함
+# (집는 패산 자리 · 놓는 펠트 자리). 3반장 것 = p01_ura · n08_ura · n02_haitei · n03_haitei(11-23).
+# 아래는 반장 설정에서(configure). 3반장 설정 값: H3 = results/han3_1123 · OUT = review2 · ANS_DEFAULT = review2/answers_user.json · META = review2/clips.json
+CFG = None
+H3 = OUT = ANS_DEFAULT = META = None
+ITEMS: list = []
+BY_ID: dict = {}
+PAGE_TITLE = PAGE_HEADING = PREP_NOTE = None
+
+
+def configure(cfg):
+    global CFG, H3, OUT, ANS_DEFAULT, META, ITEMS, BY_ID, PAGE_TITLE, PAGE_HEADING, PREP_NOTE, ANS
+    CFG = cfg
+    H3, OUT = cfg.results_dir, cfg.item_dir
+    ANS_DEFAULT = OUT / "answers_user.json"
+    META = OUT / "clips.json"
+    ITEMS = [dict(it) for it in cfg.items]
+    BY_ID = {it["id"]: it for it in ITEMS}
+    PAGE_TITLE, PAGE_HEADING, PREP_NOTE = cfg.item_page_title, cfg.item_page_heading, cfg.item_prep_note
+    ANS = ANS_DEFAULT
+    cfg.apply_recording(hc)
 
 TILE_NAME = {**{f"{i}m": f"{i}만" for i in range(1, 10)}, **{f"{i}p": f"{i}통" for i in range(1, 10)},
              **{f"{i}s": f"{i}삭" for i in range(1, 10)},
@@ -199,7 +181,7 @@ def make_still(it, force: bool) -> dict | None:
 
 def prep(force: bool = False):
     OUT.mkdir(parents=True, exist_ok=True)
-    meta = {"note": "han3_checkserver.py prep — 11-14 3반장 확인 네 가지(뒷도라 2 · 해저 2)", "items": {}}
+    meta = {"note": f"han3_checkserver.py prep — {PREP_NOTE}", "items": {}}
     for it in ITEMS:
         v = make_video(it, force)
         s = make_still(it, force)
@@ -225,7 +207,7 @@ def ready() -> bool:
 
 # ------------------------------------------------------------------ 답 파일
 LOCK = threading.Lock()
-ANS = ANS_DEFAULT
+ANS = None   # configure 가 ANS_DEFAULT 로, serve 가 --ans 로
 
 
 def log_path(ans: Path) -> Path:
@@ -244,7 +226,7 @@ def load_answers(ans: Path) -> dict:
 # ------------------------------------------------------------------ 페이지
 PAGE = r"""<!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>3반장 네 가지 확인</title>
+<title>__TITLE__</title>
 <style>
 :root{--bg:#f6f6f3;--fg:#1d1d1b;--muted:#666;--card:#fff;--line:#d8d8d2;--acc:#1f6feb;--ok:#1a7f37;--sel:#ffd84d}
 @media (prefers-color-scheme: dark){:root{--bg:#16171a;--fg:#e8e8e4;--muted:#a0a0a0;--card:#202227;--line:#3a3c42;--acc:#5a9cff;--ok:#3fb950;--sel:#9a7b00}}
@@ -283,7 +265,7 @@ textarea{width:100%;min-height:64px;font:inherit;margin-top:10px;padding:6px;bor
 @media (max-width:800px){.wrap{flex-direction:column}nav{flex:none}.tiles{grid-template-columns:52px repeat(9,1fr)}}
 </style></head><body>
 <div class="wrap">
-<nav><h1>11-14 3반장 — 확인할 네 가지</h1><ol id="list"></ol>
+<nav><h1>__HEADING__</h1><ol id="list"></ol>
 <div class="hint">영상은 실제보다 2배 느리게 만들어 두었습니다(초당 10장 전부). 위 노란 글씨가 그날 시각과 프레임 번호입니다.
 왼쪽 칸은 탁자 전체, 오른쪽 칸은 테두리 친 곳을 2배로 키운 것입니다.</div></nav>
 <main>
@@ -397,7 +379,9 @@ def page_bytes() -> bytes:
     items = [{k: it[k] for k in ("id", "no", "kind", "title", "desc")} for it in ITEMS]
     m = {i: {"video": {k: v["video"][k] for k in ("file", "frames", "fps")}, "still": v.get("still")} for i, v in meta.items()}
     js = lambda o: json.dumps(o, ensure_ascii=False).replace("</", "<\\/")  # noqa: E731
-    return PAGE.replace("__ITEMS__", js(items)).replace("__META__", js(m)).encode("utf-8")
+    esc = lambda t: t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")  # noqa: E731
+    page = PAGE.replace("__TITLE__", esc(PAGE_TITLE), 1).replace("__HEADING__", esc(PAGE_HEADING), 1)
+    return page.replace("__ITEMS__", js(items)).replace("__META__", js(m)).encode("utf-8")
 
 
 def media_files() -> dict:
@@ -543,8 +527,12 @@ def show(ans: Path):
     print(f"\n적은 항목 {sum(1 for it in ITEMS if it['id'] in a)} / {len(ITEMS)}")
 
 
+configure(hcfg.load(check=False))   # main 이 --hanchan 을 읽어 다시 부름(겹침 검사와 함께)
+
+
 def main():
     args = sys.argv[1:]
+    configure(hcfg.from_argv(args))   # --hanchan(· --prep, 여기선 안 씀)을 꺼냄 + 겹침 검사
     if args and args[0] in ("prep", "show"):
         ap = argparse.ArgumentParser()
         ap.add_argument("cmd")

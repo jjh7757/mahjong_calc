@@ -1,7 +1,11 @@
-"""3반장(11-14 14:47 ~ 15:45, n01 ~ n08) 판을 손패 읽기 흐름(turncut → slotgrid → opusread → rebuild_opus)에 태우는 래퍼(2026-11-23).
+"""헤드 녹화로 복구하는 반장(처음은 11-14 3반장, p01 ~ p03 · n01 ~ n08) 판을 손패 읽기 흐름(turncut → slotgrid → opusread → rebuild_opus)에 태우는 래퍼(2026-11-23).
 
 기존 스크립트(turncut · sam2track · opusread · rebuild_opus · truthprep · slotgrid)는 고치지 않는다 — 다른 세션의 커밋 안 된 변경이 섞여 있어서.
 여기서 그 모듈들을 import 한 뒤 **실행 중에만** 판 목록 · 파일 자리를 바꾸고 원래 main() 을 부른다.
+
+11-24: 판 목록 · 경로 · 손 설정은 반장 설정 JSON(hanchan_cfg.py · experiments/paifu_frames/hanchan/*.json)에서 읽는다.
+  모든 명령에 `--hanchan <json>`(안 주면 hanchan/h3_1123.json = 3반장) · `--prep <폴더>`(손패 재료 폴더 바꾸기 — 시험용, 안 주면 설정의 prep_dir)를 붙일 수 있다.
+  아래 보기의 파일 이름(turns_han3.json · rawread_han3_1123 등)은 3반장 설정 값이다. 시작할 때 판 id · 차례 id 접두사가 기존 판과 겹치면 멈춘다.
 
   python -X utf8 han3.py turns [판…]                    # truthprep 꼴 차례 목록 → results/han3_1123/_prep/turns_han3.json (+ turn_fix.json 적용)
   python -X utf8 han3.py link <판…>                     # 기록기 결과를 turncut 이 읽는 자리로: _prep/rec/<판>/dart_overlay_v2.json · overlay_dump.json
@@ -18,7 +22,8 @@
   1. htcommon.jload: `_work/testtruth_1116/turns.json` 을 읽으면 원본 판들(3반장 판 id 는 뺌) + turns_han3.json 의 판을 합쳐 돌려준다(원본 파일은 안 바뀜).
      `HAN3_FINAL=result` 환경 변수면 `results/handtrack/<판>/game.json` 의 final_hand.closed 를 result_read.json 의 hand 로 바꿔 돌려준다.
   2. turncut.EXTRA 에 _prep/turns_cut_han3.json 을 더하고, turncut.rec_dir 를 3반장 판은 _prep/rec/<판>/ 로.
-  3. sam2track.GAMES 에 3반장 판을 더함(차례 id 앞 세 글자 n01 ~ n08 로 판을 찾음).
+  3. sam2track.GAMES 에 3반장 판을 더함(차례 id 앞 세 글자 n01 ~ n08 로 판을 찾음 — 그래서 설정의 turn_prefix 는 판 id 앞 세 글자이고,
+     sam2track.GAMES · 기존 판 목록 · 다른 반장 설정과 겹치면 시작할 때 멈춤).
   4. sam2track.truth_all: 정답 파일들 + turn_fix.json 의 "kind" 칸(3반장 판엔 정답이 없음 — 울기 차례를 rebuild_opus 의 "call" 처리로 보내려고).
   5. rebuild_opus.call_hand_tiles: turn_fix.json 에 "call_hand"(손에서 울기로 나간 패)가 있으면 그것을 씀(game.json meld_detail 의 cx 순 조각은
      울기가 둘 이상이면 시간 순과 어긋날 수 있음).
@@ -38,23 +43,47 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import htcommon as hc  # noqa: E402
+import hanchan_cfg as hcfg  # noqa: E402
 
-P3 = ["p01_143158", "p02_143539", "p03_144427"]   # 3반장 앞 세 판(11-23 3c)
-H3 = P3 + ["n01_144748", "n02_145625", "n03_150528", "n04_151410", "n05_151953", "n06_152545", "n07_153010", "n08_153825"]
 RES = hc.OUT.parent                       # experiments/paifu_frames/results
-H3DIR = RES / "han3_1123"
-PREP = H3DIR / "_prep"
-TURNS_H3 = PREP / "turns_han3.json"
-CUT_H3 = PREP / "turns_cut_han3.json"
-FIX = PREP / "turn_fix.json"              # {차례 id: {"tile", "sideways", "n_calc", "meld_tiles", "kind", "call_hand", "skip", "why"}}
 TURNS_ORIG = hc.WORK / "testtruth_1116" / "turns.json"
 SIDES = ["bottom", "right", "top", "left"]
-READ_ROOT = "rawread_han3_1123"
+
+# ---- 반장 설정에서 오는 값(configure 가 채움 — 아래 줄 끝 주석은 3반장 설정 값)
+CFG: "hcfg.Hanchan | None" = None
+H3: list = []           # 판 목록(시간 순) — 3반장: p01 ~ p03 · n01 ~ n08
+H3DIR = PREP = TURNS_H3 = CUT_H3 = FIX = None   # results/han3_1123 · _prep · _prep/turns_han3.json · _prep/turns_cut_han3.json · _prep/turn_fix.json
+# FIX = {차례 id: {"tile", "sideways", "n_calc", "meld_tiles", "kind", "call_hand", "skip", "why"}}
+READ_ROOT = None        # 읽기 폴더 이름(_work 아래) — 3반장: rawread_han3_1123
+# pixtrack.Row(gid) 는 segments.json 의 가장 긴 정지 상태 한 프레임으로 줄 높이(흰 면 행)를 잡는다(slotgrid detect 의 가림 열 · 칸 틀이 이것을 씀).
+# 3반장 n04 는 판 내내 두 손이 줄 위에 있어 정지 상태가 3개뿐이고 가장 긴 것(0.8초)이 공개 뒤라 줄 높이가 틀림(y 0 ~ 18) → 손이 줄에서 떨어진 프레임 시각을 줌.
+ROW_AT: dict = {}       # 3반장: {"n04_151410": "15:14:53.9"} — 13장 줄이 서고 두 손이 줄 양 끝 밖에 있는 프레임(han3a 에서 눈으로 고름)
+CUT_LAG = 1000               # 시작 줄은 차례 경계 + 이만큼(ms) 안이어야(뽑기 전) — patch 의 _anchor_limit 참고
+ANCHOR_LEAD = 1500          # 시작 줄은 그 차례 버림보다 이만큼(ms) 앞이어야(뽑기 → 버림이 1.5초 안에 끝나는 일은 드묾) — patch 의 anchor 참고
+ROW_PAD = 80               # 읽기 그림 띠를 줄 방향 양 끝으로 더 여는 폭(px, 원본) — patch 의 wide_band 참고
+RECFIX = META = EXE = None   # results/han3_1123/recorder_fix.json · rounds_meta.json · _bin/replay_recorder.exe
+STICKS = None           # 기록기 --sticks — 3반장: "424,425,618,622"
+CALL_TURNS: list = []   # 울기 차례(callprep 기본) — 3반장: n03_d12 · n04_d05 · n04_d06 · n05_d10b · n07_d06 · n07_d10 · n07_d15
+
+
+def configure(cfg: "hcfg.Hanchan"):
+    """반장 설정을 이 모듈 값으로 옮긴다(patch · 명령 전에). 녹화 자리 · 날짜가 설정에 있으면 htcommon 도 바꾼다."""
+    global CFG, H3, H3DIR, PREP, TURNS_H3, CUT_H3, FIX, READ_ROOT, ROW_AT, CUT_LAG, ANCHOR_LEAD, ROW_PAD, RECFIX, META, EXE, STICKS, CALL_TURNS
+    CFG = cfg
+    H3 = list(cfg.games)
+    H3DIR, PREP = cfg.results_dir, cfg.prep_dir
+    TURNS_H3, CUT_H3, FIX = cfg.turns_file, cfg.cut_file, cfg.fix_file
+    READ_ROOT = cfg.read_root
+    ROW_AT = dict(cfg.row_at)
+    CUT_LAG, ANCHOR_LEAD, ROW_PAD = cfg.cut_lag, cfg.anchor_lead, cfg.row_pad
+    RECFIX, META, EXE, STICKS = cfg.recfix_file, cfg.meta_file, cfg.exe, cfg.sticks
+    CALL_TURNS = list(cfg.call_turns)
+    cfg.apply_recording(hc)
+
+
+configure(hcfg.load(check=False))   # import 만 한 쪽(han3_paifu 등)도 값이 있게 — 겹침 검사는 main · han3_paifu.main 이 설정을 다시 읽을 때
 
 _orig_jload = hc.jload
-# pixtrack.Row(gid) 는 segments.json 의 가장 긴 정지 상태 한 프레임으로 줄 높이(흰 면 행)를 잡는다(slotgrid detect 의 가림 열 · 칸 틀이 이것을 씀).
-# n04 는 판 내내 두 손이 줄 위에 있어 정지 상태가 3개뿐이고 가장 긴 것(0.8초)이 공개 뒤라 줄 높이가 틀림(y 0 ~ 18) → 손이 줄에서 떨어진 프레임 시각을 줌.
-ROW_AT = {"n04_151410": "15:14:53.9"}   # 13장 줄이 서고 두 손이 줄 양 끝 밖에 있는 프레임(han3a 에서 눈으로 고름)
 _row_gid = None
 ANCHOR_RELAXED: list = []   # 가림을 안 따지고 시작 줄을 잡은 프레임 시각(ms) — patch 의 anchor 참고
 _cur_tid = [None]
@@ -68,9 +97,6 @@ END_NOTE = """
 END_NOTE_CALL = """- 이 차례 바로 뒤에 이 사람이 **울기**(남이 버린 패를 가져오려고 줄에서 두 장을 빼 옆으로 놓음)를 한다. 프레임 끝에 그 동작이 보이면
   **울기로 줄에서 패를 빼기 직전의 줄**을 끝 줄로 적고(end_order · j 도 그 줄 기준), why 에 그 직전 프레임 번호를 적는다. 울기로 빼는 두 장은 이 차례의 버림이 아니다.
 """
-CUT_LAG = 1000               # 시작 줄은 차례 경계 + 이만큼(ms) 안이어야(뽑기 전) — patch 의 _anchor_limit 참고
-ANCHOR_LEAD = 1500          # 시작 줄은 그 차례 버림보다 이만큼(ms) 앞이어야(뽑기 → 버림이 1.5초 안에 끝나는 일은 드묾) — patch 의 anchor 참고
-ROW_PAD = 80               # 읽기 그림 띠를 줄 방향 양 끝으로 더 여는 폭(px, 원본) — patch 의 wide_band 참고
 
 
 def _same(p, q) -> bool:
@@ -92,7 +118,7 @@ def apply_fix(games: list, insert: bool = True) -> list:
     fx = _fix()
     for g in games:
         for ins in (fx.get("__insert__", []) if insert else []):
-            if not ins["id"].startswith(g["id"][:3]) or any(t["id"] == ins["id"] for t in g["turns"]):
+            if not CFG.owns(ins["id"], g["id"]) or any(t["id"] == ins["id"] for t in g["turns"]):
                 continue
             k = next(i for i, t in enumerate(g["turns"]) if t["id"] == ins["after"])
             prev = g["turns"][k]
@@ -182,7 +208,8 @@ def patch():
             return a
         b = relaxed(frs, n, before=lim)
         if b is not None:
-            ANCHOR_RELAXED.append({"tid": _cur_tid[0], "ms": b[4], "t": hc.hms(b[4]), "kind": "가림 무시" + (" · 원래 시작 줄이 한도(버림 − 1.5초 · 경계 + 1초) 뒤" if late else ""),
+            ANCHOR_RELAXED.append({"tid": _cur_tid[0], "ms": b[4], "t": hc.hms(b[4]),
+                                   "kind": "가림 무시" + (f" · 원래 시작 줄이 한도(버림 − {ANCHOR_LEAD / 1000:g}초 · 경계 + {CUT_LAG / 1000:g}초) 뒤" if late else ""),
                                    "orig": hc.hms(a[4]) if a else None})
             return b
         if late:
@@ -235,6 +262,10 @@ def patch():
     _rd = tc.rec_dir
     tc.rec_dir = lambda gid: (PREP / "rec" / gid) if gid in H3 else _rd(gid)
     import sam2track as s1
+    # sam2track.turn_of 는 GAMES 를 앞에서부터 보며 차례 id 앞 세 글자가 같은 첫 판을 고른다 — 이 반장 판의 접두사가 이미 있는 판과 겹치면 엉뚱한 판으로 감
+    clash = [(g, x) for g in H3 for x in s1.GAMES if x[:3] == CFG.prefix_of(g) and not (x == g and g in CFG.replaces_base)]
+    if clash:
+        raise hcfg.HanchanError(f"{CFG.path.name}: 차례 id 접두사가 sam2track.GAMES 의 판과 겹침 {clash} — 판 id 앞 세 글자를 바꿔라")
     s1.GAMES = tuple(s1.GAMES) + tuple(g for g in H3 if g not in s1.GAMES)
     # 읽기 그림 띠(band2 = wide_band(sheet_band)): 줄 방향 양 끝을 ROW_PAD 씩 더 연다. sheet_band 는 bandfit 의 0.5 ~ 99.5 백분위 + 40/100px 라
     # 줄을 끝까지 밀어 둔 순간 끝 패가 그림 가장자리에서 잘림(n02_d08 59:52 ~ 57: 떼어 둔 패가 원본 x 1050 ~ 1100, sheet_band 끝 1096 · n01 줄 끝 568 < 577).
@@ -311,7 +342,7 @@ def cmd_turns(games: list):
     for g in d["games"]:
         have[g["id"]] = g
     hc.jsave(TURNS_H3, {"games": [have[g] for g in H3 if g in have], "scale": d["scale"],
-                        "note": "truthprep.build 를 3반장 판에만 돌린 것(han3.py turns). 원본 turns.json 은 안 건드림 — han3.patch 가 읽을 때 합침. turn_fix.json 은 읽을 때 적용"})
+                        "note": f"truthprep.build 를 {CFG.label} 판에만 돌린 것(han3.py turns). 원본 turns.json 은 안 건드림 — han3.patch 가 읽을 때 합침. {FIX.name} 은 읽을 때 적용"})
     for g in apply_fix([have[x] for x in games]):
         bad = [t["id"] for t in g["turns"] if t.get("n_calc") is None]
         print(f"{g['id']}: 차례 {len(g['turns'])} · 첫 강 번호 {g['first_i']} · 패 모름 {sum(t['tile'] is None for t in g['turns'])} · "
@@ -324,12 +355,6 @@ def rec_src(gid: str) -> dict:
     fx = PREP / "rec" / gid
     return {"dart": d / "dart_overlay.json", "dump": d / "overlay_dump.json", "result": d / "result_read.json",
             "paifu": fx / "paifu_rec.json" if (fx / "paifu_rec.json").exists() else d / "paifu_rec.json"}
-
-
-RECFIX = H3DIR / "recorder_fix.json"
-META = H3DIR / "rounds_meta.json"
-EXE = H3DIR / "_bin" / "replay_recorder.exe"
-STICKS = "424,425,618,622"
 
 
 def _wj(p, o, indent=1):
@@ -366,6 +391,8 @@ def cmd_recfix(games: list):
         log = []
         run = next((o for o in ops if o["op"] == "use_run"), None)
         if run:
+            if not STICKS:
+                raise SystemExit(f"{gid}: use_run 에 기록기 --sticks 값이 필요 — 반장 설정 recorder.sticks 를 적어라")
             od = out / f"run_{run['run']}"
             od.mkdir(parents=True, exist_ok=True)
             ref = (src / run["run"] / "stdout.txt").read_text(encoding="utf-8").splitlines()[0].split()
@@ -581,7 +608,7 @@ def cmd_fix(games: list, write: bool):
         # 기록기 버림 번호 → 차례 id(짝 지은 차례 + 끼운 차례). 끼운 차례 id = <판 앞 세 글자>_d<기록기에서 손패 주인 몇 번째 버림>r
         # (같은 차례 뒤에 둘 이상 끼울 때 id 가 겹치지 않고, 앞에 끼운 차례 뒤로 이어 붙게)
         id_of = {b: g["turns"][n]["id"] for n, b in pair.items()}
-        ins_all = [x for x in fx.get("__insert__", []) if not x["id"].startswith(gid[:3])]
+        ins_all = [x for x in fx.get("__insert__", []) if not CFG.owns(x["id"], gid)]
         for k in left:
             if k in pre:
                 continue
@@ -592,7 +619,7 @@ def cmd_fix(games: list, write: bool):
                 print(f"  기록기에만 있는 버림 {x['tile']}(기록기 {k + 1}번째) — 앞 짝 차례를 못 찾음, 손으로")
                 continue
             c = x["c"]
-            nid = f"{gid[:3]}_d{k + 1:02d}r"
+            nid = f"{CFG.prefix_of(gid)}_d{k + 1:02d}r"
             id_of[k] = nid
             ins = {"after": after, "id": nid, "tile": x["tile"], "sideways": x["riichi"], "n_calc": 13 - 3 * c, "meld_tiles": [3 * c, 3 * c],
                    "why": f"기록기 손패 주인 {k + 1}번째 버림 — 강 사진 차례 목록에 없음(울려 나감 · 공개 직전 등)"}
@@ -627,7 +654,6 @@ def read_ids(gid: str) -> list:
 # 화료자가 운 판(n03 · n04 · n05 · n07)의 울기 차례는 지금까지 읽지 않고 rebuild_opus.back_call 이 "묶음은 확실, 줄 순서는 정렬로 짐작" 으로
 # 울기 전 줄을 만들었다. 그 앞 순들은 Opus 의 칸 번호를 그 짐작한 줄에 대고 거꾸로 풀어서, 줄 순서가 틀리면 뽑은 패 종류(= 손패 묶음)까지 틀린다.
 # → 울기 차례도 읽는다: 줄 n장에서 울기로 나간 두 칸(gone) · 버린 칸(k) · 끝 줄 순서(end_order, n−3장).
-CALL_TURNS = ["n03_d12", "n04_d05", "n04_d06", "n05_d10b", "n07_d06", "n07_d10", "n07_d15"]
 CALL_LOG: dict = {}   # 복원 때 울기 차례마다 {"how": "answer" | "guess", "note"}
 
 
@@ -812,7 +838,7 @@ def passthrough(mod: str, args: list):
                     if tf.exists():
                         s = tf.read_text(encoding="utf-8")
                         if "## 이 차례만 다른 점(끝 줄)" not in s:
-                            ts = turns_h3(next(g for g in H3 if g[:3] == x["tid"][:3]))
+                            ts = turns_h3(CFG.game_of(x["tid"]))
                             k = next(i for i, t in enumerate(ts) if t["id"] == x["tid"])
                             n = ts[k]["n_calc"]
                             nxt_call = k + 1 < len(ts) and (fx.get(ts[k + 1]["id"]) or {}).get("kind") == "call"
@@ -824,6 +850,10 @@ def passthrough(mod: str, args: list):
 
 def main():
     a = sys.argv[1:]
+    if not a:
+        print(__doc__)
+        return
+    configure(hcfg.from_argv(a))   # --hanchan · --prep 를 꺼내고(a 에서 지움) 겹침 검사
     if not a:
         print(__doc__)
         return

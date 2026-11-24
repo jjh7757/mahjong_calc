@@ -1,8 +1,12 @@
-"""11-14 3반장 — 확신 낮은 여섯 차례의 손패 정답 입력 페이지(2026-11-23). 내 컴퓨터 안에서만 돈다(127.0.0.1).
+"""헤드 녹화 반장 — 확신 낮은 차례의 손패 정답 입력 페이지(2026-11-23, 처음은 11-14 3반장 여섯 차례). 내 컴퓨터 안에서만 돈다(127.0.0.1).
 
   python -X utf8 han3_truthserver.py [포트 8313] [--ans <답 파일>]   # 페이지 띄우기(--ans: 시험용 — 진짜 답 파일 대신 다른 파일에 씀)
   python -X utf8 han3_truthserver.py prep [--force]                  # 프레임 · 차례 목록 만들기(서버를 켤 때 없으면 저절로)
-  python -X utf8 han3_truthserver.py compare [--ans <답 파일>]       # 사용자 답과 Opus 답(rawread_han3_1123/<id>/answer.json) 나란히
+  python -X utf8 han3_truthserver.py compare [--ans <답 파일>]       # 사용자 답과 Opus 답(<read_root>/<id>/answer.json) 나란히
+  모든 명령에 --hanchan <json>(안 주면 ../hanchan/h3_1123.json = 3반장) · --prep <폴더>(차례 목록을 읽을 손패 재료 폴더) 를 붙일 수 있다.
+
+11-24: 확인할 차례(truth_check.ids) · 자료 폴더(truth_check.dir) · 읽기 폴더(read_root) · 페이지 제목 글은 반장 설정(hanchan_cfg.py)에서.
+아래 폴더 이름은 3반장 설정 값이다.
 
 11-16 ~ 11-17 의 truthserver.py · truthpage.html 을 고치지 않고 그대로 쓴다:
 - truthserver 모듈을 import 해 BASE(자료 폴더) · ANS(답 파일)만 바꿔 끼우고, 저장(/save)만 답 기록 파일 이름을 맞추려고 다시 씀
@@ -26,28 +30,41 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import hanchan_cfg as hcfg  # noqa: E402
 import htcommon as hc  # noqa: E402
 import slotsim as ss  # noqa: E402
 import truthserver as ts  # noqa: E402
 
-IDS = {"n03_d04": "n03_150528", "n04_d04": "n04_151410", "n04_d09": "n04_151410",
-       "n05_d09": "n05_151953", "n06_d06": "n06_152545", "n08_d04": "n08_153825"}
-H3 = hc.EXP / "paifu_frames" / "results" / "han3_1123"
-PREP = H3 / "_prep"
-REVIEW = H3 / "review"
-TRUTH = REVIEW / "truth"
-ANS_DEFAULT = REVIEW / "answers_user.json"
-RAW = hc.WORK / "rawread_han3_1123"
 PAD = 90          # review_clips.py 와 같음 — 줄 방향 · 앞쪽 여유
 PRE_MS = 1000     # 창 1초 앞부터
 
-PAGE_PATCH = [  # (원래 글, 바꾼 글) — 한 번씩만 나와야 한다(truthpage.html 이 바뀌면 멈춤)
-    ("<title>시험 판 정답 확인</title>", "<title>3반장 여섯 차례 정답</title>"),
-    ('"2반장 — 적을 판"', '"11-14 3반장 — 확인할 여섯 차례"'),
-    ("`2반장 적은 차례 ${n} / ${tot}`", "`적은 차례 ${n} / ${tot}`"),
-    ("가운데 진한 구간이 그 버림이 일어난 손 움직임, 앞·뒤 구간은 그 전후의 손 움직임이다.",
-     "진한 \"버림\" 구간이 이 차례 창 전체(앞 자리 버림이 보이기 직전 ~ 다음 차례 경계)이고, 그 앞 \"앞\" 구간은 창 1초 앞이다. 그림은 초당 10장 전부다."),
-]
+# 아래는 반장 설정에서(configure). 3반장 설정 값: IDS = n03_d04 · n04_d04 · n04_d09 · n05_d09 · n06_d06 · n08_d04(→ 판),
+# H3 = results/han3_1123 · PREP = _prep · REVIEW = review · TRUTH = review/truth · ANS_DEFAULT = review/answers_user.json · RAW = _work/rawread_han3_1123
+CFG = None
+IDS: dict = {}
+H3 = PREP = REVIEW = TRUTH = ANS_DEFAULT = RAW = None
+PAGE_PATCH: list = []
+
+
+def configure(cfg):
+    global CFG, IDS, H3, PREP, REVIEW, TRUTH, ANS_DEFAULT, RAW, PAGE_PATCH
+    CFG = cfg
+    IDS = {tid: cfg.game_of(tid) for tid in cfg.truth_ids}
+    H3, PREP, REVIEW = cfg.results_dir, cfg.prep_dir, cfg.truth_dir
+    TRUTH = REVIEW / "truth"
+    ANS_DEFAULT = REVIEW / "answers_user.json"
+    RAW = hc.WORK / cfg.read_root
+    PAGE_PATCH = [  # (원래 글, 바꾼 글) — 한 번씩만 나와야 한다(truthpage.html 이 바뀌면 멈춤)
+        ("<title>시험 판 정답 확인</title>", f"<title>{cfg.truth_page_title}</title>"),
+        ('"2반장 — 적을 판"', json.dumps(cfg.truth_page_group, ensure_ascii=False)),
+        ("`2반장 적은 차례 ${n} / ${tot}`", "`적은 차례 ${n} / ${tot}`"),
+        ("가운데 진한 구간이 그 버림이 일어난 손 움직임, 앞·뒤 구간은 그 전후의 손 움직임이다.",
+         "진한 \"버림\" 구간이 이 차례 창 전체(앞 자리 버림이 보이기 직전 ~ 다음 차례 경계)이고, 그 앞 \"앞\" 구간은 창 1초 앞이다. 그림은 초당 10장 전부다."),
+    ]
+    cfg.apply_recording(hc)
+
+
+configure(hcfg.load(check=False))   # main 이 --hanchan 을 읽어 다시 부름(겹침 검사와 함께)
 
 
 def page_bytes() -> bytes:
@@ -61,14 +78,16 @@ def page_bytes() -> bytes:
 
 # ------------------------------------------------------------------ 자료 만들기
 def window(tid: str) -> tuple[int, int]:
-    """Opus 가 본 창(frames.txt 첫 · 끝 시각) — review_clips.py 와 같은 읽기."""
+    """Opus 가 본 창(frames.txt 첫 · 끝 시각) — review_clips.py 와 같은 읽기. frames.txt 는 '분:초' 만 적으므로 시는 판 시작(t_start)에
+    가장 가까운 것으로(11-23 판은 "15:" 를 박아 두었음 — 3반장 여섯 차례는 모두 15시라 같은 값)."""
     ts_ = [re.findall(r"\d\d:\d\d\.\d", ln)[0] for ln in (RAW / tid / "frames.txt").read_text(encoding="utf-8").strip().splitlines()]
-    return hc.to_ms("15:" + ts_[0]), hc.to_ms("15:" + ts_[-1])
+    ref = hc.to_ms(hc.config(IDS[tid])["t_start"])
+    return CFG.ms_near(ts_[0], ref, hc), CFG.ms_near(ts_[-1], ref, hc)
 
 
 def cut_turns() -> dict:
     out = {}
-    for g in hc.jload(PREP / "turns_cut_han3.json")["games"]:
+    for g in hc.jload(CFG.cut_file)["games"]:
         for t in g["turns"]:
             if t["id"] in IDS:
                 out[t["id"]] = (g, t)
@@ -79,7 +98,7 @@ def prep(force: bool = False):
     import numpy as np  # noqa: F401  (band_crop 가 numpy 배열을 돌려줌)
     from PIL import Image
     cut = cut_turns()
-    meta = {g["id"]: g for g in hc.jload(PREP / "turns_han3.json")["games"]}
+    meta = {g["id"]: g for g in hc.jload(CFG.turns_file)["games"]}
     games, rows = {}, []
     for tid, gid in IDS.items():
         g, t = cut[tid]
@@ -122,7 +141,7 @@ def prep(force: bool = False):
         games[gid]["n_frames"] += len(ms_all)
         rows.append((tid, n, len(ms_all), len(pre), hc.hms(ms_all[0]), hc.hms(t0), hc.hms(t1), made, warn))
     hc.jsave(TRUTH / "turns.json", {"games": list(games.values()), "scale": 2,
-                                     "note": "han3_truthserver.py prep — 11-14 3반장 확신 낮은 여섯 차례(han 2 로 적은 것은 페이지 묶음용)"})
+                                     "note": f"han3_truthserver.py prep — {CFG.truth_prep_note}(han 2 로 적은 것은 페이지 묶음용)"})
     print("차례      줄  프레임(앞)  첫 프레임    창 시작      창 끝       새로 그림")
     for tid, n, nf, npre, f0, w0, w1, made, warn in rows:
         print(f"{tid}  {n!s:>3}  {nf:4d}({npre:2d})  {f0}  {w0}  {w1}  {made:4d}{warn}")
@@ -251,6 +270,7 @@ def compare(ans: Path):
 
 def main():
     args = sys.argv[1:]
+    configure(hcfg.from_argv(args))   # --hanchan · --prep 를 꺼냄 + 겹침 검사
     if args and args[0] in ("prep", "compare"):
         ap = argparse.ArgumentParser()
         ap.add_argument("cmd")

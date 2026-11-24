@@ -1,8 +1,12 @@
-"""3반장(2026-11-14 14:31 ~ 15:45, p01 ~ p03 · n01 ~ n08) 패보 조립(2026-11-23).
+"""헤드 녹화로 복구한 반장(처음은 3반장 2026-11-14 14:31 ~ 15:45, p01 ~ p03 · n01 ~ n08) 패보 조립(2026-11-23).
 
 앱 기록이 없는 반장이라 헤드 폰 녹화에서 복구한 재료를 앱 패보 형식(lib/paifu/paifu.dart, version 1)으로 묶는다.
-  python -X utf8 experiments/paifu_frames/han3_paifu.py [판 id …] [--hands] [--dump]      (저장소 루트에서, --dump = 판별 매 순 시작 줄)
-판을 안 주면 rounds_meta.json 의 열한 판 모두. 결과 = results/han3_1123/_prep/paifu/<판 id>.json (+ _check.json · _scores.json).
+  python -X utf8 experiments/paifu_frames/han3_paifu.py [판 id …] [--hands] [--dump] [--hanchan <json>] [--prep <폴더>] [--out <폴더>]
+      (저장소 루트에서, --dump = 판별 매 순 시작 줄)
+판을 안 주면 rounds_meta.json 의 판 모두(3반장 열한 판). 결과 = <paifu.out_dir>/<판 id>.json (+ _check.json · _scores.json · _info.json)
+— 3반장 설정이면 results/han3_1123/_prep/paifu/.
+11-24: 판 목록 · 경로 · 제목 · 조립 때 고침(EVENT_FIX) · 시작 점수는 반장 설정(handtrack/hanchan_cfg.py, 안 주면 hanchan/h3_1123.json)에서.
+  --prep = 손패 재료 폴더(설정의 prep_dir 대신 — 시험용), --out = 결과 폴더(설정의 paifu.out_dir 대신).
 
 - 버림 · 울기 = 고친 기록기 결과 `_prep/rec/<판>/paifu_rec.json`(handtrack/han3.py recfix — recorder_fix.json 적용)
   + 조립 때 고침 EVENT_FIX(근거와 함께). 그 밖에 기록기와 눈 읽기(result_read.json)가 갈리는 리치 · 울기는 고치지 않고 목록으로만 낸다.
@@ -27,25 +31,29 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE / "handtrack"))
 import han3  # noqa: E402
+import hanchan_cfg as hcfg  # noqa: E402
 import htcommon as hc  # noqa: E402
 
 SIDES = han3.SIDES
-OUT = han3.PREP / "paifu"
 DART = "C:/Users/jjh7757/flutter/bin/dart.bat"
 CHECK = "experiments/paifu_frames/han3_check.dart"
-START = 25000
+# 아래 셋은 반장 설정에서(configure — 3반장 설정 값: OUT = results/han3_1123/_prep/paifu · START 25000 · EVENT_FIX = 아래 주석)
+OUT = han3.CFG.paifu_dir
+START = han3.CFG.start_score
+EVENT_FIX = han3.CFG.event_fix
 
-# 조립 때 고치는 사건(기록기 결과에 근거 있는 것만). side = 사진 기준 자리.
-EVENT_FIX = {
-    "n04_151410": [{"op": "unriichi", "side": "bottom", "tile": "5p",
-                    "why": "아래 자리 7번째(론 당한 5p)에 기록기가 찍은 가로(리치) — 눈 읽기에 n04 리치 없음 · 리치봉 없음, 론 패가 비스듬히 놓인 것으로 봄(11-23 조정자)"}],
-    "n03_150528": [{"op": "recall", "side": "bottom", "from_side": "left", "old_kind": "call", "old_tiles": ["6p"], "kind": "chi", "tiles": ["6p", "4p", "0p"],
-                    "why": "기록기는 아래 자리가 왼쪽 강의 6p 를 가져간 것만 보고 종류를 모름('call' · 한 장). 눈 읽기(result_read melds) = 아래 자리 치 4p 0p 6p(왼쪽에서). "
-                           "묶음 순서는 기록기 꼴(받은 패를 준 자리 쪽 칸 — 왼쪽 자리면 첫 칸, 나머지는 작은 패부터)(11-23 3d 조정자)"}],
-    "n01_144748": [{"op": "kakan", "side": "top", "tile": "7z", "before_discard_at": "14:51:39",
-                    "why": "눈 읽기 = 위 자리 7z 퐁 뒤 가깡(14:51:32 에 깡도라 4z 가 뒤집힘 — 표시패 7m · 4z). 기록기는 퐁만 적음. "
-                           "가깡 사건(kind kakan)을 위 자리의 그 무렵 버림(8p, 기록기 첫 봄 14:51:39) 바로 앞에 끼움(11-23 3d 조정자)"}],
-}
+
+def configure(cfg, out=None):
+    """반장 설정을 han3 와 이 모듈에 옮긴다. out = 결과 폴더 덮어쓰기(--out)."""
+    global OUT, START, EVENT_FIX
+    han3.configure(cfg)
+    OUT = Path(out).resolve() if out else cfg.paifu_dir
+    START = cfg.start_score
+    EVENT_FIX = cfg.event_fix
+
+
+# 조립 때 고치는 사건(기록기 결과에 근거 있는 것만, side = 사진 기준 자리)은 반장 설정 paifu.event_fix 에 있다 — op: unriichi · recall · kakan(apply_event_fix),
+# 판마다 근거(why)와 함께. 3반장 것 = n04 unriichi · n03 recall · n01 kakan(11-23 조정자).
 
 
 def jl(p):
@@ -151,8 +159,11 @@ def result_of(rr, bottom):
     w = seat_of(rr["winner_side"], bottom)
     riichi = any(x["side"] == rr["winner_side"] for x in rr.get("riichi") or [])
     melds = [{"kind": m["kind"], "tiles": list(m["tiles"])} for m in (rr.get("melds") or {}).get(rr["winner_side"]) or []]
+    flags = {"riichi": riichi}
+    if "last_tile" in rr:   # 11-24: 사용자 확인으로 해저 · 하저가 남은 패 계산과 다를 때만 paifu_auto.py apply 가 적음(없으면 옛 꼴 그대로)
+        flags["last_tile"] = bool(rr["last_tile"])
     return {"type": rr["win_type"], "winner": w, "loser": seat_of(rr["loser_side"], bottom) if rr.get("loser_side") else None,
-            "win_tile": rr["win_tile"], "hand": list(rr["hand"]), "melds": melds, "flags": {"riichi": riichi}}
+            "win_tile": rr["win_tile"], "hand": list(rr["hand"]), "melds": melds, "flags": flags}
 
 
 def answers_missing(gid):
@@ -213,12 +224,12 @@ def build(gid, meta, want_hands):
             note += f" 울기 {hero_calls}번 — 울기 차례 {len(guess)}개는 울기 전 손패 줄 순서를 정렬로 짐작(울기 차례의 손패 묶음은 확실하나, 그 앞 순들의 뽑은 패 · 손패 묶음은 이 짐작에 기대므로 틀릴 수 있음)."
         else:
             note += f" 울기 {hero_calls}번 — 울기 차례도 Opus 가 울기로 나간 칸 · 버린 칸을 읽어 복원" + (" (치의 두 장이 어느 칸이었는지는 정렬로 짐작)." if chi else ".")
-    note += " 국 시작 점수 · 공탁은 25,000점에서 앞 판들의 점수 계산으로 굴린 계산값(점봉 이동은 영상에서 읽지 않음)."
+    note += f" 국 시작 점수 · 공탁은 {START:,}점에서 앞 판들의 점수 계산으로 굴린 계산값(점봉 이동은 영상에서 읽지 않음)."
     out = {
         "version": 1, "id": gid,
-        "title": f"2026-11-14 3반장 {meta['round']}" + (f" {meta['honba']}본장" if meta["honba"] else ""),
+        "title": f"{han3.CFG.title_prefix} {meta['round']}" + (f" {meta['honba']}본장" if meta["honba"] else ""),
         "round": meta["round"], "honba": meta["honba"], "dealer": meta["dealer"], "hero": hero,
-        "names": ["플레이어 1", "플레이어 2", "플레이어 3", "플레이어 4"],
+        "names": list(han3.CFG.names),
         "dora_indicators": list(rr.get("dora_indicators") or []), "ura_indicators": list(rr.get("ura_indicators") or []),
         "note": note, "source": "recorder+opus_hand" if hands else "recorder",
         "events": events, "result": res,
@@ -298,12 +309,16 @@ def roll(order, chk, infos):
 
 def main():
     a = sys.argv[1:]
+    cfg = hcfg.from_argv(a)                      # --hanchan · --prep 를 꺼냄(a 에서 지움) + 겹침 검사
+    configure(cfg, hcfg.pop_opt(a, "--out"))
     want_hands = "--hands" in a
     if want_hands:
         os.environ["HAN3_FINAL"] = "result"
     han3.patch()
     meta_all = jl(han3.META)
     order = [(r["id"], han3.meta_of(r["id"])) for r in meta_all["rounds"]]
+    if [g for g, _ in order] != list(cfg.games):
+        raise SystemExit(f"{han3.META.name} 의 판 {[g for g, _ in order]} 가 반장 설정 games {cfg.games} 와 다름(순서까지 같아야 함)")
     pick = [x for x in a if not x.startswith("--")] or [g for g, _ in order]
     built, infos = {}, {}
     for gid, meta in order:          # 점수를 굴리려고 열한 판 모두 만든다(고른 판만 손패를 붙임)

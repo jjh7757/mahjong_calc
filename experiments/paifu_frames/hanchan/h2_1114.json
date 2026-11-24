@@ -1,0 +1,76 @@
+{
+ "_note": "11-14 매장 2반장(13:09 ~ 14:27, 아홉 국 — 앱 촬영 기록 있음) — 자동 패보 앱 기록 우선 흐름(설계서 8-5 · 8-6, 11-24 저녁)의 첫 설정. 판 id 는 기존 2반장 자료(_work/testtruth_1116 turns · 정답 · assets/paifu 의 r11 ~ r19 · L16)와 겹치지 않게 접두사 w 를 씀 — 같은 국의 기존 id 는 추적 폴더 시각(HHMMSS)이 같다(w12_131655 = r12_131655, w16_135321 = r16_135321 · L16_135321). hanchan_cfg 겹침 검사는 그대로 켜 둠. 꼴 설명은 handtrack/hanchan_cfg.py.",
+ "id": "h2_1114",
+ "label": "2반장",
+ "results_dir": "experiments/paifu_frames/results/h2_1114",
+ "read_root": "rawread_h2_1114",
+ "recording": {
+  "root": "experiments/visit_20261114/head_rec",
+  "recs": [
+   "rec_20261114_125617"
+  ],
+  "date": "2026-11-14"
+ },
+ "games": [
+  "w11_130921",
+  "w12_131655",
+  "w13_132644",
+  "w14_133610",
+  "w15_134151",
+  "w16_135321",
+  "w17_140450",
+  "w18_141259",
+  "w19_142013"
+ ],
+ "turn_prefix": {
+  "w11": "w11_130921",
+  "w12": "w12_131655",
+  "w13": "w13_132644",
+  "w14": "w14_133610",
+  "w15": "w15_134151",
+  "w16": "w16_135321",
+  "w17": "w17_140450",
+  "w18": "w18_141259",
+  "w19": "w19_142013"
+ },
+ "files": {
+  "turns": "turns_h2.json",
+  "turns_cut": "turns_cut_h2.json",
+  "turn_fix": "turn_fix.json",
+  "rounds_meta": "rounds_meta.json",
+  "recorder_fix": "recorder_fix.json"
+ },
+ "recorder": {
+  "sticks": "424,425,618,622"
+ },
+ "hand": {
+  "call_turns": []
+ },
+ "paifu": {
+  "title_prefix": "2026-11-14 2반장",
+  "start_score": 25000,
+  "event_fix": {}
+ },
+ "app_record": {
+  "captures": "experiments/visit_20261114/captures",
+  "from": "13:05:00",
+  "to": "14:30:00",
+  "sticks": "424,425,618,622",
+  "sticks_by_track": {
+   "130921": "425,426,619,621",
+   "131655": "425,426,619,621"
+  },
+  "_sticks_note": "추적 프레임 재생 --sticks = paifu_examples 가 쓴 값(results/heldout_1114/rounds.json 의 sticks · r11 은 ghost_slot_1121/README)",
+  "id_prefix": "w",
+  "clock_ref": {
+   "offset_ms": -414,
+   "source": "experiments/tile_classifier/data/v1114rec/pair/summary.json calibration rec_20261114_125617(태블릿 그림 ↔ 녹화 프레임 짝, offset_ms = 녹화 − 태블릿으로 봄)"
+  },
+  "check_windows": {
+   "w13_132644": "val_h13_132644",
+   "w15_134151": "val_h15_134151",
+   "w17_140450": "val_h17_140450",
+   "w18_141259": "val_h18_141259"
+  }
+ }
+}
