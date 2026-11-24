@@ -32,6 +32,10 @@ class _ResultEntryScreenState extends State<ResultEntryScreen> {
   final _picked = List<String?>.filled(4, null);
   final _scores = List.generate(4, (_) => TextEditingController());
 
+  /// 자리별 별(하네만 1 · 배만 2 · 삼배만 3 · 역만 5 …를 사람이 세어 넣는다).
+  final _stars = List.filled(4, 0);
+  static const _maxStars = 99;
+
   int _start = 25000;
   int _ret = 30000;
   String _uma = '20-10';
@@ -122,6 +126,7 @@ class _ResultEntryScreenState extends State<ResultEntryScreen> {
         settings: _settings,
         names: [for (final n in _picked) n!],
         scores: [for (var i = 0; i < 4; i++) _score(i)!],
+        stars: List.of(_stars),
       );
 
   /// 고른 날짜 + 지금 시각(같은 날 여러 판이면 넣은 순서대로 정렬되게).
@@ -226,6 +231,40 @@ class _ResultEntryScreenState extends State<ResultEntryScreen> {
     );
   }
 
+  /// 자리 하나의 별 칸(−/+). 0 이상 정수.
+  Widget _starsRow(BuildContext context, int i) {
+    final n = _stars[i];
+    return Padding(
+      padding: const EdgeInsets.only(left: 72, bottom: 8),
+      child: Row(
+        children: [
+          const Text('별'),
+          IconButton(
+            key: ValueKey('entry-stars-$i-minus'),
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.remove_circle_outline),
+            onPressed: n > 0 ? () => setState(() => _stars[i]--) : null,
+          ),
+          SizedBox(
+            width: 28,
+            child: Text(
+              '$n',
+              key: ValueKey('entry-stars-$i'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 16, fontFeatures: [FontFeature.tabularFigures()]),
+            ),
+          ),
+          IconButton(
+            key: ValueKey('entry-stars-$i-plus'),
+            visualDensity: VisualDensity.compact,
+            icon: const Icon(Icons.add_circle_outline),
+            onPressed: n < _maxStars ? () => setState(() => _stars[i]++) : null,
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _preview(BuildContext context) {
     final rows = _build('preview', _playedAt).settle();
     final theme = Theme.of(context);
@@ -245,7 +284,13 @@ class _ResultEntryScreenState extends State<ResultEntryScreen> {
                 child: Row(
                   children: [
                     SizedBox(width: 40, child: Text('${r.rank}위', style: const TextStyle(fontWeight: FontWeight.w700))),
-                    Expanded(child: Text(r.name, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    Expanded(
+                      child: Text(
+                        r.stars > 0 ? '${r.name} ★${r.stars}' : r.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     Text('${r.points}', style: const TextStyle(fontFeatures: [FontFeature.tabularFigures()])),
                     SizedBox(
                       width: 72,
@@ -287,11 +332,12 @@ class _ResultEntryScreenState extends State<ResultEntryScreen> {
                   Text('자리별 멤버와 최종 점수 (동 → 남 → 서 → 북)', style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 4),
                   Text(
-                    '동점이면 기동 자리에 가까운 사람이 위 순위입니다. 남은 공탁은 1위 점수에 더해 넣으세요.',
+                    '동점이면 기동 자리에 가까운 사람이 위 순위입니다. 남은 공탁은 1위 점수에 더해 넣으세요. '
+                    '별은 화료마다 하네만 1 · 배만 2 · 삼배만 3 · 역만 5(더블 10).',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: 10),
-                  for (var i = 0; i < 4; i++) _seatRow(context, i),
+                  for (var i = 0; i < 4; i++) ...[_seatRow(context, i), _starsRow(context, i)],
                   const SizedBox(height: 4),
                   Row(
                     children: [

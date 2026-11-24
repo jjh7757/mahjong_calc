@@ -388,6 +388,15 @@ class _RankBanner extends StatelessWidget {
                     decoration: BoxDecoration(color: const Color(0xFFC62828), borderRadius: BorderRadius.circular(4)),
                     child: Text('토비', style: TextStyle(fontSize: wide ? 14 : 11, color: Colors.white, fontWeight: FontWeight.w800)),
                   ),
+                if (row.stars > 0)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Text(
+                      '★${row.stars}',
+                      key: ValueKey('settle-stars-${row.rank}'),
+                      style: TextStyle(fontSize: wide ? 16 : 12, fontWeight: FontWeight.w800, color: first ? const Color(0xFF7A5400) : const Color(0xFFFFD54F)),
+                    ),
+                  ),
                 AnimatedBuilder(
                   animation: countUp,
                   builder: (_, _) => Text(

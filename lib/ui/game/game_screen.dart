@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../engine/calculator.dart';
 import '../../game/game.dart';
 import '../../game/game_store.dart';
+import '../../game/member_store.dart';
 import '../kiosk.dart';
 import '../name_keyboard.dart';
 import '../seat_picker.dart';
 import 'history_screen.dart';
+import 'member_screens.dart';
 import 'record_edit.dart';
 import 'settlement_screen.dart';
 import 'win_sheet.dart';
@@ -52,7 +55,7 @@ class _SetupForm extends StatefulWidget {
 }
 
 class _SetupFormState extends State<_SetupForm> {
-  final _names = List.generate(4, (i) => TextEditingController(text: '플레이어 ${i + 1}'));
+  final _names = List.generate(4, (i) => TextEditingController(text: _defaultName(i)));
   int _start = 25000;
   int _ret = 30000;
   String _uma = '20-10';
@@ -75,6 +78,45 @@ class _SetupFormState extends State<_SetupForm> {
   final _scores = List.generate(4, (_) => TextEditingController(text: '25000'));
 
   static const _umaPresets = {'10-5': (10, 5), '20-10': (20, 10), '30-10': (30, 10)};
+
+  /// 마지막으로 시작한 대국의 네 이름(자리 순). 모두 등록 멤버면 다음 설정 폼 기본값으로 채운다.
+  static const lastMembersKey = 'setup.lastMembers';
+
+  static String _defaultName(int i) => '플레이어 ${i + 1}';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastMembers();
+  }
+
+  /// 지난 대국의 네 이름이 모두 명단에 있고, 아직 아무 이름도 안 바꿨으면 채운다. 명단이 비면 채우지 않는다.
+  Future<void> _loadLastMembers() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      final last = p.getStringList(lastMembersKey);
+      if (last == null || last.length != 4 || last.toSet().length != 4) return;
+      if (!memberStore.loaded) await memberStore.load();
+      if (!mounted) return;
+      final members = memberStore.members;
+      if (members.isEmpty || !last.every(members.contains)) return;
+      for (var i = 0; i < 4; i++) {
+        if (_names[i].text != _defaultName(i)) return;
+      }
+      setState(() {
+        for (var i = 0; i < 4; i++) {
+          _names[i].text = last[i];
+        }
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _saveLastMembers(List<String> names) async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setStringList(lastMembersKey, List.of(names));
+    } catch (_) {}
+  }
 
   @override
   void dispose() {
@@ -115,13 +157,39 @@ class _SetupFormState extends State<_SetupForm> {
     return sum == expected ? null : expected;
   }
 
+  /// 이름 칸을 누르면: 등록 멤버가 있으면 명단에서 고르기(다른 자리에서 고른 사람은 뺌) · 직접 입력 · 멤버 관리,
+  /// 명단이 비면 바로 앱 안 키보드.
   Future<void> _editName(int i) async {
+    final members = memberStore.members;
+    if (members.isEmpty) return _typeName(i);
+    final cur = _names[i].text.trim();
+    final taken = {for (var s = 0; s < 4; s++) if (s != i) _names[s].text.trim()};
+    final pick = await showAdaptiveSheet<_NamePick>(
+      context,
+      builder: (_) => _SetupMemberSheet(
+        title: '${Game.windNames[i]}가 이름',
+        members: [for (final n in members) if (!taken.contains(n)) n],
+        current: cur,
+      ),
+    );
+    if (pick == null || !mounted) return;
+    if (pick.name != null) {
+      setState(() => _names[i].text = pick.name!);
+    } else if (pick.typed) {
+      await _typeName(i);
+    } else if (pick.manage) {
+      await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MemberManageScreen()));
+    }
+  }
+
+  Future<void> _typeName(int i) async {
     final cur = _names[i].text;
     final v = await showNameKeyboard(
       context,
       title: '${Game.windNames[i]}가 이름',
       initial: cur,
-      replaceOnType: cur == '플레이어 ${i + 1}',
+      // 기본 이름이나 멤버 이름이 들어 있으면 처음 누른 글자가 대신한다(손님 이름을 새로 칠 때).
+      replaceOnType: cur == _defaultName(i) || memberStore.members.contains(cur.trim()),
     );
     if (v != null && mounted) setState(() => _names[i].text = v);
   }
@@ -137,6 +205,7 @@ class _SetupFormState extends State<_SetupForm> {
   }
 
   void _start0() {
+    _saveLastMembers(_nameList);
     if (_resume) {
       gameStore.resume(
         _nameList,
@@ -440,6 +509,78 @@ class _SetupFormState extends State<_SetupForm> {
         const SizedBox(height: 20),
         FilledButton(onPressed: _start0, child: Text(_resume ? '여기서부터 기록' : '대국 시작')),
       ],
+    );
+  }
+}
+
+
+/// 설정 폼 이름 고르기 창의 결과: 멤버 [name], 직접 입력([typed]), 멤버 관리([manage]) 중 하나.
+class _NamePick {
+  final String? name;
+  final bool typed;
+  final bool manage;
+  const _NamePick({this.name, this.typed = false, this.manage = false});
+}
+
+/// 대국 시작 폼에서 자리 하나의 이름 고르기. [members] 는 다른 자리에서 안 고른 등록 멤버.
+class _SetupMemberSheet extends StatelessWidget {
+  final String title;
+  final List<String> members;
+  final String current;
+  const _SetupMemberSheet({required this.title, required this.members, required this.current});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(title, style: theme.textTheme.titleMedium),
+            const SizedBox(height: 8),
+            if (members.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Text('남은 멤버가 없습니다. 멤버 관리에서 더 등록하거나 직접 입력하세요.'),
+              )
+            else
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    for (final n in members)
+                      ListTile(
+                        key: ValueKey('setup-pick-$n'),
+                        leading: Icon(n == current ? Icons.check_circle : Icons.person_outline),
+                        title: Text(n),
+                        onTap: () => Navigator.of(context).pop(_NamePick(name: n)),
+                      ),
+                  ],
+                ),
+              ),
+            const Divider(height: 16),
+            ListTile(
+              key: const ValueKey('setup-pick-type'),
+              leading: const Icon(Icons.keyboard),
+              title: const Text('이름 직접 입력'),
+              subtitle: const Text('손님용 — 명단에 없는 이름은 멤버 순위에 잡히지 않습니다.'),
+              onTap: () => Navigator.of(context).pop(const _NamePick(typed: true)),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                key: const ValueKey('setup-pick-manage'),
+                icon: const Icon(Icons.manage_accounts),
+                label: const Text('멤버 관리'),
+                onPressed: () => Navigator.of(context).pop(const _NamePick(manage: true)),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

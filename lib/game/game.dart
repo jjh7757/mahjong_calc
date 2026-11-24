@@ -114,6 +114,22 @@ class GameSettings {
       );
 }
 
+/// 기본점 → 별(동호회 순위표). 하네만 1 · 배만 2 · 삼배만 3 · 역만(헤아림 포함) 5 · 더블 역만 10 · 그 위는 역만 개수 × 5.
+/// 만관 이하는 0.
+int starsForBase(int base) {
+  if (base >= 8000) return base % 8000 == 0 ? base ~/ 8000 * 5 : 0;
+  return switch (base) { 3000 => 1, 4000 => 2, 6000 => 3, _ => 0 };
+}
+
+/// 화료 지불액 → 별. [Payment] 에는 기본점이 없어 (총액 − 본장 몫) ÷ (친 6 · 자 4) 로 되살린다.
+/// 만관 이상은 지불액이 기본점의 정확한 배수라 맞게 돌아오고, 나누어떨어지지 않으면 만관 미만이라 0.
+int starsForPayment(Payment p, {required bool winnerIsDealer}) {
+  final paid = p.total - p.honbaBonus;
+  final div = winnerIsDealer ? 6 : 4;
+  if (paid <= 0 || paid % div != 0) return 0;
+  return starsForBase(paid ~/ div);
+}
+
 /// 한 국의 사건 기록.
 class GameEvent {
   final String kind; // win | riichi | draw | adjust
@@ -121,16 +137,25 @@ class GameEvent {
   final List<int> delta; // 4명 점수 변화
   final String roundLabel;
 
-  const GameEvent(this.kind, this.description, this.delta, this.roundLabel);
+  /// 이 사건으로 받은 별(자리별, 길이 4). 화료 사건과 직접 입력한 대국만 채운다. 옛 기록·그 밖의 사건은 null.
+  final List<int>? stars;
 
-  Map<String, dynamic> toJson() =>
-      {'kind': kind, 'description': description, 'delta': delta, 'round': roundLabel};
+  const GameEvent(this.kind, this.description, this.delta, this.roundLabel, {this.stars});
+
+  Map<String, dynamic> toJson() => {
+        'kind': kind,
+        'description': description,
+        'delta': delta,
+        'round': roundLabel,
+        if (stars != null) 'stars': stars,
+      };
 
   factory GameEvent.fromJson(Map<String, dynamic> j) => GameEvent(
         j['kind'] as String,
         j['description'] as String,
         (j['delta'] as List).cast<int>(),
         j['round'] as String,
+        stars: (j['stars'] as List?)?.cast<int>(),
       );
 }
 
@@ -198,7 +223,10 @@ class Settlement {
   /// 천점 단위 최종값(우마·오카 포함).
   final double score;
 
-  const Settlement(this.seat, this.name, this.rank, this.points, this.score);
+  /// 이 대국에서 받은 별 합([Game.starsOf]).
+  final int stars;
+
+  const Settlement(this.seat, this.name, this.rank, this.points, this.score, {this.stars = 0});
 }
 
 class Game {
@@ -306,8 +334,12 @@ class Game {
     required GameSettings settings,
     required List<String> names,
     required List<int> scores,
+    List<int>? stars,
   }) {
     if (scores.length != 4) throw ArgumentError('점수는 4개여야 합니다');
+    if (stars != null && (stars.length != 4 || stars.any((s) => s < 0))) {
+      throw ArgumentError('별은 0 이상 4개여야 합니다');
+    }
     final g = Game(
       id: id,
       startedAt: playedAt,
@@ -321,7 +353,8 @@ class Game {
       endedBy: manualEndedBy,
     );
     g.events.add(GameEvent(
-        'adjust', '대국 결과 직접 입력', [for (var s = 0; s < 4; s++) scores[s] - settings.startPoints], g.roundLabel));
+        'adjust', '대국 결과 직접 입력', [for (var s = 0; s < 4; s++) scores[s] - settings.startPoints], g.roundLabel,
+        stars: stars == null ? null : List.of(stars)));
     return g;
   }
 
@@ -382,6 +415,16 @@ class Game {
           '연장전 종료' => '연장전 종료',
           _ => '$endedBy — 종료',
         };
+
+  /// 자리 [seat] 가 이 대국에서 받은 별 합(사건의 [GameEvent.stars] 합). 되돌리기로 사건이 지워지면 함께 빠진다.
+  int starsOf(int seat) {
+    var n = 0;
+    for (final e in events) {
+      final st = e.stars;
+      if (st != null) n += st[seat];
+    }
+    return n;
+  }
 
   /// 1위 자리(동점은 기동 자리 순).
   int get topSeat => [for (var s = 0; s < 4; s++) s].firstWhere((s) => rankOf(s) == 1);
@@ -576,7 +619,11 @@ class Game {
             '${honba > 0 ? ' +본장 ${names[order.first]}' : ''}'
             '${sticks > 0 ? ' +공탁 $sticks ${names[order.first]}' : ''}',
         delta,
-        roundLabel));
+        roundLabel,
+        stars: [
+          for (var s = 0; s < 4; s++)
+            payments[s] == null ? 0 : starsForPayment(payments[s]!, winnerIsDealer: s == dealer),
+        ]));
     final dealerWon = payments.containsKey(dealer);
     if (dealerWon && _yameNow(tenpai: false)) return _endBy('아가리야메');
     _endHand(dealerKeeps: dealerWon, incrementHonba: dealerWon);
@@ -629,7 +676,9 @@ class Game {
         'win',
         '${names[winner]} $how $summary$paoNote${sticks > 0 ? ' +공탁 $sticks' : ''}',
         delta,
-        roundLabel));
+        roundLabel,
+        // 파오여도 별은 화료자 몫([payment] 는 화료자가 받는 전체 지불액).
+        stars: List.filled(4, 0)..[winner] = starsForPayment(payment, winnerIsDealer: winner == dealer)));
     if (winner == dealer && _yameNow(tenpai: false)) return _endBy('아가리야메');
     _endHand(dealerKeeps: winner == dealer, incrementHonba: winner == dealer);
   }
@@ -790,7 +839,7 @@ class Game {
       var base = _thousands(scores[seat] - settings.returnPoints);
       base += uma[rank];
       if (rank == 0) base += settings.oka;
-      result.add(Settlement(seat, names[seat], rank + 1, scores[seat], base));
+      result.add(Settlement(seat, names[seat], rank + 1, scores[seat], base, stars: starsOf(seat)));
     }
     return result;
   }

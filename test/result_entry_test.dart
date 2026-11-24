@@ -111,6 +111,67 @@ void main() {
         (25000, 30000, 20, 10, 1));
   });
 
+  testWidgets('별 입력 → 미리보기 · 저장된 대국 starsOf · 정산 화면 ★ · 멤버 순위 별 열', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: ResultEntryScreen()));
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 4; i++) {
+      await pick(tester, i, members[i]);
+    }
+    await score(tester, 0, '45000');
+    await score(tester, 1, '30000');
+    await score(tester, 2, '20000');
+    await score(tester, 3, '5000');
+
+    Future<void> tapKey(String k) async {
+      await tester.ensureVisible(find.byKey(ValueKey(k)));
+      await tester.tap(find.byKey(ValueKey(k)));
+      await tester.pump();
+    }
+
+    String starsText(int i) => tester.widget<Text>(find.byKey(ValueKey('entry-stars-$i'))).data!;
+    bool enabled(String k) => tester.widget<IconButton>(find.byKey(ValueKey(k))).onPressed != null;
+
+    // 기본 0, 0 에서는 − 가 막힘.
+    for (var i = 0; i < 4; i++) {
+      expect(starsText(i), '0');
+    }
+    expect(enabled('entry-stars-1-minus'), isFalse);
+    // 민수 +4 −1 = 3, 태호 +1.
+    for (var n = 0; n < 4; n++) {
+      await tapKey('entry-stars-0-plus');
+    }
+    await tapKey('entry-stars-0-minus');
+    await tapKey('entry-stars-2-plus');
+    expect(starsText(0), '3');
+    expect(starsText(2), '1');
+    expect(enabled('entry-stars-0-minus'), isTrue);
+    expect(find.text('민수 ★3'), findsOneWidget);
+    expect(find.text('태호 ★1'), findsOneWidget);
+
+    await tester.ensureVisible(find.byKey(const ValueKey('entry-save')));
+    await tester.tap(find.byKey(const ValueKey('entry-save')));
+    await tester.pumpAndSettle();
+
+    final g = gameStore.history.single;
+    expect([for (var s = 0; s < 4; s++) g.starsOf(s)], [3, 0, 1, 0]);
+    expect(find.byType(SettlementScreen), findsOneWidget);
+    expect(tester.widget<Text>(find.byKey(const ValueKey('settle-stars-1'))).data, '★3');
+    expect(tester.widget<Text>(find.byKey(const ValueKey('settle-stars-3'))).data, '★1');
+    expect(find.byKey(const ValueKey('settle-stars-2')), findsNothing);
+    expect(find.byKey(const ValueKey('settle-stars-4')), findsNothing);
+
+    // 멤버 순위: 별 · 평별 · 최고점 · 1,2위율(새 앱으로 — 같은 MaterialApp 이면 정산 화면 경로가 남는다).
+    await tester.pumpWidget(MaterialApp(key: UniqueKey(), home: const MemberRankingScreen()));
+    await tester.pumpAndSettle();
+    String cell(String k) => tester.widget<Text>(find.byKey(ValueKey(k))).data!;
+    expect(cell('members-stars-민수'), '3');
+    expect(cell('members-avgstars-민수'), '3.00');
+    expect(cell('members-best-민수'), '45000');
+    expect(cell('members-top2-민수'), '100%');
+    expect(cell('members-stars-태호'), '1');
+    expect(cell('members-top2-태호'), '0%');
+  });
+
   testWidgets('명단이 비었으면 고르기 창에 멤버 관리 안내', (tester) async {
     SharedPreferences.setMockInitialValues({});
     await memberStore.load();

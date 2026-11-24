@@ -94,6 +94,45 @@ void main() {
     expect(s.map((m) => m.name).toList(), ['X', 'Y', 'S', 'R', 'Q', 'P']);
   });
 
+  test('별 · 평별 · 최고점 · 1,2위율', () {
+    // 1판과 같은 점수에 별만 A 3 · C 1 을 넣은 판 + 2판 + 3판.
+    final s1 = Game.manual(
+        id: 's1',
+        playedAt: DateTime(2026, 11, 20),
+        settings: std,
+        names: const ['A', 'B', 'C', 'D'],
+        scores: const [45000, 30000, 20000, 5000],
+        stars: const [3, 0, 1, 0]);
+    final by = {for (final m in memberStats([s1, g2, g3])) m.name: m};
+    // A: 별 3, 3판 → 평별 1.00, 최고 45000(45000 · 15000 · 31700), 순위 1·4·2 → 1,2위율 2/3.
+    expect(by['A']!.stars, 3);
+    expect(by['A']!.avgStars, closeTo(1.0, 1e-9));
+    expect(by['A']!.best, 45000);
+    expect(by['A']!.top2Rate, closeTo(2 / 3, 1e-9));
+    // B: 별 0, 최고 52300(30000 · 25000 · 52300), 순위 2·3·1 → 2/3.
+    expect(by['B']!.stars, 0);
+    expect(by['B']!.avgStars, 0);
+    expect(by['B']!.best, 52300);
+    expect(by['B']!.top2Rate, closeTo(2 / 3, 1e-9));
+    // C: 별 1 → 평별 1/3, 최고 30000(20000 · 30000 · −1400), 순위 3·2·4 → 1/3.
+    expect(by['C']!.stars, 1);
+    expect(by['C']!.avgStars, closeTo(1 / 3, 1e-9));
+    expect(by['C']!.best, 30000);
+    expect(by['C']!.top2Rate, closeTo(1 / 3, 1e-9));
+    // D: 최고 30000(5000 · 30000 · 17400), 순위 4·1·3 → 1/3.
+    expect(by['D']!.best, 30000);
+    expect(by['D']!.top2Rate, closeTo(1 / 3, 1e-9));
+
+    // 앱으로 친 대국: 친 A 가 B 에게서 하네만 론(18000) → A 43000 · 별 1, 1위.
+    final app = Game(id: 'app', startedAt: DateTime(2026, 11, 21), settings: std, names: const ['A', 'B', 'C', 'E']);
+    app.win(winner: 0, loser: 1, isTsumo: false, payment: paymentFor(han: 6, fu: 30, isDealer: true, isTsumo: false, honba: 0));
+    final a = memberStats([app], only: const ['A', 'F']);
+    expect(a.first.name, 'A');
+    expect((a.first.stars, a.first.best, a.first.avgStars, a.first.top2Rate), (1, 43000, 1.0, 1.0));
+    // 대국 없는 F: 별 0 · 평별 0 · 최고점 없음 · 1,2위율 0.
+    expect((a.last.name, a.last.stars, a.last.avgStars, a.last.best, a.last.top2Rate), ('F', 0, 0.0, null, 0.0));
+  });
+
   test('Game.manual: 끝난 대국, 올라스, 결과 입력 사건 하나', () {
     expect(g1.finished, isTrue);
     expect(g1.isManual, isTrue);
