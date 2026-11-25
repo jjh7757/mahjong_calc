@@ -2676,6 +2676,38 @@
       "autoPort": false
     },
     {
+      "name": "paifu-confirm-h3",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-X",
+        "utf8",
+        "experiments/paifu_frames/paifu_confirm.py",
+        "serve",
+        "--run",
+        "experiments/paifu_frames/results/auto_h3_4b_on",
+        "8315"
+      ],
+      "port": 8315,
+      "autoPort": false
+    },
+    {
+      "name": "paifu-confirm-h3-test",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-X",
+        "utf8",
+        "experiments/paifu_frames/paifu_confirm.py",
+        "serve",
+        "--run",
+        "experiments/paifu_frames/results/auto_h3_4b_on",
+        "8316",
+        "--ans",
+        "experiments/paifu_frames/results/_setup_dev/k_session_ans.json"
+      ],
+      "port": 8316,
+      "autoPort": false
+    },
+    {
       "name": "web-riskcal",
       "runtimeExecutable": "python",
       "runtimeArgs": [

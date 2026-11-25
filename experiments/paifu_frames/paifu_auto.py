@@ -46,6 +46,10 @@ S9 차례 질문(8-3절 v2): 답의 unsure 또는 확신 말(HEDGE_*)에 걸리�
   사용자 답(apply)은 S7 · S8 · S9 만 다시 돈다 — supervisor 를 다시 띄우지 않는다(3-11 정한 것 3).
   옛 실행 폴더(state 에 sup 칸 없음): S7 이 이미 끝났으면 끈 것으로(옛 흐름 그대로), 아니면 켠 것으로 본다(S7s 는 "todo").
 단계마다 결과 파일을 남기고 state.json 에 적는다 — 같은 명령을 다시 불러도 된 단계는 건너뛴다(멱등).
+확인 페이지 · 답 반영(설계서 8-17 4-②, 11-25 밤): 페이지 · 근거 영상은 paifu_confirm.py(prep · serve · show — 답 = <실행>/answers_user.json 한 파일).
+  질문 id 꼴 표 Q_FORMS(묶음 A 가린 확인 · B 후보 고르기 · C 알림)를 페이지와 apply 가 같이 쓴다. apply 는 차례 답(k = k_id) · 뒷도라(none = 없음) ·
+  해저 · 강 한 칸 패 종류(_prep/rec/<판>/ 의 그 칸 — 사본 _before_apply/, 기록 user_record_fix.json)를 넣고, 덜 끝난 답 · unknown · unseen · bad · call 은
+  까닭과 함께 건너뛰며, B · C 답은 report.md 에 "답 받음 · 반영 안 됨(손으로)" 로 적는다. unapply 가 강 칸까지 되돌린다.
 
 앱 기록 우선(설계서 8-5 · 8-6 W1 ~ W5, 11-24 저녁) — 반장 설정에 app_record 칸이 있을 때만(없으면 위 흐름 그대로 · 3반장):
   S0  W1 · W2: app_record.build → app_rounds.json(판 목록 · 국 · 본장 · 선 · 아래 자리 · 화료/유국 · 닻 시각 · 결과 · 근거 폴더 · 버림 출처)
@@ -3969,8 +3973,48 @@ def write_report(r: Run, asked, hidden, samples=None, sup=None):
             L.append(f"| {t} | {v['unsure']} | {json.dumps(v.get('signal'), ensure_ascii=False) if v.get('signal') else '—'} | {where} | {v['cands']} ({v['src']}) | {im} |")
     if r.cfg().app_record and r.app():
         L += [""] + app_report_lines(r)
+    L += user_answer_lines(r)
     L += ["", "## 정답", "", "정답 없음 — 읽기끼리의 일치와 앞뒤 검사. 재생은 LLM 호출 0 · 하위 에이전트 0 · 토큰 0.", ""]
     wt(r.d / "report.md", "\n".join(L))
+
+
+def user_answer_lines(r: Run) -> list:
+    """사용자 답(apply — 설계서 8-17 4-② (라))의 보고서 절: 반영함 · 건너뜀(까닭) · 답 받음 · 반영 안 됨(손으로, B · C 묶음) — 답 글과 함께.
+    apply 를 한 적이 없으면 빈 목록(옛 보고서 그대로). 강 칸 고침(user_record_fix.json)이 S5 를 다시 돌려 사라졌으면 경고."""
+    ua = r.state.get("user_answers") or {}
+    L = []
+    rf = r.d / "user_record_fix.json"
+    lost = []
+    if rf.exists():
+        for qid, v in jl(rf).items():
+            if qid.startswith("_"):
+                continue
+            try:
+                sl = next(x for x in jl(r.prep / "rec" / v["game"] / "dart_overlay.json")[v["side"]]["slots"] if x.get("i") == v["i"])
+                if norm(sl["tile"]) != norm(v["to"]):
+                    lost.append(f"{qid}({v['side']} 칸 {v['i']}: 넣은 {v['to']} · 지금 {sl['tile']})")
+            except (OSError, StopIteration, KeyError):
+                lost.append(f"{qid}(칸을 못 찾음)")
+    if not ua and not lost:
+        return L
+    def txt(v):
+        return json.dumps(v, ensure_ascii=False) if not isinstance(v, str) else v
+    L += ["", f"## 사용자 답(apply — 확인 페이지 답, 설계서 8-17 4-②) {len(ua)}칸", ""]
+    if lost:
+        L += [f"**경고: S5 를 다시 돌려 apply 가 넣은 강 칸 고침이 사라짐 — 같은 답 파일로 apply 를 다시 부를 것: {', '.join(lost)}**", ""]
+    groups = [("applied", "반영함"), ("skipped", "건너뜀(넣지 않음)"), ("unapplied", "답 받음 · 반영 안 됨(손으로)")]
+    for key, label in groups:
+        rows = [(k, v) for k, v in ua.items() if v.get("result") == key]
+        if not rows:
+            continue
+        L += [f"### {label} {len(rows)}칸", "", "| id | 묶음 · 꼴 | 답 | 메모 | 까닭 · 결과 | 답 파일 · 저장 |", "|---|---|---|---|---|---|"]
+        for k, v in rows:
+            res = ("전과 같음" if v.get("same_as_before") else "바뀜") + (f" · {v['log']}" if v.get("log") else "") if key == "applied" else (v.get("why") or "")
+            ans = txt(v.get("value")) + (f"({v['value_name']})" if v.get("value_name") else "")
+            note = (v.get("note") or "").replace("|", "/").replace("\n", " ")
+            L.append(f"| {k} | {v.get('bundle')} · {v.get('form')} | {ans} | {note or '—'} | {res} | `{v.get('file')}` · {v.get('saved_at') or '—'} |")
+        L.append("")
+    return L
 
 
 def app_report_lines(r: Run) -> list:
@@ -4204,11 +4248,241 @@ def cmd_replay(a):
     print(f"replay: 넣음 {put} · 답 없음 {len(miss)}{' ' + str(miss) if miss else ''}")
 
 
+# ------------------------------------------------------------------ 확인 페이지 묶음 · 답 반영(설계서 8-17 4-②, 11-25 밤)
+# 질문 id 꼴 표 하나 — paifu_confirm.py(페이지 · 영상)와 apply(반영)가 같이 쓴다. 위에서부터 먼저 맞는 줄이 이긴다. 맞는 줄이 없으면 C(알림).
+# 칸: (꼴 이름, id 정규식(None = kind turn_slot), 묶음, 페이지 입력, 영상 구간 출처, apply)
+#   묶음 A = 가린 확인(지금 값 · 후보 · why 를 안 보냄) · B = 후보 고르기(지금 값과 후보를 섞어 정해진 순서로 — 어느 것이 지금 값인지 안 보임)
+#   · C = 알림(why 를 그대로 보임). "A?" = 지금 값과 후보가 모두 패 이름이면 A(패 종류), 아니면 B. B 인데 고를 것(지금 값 + 후보)이 둘 미만이면 C.
+_P3 = r"[0-9a-z]{3}"
+_SD = r"(?P<side>bottom|right|top|left)"
+Q_FORMS = [
+    ("turn_slot", None, "A", "차례 칸 정답 입력(프레임 묶음)", "read/<차례>/frames.txt 창 1초 앞부터 초당 10장", "반영 — 차례 답(k = k_id)"),
+    ("ura", rf"^{_P3}_ura$", "A", "패 34종 + 안 깠다 + 모르겠다", "S9: t_reveal ~ +15초(확대 칸 없음)", "반영(unknown 건너뜀 · none = 뒷도라 없음)"),
+    ("haitei", rf"^{_P3}_haitei$", "A", "예 · 아니오 · 모르겠다", "S9: t_end_play − 25초 ~ t_reveal + 5초(확대 칸 없음)", "반영(unknown 건너뜀)"),
+    ("rec_cell", rf"^{_P3}_rec_{_SD}_(?P<pos>\d+)$", "A?", "패 34종 + 모르겠다(A) / 후보 고르기(B)", "S9: 기록기가 그 칸을 처음 본 때 −5 ~ +10초(칸 상자가 있으면 확대)", "A 면 반영 — _prep/rec/<판>/ 의 그 칸 패 종류"),
+    ("app5_tile", rf"^{_P3}_app5_tile_{_SD}_(?P<pos>\w+)$", "A?", "패 34종 + 모르겠다(A) / 후보 고르기(B)", "S5: 그 고침의 헤드 · 앱 시각 −5 ~ +10초(칸 상자가 있으면 확대)", "A 면 반영 — 앱 기록 길 _prep/rec/<판>/ 의 그 칸 패 종류"),
+    ("app_warn", r"^app_warn_\d+$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("app_games", r"^app_games$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("game_app_warn", rf"^{_P3}_app_warn_\d+$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("s1_rounds", r"^s1_rounds$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("s1_order", r"^s1_order$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("s1_track_window", r"^s1_\w+_track_window$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("s1_gap", r"^s1_\w+_gap$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("s1_outside", r"^s1_\w+_outside$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("s1_reveal", r"^s1_\w+_reveal$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("app_bottom", r"^app_bottom$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("app_start", rf"^{_P3}_app_start$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("app_clock", rf"^{_P3}_app_clock$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("dealer", r"^\w+_dealer$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("s5_app_bottom", r"^s5_app_bottom$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("app5_round", rf"^{_P3}_app5_round$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("app5_head_primary", rf"^{_P3}_app5_head_primary$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("app5_uncertain", rf"^{_P3}_app5_uncertain$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("app5_chk", rf"^{_P3}_app5_chk_\w+$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("s6a", rf"^{_P3}_s6a_\w+$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("s6_turns", rf"^{_P3}_s6_turns$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("reveal", rf"^{_P3}_reveal$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("result", rf"^{_P3}_result$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("ev", rf"^{_P3}_ev_\w+_{_SD}$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("w5_cell", rf"^{_P3}_app_{_SD}_\d+$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("w5_calls", rf"^{_P3}_app_calls$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("w5_riichi", rf"^{_P3}_app_riichi$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("app5_hero_hand", rf"^{_P3}_app5_hero_hand$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("app5_hero", rf"^{_P3}_app5_hero$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("app5_pre", rf"^{_P3}_app5_pre_{_SD}_\w+$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "S5: 헤드 시각 −5 ~ +10초", "안 함(보고서)"),
+    ("app5_call_headonly", rf"^{_P3}_app5_call_headonly_{_SD}_\w+$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "S5: 받은 버림 헤드 시각 −5 ~ +10초", "안 함(보고서)"),
+    ("app5_call_apponly", rf"^{_P3}_app5_call_apponly_{_SD}_\w+$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "S5: 받은 버림 헤드 시각 −5 ~ +10초", "안 함(보고서)"),
+    ("app5_call", rf"^{_P3}_app5_call_{_SD}_\w+$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "S5: 받은 버림 헤드 시각 −5 ~ +10초", "안 함(보고서)"),
+    ("app5_headonly", rf"^{_P3}_app5_headonly_{_SD}_\w+$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "S5: 헤드 시각 −5 ~ +10초", "안 함(보고서)"),
+    ("app5_apponly", rf"^{_P3}_app5_apponly_{_SD}_\w+$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "S5: 앱 시각 + 시계 차 −5 ~ +10초", "안 함(보고서)"),
+    ("app5_riichi", rf"^{_P3}_app5_riichi_{_SD}_\w+$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "S5: 시각이 있으면 −5 ~ +10초", "안 함(보고서)"),
+    ("hero", r"^\w+_hero$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "없음", "안 함(보고서)"),
+]
+Q_FORM_UNKNOWN = ("unknown_form", None, "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음(clip 칸이 있으면 그 구간)", "안 함(보고서)")
+TILES34 = [f"{i}{s}" for s in "mps" for i in range(1, 10)] + [f"{i}z" for i in range(1, 8)]
+_TILE_RE = re.compile(r"^(?:[0-9][mps]|[1-7]z)$")
+
+
+def is_tile(v) -> bool:
+    return isinstance(v, str) and bool(_TILE_RE.match(v))
+
+
+def b_options(q: dict) -> list:
+    """B 묶음의 고를 것: 지금 값 + 후보를 한데 섞어 정해진 순서(글로 바꾼 JSON 의 사전 순)로 — 어느 것이 지금 값인지 안 보이게. 같은 것은 하나로."""
+    vals = ([q["current"]] if q.get("current") is not None else []) + [c for c in (q.get("candidates") or []) if c is not None]
+    seen = {}
+    for v in vals:
+        seen.setdefault(json.dumps(v, ensure_ascii=False, sort_keys=True), v)
+    return [seen[k] for k in sorted(seen)]
+
+
+def q_form(q: dict) -> dict:
+    """질문 줄 → {"form", "bundle"(A · B · C), "input", "clip_src", "apply", "m"(정규식 맞음 — side · pos), "note"}. 모르는 꼴은 C(죽지 않음)."""
+    qid = str(q.get("id") or "")
+    row, m = None, None
+    if q.get("kind") == "turn_slot":
+        row = Q_FORMS[0]
+    else:
+        for f in Q_FORMS[1:]:
+            m = re.match(f[1], qid)
+            if m:
+                row = f
+                break
+    row = row or Q_FORM_UNKNOWN
+    name, _, bundle, inp, clip_src, ap = row
+    note = None
+    if bundle == "A?":
+        cands = q.get("candidates") or []
+        if is_tile(q.get("current")) and cands and all(is_tile(c) for c in cands):
+            bundle, inp = "A", "패 34종 + 모르겠다"
+        else:
+            bundle, inp, note = "B", "후보 고르기(섞음) + 모르겠다 + 메모", "지금 값 · 후보가 패 이름이 아님 → B"
+    if bundle == "B" and len(b_options(q)) < 2:
+        bundle, inp, note = "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "고를 것(지금 값 + 후보)이 둘 미만 → C"
+    return {"form": name, "bundle": bundle, "input": inp, "clip_src": clip_src, "apply": ap, "m": m.groupdict() if m else {}, "note": note}
+
+
+def q_rows(r: "Run") -> dict:
+    """질문 id → 질문 줄(questions.jsonl · samples.jsonl · questions_hidden.jsonl · state 의 questions_* — 앞의 것이 이김). apply 가 꼴 · 지금 값을 본다."""
+    out = {}
+    for f in ("questions.jsonl", "samples.jsonl", "questions_hidden.jsonl"):
+        for q in jlines(r.d / f):
+            out.setdefault(q["id"], q)
+    for k, v in r.state.items():
+        if k.startswith("questions_") and isinstance(v, list):
+            for q in v:
+                if isinstance(q, dict) and q.get("id"):
+                    out.setdefault(q["id"], q)
+    return out
+
+
+TURN_SKIP = {"unseen": "안 보임 · 모름(페이지 답) — 넣지 않음",
+             "bad": "구간이 이상함(페이지 답) — 넣지 않음",
+             "call": "울기 뒤 버림 — 페이지 답에 조립이 쓰는 칸(gone · end_order)이 없음(넣는 길은 아직 없음)"}
+
+
+def _first(u: dict, keys):
+    return next((u[k] for k in keys if u.get(k) is not None), None)
+
+
+def turn_answer_problem(u: dict):
+    """차례 답을 넣을 수 없으면 까닭(글), 넣을 수 있으면 None. 덜 끝난 답 = ops_error · ops_pending 이 있거나 손에서 냄인데 order · 버린 칸이 없음."""
+    kd = u.get("kind")
+    if kd in TURN_SKIP:
+        return TURN_SKIP[kd]
+    if kd not in ("hand", "tsumogiri"):
+        return f"종류가 없거나 모르는 종류({kd}) — 넣지 않음"
+    if u.get("ops_error"):
+        return f"덜 끝난 답 — 칸 동작 오류: {u['ops_error']}"
+    if u.get("ops_pending"):
+        return f"덜 끝난 답 — 아직: {u['ops_pending']}"
+    if kd == "hand" and not u.get("order"):
+        return "덜 끝난 답 — 끝 줄(order)이 없음"
+    if kd == "hand" and _first(u, ("k_id", "k_orig", "k")) is None:
+        return "덜 끝난 답 — 버린 칸이 없음"
+    return None
+
+
+def rec_cell_locate(r: "Run", g: str, form: str, side: str, pos: str):
+    """고친 기록(_prep/rec/<판>/)에서 그 칸 → (기록기 칸 i, 까닭). 3반장 길(rec_cell) = 칸 i 그대로(질문 id 의 숫자 = river_rules 의 slot i).
+    앱 기록 길(app5_tile) = 질문 id 의 끝 = 헤드 녹화 기록기에서 그 자리 몇 번째 버림(app_merge 의 nth) → 헤드 dart(s5/compare.json 의 head 폴더) 그 칸의 i
+    (s5_app 이 헤드 칸을 i 째 복사해 _prep/rec 의 dart 를 만듦)."""
+    if form == "rec_cell":
+        return int(pos), None
+    try:
+        nth = int(pos)
+        head = jl(r.d / "s5" / "compare.json")["games"][g]["head"]
+        hd = jl(hcfg._p(head) / "dart_overlay.json")
+        return hd[side]["slots"][nth - 1]["i"], None
+    except (OSError, KeyError, IndexError, ValueError, TypeError) as e:
+        return None, f"앱 기록 길 칸을 못 찾음({type(e).__name__}: {e})"
+
+
+REC_FIX_FILES = ("dart_overlay.json", "dart_overlay_v2.json", "paifu_rec.json", "recfix_check.json")
+
+
+def rec_cell_fix(r: "Run", qid: str, g: str, form: str, side: str, pos: str, cur, new: str) -> tuple:
+    """강 한 칸의 패 종류를 고친 기록(_prep/rec/<판>/ — 조립 S8 이 읽는 곳)에 넣는다 → ("applied" | "same" | "skip", 글).
+    고치는 곳: dart_overlay.json · dart_overlay_v2.json(칸 tile · 울려 나간 칸이면 meld.tiles) · paifu_rec.json(그 자리 같은 순번 버림 사건 tile ·
+    바로 뒤가 그 패를 받은 울기 사건이면 그 tiles 한 장) · recfix_check.json(ops 에 한 줄 — 패보 note 의 고침 목록). 처음 고치기 전 네 파일을
+    _prep/rec/<판>/_before_apply/ 에 남김(unapply 가 되돌림). S5 는 다시 돌리지 않는다."""
+    rd = r.prep / "rec" / g
+    if not (rd / "paifu_rec.json").exists() or not (rd / "dart_overlay.json").exists():
+        return "skip", f"고친 기록 {rel(rd)} 이 없음"
+    i, why = rec_cell_locate(r, g, form, side, pos)
+    if i is None:
+        return "skip", why
+    d = jl(rd / "dart_overlay.json")
+    sl = d.get(side, {}).get("slots") or []
+    k = next((n for n, x in enumerate(sl) if x.get("i") == i and not (form == "app5_tile" and x.get("added_by"))), None)
+    if k is None:
+        return "skip", f"{side} 칸 i={i} 이 고친 기록에 없음"
+    pr = jl(rd / "paifu_rec.json")
+    ev = pr["events"]
+    seat = (pr["hero"] + SIDES.index(side)) % 4   # paifu_rec 의 hero = 아래 자리(replay_recorder bottomSeat · s5_app 도 같음)
+    idx = [n for n, e in enumerate(ev) if e["type"] == "discard" and e["seat"] == seat]
+    if len(idx) != len(sl):
+        return "skip", f"{side} 칸 {len(sl)} ≠ 사건 버림 {len(idx)} — 칸과 사건을 못 맞춤"
+    n = idx[k]
+    old = sl[k]["tile"]
+    if norm(old) != norm(ev[n]["tile"]):
+        return "skip", f"칸 {old} ≠ 사건 {ev[n]['tile']} — 칸과 사건을 못 맞춤"
+    if norm(old) == norm(new):
+        return "same", f"{side} 칸 i={i} 이 이미 {old}"
+    if cur is not None and norm(old) != norm(cur):
+        return "skip", f"{side} 칸 i={i} 의 지금 값 {old} 이 질문의 지금 값 {cur} 과 다름 — 넣지 않음"
+    bdir = rd / "_before_apply"
+    if not bdir.exists():
+        bdir.mkdir(parents=True)
+        for name in REC_FIX_FILES:
+            if (rd / name).exists():
+                shutil.copyfile(rd / name, bdir / name)
+    touched = []
+    for name in ("dart_overlay.json", "dart_overlay_v2.json"):
+        f = rd / name
+        if not f.exists():
+            continue
+        dd = d if name == "dart_overlay.json" else jl(f)
+        s2 = next(x for x in dd[side]["slots"] if x.get("i") == i)
+        if norm(s2["tile"]) != norm(old):
+            return "skip", f"{name} 의 칸 {s2['tile']} ≠ {old}"
+        s2["tile"] = new
+        if isinstance(s2.get("meld"), dict) and old in (s2["meld"].get("tiles") or []):
+            t = list(s2["meld"]["tiles"])
+            t[t.index(old)] = new
+            s2["meld"]["tiles"] = t
+        wj(f, dd)
+        touched.append(name)
+    ev[n] = {**ev[n], "tile": new}
+    call = None
+    if n + 1 < len(ev) and ev[n + 1]["type"] == "call" and ev[n + 1].get("from") == seat and old in (ev[n + 1].get("tiles") or []):
+        t = list(ev[n + 1]["tiles"])
+        t[t.index(old)] = new
+        ev[n + 1] = {**ev[n + 1], "tiles": t}
+        call = t
+    wj(rd / "paifu_rec.json", pr)
+    touched.append("paifu_rec.json")
+    log = f"retile {side} {i} {old}→{new}(사용자 확인 {qid} — paifu_auto apply)"
+    if (rd / "recfix_check.json").exists():
+        rc = jl(rd / "recfix_check.json")
+        rc["ops"] = list(rc.get("ops") or []) + [log]
+        wj(rd / "recfix_check.json", rc)
+        touched.append("recfix_check.json")
+    rf = r.d / "user_record_fix.json"
+    uf = jl(rf) if rf.exists() else {}
+    uf.setdefault("_note", "paifu_auto apply 가 _prep/rec/<판>/ 에 넣은 강 칸 패 종류(사용자 답). S5 를 다시 돌리면 _prep/rec 를 새로 써서 사라진다 — "
+                           "report.md 가 경고하고, 다시 넣으려면 같은 답 파일로 apply 를 다시 부른다.")
+    uf[qid] = {"game": g, "side": side, "i": i, "seat": seat, "from": old, "to": new, "event": n, "call_tiles": call, "files": touched, "at": now()}
+    wj(rf, uf)
+    return "applied", log + (f" · 받은 울기 {call}" if call else "")
+
+
 def user_turn_answer(u: dict, cur: dict) -> dict:
-    """정답 입력 페이지 답(answers_user.json 한 칸) → 읽기 답 꼴(kind · k · j · end_order)."""
+    """정답 입력 페이지 답(answers_user.json 한 칸) → 읽기 답 꼴(kind · k · j · end_order).
+    k = k_id(원래 줄에서 몇 번째 — 읽기 답의 k 와 같은 뜻). 페이지의 k 는 k_pos(버리는 순간의 자리)라 쓰지 않는다(8-17 4-② (라)) — k_id 가 없는 옛 답은 k_orig · k."""
     out = {"id": cur.get("id"), "kind": u["kind"], "unsure": False, "user": True, "user_note": u.get("note"), "user_saved_at": u.get("saved_at")}
     if u["kind"] == "hand":
-        out.update(k=u["k"], j=u.get("j_closed"), end_order=[str(x) for x in u["order"]])
+        out.update(k=_first(u, ("k_id", "k_orig", "k")), j=u.get("j_closed"), end_order=[str(x) for x in u["order"]])
     elif u["kind"] == "tsumogiri":
         n = len([x for x in cur.get("end_order") or [] if x != "D"]) or 13
         out.update(k=None, j=None, end_order=[str(i) for i in range(1, n + 1)])
@@ -4218,22 +4492,45 @@ def user_turn_answer(u: dict, cur: dict) -> dict:
 
 
 def cmd_apply(a):
+    """사용자 답 파일(확인 페이지 answers_user.json — 차례 답 · 항목 답이 한 파일에 같이 있어도 되고, --answers 를 여러 번 줘도 됨) → 반영 → S7 · S8 · S9.
+    가르기(설계서 8-17 4-② (라)): 값에 kind 가 있으면 차례 답(키 = 차례 id), value 가 있으면 항목 답 — 질문 id 꼴 표(Q_FORMS)로 묶음을 가름.
+      반영: 차례 답(hand · tsumogiri — k = k_id) · 뒷도라(패 · none = 없음) · 해저(yes · no) · 강 한 칸 패 종류(A 묶음 rec_cell · app5_tile).
+      건너뜀(까닭과 함께 — 죽지 않음): 덜 끝난 차례 답 · unseen · bad · call · unknown("모르겠다", 어느 꼴이든) · 모르는 값 · 칸을 못 찾음.
+      B · C 묶음 답: 반영하지 않고 보고서에 "답 받음 · 반영 안 됨(손으로)" 로 답 글과 함께.
+    반영한 칸만 state.answered(다음 S9 에서 질문 · 표본에서 숨김). supervisor(S7s)는 다시 띄우지 않는다."""
     r = Run(a.run)
     cfg = r.cfg()
     applied, notq = [], []
-    def lines(f):
-        return [json.loads(x) for x in f.read_text(encoding="utf-8").splitlines() if x.strip()] if f.exists() else []
-    qids = {q["id"] for q in lines(r.d / "questions.jsonl")}
-    sids = {q["id"] for q in lines(r.d / "samples.jsonl")}
+    qids = {q["id"] for q in jlines(r.d / "questions.jsonl")}
+    sids = {q["id"] for q in jlines(r.d / "samples.jsonl")}
+    rows = q_rows(r)
+    ua = r.state.setdefault("user_answers", {})   # 질문 id → 이번까지의 마지막 처리(보고서 "사용자 답" 절)
     for af in a.answers:
-        ans = jl(af)
+        try:
+            ans = jl(af)
+        except (OSError, json.JSONDecodeError) as e:
+            notq.append(f"{rel(af)}: 답 파일을 못 읽음({type(e).__name__})")
+            continue
         for k, u in ans.items():
             if k.startswith("_"):
                 continue
-            if "kind" in u and u["kind"] in ("hand", "tsumogiri", "call"):
+            base = {"id": k, "file": rel(af), "note": (u or {}).get("note") if isinstance(u, dict) else None,
+                    "saved_at": (u or {}).get("saved_at") if isinstance(u, dict) else None}
+
+            def skip(why, **kw):
+                notq.append(f"{k}: {why}")
+                ua[k] = {**base, "result": "skipped", "why": why, **kw}
+            if not isinstance(u, dict):
+                skip("답이 사전 꼴이 아님")
+                continue
+            if "kind" in u:   # 차례 답(칸 정답 입력 화면)
+                why = turn_answer_problem(u)
+                if why:
+                    skip(why, bundle="A", form="turn_slot", value=u.get("kind"))
+                    continue
                 f = active_answer(r, k)
                 if not f.exists():
-                    notq.append(f"{k}: 읽기 답 없음")
+                    skip("읽기 답 없음", bundle="A", form="turn_slot", value=u.get("kind"))
                     continue
                 cur = jl(f)
                 keep = r.read / k / "answer_before_apply.json"
@@ -4243,39 +4540,83 @@ def cmd_apply(a):
                 same = [str(x) for x in (cur.get("end_order") or [])] == new["end_order"] and cur.get("kind") == new["kind"]
                 wj(f, {**cur, **new})
                 applied.append({"id": k, "kind": "turn", "same_as_before": same, "was_question": k in qids, "was_sample": k in sids})
-            elif "value" in u:
-                pre, what = k.split("_", 1)
-                g = cfg.game_of(pre)
+                ua[k] = {**base, "result": "applied", "bundle": "A", "form": "turn_slot", "value": {"kind": new["kind"], "k": new.get("k"), "j": new.get("j")},
+                         "same_as_before": same}
+                continue
+            if "value" not in u:
+                skip("kind 도 value 도 없는 답")
+                continue
+            v = u["value"]
+            row = rows.get(k) or {"id": k}
+            fm = q_form(row)
+            if k not in rows and u.get("bundle") in ("B", "C"):   # 이 실행의 질문 목록에 없는 id — 페이지가 저장한 묶음을 씀(꼴 표만으로는 후보 수를 모름)
+                fm = {**fm, "bundle": u["bundle"]}
+            if fm["bundle"] in ("B", "C"):
+                ua[k] = {**base, "result": "unapplied", "bundle": fm["bundle"], "form": fm["form"], "value": v, "value_name": u.get("value_name"),
+                         "why": "답 받음 · 반영 안 됨(손으로)" + ("" if k in rows else " — 이 실행의 질문 목록에 없는 id")}
+                continue
+            if v == "unknown":
+                skip("모르겠다(unknown) — 넣지 않음(그 칸은 확인 안 된 추정으로 남음)", bundle="A", form=fm["form"], value=v)
+                continue
+            pre = k.split("_", 1)[0]
+            g = cfg.game_of(pre)
+            if g is None:
+                skip(f"판을 못 찾음(접두사 {pre})", bundle="A", form=fm["form"], value=v)
+                continue
+            if fm["form"] in ("ura", "haitei"):
+                if fm["form"] == "ura" and v != "none" and not is_tile(v):
+                    skip(f"모르는 값 {v!r}", bundle="A", form=fm["form"], value=v)
+                    continue
+                if fm["form"] == "haitei" and v not in ("yes", "no"):
+                    skip(f"모르는 값 {v!r}", bundle="A", form=fm["form"], value=v)
+                    continue
                 f = r.d / g / "result_read.json"
                 rr = jl(f)
                 keep = r.d / g / "result_read_before_apply.json"
                 if not keep.exists():
                     shutil.copyfile(f, keep)
-                if what == "ura":
-                    same = (rr.get("ura_indicators") or [None])[0] == u["value"]
-                    if not same:
-                        rr["ura_indicators"] = [u["value"]] + list((rr.get("ura_indicators") or [])[1:])
-                elif what == "haitei":
+                if fm["form"] == "ura":
+                    if v == "none":   # 뒷도라를 안 깠다 → 표시패 없음(조립은 빈 목록을 받음 — han3_paifu: list(rr.get("ura_indicators") or []))
+                        same = not rr.get("ura_indicators")
+                        if not same:
+                            rr["ura_indicators"] = []
+                    else:
+                        same = (rr.get("ura_indicators") or [None])[0] == v
+                        if not same:
+                            rr["ura_indicators"] = [v] + list((rr.get("ura_indicators") or [])[1:])
+                else:
                     chk = jl(r.paifu / "_check.json")[g]
                     cur = chk.get("wall_left_end") == 0
-                    want = u["value"] == "yes"
+                    want = v == "yes"
                     same = cur == want
                     if not same:
                         rr["last_tile"] = want
-                else:
-                    notq.append(f"{k}: 모르는 항목")
-                    continue
                 if not same:
                     wj(f, rr)
-                applied.append({"id": k, "kind": what, "same_as_before": same, "was_question": k in qids, "was_sample": k in sids})
+                applied.append({"id": k, "kind": fm["form"], "same_as_before": same, "was_question": k in qids, "was_sample": k in sids})
+                ua[k] = {**base, "result": "applied", "bundle": "A", "form": fm["form"], "value": v, "same_as_before": same}
+                continue
+            if fm["form"] in ("rec_cell", "app5_tile"):
+                if not is_tile(v):
+                    skip(f"모르는 값 {v!r}", bundle="A", form=fm["form"], value=v)
+                    continue
+                st, why = rec_cell_fix(r, k, g, fm["form"], fm["m"]["side"], fm["m"]["pos"], row.get("current"), v)
+                if st == "skip":
+                    skip(why, bundle="A", form=fm["form"], value=v)
+                    continue
+                applied.append({"id": k, "kind": fm["form"], "same_as_before": st == "same", "was_question": k in qids, "was_sample": k in sids, "log": why})
+                ua[k] = {**base, "result": "applied", "bundle": "A", "form": fm["form"], "value": v, "same_as_before": st == "same", "log": why}
+                continue
+            skip(f"A 묶음인데 반영 길이 없는 꼴 {fm['form']}", bundle="A", form=fm["form"], value=v)
     r.state["answered"] = sorted(set(r.state.get("answered") or []) | {x["id"] for x in applied})
     for s in ("S7", "S8", "S9"):
         r.state["stages"][s] = {"status": "todo"}
         r.state["timing"].pop(s, None)   # 걸린 시간은 이번 바퀴 것만(옛 코드는 누적)
     r.state["reread"] = {}
-    r.state["events"].append({"at": now(), "apply": applied, "skipped": notq, "files": [rel(x) for x in a.answers]})
+    unap = [x for x, v in ua.items() if v.get("result") == "unapplied"]
+    r.state["events"].append({"at": now(), "apply": applied, "skipped": notq, "unapplied": unap, "files": [rel(x) for x in a.answers]})
     r.save()
-    print(f"apply: {len(applied)}칸 (전과 같음 {sum(x['same_as_before'] for x in applied)}) · 건너뜀 {notq}")
+    print(f"apply: {len(applied)}칸 (전과 같음 {sum(x['same_as_before'] for x in applied)}) · 건너뜀 {notq} · 답 받음 · 반영 안 됨(B · C) {len(unap)}")
     cmd_next(argparse.Namespace(run=a.run))
 
 
@@ -4292,8 +4633,19 @@ def cmd_unapply(a):
         if f.exists():
             shutil.copyfile(f, r.d / g / "result_read.json")
             back.append(g)
-    r.state["events"].append({"at": now(), "unapply": back, "answered_was": r.state.get("answered")})
+        bdir = r.prep / "rec" / g / "_before_apply"   # 강 칸 패 종류(8-17 4-②) — 사본은 남김(다음 apply 도 같은 '전' 을 봄)
+        if bdir.is_dir():
+            for f in sorted(bdir.glob("*.json")):
+                shutil.copyfile(f, bdir.parent / f.name)
+            back.append(f"rec/{g}")
+    rf = r.d / "user_record_fix.json"
+    if rf.exists():
+        old = {k: v for k, v in jl(rf).items() if not k.startswith("_")}
+        wj(rf, {"_note": f"unapply({now()})로 되돌림 — 넣은 칸 없음", "_undone": old})
+    r.state["events"].append({"at": now(), "unapply": back, "answered_was": r.state.get("answered"),
+                              "user_answers_was": sorted((r.state.get("user_answers") or {}).keys())})
     r.state["answered"] = []
+    r.state["user_answers"] = {}
     for s in ("S7", "S8", "S9"):
         r.state["stages"][s] = {"status": "todo"}
         r.state["timing"].pop(s, None)
