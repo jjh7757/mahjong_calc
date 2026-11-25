@@ -270,6 +270,10 @@ class Game {
   /// 되돌리기·다시 실행([rewindTo]·[restoreFrom])과 상관없이 그대로 둔다(앱 밖에서 일어난 일이다).
   DateTime? mavelyUploadedAt;
 
+  /// 우리 기록 사이트(`/records`, docs/records_site_design_1125.md)에 올린(서버가 200 으로 받은) 때. 안 올렸거나 옛 기록이면 null.
+  /// [mavelyUploadedAt] 처럼 되돌리기·다시 실행과 상관없이 그대로 둔다.
+  DateTime? recordsUploadedAt;
+
   Game({
     required this.id,
     required this.startedAt,
@@ -288,6 +292,7 @@ class Game {
     this.finished = false,
     this.endedBy,
     this.mavelyUploadedAt,
+    this.recordsUploadedAt,
   })  : scores = scores ?? List.filled(4, settings.startPoints),
         riichiSeats = riichiSeats ?? {},
         carriedStickSeats = carriedStickSeats ?? {},
@@ -896,6 +901,7 @@ class Game {
         'finished': finished,
         'endedBy': endedBy,
         if (mavelyUploadedAt != null) 'mavelyUploadedAt': mavelyUploadedAt!.toIso8601String(),
+        if (recordsUploadedAt != null) 'recordsUploadedAt': recordsUploadedAt!.toIso8601String(),
       };
 
   factory Game.fromJson(Map<String, dynamic> j) => Game(
@@ -920,6 +926,7 @@ class Game {
         finished: j['finished'] as bool,
         endedBy: j['endedBy'] as String?,
         mavelyUploadedAt: j['mavelyUploadedAt'] == null ? null : DateTime.parse(j['mavelyUploadedAt'] as String),
+        recordsUploadedAt: j['recordsUploadedAt'] == null ? null : DateTime.parse(j['recordsUploadedAt'] as String),
       );
 }
 

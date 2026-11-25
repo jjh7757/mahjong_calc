@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'game/game_store.dart';
 import 'game/member_store.dart';
+import 'game/records_upload.dart';
 import 'services/on_device_bench.dart';
 import 'ui/game/settlement_screen.dart';
 import 'ui/hand_editor.dart';
@@ -14,6 +15,8 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   // 기기 판독 실험(exp/on-device-read): adb 측정 입구(OnDeviceBenchReceiver --es flow)가 부르는 앱 흐름 측정.
   OnDeviceBench.register();
+  // 대국이 끝나면 기록 사이트 대기열에 넣고 올리기를 시도한다(설정에서 켰을 때만, docs/records_site_design_1125.md 6절).
+  gameStore.onFinished = recordsUploader.onFinished;
   runApp(const MahjongApp());
 }
 
@@ -34,7 +37,8 @@ class _MahjongAppState extends State<MahjongApp> with WidgetsBindingObserver {
     super.initState();
     if (widget.loadSavedRules) {
       RulesStore.load().then(editor.setRules);
-      gameStore.load();
+      // 지난 대국을 읽은 뒤 기록 사이트 대기열을 비운다(꺼져 있으면 아무것도 안 함, 실패는 조용히).
+      gameStore.load().then((_) => recordsUploader.flush());
       memberStore.load();
       FullscreenMode.load();
       WidgetsBinding.instance.addObserver(this);

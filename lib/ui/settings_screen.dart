@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../engine/calculator.dart';
 import '../services/announcer.dart';
 import 'hand_editor.dart';
+import 'records_site_screen.dart';
 
 /// 룰 설정을 기기에 저장·복원한다.
 class RulesStore {
@@ -84,6 +85,14 @@ class SettingsScreen extends StatelessWidget {
             children: [
               const _VoiceSwitch(),
               const _AutoRecordSwitch(),
+              ListTile(
+                key: const ValueKey('records-site'),
+                leading: const Icon(Icons.cloud_upload_outlined),
+                title: const Text('기록 사이트'),
+                subtitle: const Text('끝난 대국을 매장 기록 사이트에 올림(주소 · 매장 키 · 켜기/끄기)'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RecordsSiteScreen())),
+              ),
               const Divider(height: 1),
               SwitchListTile(
                 title: const Text('쿠이탄'),

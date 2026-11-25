@@ -17,6 +17,20 @@ class GameStore extends ChangeNotifier {
   List<Game> history = [];
   bool loaded = false;
 
+  /// 대국이 끝나 지난 대국에 들어간 직후([finish] · [addFinished]) 부르는 고리. 앱은 기록 사이트 올리기를 단다
+  /// (`recordsUploader.onFinished`, main.dart). 저장 뒤에 부르고, 던져도 대국 흐름은 막지 않는다.
+  void Function(Game g)? onFinished;
+
+  void _notifyFinished(Game g) {
+    final f = onFinished;
+    if (f == null) return;
+    try {
+      f(g);
+    } catch (e) {
+      debugPrint('[records] 끝난 대국 알림 실패: $e');
+    }
+  }
+
   Future<void> load() async {
     final p = await SharedPreferences.getInstance();
     final c = p.getString(_currentKey);
@@ -140,6 +154,7 @@ class GameStore extends ChangeNotifier {
     current = null;
     _save();
     notifyListeners();
+    _notifyFinished(g);
   }
 
   /// 앱 밖에서 친 대국(직접 입력, [Game.manual])처럼 이미 끝난 대국을 지난 대국에 넣는다.
@@ -153,6 +168,7 @@ class GameStore extends ChangeNotifier {
     _trimHistory();
     _save();
     notifyListeners();
+    _notifyFinished(g);
   }
 
   void _trimHistory() {
@@ -176,6 +192,26 @@ class GameStore extends ChangeNotifier {
     notifyListeners();
     return true;
   }
+
+  /// 지난 대국 [gameId] 에 '기록 사이트에 올림' 표시를 남긴다([Game.recordsUploadedAt]). 찾으면 true.
+  /// [save] 가 false 면 저장하지 않는다 — 여러 대국을 한꺼번에 올릴 때 매번 지난 대국 전체를 쓰지 않게, 끝에 [persist] 한 번.
+  bool markRecordsUploaded(String gameId, {DateTime? at, bool save = true}) {
+    Game? g;
+    for (final h in history) {
+      if (h.id == gameId) {
+        g = h;
+        break;
+      }
+    }
+    if (g == null) return false;
+    g.recordsUploadedAt = at ?? DateTime.now();
+    if (save) _save();
+    notifyListeners();
+    return true;
+  }
+
+  /// 지금 상태를 저장한다([markRecordsUploaded] 를 save: false 로 부른 뒤).
+  Future<void> persist() => _save();
 
   void discardCurrent() {
     current = null;

@@ -1,14 +1,26 @@
 import 'package:flutter/material.dart';
 
 import '../../game/game_store.dart';
+import '../../game/records_upload.dart';
 import '../../paifu/paifu_store.dart';
 import '../kiosk.dart';
 import '../paifu/paifu_screen.dart';
 import 'settlement_screen.dart';
 
-/// 끝난 대국 목록.
-class HistoryScreen extends StatelessWidget {
+/// 끝난 대국 목록. 열 때 기록 사이트 대기열을 비운다(꺼져 있으면 아무것도 안 함).
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
+
+  @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  @override
+  void initState() {
+    super.initState();
+    recordsUploader.flush();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,9 +54,10 @@ class HistoryScreen extends StatelessWidget {
                     return ListTile(
                       title: Text(rows.map((r) => '${r.name} ${_fmt(r.score)}').join('  ')),
                       // 직접 입력한 대국은 국·건수가 뜻이 없고 패보도 없다.
-                      // 마블리에 올린 대국은 끝에 작은 표시.
+                      // 마블리 · 기록 사이트에 올린 대국은 끝에 작은 표시.
                       subtitle: Text('${g.isManual ? '$date · 직접 입력' : '$date · ${g.roundLabel} · ${g.events.length}건'}'
-                          '${g.mavelyUploadedAt != null ? ' · 마블리 ✓' : ''}'),
+                          '${g.mavelyUploadedAt != null ? ' · 마블리 ✓' : ''}'
+                          '${g.recordsUploadedAt != null ? ' · 기록 ✓' : ''}'),
                       trailing: g.isManual ? null : IconButton(
                         tooltip: '패보',
                         icon: const Icon(Icons.slideshow),
