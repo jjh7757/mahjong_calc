@@ -50,6 +50,11 @@ S9 차례 질문(8-3절 v2): 답의 unsure 또는 확신 말(HEDGE_*)에 걸리�
   질문 id 꼴 표 Q_FORMS(묶음 A 가린 확인 · B 후보 고르기 · C 알림)를 페이지와 apply 가 같이 쓴다. apply 는 차례 답(k = k_id) · 뒷도라(none = 없음) ·
   해저 · 강 한 칸 패 종류(_prep/rec/<판>/ 의 그 칸 — 사본 _before_apply/, 기록 user_record_fix.json)를 넣고, 덜 끝난 답 · unknown · unseen · bad · call 은
   까닭과 함께 건너뛰며, B · C 답은 report.md 에 "답 받음 · 반영 안 됨(손으로)" 로 적는다. unapply 가 강 칸까지 되돌린다.
+실행기 · 답 반영 뒤 규칙(설계서 8-17 4-③, 11-25 밤): 설정에서 확인 페이지까지의 고리(start · go · page · answer)는 paifu_run.py. 이 파일에서 바뀐 것 둘:
+  - apply 뒤의 S7 은 다시 읽기 꾸러미를 내지 않는다(state.user_final — 사용자 답은 최종, 3-11 정한 것 3). 걸린 판은 final_bad 로 그대로 남긴다.
+    unapply 는 이 표시를 지운다(apply 전 흐름으로).
+  - 검사에 걸린 채 남은 판(S7 final_bad · S8 check_fail)은 S9 가 판마다 알림 질문 하나 <판 앞 세 글자>_s7_check(kind check · 검사 글 그대로 ·
+    반영 길 없음 · 영상 없음)로 questions.jsonl 에 올린다 — 답 반영 전의 S9 에서도 같다(전에는 상태에만 남았음).
 
 앱 기록 우선(설계서 8-5 · 8-6 W1 ~ W5, 11-24 저녁) — 반장 설정에 app_record 칸이 있을 때만(없으면 위 흐름 그대로 · 3반장):
   S0  W1 · W2: app_record.build → app_rounds.json(판 목록 · 국 · 본장 · 선 · 아래 자리 · 화료/유국 · 닻 시각 · 결과 · 근거 폴더 · 버림 출처)
@@ -3154,6 +3159,12 @@ def s7(r: Run):
             if why and res.get(g, {}).get("ok"):
                 res[g] = {**res[g], "ok": False, "error": f"{tid}: 답 꼴 이상 — {why}"}
     bad = {g: v for g, v in res.items() if not v["ok"] or v.get("missing") or v.get("hand_count_problems") or v.get("four")}
+    if r.state.get("user_final"):
+        # 설계서 8-17 4-③(3-11 정한 것 3): 사용자 답 반영(apply) 뒤의 S7 은 다시 읽기 꾸러미를 내지 않는다(LLM 0) — 사용자 답은 최종.
+        # 걸린 판은 final_bad 로 그대로 남기고, S9 가 <판>_s7_check 알림 질문으로 올린다.
+        st["final_bad"] = bad
+        r.done("S7", bad=list(bad), rereads=dict(r.state["reread"]), after_user=True)
+        return []
     new_wait = {}
     for g, v in bad.items():
         n = r.state["reread"].get(g, 0)
@@ -3559,6 +3570,7 @@ def s9(r: Run):
                 hidden.append({**q, "hidden_reason": "설정(11-23 손 파일)이 덮음"})
             else:
                 asked.append(q)
+    asked += check_questions(r)   # 설계서 8-17 4-③: 검사에 걸린 채 남은 판 → 알림 질문 <판>_s7_check(걸린 판이 없으면 0 — 질문 파일은 전과 같음)
     for q in hidden:
         q.setdefault("hidden_reason", "hidden_zero_impact")
 
@@ -3635,6 +3647,32 @@ def s9(r: Run):
     r.save()
     write_report(r, asked, hidden, samples, sup={"su": su, "sources": src})
     return []
+
+
+S7_CHECK_KEYS = ("ok", "error", "missing", "hand_count_problems", "four")   # S7 앞뒤 검사 결과에서 알림 질문 글에 옮기는 칸(hands · call_log 는 뺌)
+
+
+def check_questions(r: Run) -> list:
+    """설계서 8-17 4-③: 검사에 걸린 채 남은 판(S7 final_bad · S8 check_fail) → 판마다 알림 질문 하나 <판 앞 세 글자>_s7_check.
+    why = 검사 글 그대로(S7 은 S7_CHECK_KEYS 칸만 · S8 은 han3_check.dart 의 check 값). 반영 길 · 영상(clip) 없음 — 확인 페이지 묶음 C."""
+    s7b = r.stage("S7").get("final_bad") or {}
+    s8b = r.stage("S8").get("check_fail") or {}
+    out = []
+    for g in r.games():
+        if g not in s7b and g not in s8b:
+            continue
+        chk, parts = {}, []
+        if g in s7b:
+            chk["S7"] = {k: s7b[g][k] for k in S7_CHECK_KEYS if k in s7b[g] and (k == "ok" or s7b[g][k])}
+            parts.append("S7 앞뒤 검사: " + json.dumps(chk["S7"], ensure_ascii=False))
+        if g in s8b:
+            chk["S8"] = s8b[g]
+            parts.append("S8 조립 검사(han3_check.dart): " + json.dumps(s8b[g], ensure_ascii=False))
+        out.append({"id": f"{g[:3]}_s7_check", "kind": "check", "stage": "S7" if g in s7b else "S8", "game": g, "why": " / ".join(parts),
+                    "check": chk, "after_user": bool(r.state.get("user_final")),
+                    "impact_summary": {"max_hand_turns": None, "result_changed": False, "zero": False},
+                    "rule": "8-17 4-③ 검사에 걸린 채 남은 판 — 알림(반영 길 없음)"})
+    return out
 
 
 def v2_samples(r: Run, cfg, all_ids: list, raised_set: set, imp: dict, turn_row):
@@ -3835,6 +3873,8 @@ def q_bundle(q) -> str:
         return "묶음 2(탁자 기록)"
     if s in ("S6a", "S6"):
         return "묶음 3(손 추적 준비)"
+    if q.get("kind") == "check":   # 8-17 4-③ <판>_s7_check — 검사에 걸린 채 남은 판
+        return "묶음 4(앞뒤 검사 · 조립 검사)"
     return f"그 밖({s or '단계 없음'})"
 
 
@@ -4283,6 +4323,7 @@ Q_FORMS = [
     ("s6_turns", rf"^{_P3}_s6_turns$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
     ("reveal", rf"^{_P3}_reveal$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
     ("result", rf"^{_P3}_result$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("s7_check", rf"^{_P3}_s7_check$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),   # 8-17 4-③
     ("ev", rf"^{_P3}_ev_\w+_{_SD}$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "없음", "안 함(보고서)"),
     ("w5_cell", rf"^{_P3}_app_{_SD}_\d+$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "없음", "안 함(보고서)"),
     ("w5_calls", rf"^{_P3}_app_calls$", "B", "후보 고르기(섞음) + 모르겠다 + 메모", "없음", "안 함(보고서)"),
@@ -4477,6 +4518,34 @@ def rec_cell_fix(r: "Run", qid: str, g: str, form: str, side: str, pos: str, cur
     return "applied", log + (f" · 받은 울기 {call}" if call else "")
 
 
+def turn_size(cur: dict) -> int:
+    """차례가 끝난 뒤의 줄 장수 = 읽기 답 끝 줄 길이(손에서 냄은 D 를 한 장으로 셈 · 쯔모기리는 D 없음). 읽기 답에 끝 줄이 없으면 13."""
+    return len(cur.get("end_order") or []) or 13
+
+
+def tsumogiri_problem(u: dict, cur: dict):
+    """쯔모기리 페이지 답을 넣을 수 없으면 까닭(글), 넣을 수 있으면 None(8-17 4-③ 덧붙임).
+    끝 줄(order — 칸 판으로 적은 답)이 있으면: 길이가 줄 장수(turn_size)와 같고 1 … n 을 한 번씩. 그 답의 "줄 장수가 다르면" 칸(n)은 칸 판 크기에
+    이미 들어가 끝 줄 길이로 드러나므로 따로 안 봄. 끝 줄이 없으면(쯔모기리만 고름): n 칸이 적혀 있고 줄 장수와 다를 때만 건너뜀 — n 으로 끝 줄을 만들지는 않음."""
+    n = turn_size(cur)
+    o = u.get("order")
+    if o:
+        o = [str(x) for x in o]
+        if len(o) != n:
+            return f"쯔모기리 끝 줄 {len(o)}장 ≠ 읽기 답 줄 장수 {n}장 — 넣지 않음"
+        if sorted(o, key=lambda x: (len(x), x)) != [str(i) for i in range(1, n + 1)]:
+            return f"쯔모기리 끝 줄이 1 … {n} 을 한 번씩 담지 않음({' '.join(o)}) — 넣지 않음"
+        return None
+    if u.get("n") not in (None, ""):
+        try:
+            un = int(u["n"])
+        except (TypeError, ValueError):
+            return f"줄 장수 칸 n {u['n']!r} 을 못 읽음 — 넣지 않음"
+        if un != n:
+            return f"페이지 '줄 장수가 다르면' {un}장 ≠ 읽기 답 줄 장수 {n}장(끝 줄 없는 쯔모기리) — 넣지 않음"
+    return None
+
+
 def user_turn_answer(u: dict, cur: dict) -> dict:
     """정답 입력 페이지 답(answers_user.json 한 칸) → 읽기 답 꼴(kind · k · j · end_order).
     k = k_id(원래 줄에서 몇 번째 — 읽기 답의 k 와 같은 뜻). 페이지의 k 는 k_pos(버리는 순간의 자리)라 쓰지 않는다(8-17 4-② (라)) — k_id 가 없는 옛 답은 k_orig · k."""
@@ -4484,8 +4553,11 @@ def user_turn_answer(u: dict, cur: dict) -> dict:
     if u["kind"] == "hand":
         out.update(k=_first(u, ("k_id", "k_orig", "k")), j=u.get("j_closed"), end_order=[str(x) for x in u["order"]])
     elif u["kind"] == "tsumogiri":
-        n = len([x for x in cur.get("end_order") or [] if x != "D"]) or 13
-        out.update(k=None, j=None, end_order=[str(i) for i in range(1, n + 1)])
+        # 11-25 밤(8-17 4-③ 덧붙임): 줄 장수 = 차례가 끝난 뒤의 줄 장수 = 읽기 답 끝 줄 길이(D 도 한 장). 옛 코드는 D 를 빼고 세어
+        # 읽기 답이 "손에서 냄" 인 차례에 1 … 12 가 됐다. 페이지 끝 줄(order)이 있으면 그것(길이 · 순열 검사는 tsumogiri_problem — apply 가 먼저 봄)
+        n = turn_size(cur)
+        eo = [str(x) for x in u["order"]] if u.get("order") else [str(i) for i in range(1, n + 1)]
+        out.update(k=None, j=None, end_order=eo)
     else:
         out.update({k: u.get(k) for k in ("k", "gone", "end_order")})
     return out
@@ -4533,6 +4605,10 @@ def cmd_apply(a):
                     skip("읽기 답 없음", bundle="A", form="turn_slot", value=u.get("kind"))
                     continue
                 cur = jl(f)
+                why = tsumogiri_problem(u, cur) if u.get("kind") == "tsumogiri" else None   # 8-17 4-③ 덧붙임: 쯔모기리 줄 장수
+                if why:
+                    skip(why, bundle="A", form="turn_slot", value=u.get("kind"))
+                    continue
                 keep = r.read / k / "answer_before_apply.json"
                 if not keep.exists():
                     shutil.copyfile(f, keep)
@@ -4613,6 +4689,8 @@ def cmd_apply(a):
         r.state["stages"][s] = {"status": "todo"}
         r.state["timing"].pop(s, None)   # 걸린 시간은 이번 바퀴 것만(옛 코드는 누적)
     r.state["reread"] = {}
+    # 설계서 8-17 4-③: 이 뒤의 S7 은 다시 읽기 꾸러미를 내지 않는다(사용자 답은 최종 — 걸린 판은 S9 의 <판>_s7_check 로)
+    r.state["user_final"] = {"at": now(), "note": "apply 뒤 — S7 다시 읽기 안 함(설계서 8-17 4-③)"}
     unap = [x for x, v in ua.items() if v.get("result") == "unapplied"]
     r.state["events"].append({"at": now(), "apply": applied, "skipped": notq, "unapplied": unap, "files": [rel(x) for x in a.answers]})
     r.save()
@@ -4646,6 +4724,7 @@ def cmd_unapply(a):
                               "user_answers_was": sorted((r.state.get("user_answers") or {}).keys())})
     r.state["answered"] = []
     r.state["user_answers"] = {}
+    r.state.pop("user_final", None)   # 8-17 4-③ 표시도 지움 — apply 전 흐름(S7 다시 읽기 있음)으로
     for s in ("S7", "S8", "S9"):
         r.state["stages"][s] = {"status": "todo"}
         r.state["timing"].pop(s, None)

@@ -5,7 +5,9 @@
   python -X utf8 experiments/paifu_frames/paifu_confirm.py show  --run <실행 폴더> [--ans <답 파일>] [--questions <파일>]
 (저장소 루트에서. 실행 폴더 = paifu_auto.py 의 실행 폴더 — 읽기만, 쓰는 곳은 <실행>/confirm/ 과 답 파일 둘뿐.)
 
-볼 것 = 실행 폴더의 questions.jsonl(먼저) + samples.jsonl(파일 순서). --questions = 시험용 질문 줄 파일(jsonl · json 목록)로 바꿈.
+볼 것 = 실행 폴더의 questions.jsonl(먼저) + samples.jsonl(파일 순서). --questions = 질문 줄 파일(jsonl · json 목록)로 바꿈(시험용 ·
+  실행기 paifu_run.py 가 확인 차례마다 그때의 줄을 얼려 둔 파일 — 둘째 차례(추가 질문)는 --out <실행>/confirm_2 와 함께, 설계서 8-17 4-③).
+  답 파일은 차례와 상관없이 <실행>/answers_user.json 하나(둘째 차례 페이지도 그 차례 줄의 답만 받고 · 탭 수도 그 줄만 셈).
 묶음은 paifu_auto.Q_FORMS(질문 id 꼴 표 하나 — apply 와 같은 표)로 가른다:
   A 가린 확인 — 차례 칸(질문 · 표본) = 칸 정답 입력 화면(handtrack/truthpage.html 을 고치지 않고 han3_truthserver.PAGE_PATCH 로 글만 바꿔 보냄,
                 길 /turns.json · /answers · /save · /f/<판>/<ms>.jpg). 그림 = read/<차례>/frames.txt 창 1초 앞부터 초당 10장, 판별 설정 sheet_band(없으면 band)
@@ -564,7 +566,7 @@ const FORM_KO = {ura:"뒷도라", haitei:"해저", rec_cell:"강 칸", app5_tile
   hero:"손패 주인", app_warn:"앱 기록 경고", app_games:"앱 판 목록", game_app_warn:"앱 기록 경고", s1_rounds:"판 경계", s1_order:"판 순서",
   s1_track_window:"판 구간(추적 창)", s1_gap:"녹화 끊김", s1_outside:"녹화 밖", s1_reveal:"공개 시각", app_bottom:"아래 자리", app_start:"판 시작",
   app_clock:"시계 차", dealer:"선", s5_app_bottom:"아래 자리", app5_round:"국 · 본장", app5_head_primary:"헤드 녹화 기록을 씀", app5_uncertain:"탁자 기록 불확실",
-  app5_chk:"탁자 기록 검사", s6a:"손 추적 준비", s6_turns:"차례 수", reveal:"공개 손패", result:"판 결과", unknown_form:"확인할 것"};
+  app5_chk:"탁자 기록 검사", s6a:"손 추적 준비", s6_turns:"차례 수", reveal:"공개 손패", result:"판 결과", s7_check:"앞뒤 검사에 걸린 채 남음", unknown_form:"확인할 것"};
 function itemLabel(it){
   const pre = it.game ? it.game.slice(0,3) + " 판 " : "";
   const side = it.side ? (SIDE_KO[it.side] || it.side) + " 자리 " : "";
@@ -832,8 +834,8 @@ def main():
     for name in ("prep", "serve", "show"):
         p = sp.add_parser(name)
         p.add_argument("--run", required=True)
-        p.add_argument("--questions", help="시험용: 질문 줄 파일(jsonl · json 목록) — 실행 폴더의 questions.jsonl · samples.jsonl 대신")
-        p.add_argument("--out", help="시험용: 자료 폴더(기본 <실행>/confirm)")
+        p.add_argument("--questions", help="질문 줄 파일(jsonl · json 목록) — 실행 폴더의 questions.jsonl · samples.jsonl 대신(시험용 · paifu_run 확인 차례)")
+        p.add_argument("--out", help="자료 폴더(기본 <실행>/confirm — paifu_run 둘째 차례는 <실행>/confirm_2)")
         if name == "prep":
             p.add_argument("--force", action="store_true")
         if name in ("serve", "show"):
