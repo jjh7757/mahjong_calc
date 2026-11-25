@@ -329,12 +329,12 @@ class _ResultEntryScreenState extends State<ResultEntryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('자리별 멤버와 최종 점수 (동 → 남 → 서 → 북)', style: Theme.of(context).textTheme.titleMedium),
+                  Text('자리별 멤버와 최종 점수 (동 → 남 → 서 → 북)', style: kioskTextTheme(context).titleMedium),
                   const SizedBox(height: 4),
                   Text(
                     '동점이면 기동 자리에 가까운 사람이 위 순위입니다. 남은 공탁은 1위 점수에 더해 넣으세요. '
                     '별은 화료마다 하네만 1 · 배만 2 · 삼배만 3 · 역만 5(더블 10).',
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: kioskTextTheme(context).bodySmall,
                   ),
                   const SizedBox(height: 10),
                   for (var i = 0; i < 4; i++) ...[_seatRow(context, i), _starsRow(context, i)],
@@ -351,7 +351,7 @@ class _ResultEntryScreenState extends State<ResultEntryScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text('규칙', style: Theme.of(context).textTheme.titleMedium),
+                  Text('규칙', style: kioskTextTheme(context).titleMedium),
                   const SizedBox(height: 8),
                   _chips<int>('시작점', const [(25000, '25000'), (30000, '30000')], _start, (v) => _rules(() => _start = v)),
                   _chips<int>('반환점', const [(25000, '25000'), (30000, '30000')], _ret, (v) => _rules(() => _ret = v)),
@@ -422,7 +422,7 @@ class _MemberPickSheet extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
+            Text(title, style: kioskTextTheme(context).titleMedium),
             const SizedBox(height: 8),
             if (all.isEmpty)
               const Padding(

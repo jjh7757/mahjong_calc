@@ -52,7 +52,7 @@ class MemberRankingScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   '앱으로 기록한 대국도 이름이 명단과 같으면 함께 셉니다.',
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: kioskTextTheme(context).bodySmall,
                 ),
                 const SizedBox(height: 12),
                 if (stats.isEmpty)
@@ -74,7 +74,7 @@ class MemberRankingScreen extends StatelessWidget {
   }
 
   Widget _table(BuildContext context, List<MemberStat> played, List<MemberStat> unplayed) {
-    final scheme = Theme.of(context).colorScheme;
+    final scheme = kioskColorScheme(context);
     final faded = scheme.onSurface.withValues(alpha: 0.38);
     const tabular = [FontFeature.tabularFigures()];
 
@@ -249,7 +249,7 @@ class MemberManageScreen extends StatelessWidget {
                       return Padding(
                         padding: const EdgeInsets.all(16),
                         child: Text('길게 누르면 명단에서 뺍니다(지난 기록은 남음).',
-                            style: Theme.of(context).textTheme.bodySmall),
+                            style: kioskTextTheme(context).bodySmall),
                       );
                     }
                     final n = list[i];

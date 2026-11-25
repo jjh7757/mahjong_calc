@@ -51,6 +51,15 @@ const kioskRed = Color(0xFFC62828);
 const kioskFelt = Color(0xFF1F4D3A);
 const kioskPanel = Color(0xFFF7F4EE);
 
+/// [kioskWrap] 이 씌우는 테마의 글자 스타일. [kioskWrap] 바깥 context 로 `Theme.of(context).textTheme` 를 읽으면
+/// 밝은 테마의 어두운 글자색이 어두운 배경에 그려져 안 보인다(11-25 태블릿에서 확인). 키오스크가 아니면 그대로.
+TextTheme kioskTextTheme(BuildContext context) =>
+    isKioskLayout(context) ? kioskDarkTheme().textTheme : Theme.of(context).textTheme;
+
+/// [kioskTextTheme] 과 같은 이유로, [kioskWrap] 바깥 context 에서 쓸 색 구성.
+ColorScheme kioskColorScheme(BuildContext context) =>
+    isKioskLayout(context) ? kioskDarkTheme().colorScheme : Theme.of(context).colorScheme;
+
 /// 키오스크에서는 시트·대화상자·보조 화면을 어두운 테마 + 글자 1.25배로 키운다. 폰이면 그대로.
 Widget kioskWrap(BuildContext context, Widget child, {double scale = 1.25}) {
   if (!isKioskLayout(context)) return child;

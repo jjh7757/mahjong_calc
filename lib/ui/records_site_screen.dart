@@ -82,7 +82,7 @@ class _RecordsSiteScreenState extends State<RecordsSiteScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
+    final text = kioskTextTheme(context);
     final enabled = _enabled;
     return kioskWrap(context, Scaffold(
       appBar: AppBar(title: const Text('기록 사이트')),
