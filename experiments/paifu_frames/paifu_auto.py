@@ -22,14 +22,29 @@ init 옵션
                           안 주면 자동 규칙이 낸 것을 그대로 쓴다.
   --s6-games <판,…>       시험용: S6 칸 틀 검출 · 차례 꾸러미를 그 판들만(차례 목록 · 차례 수 검사는 모든 판). S7 뒤로는 못 감.
   --s6a-rules             견줌용: S6a 를 옛 화소 규칙(handtrack_auto.py conf, 표 12-124)으로. 기본은 준비 읽기(설계서 8-8).
+  --no-sup                판 supervisor 단계(S7s)를 끈다 — 끄면 단계 · 질문 규칙 v2 · 표본 판마다 2 가 이 옵션 전(설계서 8-17 4-① 전)과 같다.
+  --sup-games <판,…>      시험용: supervisor 를 이 판들만 거치게(나머지 판은 S7s 에서 건너뜀 — 그 판의 unsure 차례는 질문으로).
 replay 는 S1 · S4(3반장 result_read · 앱 유국 공개 읽기 s4/<판>/<a|b|c>/reveal_read.json) · S6a(<from>/s6a/<판>/answer.json ·
   <from>/<판>/answer.json · <from>/<판>.json 중 먼저 있는 것) · S6 · S7 꾸러미에 답을 넣는다.
+  S7s 꾸러미는 <from>/sup/<판>/ 이 마감(decision.json)된 꾸러미면 paifu_sup.py replay(초안 · 다시 읽기 답을 가져옴) → done(같은 마감 검사)으로
+  다시 적용한다(처음 답 칸 값이 다르면 거절 — 답 없음으로 둠).
 
 단계(설계서 3절): S0 준비 · S1 판 경계(LLM) · S2 프레임 · S3 버림 기록 · S4 판 결과(LLM, 둘이 따로) · S5 대조 · 고침 ·
-  S6 손패 차례 재료 + 읽기(LLM) · S7 앞뒤 검사 · 다시 읽기(LLM, 한 판 2회) · S8 조립 · S9 질문 목록 · 영향 · 보고서.
+  S6 손패 차례 재료 + 읽기(LLM) · S7 앞뒤 검사 · 다시 읽기(LLM, 한 판 2회) · S7s 판 supervisor(LLM, 판당 하나) · S8 조립 · S9 질문 목록 · 영향 · 보고서.
 S9 차례 질문(8-3절 v2): 답의 unsure 또는 확신 말(HEDGE_*)에 걸리면 질문(questions.jsonl 의 signal 칸), 안 걸린 차례는 영향을 재서
   판마다 위 2차례를 표본(samples.jsonl, signal sample:impact — 바뀌는 순 수 0 인 차례는 표본에서 뺌). 질문은 영향 0 · 사용자 답(apply) 숨김,
-  표본은 사용자 답만 숨김.
+  표본은 사용자 답만 숨김. — supervisor 단계가 꺼진 실행(--no-sup · S7 이 이미 끝난 옛 실행 폴더)만 이렇다.
+판 supervisor 단계 S7s(설계서 8-17 4-① · 3-10 · 3-11, 11-25 밤): 읽은 차례가 있는 판마다 paifu_sup.py pack → 판 꾸러미 하나(sup/<판>/TASK.md,
+  끝난 표시 = sup/<판>/decision.json — supervisor 가 done 으로 씀. supervisor 가 다시 읽기 작업자를 스스로 띄우는 방식은 그대로)를 내고 멈춘다.
+  모든 판이 마감되면 S8. 이 단계가 켜진 실행의 S9:
+  - 차례 질문 = supervisor 의 ask(sup/<판>/questions_sup.jsonl, signal sup:ask) + supervisor 를 안 거친 판의 unsure 차례(signal unsure).
+    낱말 규칙(v2)은 질문을 만들지 않고 "그 규칙이었다면" 수만 state signals.v2_compare · report.md 에. 그 밖의 질문(S0 ~ S6 · 판 결과)은 그대로.
+  - 표본 = 반장당 SAMPLE_PER_HANCHAN(5): supervisor 가 직접 정한 차례(set) → 다시 읽기로 답이 바뀐 차례 → 영향 큰 순(바뀌는 순 수 0 은 뺌),
+    같은 순위 안에서는 영향 큰 순 · 이른 순(판 순서 · 차례 번호). 질문에 오른 차례(숨김 포함)는 표본에 안 넣음.
+  - 차례별 출처 파일 paifu_source/<판>.json(패보 형식은 안 바꿈): 손패 주인 버림마다 SOURCE_KINDS 가운데 하나와 근거 파일 이름.
+  - report.md 에 판마다 간 길 · supervisor 가 손댄 차례 · 질문 출처(묶음별) · 숨긴 질문 수 · 질문 > 10 경고.
+  사용자 답(apply)은 S7 · S8 · S9 만 다시 돈다 — supervisor 를 다시 띄우지 않는다(3-11 정한 것 3).
+  옛 실행 폴더(state 에 sup 칸 없음): S7 이 이미 끝났으면 끈 것으로(옛 흐름 그대로), 아니면 켠 것으로 본다(S7s 는 "todo").
 단계마다 결과 파일을 남기고 state.json 에 적는다 — 같은 명령을 다시 불러도 된 단계는 건너뛴다(멱등).
 
 앱 기록 우선(설계서 8-5 · 8-6 W1 ~ W5, 11-24 저녁) — 반장 설정에 app_record 칸이 있을 때만(없으면 위 흐름 그대로 · 3반장):
@@ -56,6 +71,8 @@ S9 차례 질문(8-3절 v2): 답의 unsure 또는 확신 말(HEDGE_*)에 걸리�
       공개 프레임 앞면 상자 · reveal_region, 좌표 꼴, 시각 순서). 어긋남 · 답의 unsure 는 questions_s6a(값은 답 그대로). 설정이 바뀌면 그 판의 옛 판별 출력 ·
       칸 틀 캐시 · turn_fix 몫을 지움. 화소 규칙(handtrack_auto.py conf)은 견줌용으로만 남김(init --s6a-rules 일 때 s6a_rules). 손 설정이 다 있는 판(3반장)은 그대로 씀.
       결과는 실행 폴더 handtrack/(config · <판>/ · _work/) — 실행 설정 handtrack 칸으로 han3 · han3_paifu 가 경로를 돌림(handtrack/ht_redirect.py).
+      (11-25 밤, 설계서 8-16) 답의 t_ready_late(늦은 후보)가 t_ready 보다 뒤면 apply 가 그것을 판별 설정 t_ready 로 쓴다 — 상태 games.<판>.ready_late 에
+      답의 값 · 늦은 후보 · 쓴 값, report.md 에 표시(쓴 판은 질문 아님 · 그 뒤 버림이 0 이라 못 쓴 판은 검사 ready_late 질문).
   S6b 손 추적 판별: handtrack_auto.py run = segment · river · game(run.py 의 features 뒤, sheets 뺌) + bandfit --write(sheet_band). 있으면 건너뜀.
   S6  판별 설정 · 출력(손 설정 판은 공용 자리, S6a 판은 실행 폴더)이 없으면 멈춤. 칸 틀 캐시(det_<판>.json)도 S6a 판은 실행 폴더 handtrack/_work/slotgrid_1117.
       han3 turns · fix · turncut 뒤 차례 수 검사(s6_turn_check): 차례 목록(turn_fix 끼움 포함) ↔ 고친 기록의 손패 주인 버림 중 t_ready 뒤 것.
@@ -102,9 +119,15 @@ import dump_regions  # noqa: E402  (11-25, 설계서 8-14 (가)) 강 · 울기 �
 PY = sys.executable
 KST = timezone(timedelta(hours=9))
 SIDES = ["bottom", "right", "top", "left"]
-STAGES = ["S0", "S1", "S2", "S3", "S4", "S5", "S6a", "S6b", "S6", "S7", "S8", "S9"]
+STAGES = ["S0", "S1", "S2", "S3", "S4", "S5", "S6a", "S6b", "S6", "S7", "S7s", "S8", "S9"]
 STAGE_NAME = {"S0": "준비", "S1": "판 경계", "S2": "프레임", "S3": "버림 기록", "S4": "판 결과", "S5": "대조 · 고침",
-              "S6a": "손 추적 설정", "S6b": "손 추적 판별", "S6": "손패 차례", "S7": "앞뒤 검사 · 다시 읽기", "S8": "조립", "S9": "질문 목록 · 보고서"}
+              "S6a": "손 추적 설정", "S6b": "손 추적 판별", "S6": "손패 차례", "S7": "앞뒤 검사 · 다시 읽기", "S7s": "판 supervisor",
+              "S8": "조립", "S9": "질문 목록 · 보고서"}
+SUP_PY = Path(__file__).resolve().parent / "paifu_sup.py"   # 판 supervisor 명령 한 벌(설계서 8-10) — 흐름은 하위 프로세스로 부름
+SAMPLE_PER_HANCHAN = 5  # 설계서 8-17 4-① · 3-11 정한 것 1: supervisor 단계가 켜진 실행의 표본은 반장당 5(판마다 2 를 바꿈)
+SAMPLE_TIERS = {0: "supervisor 가 직접 정함(set)", 1: "다시 읽기로 답이 바뀜", 2: "영향 큰 순"}
+SOURCE_KINDS = ["첫 읽기 그대로", "다시 읽기와 일치", "supervisor 가 정함", "사용자 확인", "확인 안 된 추정", "코드 규칙", "복원 안 함"]   # 차례별 출처(4-①)
+SLOT_KEYS = ("kind", "k", "j", "end_order", "gone")   # paifu_sup.slot 과 같은 칸(조립에 쓰는 칸 값)
 MAX_REREAD = 2          # S7: 한 판 다시 읽기 횟수
 GAP_S = 30              # S0: 이만큼 넘는 녹화 빈 구간은 보고서에
 TOKENS_PER_HANCHAN = 15_000_000   # 11-23 3반장 손 작업 실측(하위 에이전트) — 예산 안내용
@@ -278,6 +301,11 @@ def cmd_init(a):
     if r.state is not None:
         print(f"이미 있음: {rel(r.state_f)} — 그대로 둠(이어 가려면 next)")
         return
+    if a.no_sup and a.sup_games:
+        raise SystemExit("--no-sup 와 --sup-games 는 같이 못 씀")
+    bad_g = [x for x in (a.sup_games or "").split(",") if x and x not in src_cfg.games]
+    if bad_g:
+        raise SystemExit(f"--sup-games: 반장 설정에 없는 판 {bad_g}")
     rd.mkdir(parents=True, exist_ok=True)
     raw = copy.deepcopy(src_cfg.raw)
     rid = f"auto_{src_cfg.id}" if not a.run else Path(a.run).name
@@ -308,7 +336,9 @@ def cmd_init(a):
                "game_ids": list(src_cfg.games), "reuse": rel(a.reuse) if a.reuse else None, "verify_dump": a.verify_dump,
                "hand_settings": rel(hand) if hand else None, "src_event_fix": (raw.get("paifu") or {}).get("event_fix") or {},
                "src_call_turns": list((raw.get("hand") or {}).get("call_turns") or []), "human_picked_1123": human,
-               "stages": {s: {"status": "todo"} for s in STAGES}, "reread": {}, "timing": {}, "events": []}
+               "stages": {s: {"status": "todo"} for s in STAGES if s != "S7s" or not a.no_sup}, "reread": {}, "timing": {}, "events": [],
+               # 판 supervisor 단계(설계서 8-17 4-①): 기본 켬 · --no-sup 이면 끔(단계 목록에서 빠짐) · --sup-games 는 시험용(그 판들만 supervisor)
+               "sup": {"on": not a.no_sup, "games": [x for x in (a.sup_games or "").split(",") if x] or None}}
     if a.s6_games:      # 시험용: S6 칸 틀 검출 · 차례 꾸러미를 이 판들만(차례 목록 · 차례 수 검사는 모든 판)
         r.state["s6_games"] = [x for x in a.s6_games.split(",") if x]
     if a.s6a_rules:     # 견줌용: S6a 를 옛 화소 규칙(handtrack_auto.py conf)으로 — 기본 흐름은 준비 읽기
@@ -335,6 +365,40 @@ def answered(p) -> bool:
         return True
     except (json.JSONDecodeError, UnicodeDecodeError):
         return False
+
+
+# ------------------------------------------------------------------ 판 supervisor 단계(S7s) 켜짐 · 단계 목록(설계서 8-17 4-①)
+def sup_on(r: Run) -> bool:
+    """이 실행에서 S7s 가 켜졌나. init 이 state.sup.on 을 적는다(기본 켬, --no-sup 이면 끔).
+    sup 칸이 없는 옛 실행 폴더: S7 이 이미 끝났으면 끔(옛 흐름 그대로 — 끝난 실행을 다시 부를 때 supervisor 가 끼지 않게), 아니면 켬."""
+    s = r.state.get("sup")
+    if s is not None:
+        return bool(s.get("on"))
+    return (r.state["stages"].get("S7") or {}).get("status") != "done"
+
+
+def stage_list(r: Run) -> list:
+    return STAGES if sup_on(r) else [s for s in STAGES if s != "S7s"]
+
+
+def slot_of(a: dict) -> dict:
+    """paifu_sup.slot 과 같은 셈(답의 칸 값 — 글 칸은 뺌)."""
+    out = {}
+    for k in SLOT_KEYS:
+        v = a.get(k)
+        if k in ("end_order", "gone") and v is not None:
+            v = [str(x) for x in v]
+        if k in ("k", "j") and v is not None:
+            try:
+                v = int(v)
+            except (TypeError, ValueError):
+                pass
+        out[k] = v
+    return out
+
+
+def jlines(f: Path) -> list:
+    return [json.loads(x) for x in Path(f).read_text(encoding="utf-8").splitlines() if x.strip()] if Path(f).exists() else []
 
 
 # ------------------------------------------------------------------ S0 준비
@@ -2480,6 +2544,8 @@ def s6a(r: Run):
                   "post_sec": o["config"]["post_sec"], "changed": o["changed_regions"], "failed": [c["name"] for c in o["checks"] if not c["ok"]],
                   "unsure": len(o.get("unsure") or []), "pre_ready": o.get("hero_discards_before_ready"), "config_written": o.get("config_written"),
                   "purged": len(o.get("purged") or []), "purged_fix": purged_fix, "wall_s": round(time.time() - t0, 1)}
+        if o.get("ready_late"):   # (11-25 밤, 설계서 8-16) 답에 늦은 후보가 있던 판 — 답의 값 · 늦은 후보 · 쓴 값(늦은 쪽을 쓴 판은 질문 아님 · report 에 표시)
+            res[g]["ready_late"] = o["ready_late"]
     if fatal:
         raise SystemExit("S6a 답 꼴 이상 — " + " / ".join(fatal) + " (그 판의 s6a/<판>/answer.json 을 지우고 next 하면 같은 꾸러미가 다시 나옴)")
     r.state["questions_s6a"] = qs
@@ -2632,6 +2698,15 @@ def ht_report_lines(r: Run) -> list:
             bb = (b.get("games") or {}).get(g) or {}
             L.append(f"| {g} | {v['side']} | {v['t_ready']} | {v.get('pre_ready')} | {v['t_reveal']} | {v['reveal_frame']} | {v.get('changed')} | {v.get('failed')} | "
                      f"{v.get('unsure')} | {bb.get('wall_s', '')} | {bb.get('sheet_band', '')} |")
+        late = {g: v["ready_late"] for g, v in (a.get("games") or {}).items() if v.get("ready_late")}
+        if late:   # (11-25 밤, 설계서 8-16) 줄이 선 때의 늦은 후보 — 쓴 판은 표시(질문 아님), 못 쓴 판은 질문(검사 ready_late)
+            L += ["", "- 줄이 선 때의 늦은 후보(설계서 8-16 — 답에 t_ready_late 가 있던 판):"]
+            for g, rl in late.items():
+                if rl.get("which") == "late":
+                    L.append(f"  - **{g}: 줄이 선 때를 늦은 후보로 씀**(답 {rl['answer']} → 늦은 후보 {rl['late']}, 판별 설정 t_ready {rl['used']}) · "
+                             f"그 사이 버림 {len(rl.get('not_restored') or [])}장은 차례로 복원하지 않음 {rl.get('not_restored') or []}")
+                else:
+                    L.append(f"  - {g}: 늦은 후보 {rl['late']} 안 씀 — {rl['note']}(t_ready {rl['used']})")
         if a.get("half"):   # (11-25, 설계서 8-13 (다)) 녹화 틀 없음 — band 는 화면 절반 손패 줄 후보 1위에서 시작
             diff = [g for g, v in (a.get("games") or {}).items() if "band" in (v.get("changed") or [])]
             L += ["", f"- 녹화 틀 없음 → band · search = 화면 절반 손패 줄 후보 1위(공개 상자는 안 만듦). 준비 답의 band 가 후보 1위와 다른 판 "
@@ -3109,6 +3184,65 @@ def s7(r: Run):
     return []
 
 
+# ------------------------------------------------------------------ S7s 판 supervisor(설계서 8-17 4-① · 3-10 · 8-10)
+def sup_plan(r: Run) -> dict:
+    """읽은 차례가 있는 판 · 그 가운데 supervisor 를 거칠 판(--sup-games) · 건너뛸 판 · 차례 없는 판."""
+    only = (r.state.get("sup") or {}).get("games")
+    have = [g for g in r.games() if game_answer_ids(r, g)]
+    run_g = [g for g in have if not only or g in only]
+    return {"games": run_g, "skipped": [g for g in have if g not in run_g], "no_turns": [g for g in r.games() if g not in have]}
+
+
+def s7s(r: Run):
+    """판마다 paifu_sup.py pack(이미 있으면 그대로) → 꾸러미 하나(TASK.md · 끝난 표시 decision.json)를 내고 멈춘다. 모두 마감되면 끝.
+    마감 검사 · 답 반영(read/<차례>/answer.json · answer_r0.json · sup.json) · 질문(questions_sup.jsonl)은 paifu_sup.py done 이 한다."""
+    st = r.stage("S7s")
+    sp = sup_plan(r)
+    pend, made = [], []
+    for g in sp["games"]:
+        d = r.d / "sup" / g
+        if not (d / "pack.json").exists():
+            p = run([PY, "-X", "utf8", SUP_PY, "pack", "--run", r.d, "--game", g], log=r.log(f"s7s_pack_{g}.log"), check=False)
+            if p.returncode != 0 or not (d / "pack.json").exists():
+                raise SystemExit(f"S7s: {g} 판 꾸러미를 못 만듦(rc {p.returncode}) — {(p.stdout or '')[-1500:]} {(p.stderr or '')[-800:]}")
+            made.append(g)
+        pk = pkg("S7s", f"sup_{g}", d, d / "TASK.md", d / "decision.json", game=g, kind="supervisor",
+                 note="판 supervisor 하나 — 다시 읽기 작업자는 supervisor 가 스스로 띄운다(TASK.md 6). 끝난 표시 = paifu_sup.py done 이 쓰는 decision.json")
+        if not answered(pk):
+            pend.append(pk)
+    st.update(games=sp["games"], skipped=sp["skipped"], no_turns=sp["no_turns"])
+    if made:
+        st.setdefault("packed", []).extend(made)
+    if pend:
+        r.save()
+        return pend
+    dec = {}
+    for g in sp["games"]:
+        x = jl(r.d / "sup" / g / "decision.json")
+        dec[g] = {"applied": x.get("applied") or [], "asks": len(x.get("asks") or []), "reverted_for_ask": x.get("reverted_for_ask") or [],
+                  "touched": {t: v.get("how") for t, v in (x.get("turns") or {}).items() if v.get("how")}, "counts": x.get("counts"),
+                  "replayed_from": (jl(r.d / "sup" / g / "draft.json").get("replayed_from"))}
+    r.done("S7s", games=sp["games"], skipped=sp["skipped"], no_turns=sp["no_turns"], sup_decided=dec,
+           applied=sum(len(v["applied"]) for v in dec.values()), asks=sum(v["asks"] for v in dec.values()))
+    return []
+
+
+def sup_turns(r: Run) -> dict:
+    """마감된 판의 차례별 supervisor 기록: {차례: decision.turns[차례] + game}. 판별 질문 줄은 'asks'."""
+    out = {"turns": {}, "asks": {}, "games": []}
+    for g in (r.stage("S7s").get("games") or []):
+        d = r.d / "sup" / g
+        if not (d / "decision.json").exists():
+            continue
+        x = jl(d / "decision.json")
+        out["games"].append(g)
+        for t, v in (x.get("turns") or {}).items():
+            out["turns"][t] = {**v, "game": g}
+        for q in jlines(d / "questions_sup.jsonl"):
+            out["asks"].setdefault(q["id"], []).append(q)
+    return out
+
+
 # ------------------------------------------------------------------ S8 조립
 def s8(r: Run):
     t0 = time.time()
@@ -3383,11 +3517,18 @@ def s9(r: Run):
                 "current": {"kind": a.get("kind"), "k": a.get("k"), "j": a.get("j")}, "candidates": m["cands"], "candidate_source": m["src"],
                 "clip": clip_of_turn(r, tid), "impact": m["impact"], "impact_summary": summarize_impact(m["impact"]), **kw}
 
-    for tid in raised:
-        sig, hh = sigs[tid]
-        q = turn_row(tid, signal=sig_field(sig), hedge_hits=hh,
-                     rule=" · ".join(["답의 unsure: true" if s == "unsure" else f"8-3 신호 1 확신 말({s[6:]})" for s in sig]))
-        (hidden if q["impact_summary"]["zero"] else asked).append(q)
+    sup = sup_on(r)   # 판 supervisor 단계(설계서 8-17 4-①)가 켜진 실행이면 차례 질문 출처 · 표본 규칙이 바뀜(끄면 아래 v2 그대로)
+    su = sup_turns(r) if sup else None
+    if not sup:
+        for tid in raised:
+            sig, hh = sigs[tid]
+            q = turn_row(tid, signal=sig_field(sig), hedge_hits=hh,
+                         rule=" · ".join(["답의 unsure: true" if s == "unsure" else f"8-3 신호 1 확신 말({s[6:]})" for s in sig]))
+            (hidden if q["impact_summary"]["zero"] else asked).append(q)
+    else:
+        for q in sup_turn_questions(r, cfg, all_ids, answers, su, turn_row):
+            (hidden if q["impact_summary"]["zero"] else asked).append(q)
+    n_turn_asked = len(asked)   # 여기까지가 차례 질문 — 아래(판 결과 · S0 ~ S6 질문)는 두 길 모두 같음
     for q in result_jobs(r):
         g = q["game"]
         d = defs[g]
@@ -3420,10 +3561,83 @@ def s9(r: Run):
     def rank(q):
         s = q.get("impact_summary") or {}
         return (0 if s.get("result_changed") else 1, -(s.get("max_hand_turns") or 0), q["id"])
-    # 신호 2 — 영향 큰 차례 표본(8-2절): 질문에 안 오른 차례(신호 1 · unsure 아님) 모두, 후보 중 가장 큰 "바뀌는 순 수" 로 줄 세워 판마다 위 2차례.
-    # 같으면 순이 이른 차례. 영향을 못 잰 차례(후보 규칙 없음 · 후보 모두 조립 실패)는 줄에 못 서므로 표본에서 빼고 보고서에 수 · 까닭.
-    # 8-3(v2): 바뀌는 순 수가 0 인 차례는 줄에 못 선다(판마다 많아야 2 — 모자라면 모자란 대로). 뺀 수는 zero_pool 에.
-    raised_set = set(raised)
+    n_other_asked = len(asked) - n_turn_asked
+    if not sup:
+        samples, no_impact, zero_pool = v2_samples(r, cfg, all_ids, set(raised), imp, turn_row)
+    else:
+        # 설계서 8-17 4-① 표본: 반장당 SAMPLE_PER_HANCHAN — set → 다시 읽기로 바뀜 → 영향 큰 순. 질문에 오른 차례(숨김 포함)는 뺌
+        q_turns = {q["id"] for q in asked[:n_turn_asked] + hidden if q.get("kind") == "turn_slot"}
+        cands, no_impact, zero_pool = sup_sample_cands(all_ids, r.games(), cfg.game_of, imp, su["turns"], q_turns)
+        samples = []
+        for rank_i, c in enumerate(sup_sample_pick(cands), 1):
+            t = c["id"]
+            samples.append(turn_row(t, sample=True, signal=["sample:sup_set", "sample:sup_reread", "sample:impact"][c["tier"]], sample_rank=rank_i,
+                                    pool_size=len(cands), sample_tier=SAMPLE_TIERS[c["tier"]],
+                                    sup=(su["turns"].get(t) or {}).get("how"),
+                                    rule=f"8-17 4-① 표본(반장당 {SAMPLE_PER_HANCHAN}): {SAMPLE_TIERS[c['tier']]} — 후보 {len(cands)}차례 중 {rank_i}번째"))
+        # 견줌용: 낱말 규칙(v2)이었다면 — 차례 질문(영향 0 숨김) + 그 밖의 질문(같음) + 표본(판마다 2)
+        v2_turn = [t for t in raised if not summarize_impact(imp[t]["impact"])["zero"]]
+        v2_samp, _, _ = v2_samples(r, cfg, all_ids, set(raised), imp, turn_row)
+    done_ids = set(r.state.get("answered") or [])   # apply 로 사용자가 답한 칸은 다시 묻지 않음(보고서에 '사용자 답' 으로) — 표본에도 같게(8-2)
+    for lst in (asked, samples):
+        for q in [q for q in lst if q["id"] in done_ids]:
+            lst.remove(q)
+            hidden.append({**q, "hidden_reason": "사용자 답(apply)"})
+    asked.sort(key=rank)
+    wt(r.d / "questions.jsonl", "".join(json.dumps(q, ensure_ascii=False) + "\n" for q in asked))
+    wt(r.d / "samples.jsonl", "".join(json.dumps(q, ensure_ascii=False) + "\n" for q in samples))
+    wt(r.d / "questions_hidden.jsonl", "".join(json.dumps(q, ensure_ascii=False) + "\n" for q in hidden))
+    qids = {q["id"] for q in asked}
+    sids = {q["id"] for q in samples}
+    hid = {q["id"]: q for q in hidden}
+    sig_count = Counter()
+    for t in raised:
+        s_ = sigs[t][0]
+        sig_count["both" if len(s_) == 2 else ("unsure" if s_ == ["unsure"] else "hedge")] += 1
+    if not sup:
+        r.state["signals"] = {"turns_total": len(all_ids), "raised": len(raised), "by_signal": dict(sig_count),
+                              "raised_ids": {t: sig_field(sigs[t][0]) for t in raised},
+                              "asked_turns": sorted(t for t in raised if t in qids), "samples": [q["id"] for q in samples],
+                              "no_impact": no_impact, "sample_zero_excluded": zero_pool, "impact_s": t_imp, "rule": "8-3 v2"}
+    else:
+        v2q = [t for t in v2_turn if t not in done_ids]
+        other_q = [q for q in asked if q.get("kind") != "turn_slot"]
+        v2s = [q["id"] for q in v2_samp if q["id"] not in done_ids]
+        r.state["signals"] = {"turns_total": len(all_ids), "rule": "8-17 4-① supervisor", "sup_games": su["games"],
+                              "sup_skipped": r.stage("S7s").get("skipped") or [],
+                              "asked_turns": sorted(q["id"] for q in asked if q.get("kind") == "turn_slot"),
+                              "asked_turns_by_signal": dict(Counter(str(q.get("signal")) for q in asked if q.get("kind") == "turn_slot")),
+                              "samples": [q["id"] for q in samples], "sample_tiers": {q["id"]: q.get("sample_tier") for q in samples},
+                              "sample_pool": len(cands), "no_impact": no_impact, "sample_zero_excluded": zero_pool, "impact_s": t_imp,
+                              "v2_compare": {"raised": len(raised), "by_signal": dict(sig_count), "raised_ids": {t: sig_field(sigs[t][0]) for t in raised},
+                                             "turn_questions": len(v2q), "turn_questions_ids": v2q,
+                                             "turn_hidden_zero": [t for t in raised if summarize_impact(imp[t]["impact"])["zero"]],
+                                             "other_questions": len(other_q), "questions": len(v2q) + len(other_q), "samples": len(v2s),
+                                             "sample_ids": v2s, "total": len(v2q) + len(other_q) + len(v2s),
+                                             "note": "낱말 규칙(8-3 v2)이 차례 질문을 만들고 표본이 판마다 2 였다면의 수(사용자 답 칸은 뺌) — 질문은 만들지 않음, 견줌용"},
+                              "other_asked_before_user_hide": n_other_asked}
+    r.state["human_compare"] = {"turns": {t: {**imp[t], "summary": summarize_impact(imp[t]["impact"]), "unsure": answers[t].get("unsure"),
+                                              "signal": sig_field(sigs[t][0]) if sigs[t][0] else None,
+                                              "in_asked": t in qids, "in_sample": t in sids, "in_hidden": t in hid,
+                                              "hidden_reason": (hid.get(t) or {}).get("hidden_reason"),
+                                              "hidden_sample": bool((hid.get(t) or {}).get("sample"))} for t in human.get("turns", [])}}
+    r.state.pop("sample", None)   # 1단계의 무작위 표본(씨앗 1124)은 8-2 로 바꿈
+    r.done("S9", asked=len(asked), samples=len(samples), hidden=len(hidden), s=round(time.time() - t0, 1))
+    if not sup:
+        write_report(r, asked, hidden, samples)
+        return []
+    src = write_sources(r, asked, hidden, su)
+    r.stage("S9")["sources"] = src["totals"]
+    r.save()
+    write_report(r, asked, hidden, samples, sup={"su": su, "sources": src})
+    return []
+
+
+def v2_samples(r: Run, cfg, all_ids: list, raised_set: set, imp: dict, turn_row):
+    """8-2 · 8-3(v2) 표본 — supervisor 단계가 꺼진 실행의 표본(켜진 실행에서는 견줌 수만).
+    신호 2 — 영향 큰 차례 표본(8-2절): 질문에 안 오른 차례(신호 1 · unsure 아님) 모두, 후보 중 가장 큰 "바뀌는 순 수" 로 줄 세워 판마다 위 2차례.
+    같으면 순이 이른 차례. 영향을 못 잰 차례(후보 규칙 없음 · 후보 모두 조립 실패)는 줄에 못 서므로 표본에서 빼고 보고서에 수 · 까닭.
+    8-3(v2): 바뀌는 순 수가 0 인 차례는 줄에 못 선다(판마다 많아야 2 — 모자라면 모자란 대로). 뺀 수는 zero_pool 에."""
     samples, no_impact, zero_pool = [], {}, {}
     for g in r.games():
         pool = []
@@ -3442,39 +3656,240 @@ def s9(r: Run):
         for rank_i, (_, _, t) in enumerate(sorted(pool)[:SAMPLE_PER_GAME], 1):
             samples.append(turn_row(t, sample=True, signal="sample:impact", sample_rank=rank_i, pool_size=len(pool),
                                     rule=f"8-2 신호 2(8-3: 영향 0 뺌): 영향 큰 차례 표본(판마다 {SAMPLE_PER_GAME}, 줄 {len(pool)}차례 중 {rank_i}번째)"))
-    done_ids = set(r.state.get("answered") or [])   # apply 로 사용자가 답한 칸은 다시 묻지 않음(보고서에 '사용자 답' 으로) — 표본에도 같게(8-2)
-    for lst in (asked, samples):
-        for q in [q for q in lst if q["id"] in done_ids]:
-            lst.remove(q)
-            hidden.append({**q, "hidden_reason": "사용자 답(apply)"})
-    asked.sort(key=rank)
-    wt(r.d / "questions.jsonl", "".join(json.dumps(q, ensure_ascii=False) + "\n" for q in asked))
-    wt(r.d / "samples.jsonl", "".join(json.dumps(q, ensure_ascii=False) + "\n" for q in samples))
-    wt(r.d / "questions_hidden.jsonl", "".join(json.dumps(q, ensure_ascii=False) + "\n" for q in hidden))
-    qids = {q["id"] for q in asked}
-    sids = {q["id"] for q in samples}
-    hid = {q["id"]: q for q in hidden}
-    sig_count = Counter()
-    for t in raised:
-        s_ = sigs[t][0]
-        sig_count["both" if len(s_) == 2 else ("unsure" if s_ == ["unsure"] else "hedge")] += 1
-    r.state["signals"] = {"turns_total": len(all_ids), "raised": len(raised), "by_signal": dict(sig_count),
-                          "raised_ids": {t: sig_field(sigs[t][0]) for t in raised},
-                          "asked_turns": sorted(t for t in raised if t in qids), "samples": [q["id"] for q in samples],
-                          "no_impact": no_impact, "sample_zero_excluded": zero_pool, "impact_s": t_imp, "rule": "8-3 v2"}
-    r.state["human_compare"] = {"turns": {t: {**imp[t], "summary": summarize_impact(imp[t]["impact"]), "unsure": answers[t].get("unsure"),
-                                              "signal": sig_field(sigs[t][0]) if sigs[t][0] else None,
-                                              "in_asked": t in qids, "in_sample": t in sids, "in_hidden": t in hid,
-                                              "hidden_reason": (hid.get(t) or {}).get("hidden_reason"),
-                                              "hidden_sample": bool((hid.get(t) or {}).get("sample"))} for t in human.get("turns", [])}}
-    r.state.pop("sample", None)   # 1단계의 무작위 표본(씨앗 1124)은 8-2 로 바꿈
-    r.done("S9", asked=len(asked), samples=len(samples), hidden=len(hidden), s=round(time.time() - t0, 1))
-    write_report(r, asked, hidden, samples)
-    return []
+    return samples, no_impact, zero_pool
+
+
+def sup_turn_questions(r: Run, cfg, all_ids: list, answers: dict, su: dict, turn_row) -> list:
+    """supervisor 단계가 켜진 실행의 차례 질문(설계서 8-17 4-①): 마감된 판은 supervisor 의 ask(questions_sup.jsonl — 한 차례에 ask 가 여럿이면 한 줄),
+    supervisor 를 안 거친 판(--sup-games 로 건너뜀 · 마감 전)은 답의 unsure 차례. 낱말 규칙은 질문을 만들지 않음."""
+    out = []
+    done_games = set(su["games"])
+    for t in all_ids:
+        g = cfg.game_of(t)
+        if g in done_games:
+            qs = su["asks"].get(t)
+            if not qs:
+                continue
+            out.append(turn_row(t, stage="S7s", signal="sup:ask", sup_candidates=[q.get("candidates") for q in qs], sup_why=[q.get("why") for q in qs],
+                                sup_draft=next((q.get("sup_draft") for q in qs if q.get("sup_draft")), None),
+                                sup_file=rel(r.d / "sup" / g / "questions_sup.jsonl"),
+                                rule="판 supervisor 의 ask(설계서 8-17 4-① — supervisor 가 못 푼 차례)"))
+        elif answers[t].get("unsure"):
+            out.append(turn_row(t, signal="unsure", rule="답의 unsure: true — supervisor 를 안 거친 판(설계서 8-17 4-①)"))
+    return out
+
+
+def sup_sample_cands(all_ids: list, games: list, game_of, imp: dict, sup_turn: dict, exclude: set):
+    """표본 후보(설계서 8-17 4-①). tier 0 = supervisor 가 직접 정한 차례(마감 초안이 set), 1 = 다시 읽기로 답이 바뀐 차례(마감 초안이 r<n> 이고 반영됨),
+    2 = 그 밖에서 영향(바뀌는 순 수 최대)이 0 보다 큰 차례. 질문에 오른 차례(exclude)는 뺌. tier 2 에 못 서는 차례: 영향을 못 잰 것(no_impact) · 0(zero).
+    tier 0 · 1 은 영향이 0 이거나 못 재도 넣는다(supervisor 가 손댄 표시 — 3-10 정한 것 2 · 3-5)."""
+    gi = {g: i for i, g in enumerate(games)}
+    cands, no_impact, zero = [], {}, {}
+    for t in all_ids:
+        if t in exclude:
+            continue
+        rows = imp[t]["impact"]
+        ok = [x for x in rows if x.get("ok")]
+        mx = max(x.get("hand_turns_changed", 0) for x in ok) if ok else None
+        v = sup_turn.get(t) or {}
+        fr = str(v.get("from") or "")
+        if fr == "set":
+            tier = 0
+        elif re.fullmatch(r"r\d+", fr) and v.get("applied"):
+            tier = 1
+        else:
+            if not ok:
+                no_impact[t] = imp[t]["src"] if not imp[t]["cands"] else "후보 조립 모두 실패 — " + "; ".join(sorted({str(x.get("error"))[:80] for x in rows}))
+                continue
+            if mx == 0:
+                zero.setdefault(game_of(t), []).append(t)
+                continue
+            tier = 2
+        cands.append({"id": t, "tier": tier, "mx": mx, "g": gi.get(game_of(t), len(gi)), "no": turn_no(t)})
+    return cands, no_impact, zero
+
+
+def sup_sample_pick(cands: list, n: int = SAMPLE_PER_HANCHAN) -> list:
+    """채우는 순서: tier(set → 다시 읽기로 바뀜 → 영향) → 영향 큰 순 → 이른 순(판 순서 · 차례 번호)."""
+    return sorted(cands, key=lambda c: (c["tier"], -(c["mx"] or 0), c["g"], c["no"]))[:n]
+
+
+def write_sources(r: Run, asked: list, hidden: list, su: dict) -> dict:
+    """차례별 출처 파일 paifu_source/<판>.json(설계서 8-17 4-① — 패보 형식은 안 바꿈). 손패 주인 버림(패보의 discard)마다 SOURCE_KINDS 가운데 하나와
+    근거 파일(실행 폴더 기준 경로). 차례 목록(turns_after_fix)을 패보의 손패 주인 버림에 끝에서부터 맞춘다 — 앞에 남는 버림은 줄이 선 때 앞(복원 안 함).
+    먼저 걸리는 것이 이김: 사용자 확인 → 확인 안 된 추정(질문 · 영향 0 숨김) → supervisor 가 정함 → 다시 읽기와 일치 → 첫 읽기 그대로 · 읽지 않은 차례는 코드 규칙."""
+    cfg = r.cfg()
+    answered_ = set(r.state.get("answered") or [])
+    applied_files = [f for e in r.state.get("events") or [] if "apply" in e for f in (e.get("files") or [])]
+    qrow = {q["id"]: ("questions.jsonl", q) for q in asked if q.get("kind") == "turn_slot"}
+    for q in hidden:
+        if q.get("kind") == "turn_slot" and q.get("hidden_reason") == "hidden_zero_impact" and not q.get("sample"):
+            qrow.setdefault(q["id"], ("questions_hidden.jsonl", q))
+    s7_rr = {}
+    for h in r.stage("S7").get("history") or []:
+        for t in h.get("turns") or []:
+            s7_rr.setdefault(t, []).append(h.get("round"))
+    fix = jl(r.prep / cfg.fix_file.name) if (r.prep / cfg.fix_file.name).exists() else {}
+    out_d = r.d / "paifu_source"
+    totals, per_game = Counter(), {}
+    R = lambda p: Path(p).resolve().relative_to(r.d).as_posix()   # noqa: E731
+    for g in r.games():
+        pf = r.paifu / f"{g}.json"
+        if not pf.exists():
+            per_game[g] = {"error": "패보 없음"}
+            continue
+        P = jl(pf)
+        hero = P.get("hero")
+        disc = [e for e in P["events"] if e.get("seat") == hero and e.get("type") == "discard"]
+        turns_all = turns_after_fix(cfg, g)
+        read_ids = game_answer_ids(r, g)
+        sg = g in set(su["games"])
+        n_pre = len(disc) - len(turns_all)
+        rows, warn = [], []
+        if n_pre < 0:
+            warn.append(f"패보의 손패 주인 버림 {len(disc)} < 차례 목록 {len(turns_all)} — 앞 {-n_pre}차례는 패보에 버림이 없어 줄에 없음")
+        riichi_seen = False
+        tmap = {}
+        for k, t in enumerate(turns_all):
+            tmap[t["id"]] = riichi_seen
+            if t.get("sideways"):
+                riichi_seen = True
+        for i, e in enumerate(disc):
+            k = i - n_pre
+            t = turns_all[k] if 0 <= k < len(turns_all) else None
+            row = {"jun": i + 1, "tile": e.get("tile"), "tsumogiri": e.get("tsumogiri"), "riichi": e.get("riichi"), "turn": t["id"] if t else None}
+            if t is None:
+                row.update(source="복원 안 함", files=[R(pf)], note="줄이 선 때(t_ready) 앞 버림 — 차례 목록에 없음(패보 짐작 순)" + ("" if e.get("guess") else " · 패보에 guess 표시 없음"))
+            else:
+                tid = t["id"]
+                if norm(t.get("tile")) != norm(e.get("tile")):
+                    warn.append(f"{tid}: 차례 목록 패 {t.get('tile')} ≠ 패보 버림 {e.get('tile')}")
+                if tid not in read_ids:
+                    fx = fix.get(tid) or {}
+                    why = "리치 뒤 — 쯔모기리(코드)" if tmap.get(tid) else (f"turn_fix kind {fx.get('kind')}" if fx.get("kind") else "읽지 않음(코드로 정함)")
+                    row.update(source="코드 규칙", files=[R(r.prep / cfg.fix_file.name)], note=why)
+                elif tid in answered_:
+                    fs = [R(r.read / tid / "answer.json")] + ([R(r.read / tid / "answer_before_apply.json")] if (r.read / tid / "answer_before_apply.json").exists() else [])
+                    row.update(source="사용자 확인", files=fs + applied_files, note="apply 로 넣은 사용자 답(user: true)")
+                elif tid in qrow:
+                    fn, q = qrow[tid]
+                    fs = [fn] + ([q["sup_file"]] if q.get("sup_file") else [])
+                    row.update(source="확인 안 된 추정", files=fs, note=f"질문에 올랐으나 답 없음 — 신호 {q.get('signal')}" + (" · 영향 0 이라 숨김" if fn != "questions.jsonl" else ""))
+                else:
+                    v = (su["turns"].get(tid) or {}) if sg else {}
+                    how = v.get("how") or []
+                    cur = slot_of(jl(active_answer(r, tid)))
+                    agree = []
+                    if sg:
+                        for f in sorted((r.d / "sup" / g / "reread").glob(f"{tid}_r*/answer.json")):
+                            try:
+                                if slot_of(jl(f)) == cur:
+                                    agree.append(R(f))
+                            except (json.JSONDecodeError, UnicodeDecodeError):
+                                pass
+                    if v.get("from") == "set":
+                        fs = [R(r.d / "sup" / g / "decision.json")] + ([R(r.read / tid / "sup.json")] if (r.read / tid / "sup.json").exists() else [])
+                        row.update(source="supervisor 가 정함", files=fs, note=f"set — 근거 프레임: {v.get('evidence')}" + (" · 처음 답과 다름" if v.get("changed") else " · 처음 답과 같음"))
+                    elif agree:
+                        row.update(source="다시 읽기와 일치", files=agree + [R(r.d / "sup" / g / "decision.json")],
+                                   note=f"supervisor 다시 읽기 {', '.join(h for h in how if h.startswith('reread'))} · 마감 초안 {v.get('from')}" + (" · 처음 답과 다름" if v.get("changed") else " · 처음 답과 같음"))
+                    elif tid in s7_rr:
+                        fs = [R(f) for f in sorted((r.read / tid).glob("answer_r*.json"))]
+                        same0 = (r.read / tid / "answer_r0.json").exists() and slot_of(jl(r.read / tid / "answer_r0.json")) == cur
+                        row.update(source="다시 읽기와 일치", files=fs, note=f"S7 다시 읽기(라운드 {s7_rr[tid]}) 답을 씀 · " + ("처음 답과 같음" if same0 else "처음 답과 다름(일치 확인 없음)"))
+                    else:
+                        f0 = r.read / tid / ("answer_r0.json" if (r.read / tid / "answer_r0.json").exists() else "answer.json")
+                        row.update(source="첫 읽기 그대로", files=[R(f0)], note=("supervisor 판: " + ", ".join(how) if how else ("supervisor 판 — 손대지 않음" if sg else "supervisor 를 안 거친 판")))
+            rows.append(row)
+        c = Counter(x["source"] for x in rows)
+        read_rows = sum(1 for x in rows if x.get("turn") in set(read_ids))
+        chk = {"sum": sum(c.values()), "hero_discards": len(disc), "sum_ok": sum(c.values()) == len(disc),
+               "turns_listed": len(turns_all), "read_turns": len(read_ids), "read_rows": read_rows, "read_ok": read_rows == len(read_ids)}
+        doc = {"_note": "paifu_auto.py S9 — 차례별 출처(설계서 8-17 4-①). 패보 형식은 안 바꾸고 옆 파일로. files 는 실행 폴더 기준 경로(사용자 답 파일은 apply 에 준 경로).",
+               "game": g, "paifu": R(pf), "hero": hero, "supervisor": "마감" if sg else ("건너뜀(시험 옵션)" if g in set(r.stage("S7s").get("skipped") or []) else "없음"),
+               "counts": {k: c.get(k, 0) for k in SOURCE_KINDS}, "check": chk, "warnings": warn, "rows": rows}
+        wj(out_d / f"{g}.json", doc)
+        totals.update(c)
+        per_game[g] = {"counts": doc["counts"], "check": chk, "warnings": warn}
+    res = {"totals": {k: totals.get(k, 0) for k in SOURCE_KINDS}, "games": per_game,
+           "all_ok": all(v.get("check", {}).get("sum_ok") and v.get("check", {}).get("read_ok") for v in per_game.values())}
+    wj(out_d / "_summary.json", res)
+    return res
 
 
 # ------------------------------------------------------------------ 보고서
-def write_report(r: Run, asked, hidden, samples=None):
+def q_bundle(q) -> str:
+    """질문이 나온 묶음(설계서 3-1 · 3-11 표): 차례 칸 = 묶음 4, S0 = 묶음 1, S1 ~ S5(W5 포함 · 판 결과 S4) = 묶음 2, S6a · S6(차례 수 검사) = 묶음 3."""
+    if q.get("kind") == "turn_slot":
+        return "묶음 4(차례 읽기 · supervisor)"
+    s = str(q.get("stage") or "")
+    if s == "S0":
+        return "묶음 1(모으기)"
+    if s == "S4":
+        return "묶음 2(판 결과 S4)"
+    if s in ("S1", "S2", "S3", "S5", "W5", "w5"):
+        return "묶음 2(탁자 기록)"
+    if s in ("S6a", "S6"):
+        return "묶음 3(손 추적 준비)"
+    return f"그 밖({s or '단계 없음'})"
+
+
+def game_path(r: Run, g: str) -> str:
+    """판마다 간 길(설계서 3-2): 앱 버림 출처가 촬영 기록 paifu.json = 기본 · 추적 프레임 재생 = 옆길 가 · 그 밖(앱 기록 없음 · 헤드 녹화) = 옆길 나."""
+    x = r.app_round(g) if (r.cfg().app_record and r.app()) else None
+    used = ((x or {}).get("discard_source") or {}).get("used")
+    return {"paifu_json": "기본", "track_replay": "옆길 가"}.get(used, "옆길 나") + f"({used or '앱 기록 없음'})"
+
+
+def sup_report_lines(r: Run, asked, hidden, samples, sup: dict) -> list:
+    """supervisor 단계가 켜진 실행의 보고서 절(설계서 8-17 4-① — 3-11 '더할 것' 가운데 지금 낼 수 있는 것)."""
+    su, src = sup["su"], sup["sources"]
+    sg = r.state.get("signals") or {}
+    v2 = sg.get("v2_compare") or {}
+    s7s = r.stage("S7s")
+    L = ["## 판마다 간 길 · 판 supervisor(S7s)", "",
+         "| 판 | 길 | supervisor | 손댄 차례(어떻게 · 마감 초안 · 처음과 다름) | ask | 반영한 차례 | 출처(첫 읽기 · 다시 읽기 · supervisor · 사용자 · 추정 · 코드 · 복원 안 함) |",
+         "|---|---|---|---|---|---|---|"]
+    for g in r.games():
+        dec = (s7s.get("sup_decided") or {}).get(g)
+        state = ("마감" + (f"(재생: `{rel(dec['replayed_from'])}`)" if dec and dec.get("replayed_from") else "")) if dec else \
+                ("건너뜀(시험 옵션 --sup-games)" if g in (s7s.get("skipped") or []) else "읽은 차례 없음")
+        touched = "; ".join(f"{t} {'+'.join(v.get('how') or [])} · {v.get('from')}{' · 다름' if v.get('changed') else ''}"
+                            for t, v in su["turns"].items() if v.get("game") == g and v.get("how")) or "—"
+        c = (src["games"].get(g) or {}).get("counts") or {}
+        L.append(f"| {g} | {game_path(r, g)} | {state} | {touched} | {dec['asks'] if dec else '—'} | {', '.join(dec['applied']) if dec and dec['applied'] else '—'} | "
+                 f"{' · '.join(str(c.get(k, 0)) for k in SOURCE_KINDS)} |")
+    for t, v in su["turns"].items():
+        if v.get("from") == "set":
+            L.append(f"- set {t}: 근거 {v.get('evidence')}")
+    bc = Counter(q_bundle(q) for q in asked)
+    L += ["", f"## 질문 출처(묶음별, `questions.jsonl` {len(asked)}개)", "", "| 묶음 | 질문 |", "|---|---|"]
+    L += [f"| {k} | {n} |" for k, n in sorted(bc.items())] or ["| (없음) | 0 |"]
+    ts = Counter(str(q.get("signal")) for q in asked if q.get("kind") == "turn_slot")
+    L += ["", f"- 차례 질문 신호: " + (" · ".join(f"{k} {n}" for k, n in ts.items()) or "없음") + " (sup:ask = supervisor 가 못 푼 차례 · unsure = supervisor 를 안 거친 판의 unsure 차례)"]
+    hc = Counter(q.get("hidden_reason") for q in hidden)
+    L += [f"- 숨긴 질문 {len(hidden)}개: " + (" · ".join(f"{k} {n}" for k, n in hc.items()) or "없음")]
+    L += ["", "## 낱말 규칙(v2)이었다면 — 견줌용(질문은 안 만듦)", "",
+          f"- 차례 질문 {v2.get('turn_questions')} + 그 밖의 질문 {v2.get('other_questions')} = 질문 {v2.get('questions')} · 표본(판마다 {SAMPLE_PER_GAME}) {v2.get('samples')} → "
+          f"**볼 양 {v2.get('total')}** (지금 규칙: 질문 {len(asked)} + 표본 {len(samples)} = {len(asked) + len(samples)})",
+          f"- v2 가 올린 차례 {v2.get('raised')}(영향 0 숨김 {len(v2.get('turn_hidden_zero') or [])}): {', '.join(v2.get('turn_questions_ids') or []) or '—'}"]
+    L += ["", f"## 표본(반장당 {SAMPLE_PER_HANCHAN}, `samples.jsonl` {len(samples)}개 — set → 다시 읽기로 바뀜 → 영향 큰 순)", "",
+          "| 순위 | id | 고른 까닭 | 바뀌는 손패 순 최대 | 결과 | supervisor | 영상 구간 |", "|---|---|---|---|---|---|---|"]
+    for q in samples:
+        s = q.get("impact_summary") or {}
+        c = q.get("clip") or {}
+        L.append(f"| {q.get('sample_rank')} ({q.get('pool_size')}) | {q['id']} | {q.get('sample_tier')} | {s.get('max_hand_turns')} | {'바뀜' if s.get('result_changed') else '같음'} | "
+                 f"{'+'.join(q.get('sup') or []) or '—'} | {c.get('t0')} ~ {c.get('t1')} |")
+    L += [f"- 표본 후보 {sg.get('sample_pool')}차례 · 영향 0 이라 뺀 것 {sum(len(v) for v in (sg.get('sample_zero_excluded') or {}).values())} · 영향을 못 잰 것 {len(sg.get('no_impact') or {})}"]
+    L += ["", f"## 차례별 출처(`paifu_source/<판>.json`) — 합 {sum(src['totals'].values())} · 검사 {'통과' if src['all_ok'] else '**어긋남**'}", "",
+          "| " + " | ".join(SOURCE_KINDS) + " |", "|" + "---|" * len(SOURCE_KINDS), "| " + " | ".join(str(src["totals"].get(k, 0)) for k in SOURCE_KINDS) + " |"]
+    for g, v in src["games"].items():
+        for w in v.get("warnings") or []:
+            L.append(f"- {g}: {w}")
+    return L
+
+
+def write_report(r: Run, asked, hidden, samples=None, sup=None):
     cfg = r.cfg()
     st = r.state["stages"]
     samples = samples or []
@@ -3484,13 +3899,21 @@ def write_report(r: Run, asked, hidden, samples=None):
          f"- 실행 폴더: `{rel(r.d)}` · 원래 설정: `{r.state['source_cfg']}` · 만든 때 {r.state['created']} · 보고서 {now()}",
          f"- 재사용(S2): `{r.state.get('reuse')}` · 손 설정(S5): `{r.state.get('hand_settings')}`",
          f"- **사용자가 볼 양: 질문 {len(asked)}개 + 표본 {len(samples)}개 = {len(asked) + len(samples)}개**(`questions.jsonl` · `samples.jsonl` — 표본은 질문 수와 따로 셈, 설계서 8-2 · 8-3절)", ""]
-    if len(asked) > 10:
+    if sup is not None:   # 설계서 8-17 4-①: 질문이 10 을 넘으면 맨 위에 "질문이 많음 — 어느 묶음에서 몇 개"
+        L[-1:-1] = [f"- 판 supervisor 단계 켬(설계서 8-17 4-①) · 표본 반장당 {SAMPLE_PER_HANCHAN} · 낱말 규칙(v2)이었다면 볼 양 {((sg.get('v2_compare') or {}).get('total'))}"]
+        if len(asked) > 10:
+            bc = Counter(q_bundle(q) for q in asked)
+            L += [f"**질문이 많음({len(asked)}개 > 10) — " + " · ".join(f"{k} {n}개" for k, n in sorted(bc.items())) + "**(설계서 5절 실패 신호)", ""]
+    elif len(asked) > 10:
         L += [f"**질문이 많음({len(asked)}개 > 10) — 원인:** 아래 질문 목록의 stage · rule · signal 칸을 볼 것(설계서 5절 실패 신호).", ""]
     L += ["## 단계", "", "| 단계 | 상태 | 요약 |", "|---|---|---|"]
-    for s in STAGES:
+    for s in stage_list(r):
         v = st.get(s) or {}
-        keep = {k: v[k] for k in v if k not in ("status", "detail", "checks", "plan", "slotgrid", "history", "games", "same_as_reuse", "final_bad", "summary", "verify", "call_turns")}
+        keep = {k: v[k] for k in v if k not in ("status", "detail", "checks", "plan", "slotgrid", "history", "games", "same_as_reuse", "final_bad", "summary", "verify", "call_turns",
+                                                 "sup_decided", "packed")}
         L.append(f"| {s} {STAGE_NAME[s]} | {v.get('status')} | {json.dumps(keep, ensure_ascii=False)[:300]} |")
+    if sup is not None:
+        L += [""] + sup_report_lines(r, asked, hidden, samples, sup)
     L += ["", "## 판마다", "", "| 판 | 읽은 차례 | 질문 | 표본 | 영향 0 숨김 | 사용자 답 숨김 | 기록 불확실(S5) | 다시 읽기 |", "|---|---|---|---|---|---|---|---|"]
     plan = st["S6"].get("plan") or {"hand": {}, "call": []}
     for g in r.games():
@@ -3499,21 +3922,25 @@ def write_report(r: Run, asked, hidden, samples=None):
                  f"{sum(1 for q in hidden if q.get('game') == g and q.get('hidden_reason') == 'hidden_zero_impact')} | "
                  f"{sum(1 for q in hidden if q.get('game') == g and q.get('hidden_reason') == '사용자 답(apply)')} | "
                  f"{sum(1 for q in asked + hidden if q.get('game') == g and q.get('kind') == 'record')} | {r.state['reread'].get(g, 0)} |")
-    bs = sg.get("by_signal") or {}
-    L += ["", "## 차례 질문 신호(설계서 8-3절 v2 — 규칙은 적용 전에 고정)", "",
-          f"- 읽은 차례 {sg.get('turns_total')} 중 오른 것 {sg.get('raised')}: unsure 만 {bs.get('unsure', 0)} · hedge 만 {bs.get('hedge', 0)} · 둘 다 {bs.get('both', 0)}",
-          f"- 그중 질문 목록에 남은 차례 {len(sg.get('asked_turns') or [])} (나머지는 영향 0 · 사용자 답으로 숨김)",
-          f"- 영향 계산: 차례 {sg.get('turns_total')} 모두, {sg.get('impact_s')}초 · 영향을 못 잰 차례 {len(sg.get('no_impact') or {})}"
-          + (": " + " · ".join(f"{k} {v}" for k, v in Counter(sg['no_impact'].values()).items()) if sg.get("no_impact") else ""), ""]
+    if sup is None:
+        bs = sg.get("by_signal") or {}
+        L += ["", "## 차례 질문 신호(설계서 8-3절 v2 — 규칙은 적용 전에 고정)", "",
+              f"- 읽은 차례 {sg.get('turns_total')} 중 오른 것 {sg.get('raised')}: unsure 만 {bs.get('unsure', 0)} · hedge 만 {bs.get('hedge', 0)} · 둘 다 {bs.get('both', 0)}",
+              f"- 그중 질문 목록에 남은 차례 {len(sg.get('asked_turns') or [])} (나머지는 영향 0 · 사용자 답으로 숨김)",
+              f"- 영향 계산: 차례 {sg.get('turns_total')} 모두, {sg.get('impact_s')}초 · 영향을 못 잰 차례 {len(sg.get('no_impact') or {})}"
+              + (": " + " · ".join(f"{k} {v}" for k, v in Counter(sg['no_impact'].values()).items()) if sg.get("no_impact") else ""), ""]
+    else:
+        L += [""]
     L += [f"## 질문 목록({len(asked)}개, `questions.jsonl`)", "", "| id | 종류 | 신호 | 지금 답 | 후보 | 영향(바뀌는 손패 순 최대 · 결과) | 영상 구간 | 근거 규칙 |", "|---|---|---|---|---|---|---|---|"]
     for q in asked:
         s = q.get("impact_summary") or {}
         c = q.get("clip") or {}
         L.append(f"| {q['id']} | {q['kind']} | {json.dumps(q.get('signal'), ensure_ascii=False) if q.get('signal') else '—'} | {json.dumps(q.get('current'), ensure_ascii=False)} | "
                  f"{json.dumps(q.get('candidates'), ensure_ascii=False)} | {s.get('max_hand_turns')} · {'바뀜' if s.get('result_changed') else '같음'} | {c.get('t0')} ~ {c.get('t1')} | {q.get('rule') or q.get('why')} |")
-    L += ["", f"## 영향 큰 차례 표본({len(samples)}개, `samples.jsonl` — 신호 2, 판마다 {SAMPLE_PER_GAME})", "",
-          "| 판 | id | 줄 순위(줄 크기) | 바뀌는 손패 순 최대 | 결과 | 후보 | 영상 구간 |", "|---|---|---|---|---|---|---|"]
-    for q in samples:
+    if sup is None:   # supervisor 단계가 켜진 실행은 위 "표본(반장당 5)" 절에
+        L += ["", f"## 영향 큰 차례 표본({len(samples)}개, `samples.jsonl` — 신호 2, 판마다 {SAMPLE_PER_GAME})", "",
+              "| 판 | id | 줄 순위(줄 크기) | 바뀌는 손패 순 최대 | 결과 | 후보 | 영상 구간 |", "|---|---|---|---|---|---|---|"]
+    for q in (samples if sup is None else []):
         s = q.get("impact_summary") or {}
         c = q.get("clip") or {}
         L.append(f"| {q['game']} | {q['id']} | {q.get('sample_rank')} ({q.get('pool_size')}) | {s.get('max_hand_turns')} | {'바뀜' if s.get('result_changed') else '같음'} | "
@@ -3641,9 +4068,10 @@ def write_progress_report(r: Run, stage: str, pend: list, error: str | None = No
     if error:
         L += ["", "**멈춘 까닭:**", "", "```", error.strip()[:3000], "```"]
     L += ["", "## 단계", "", "| 단계 | 상태 | 요약 |", "|---|---|---|"]
-    for s in STAGES:
+    for s in stage_list(r):
         v = st.get(s) or {}
-        keep = {k: v[k] for k in v if k not in ("status", "detail", "checks", "plan", "slotgrid", "history", "games", "same_as_reuse", "final_bad", "summary", "verify", "call_turns", "app", "how", "advance", "error")}
+        keep = {k: v[k] for k in v if k not in ("status", "detail", "checks", "plan", "slotgrid", "history", "games", "same_as_reuse", "final_bad", "summary", "verify", "call_turns", "app", "how", "advance", "error",
+                                                 "sup_decided", "packed")}
         L.append(f"| {s} {STAGE_NAME[s]} | {v.get('status')} | {json.dumps(keep, ensure_ascii=False)[:300]} |")
     qn = {k: len(r.state.get(k) or []) for k in ("questions_s0", "questions_s1", "questions_w5", "questions_s4", "questions_s5", "questions_s6a", "questions_s6")}
     L += ["", f"- 지금까지 질문 후보: {qn}(S9 에서 questions.jsonl 로 모음 — W5 것은 w5_questions.jsonl 에 먼저 씀, S5 가 W5 의 record 질문을 대신함)", ""]
@@ -3655,7 +4083,7 @@ def write_progress_report(r: Run, stage: str, pend: list, error: str | None = No
 
 
 # ------------------------------------------------------------------ next · replay · apply · status
-STEP = {"S0": s0, "S1": s1, "S2": s2, "S3": s3, "S4": s4, "S5": s5, "S6a": s6a, "S6b": s6b, "S6": s6, "S7": s7, "S8": s8, "S9": s9}
+STEP = {"S0": s0, "S1": s1, "S2": s2, "S3": s3, "S4": s4, "S5": s5, "S6a": s6a, "S6b": s6b, "S6": s6, "S7": s7, "S7s": s7s, "S8": s8, "S9": s9}
 
 
 def cmd_next(a):
@@ -3663,14 +4091,18 @@ def cmd_next(a):
     if r.state is None:
         raise SystemExit("init 먼저")
     redo = getattr(a, "redo", None)
+    stl = stage_list(r)   # 판 supervisor 단계가 꺼진 실행은 S7s 없이(옛 흐름 그대로)
     if redo:
         # --redo S9: 그 단계와 뒤 단계만 다시(앞 단계 결과 · S6 재료는 그대로 — S9 만 고쳤을 때 488초짜리 S6 를 다시 안 돌림)
-        for s in STAGES[STAGES.index(redo):]:
+        # (S7s 를 다시 해도 마감된 꾸러미(sup/<판>/decision.json)는 그대로 둔다 — supervisor 를 새로 돌리려면 그 판 sup/<판>/ 을 치울 것)
+        if redo not in stl:
+            raise SystemExit(f"--redo {redo}: 이 실행에 없는 단계(판 supervisor 단계가 꺼진 실행)")
+        for s in stl[stl.index(redo):]:
             r.state["stages"][s] = {"status": "todo"}
             r.state["timing"].pop(s, None)
         r.state["events"].append({"at": now(), "redo": redo})
         r.save()
-    for s in STAGES:
+    for s in stl:
         if r.stage(s)["status"] == "done":
             continue
         t0 = time.time()
@@ -3727,6 +4159,22 @@ def cmd_replay(a):
                 continue
             wj(dst, {"source": rp.get("source"), "_replay": f"{rel(src / 'rounds_p.json')}(p 판) + {rel(V1114_ROUNDS)}(그 밖의 판 — 11-23 headrec_rounds.json 의 출처)",
                      "rounds": lst})
+            put += 1
+            continue
+        if p["stage"] == "S7s":   # 판 supervisor 꾸러미: 다른 실행의 마감된 꾸러미(<from>/sup/<판>/)를 가져와 같은 마감을 다시 적용(설계서 8-17 4-①)
+            q = src / "sup" / p["game"]
+            if not (q / "decision.json").exists():
+                miss.append(p["id"])
+                continue
+            why = None
+            for cmd in (["replay", "--pack", p["dir"], "--from", q], ["done", "--pack", p["dir"]]):
+                pr = run([PY, "-X", "utf8", SUP_PY, *cmd], log=r.log(f"replay_s7s_{p['game']}_{cmd[0]}.log"), check=False)
+                if pr.returncode != 0:
+                    why = f"paifu_sup {cmd[0]} rc {pr.returncode}: " + " ".join((pr.stdout or "").split())[-300:]
+                    break
+            if why or not answered(p):
+                miss.append(f"{p['id']}({why or '마감 파일 없음'})")
+                continue
             put += 1
             continue
         if p["stage"] == "S4" and p.get("kind") == "app_draw_reveal":   # 앱 유국 공개 손패 읽기(다른 실행 폴더의 s4/<판>/<a|b|c>/reveal_read.json)
@@ -3857,7 +4305,11 @@ def cmd_unapply(a):
 
 def cmd_status(a):
     r = Run(a.run)
+    on = sup_on(r)
     for s in STAGES:
+        if s == "S7s" and not on:
+            print(f"{s} {STAGE_NAME[s]:12s} {'끔':8s}")
+            continue
         v = r.stage(s)
         print(f"{s} {STAGE_NAME[s]:12s} {v['status']:8s} {r.state['timing'].get(s, '')}")
     pf = r.d / "pending.json"
@@ -3882,6 +4334,8 @@ def main():
     p.add_argument("--s6a-rules", action="store_true", help="견줌용: S6a 를 옛 화소 규칙(handtrack_auto.py conf)으로")
     p.add_argument("--slotgrid-seed", help="시험용: S6 칸 틀 검출 캐시(det_<판>.json)를 이 실행 폴더의 handtrack/_work/slotgrid_1117 에서 복사 — "
                                             "그 판 판별 설정의 side · band · sheet_band 가 같을 때만(새로 계산할 프레임만 detect)")
+    p.add_argument("--no-sup", action="store_true", help="판 supervisor 단계(S7s)를 끔 — 단계 · 질문 규칙 v2 · 표본 판마다 2(설계서 8-17 4-① 전과 같음)")
+    p.add_argument("--sup-games", help="시험용: 판 supervisor 를 이 판들만(쉼표) 거치게 — 나머지 판은 S7s 에서 건너뜀(그 판 unsure 차례는 질문으로)")
     for name in ("status", "unapply"):
         sp.add_parser(name).add_argument("--run", required=True)
     p = sp.add_parser("next")

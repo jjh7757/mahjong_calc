@@ -26,6 +26,10 @@
       (11-25, 설계서 8-14 (가)) river · meld 는 paifu_auto S6a 가 버림 기록기 덤프에서 낸 코드 값(dump_regions.py)이 spec regions 에 들어 온다 —
       그림에만 그리고 묻지 않으며, 답에 그 영역이 있어도 답 값이 아니라 코드 값을 쓴다(CODE_REGIONS). 그래도 없으면 멈춘다(features.py 가 읽음).
   앱 기록 반장(설정 app_record): try 는 강 읽기(river) 걸음을 빼고(handtrack_auto run --no-river) 차례 목록을 기록에서(han3 rturns) 만든다(8-13 (가)).
+(11-25 밤, 설계서 8-16) 답 칸 t_ready_late {"time": 시각 또는 null, "why"} — 정리인지 한 장 끼움인지 가리기 어려운 동작을 정리로 볼 때의 줄이 선 때.
+  apply · try 는 그 값이 답의 t_ready 보다 뒤면 그것을 판별 설정 t_ready 로 쓴다(같거나 앞이면 무시 · 그 뒤 손패 주인 버림이 0 이면 안 쓰고 질문 ·
+  t_reveal 과 같거나 뒤면 답 꼴 오류). 적용 결과 ready_late 에 답의 값 · 늦은 후보 · 쓴 값을 남김. 칸이 없거나 time 이 null 이면 옛 그대로.
+  지시문 글(늦은 후보 · 사실 고침 세 곳)은 기본 길 모드(task_half)에만 — 옛 길의 TASK.md 는 그대로.
 
 spec(paifu_auto.ht_spec 가 만듦 — 3반장 시험 스크립트도 같은 함수):
   gid · round_label · side · hero · bottom · dealer · end(win/draw) · win_type · loser_side · n_calls · n_closed_end · hero_riichi ·
@@ -516,6 +520,28 @@ def task_half(t: str, sp: dict) -> str:
         ("- ③ 공개 프레임에서 읽은 끝 손패 장수가 기대와 다르거나 판 결과의 패와 다르다 → reveal_frame · reveal_region 을 본다\n"
          "  (세 장 모두에서 눕힌 줄이 가지런한지, 영역이 줄 끝 · 떼어 둔 패를 자르지 않는지, 남의 패가 들지 않는지).\n",
          "- ③ 이 판은 공개 손패를 영역으로 읽지 않는다(끝 손패는 판 결과 값) — reveal_frame 은 프레임을 보고 정한다.\n"),
+        # (11-25 밤, 설계서 8-16) 사실이 틀린 세 곳(이 모드에서는 강 · 공개 읽기를 안 돌리고 차례 목록이 기록에서 옴) — 판단 잣대는 그대로
+        ("판별 설정 → 특징 → 활동 구간 → 강 → 공개 → 읽기 띠 → 차례 나누기를",
+         "판별 설정 → 특징 → 활동 구간 → 읽기 띠 → 차례 목록(기록에서) → 차례 나누기를"),
+        ("  차례 목록(`truthprep` · `han3 turns`)은 t_ready 때 강에 이미 있던 이 사람 버림을 \"판 구간 전\" 버림으로 보아 **차례로 만들지 않고**(그 순의 손패는 복원하지 않음),\n"
+         "  t_ready 뒤에 이 사람 강이 한 장 늘 때마다 차례 하나를 만든다.",
+         "  차례 목록(기록에서 — `han3 rturns`)은 기록의 이 사람 버림 가운데 기록기가 처음 본 때가 t_ready 와 같거나 앞인 것을 \"판 구간 전\" 버림으로 보아 "
+         "**차례로 만들지 않고**(그 순의 손패는 복원하지 않음),\n  t_ready 뒤 버림마다 차례 하나를 만든다."),
+        ("- reveal_frame = 공개 뒤 끝 손패를 읽을 프레임. `game.py` 가 이 프레임과 앞뒤 0.5초 프레임, 모두 세 장으로 다수결해 읽으므로: 세 장 모두에서 눕힌 손패가\n"
+         "  **한 줄로 가지런하고**(몇 장이 한 칸 앞뒤로 어긋나 있으면 손패 줄을 짧게 읽는다), ",
+         "- reveal_frame = 공개 뒤 끝 손패를 볼 프레임. 이 판은 코드가 이 프레임에서 손패를 읽지 않는다(끝 손패는 판 결과 값 — 아래 판 구간 끝을 정하는 데 쓰인다).\n"
+         "  고르는 잣대: 이 프레임과 앞뒤 0.5초 프레임, 세 장 모두에서 눕힌 손패가 **한 줄로 가지런하고**, "),
+        # (설계서 8-16) 줄이 선 때의 늦은 후보 — ⑥ 의 "첫 세 차례까지 본다" 뒤 · 답 꼴 · 마지막 보고 줄
+        ("  - 처음 가지런히 선 때에서 멈추지 말고, 그 뒤 이 사람의 첫 세 차례가 끝날 때까지 프레임을 보아 여러 장 재정리가 없는지 확인한다.\n",
+         "  - 처음 가지런히 선 때에서 멈추지 말고, 그 뒤 이 사람의 첫 세 차례가 끝날 때까지 프레임을 보아 여러 장 재정리가 없는지 확인한다.\n"
+         "  - t_ready 뒤 ~ 이 사람의 첫 세 차례가 끝날 때 사이에 여러 장을 옮기는 정리인지 한 장을 끼운 것인지 가리기 어려운 동작이 있으면, 한쪽으로 정하려 애쓰지 말고\n"
+         "    t_ready 에는 더 그럴듯한 값을, 답의 t_ready_late 에는 늦은 후보 — 그 동작이 정리였다고 볼 때의 줄이 선 때(그 동작이 끝나 줄이 가만한 첫 프레임) — 를 적는다.\n"
+         "    코드는 늦은 후보가 있으면(t_ready 보다 뒤면) 그것을 t_ready 로 쓴다. 늦게 잡으면 그 사이 버림의 차례를 복원하지 않을 뿐이고(패보에는 버림이 그대로 남는다),\n"
+         "    이르게 잡으면 정리 동작이 첫 차례에 섞여 그 차례를 잘못 읽기 때문이다. 그런 동작이 없거나 t_ready 를 이미 그 뒤로 잡았으면 t_ready_late 의 time 은 null.\n"),
+        ('  "t_ready_why": "그 프레임에서 본 것(줄 장수 · 손 위치) · 그 앞 정리가 언제 끝났는지",\n',
+         '  "t_ready_why": "그 프레임에서 본 것(줄 장수 · 손 위치) · 그 앞 정리가 언제 끝났는지",\n'
+         '  "t_ready_late": {"time": "HH:MM:SS.s", "why": "가리기 어려운 동작 · 그것을 정리로 볼 때 줄이 가만해진 프레임(없으면 time 은 null)"},\n'),
+        ("- 마지막 답은 네 줄 이내: t_ready / 공개", "- 마지막 답은 네 줄 이내: t_ready · t_ready_late / 공개"),
     ]
     for a, b in subs:
         assert t.count(a) == 1, a[:60]
@@ -694,6 +720,19 @@ def parse_answer(ans: dict, sp: dict) -> tuple:
     for k, v in T.items():
         if v is None:
             fatal.append(f"{k}: 시각이 없거나 'HH:MM:SS.s' 꼴이 아님({ans.get(k)!r:.40})")
+    # (11-25 밤, 설계서 8-16) 줄이 선 때의 늦은 후보 — 칸이 없거나 time 이 null 이면 None(옛 답과 똑같이 돎)
+    T["t_ready_late"] = None
+    late = ans.get("t_ready_late")
+    if late is not None:
+        lt = late.get("time") if isinstance(late, dict) else late
+        if not isinstance(late, dict):
+            fatal.append(f"t_ready_late: {{\"time\": \"HH:MM:SS.s\" 또는 null, \"why\": \"…\"}} 꼴이 아님({late!r:.60})")
+        elif lt is not None:
+            T["t_ready_late"] = _hms(lt)
+            if T["t_ready_late"] is None:
+                fatal.append(f"t_ready_late.time: 'HH:MM:SS.s' 꼴 또는 null 이 아님({lt!r:.40})")
+            elif T["t_reveal"] is not None and T["t_ready_late"] >= T["t_reveal"]:
+                fatal.append(f"t_ready_late.time {hc.hms(T['t_ready_late'])} 가 t_reveal {hc.hms(T['t_reveal'])} 과 같거나 뒤")
     return R, T, fatal, changed
 
 
@@ -743,6 +782,22 @@ def cmd_apply(a):
         print("JSON" + json.dumps(res, ensure_ascii=False))
         return
     t_ready, t_rev, rf = T["t_ready"], T["t_reveal"], T["reveal_frame"]
+    # (설계서 8-16) 쓰는 값 = 늦은 후보가 있고 답의 t_ready 보다 뒤면 그것(그 뒤 손패 주인 버림이 하나도 없으면 안 씀 — 질문), 아니면 답의 t_ready
+    late, rl = T.get("t_ready_late"), None
+    if late is not None:
+        hd0 = sp.get("hero_discards") or []
+        rl = {"answer": hc.hms(t_ready), "late": hc.hms(late), "why": (ans.get("t_ready_late") or {}).get("why", "")}
+        if late <= t_ready:
+            rl.update(which="answer", note="늦은 후보가 답의 t_ready 와 같거나 앞 — 무시")
+        elif not any(x.get("at") and x["at"] > late for x in hd0):
+            rl.update(which="answer", note="늦은 후보 뒤 손패 주인 버림 0(차례 0 이 됨) — 안 쓰고 답의 t_ready 로, 질문", ask=True)
+        else:
+            skip = [x for x in hd0 if x.get("at") and t_ready < x["at"] <= late]
+            rl.update(which="late", note=f"늦은 후보를 씀 — 그 사이 손패 주인 버림 {len(skip)}장은 차례로 복원하지 않음",
+                      not_restored=[f"{x['tile']}@{hc.hms(x['at'])}" for x in skip])
+            t_ready = late
+        rl["used"] = hc.hms(t_ready)
+        res["ready_late"] = rl
     t_start = t_ready - T_START_LEAD_S * 1000
     post = max(4, math.ceil((rf - t_rev) / 1000 + 2))
     cf = {"id": gid, "side": side, "t_start": hc.hms(t_start), "t_ready": hc.hms(hc.nearest(t_ready)), "t_reveal": hc.hms(t_rev),
@@ -754,6 +809,8 @@ def cmd_apply(a):
           "notes": [f"S6a 준비 읽기 답({Path(a.answer).as_posix()}) — 영역 고침 {changed or '없음'}, t_start = t_ready − {T_START_LEAD_S}초(features 구간 시작일 뿐), "
                     f"post_sec = max(4, ⌈reveal_frame − t_reveal + 2⌉)" + ("" if sp["end"] == "win" else " · 유국 t_reveal = 판 결과 읽기 값"),
                     f"reveal: {ans.get('reveal_why', '')}"[:600]] + [f"{k}: {(ans.get(k) or {}).get('why', '')}"[:300] for k in changed if isinstance(ans.get(k), dict)]}
+    if rl:   # (설계서 8-16) 늦은 후보가 있던 답만 — 칸 없음 · null 이면 설정은 옛 그대로
+        cf["notes"].append(f"t_ready: 답 {rl['answer']} · 늦은 후보 {rl['late']} · 씀 {rl['used']} — {rl['note']}(설계서 8-16)")
     if is_half(sp):
         code = [k for k in CODE_REGIONS if k in sp["regions"]]
         unused = {k: ans.get(k) for k in code if ans.get(k) is not None} or "없음"
@@ -795,6 +852,10 @@ def cmd_apply(a):
     res["hero_discards_before_ready"] = [f"{x['tile']}@{hc.hms(x['at'])}" for x in pre]
     check("ready_before_discards", bool(after), f"t_ready 뒤 손패 주인 버림 {len(after)} · 앞 {len(pre)}({res['hero_discards_before_ready']})",
           q_why=f"t_ready {hc.hms(t_ready)} 뒤에 손패 주인 버림이 없음 — 차례가 0 이 됨", clip={"t0": hc.hms(t_ready - 30000), "t1": hc.hms(t_ready + 10000)})
+    if rl:   # (설계서 8-16) 늦은 후보: 씀 · 무시는 통과(표시만), 뒤 버림 0 이라 못 씀은 질문
+        check("ready_late", not rl.get("ask"), f"답 t_ready {rl['answer']} · 늦은 후보 {rl['late']} · 씀 {rl['used']} — {rl['note']}",
+              q_why=f"늦은 후보 {rl['late']} 뒤에 손패 주인 버림이 없어 안 씀(답의 t_ready {rl['answer']} 로 감) — 늦은 후보 · t_ready 를 확인",
+              clip={"t0": hc.hms(hc.to_ms(rl["answer"]) - 5000), "t1": hc.hms(hc.to_ms(rl["late"]) + 10000)})
     if sp["end"] == "win":
         check("reveal_after_last", t_rev >= sp["last_ms"] - 3000, f"t_reveal {hc.hms(t_rev)} · 마지막 버림(기록기) {hc.hms(sp['last_ms'])}",
               q_why=f"t_reveal {hc.hms(t_rev)} 가 판 마지막 버림(기록기가 처음 본 때 {hc.hms(sp['last_ms'])}) − 3초보다 앞",
@@ -989,6 +1050,12 @@ def try_report(d: Path, n: int, pk: dict, cfgf: Path, T: dict, err, fatal) -> tu
          f"(적용 · 특징 {T.get('apply', '—')} · 판별 {T.get('run', '—')} · 차례 {round(T.get('turns', 0) + T.get('fix', 0) + T.get('rturns', 0) + T.get('turncut', 0), 1)})",
          f"- 남은 시도: {max(0, MAX_TRIES - n)}번(판당 {MAX_TRIES}번까지)", ""]
     js = {"gid": gid, "n": n, "timing": T, "error": err, "fatal": fatal}
+    rl = (jl(d / "applied.json") if (d / "applied.json").exists() else {}).get("ready_late")
+    if rl:   # (설계서 8-16) 초안에 늦은 후보가 있음 — 답의 값 · 늦은 후보 · 쓰는 값(판별 · ① · ⑤ 는 쓰는 값 기준)
+        L[4:4] = [f"- 줄이 선 때: 답의 t_ready **{rl['answer']}** · 늦은 후보 **{rl['late']}** · 쓰는 값 **{rl['used']}** — {rl['note']}"
+                  + (f" {rl.get('not_restored')}(① 에서 't_ready 앞(차례 아님)' 으로 나옴)" if rl.get("which") == "late" else "")
+                  + " · 아래 판별 · ① · ⑤ 는 쓰는 값 기준"]
+        js["ready_late"] = rl
     if fatal:
         L += ["## 답 꼴 이상 — 판별을 돌리지 않음", "", *[f"- {x}" for x in fatal], "", "시각은 'HH:MM:SS.s', 영역은 [x0, y0, x1, y1] 정수로 고쳐 다시 try."]
         return "\n".join(L) + "\n", js

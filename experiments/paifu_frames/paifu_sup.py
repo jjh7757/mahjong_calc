@@ -3,7 +3,8 @@
 S7 이 끝난 자동 패보 실행 폴더(paifu_auto.py)에 판마다 꾸러미(<실행>/sup/<판>/)를 만들고, 판 supervisor(에이전트)가 이 명령들로만
 의심 차례를 다시 읽히고(reread) · 고르고(take) · 직접 정하고(set) · 검사하고(check) · 묻고(ask) · 마감한다(done).
 초안은 꾸러미 안(draft.json)에만 있고, 실행 폴더의 답(read/<차례>/answer.json)은 done 이 마감 검사를 통과했을 때만 바뀐다.
-흐름(paifu_auto next)에는 끼우지 않는다 — done 뒤 `paifu_auto.py next --run <실행> --redo S8` 로 다시 조립(구현 4번에서 흐름에 끼움).
+(11-25 밤, 설계서 8-17 4-①) 흐름에 끼움: paifu_auto.py 의 S7s 단계가 판마다 pack 을 부르고 꾸러미(TASK.md · 끝난 표시 decision.json)를 내고 멈춘다 —
+모든 판이 마감(done)되면 흐름이 S8 로 간다. 흐름 밖에서 손으로 쓸 때는 지금처럼 done 뒤 `paifu_auto.py next --run <실행> --redo S8`.
 이 스크립트는 LLM 을 부르지 않는다. 에이전트(supervisor · 다시 읽기 작업자)는 세션이 띄운다.
 
   python -X utf8 experiments/paifu_frames/paifu_sup.py pack   --run <실행> --game <판>
@@ -15,6 +16,7 @@ S7 이 끝난 자동 패보 실행 폴더(paifu_auto.py)에 판마다 꾸러미(
   python -X utf8 experiments/paifu_frames/paifu_sup.py done   --pack <꾸러미>
   python -X utf8 experiments/paifu_frames/paifu_sup.py status --pack <꾸러미>
   python -X utf8 experiments/paifu_frames/paifu_sup.py score  --run <실행> [--truth-dir <폴더>]
+  python -X utf8 experiments/paifu_frames/paifu_sup.py replay --pack <꾸러미> --from <다른 실행의 마감된 꾸러미>   # 재생(LLM 0, 8-17 4-①) — 뒤에 done 을 따로 부름
 (저장소 루트에서. 거절은 종료 코드 2 + "거절: …")
 
 꾸러미(pack 이 만듦): TASK.md(supervisor 지시문 — 8-10 "지시문에 들어갈 것" 1 ~ 7) · game.md(판 요약 · 차례 표 · 영향 · S7 검사) ·
@@ -34,6 +36,9 @@ S7 이 끝난 자동 패보 실행 폴더(paifu_auto.py)에 판마다 꾸러미(
   통과 못 했으면 바뀐 차례가 모두 ask 여야 하고, 그 차례들은 처음 답으로 반영(초안은 질문 줄의 supervisor 안으로 남김) ③ 답이 안 온 다시 읽기 꾸러미 없음 ④ 한도 안
   ⑤ 답이 온 다시 읽기 가운데 칸 값이 마감 초안과 다른 것이 있는 차례는 초안이 그 차례의 set 이거나 · ask 가 있거나 · 초안 칸 값이 독립 읽기
   (처음 답 + 다시 읽기들) 가운데 둘 이상과 같아야 함(설계서 3-10 "다르면 셋째 읽기 · 직접 정하기 · 질문" 의 코드 문 — 11-25 검토에서 더함).
+replay(8-17 4-①): 다른 실행의 마감된 꾸러미의 초안(turns · takes · sets · asks · checks)과 다시 읽기 폴더(답 포함)를 아직 손대지 않은 이 꾸러미로 옮긴다.
+  같은 판 · 같은 차례 목록 · 처음 답 칸 값이 모두 같을 때만(아니면 거절). 마감은 하지 않는다 — 뒤에 done 을 부르면 같은 마감 검사를 지나 반영된다.
+  옮긴 check 기록은 다시 돌리지 않는다(replayed 표시 — 초안 칸 값이 같으므로 sig 가 같음).
 check 의 "통과" = paifu_auto S7 과 같은 잣대(조립 성공 · 손패 있음 · 빠진 답 없음 · 손패 장수 문제 없음 · 같은 패 5장 없음) + 모든 초안 답 꼴(answer_form_error) 이상 없음.
   정렬 어긋남은 보고만 한다(통과 잣대 아님).
 """
@@ -1084,9 +1089,54 @@ def hands_same(r: pa.Run, g: str, pk: Pack, final: dict, tid: str, ua: dict, wor
     return "틀림"
 
 
+# ------------------------------------------------------------------ replay(설계서 8-17 4-① — 다른 실행의 마감된 꾸러미를 같은 마감으로 다시 적용, LLM 0)
+def cmd_replay(a):
+    pk = Pack(a.pack)
+    pk.need_open()
+    q = Pack(a.src)
+    if pk.d == q.d:
+        raise Reject("같은 꾸러미")
+    if not (q.draft and q.draft.get("done") and (q.d / "decision.json").exists()):
+        raise Reject(f"가져올 꾸러미가 마감 전: {posix(q.d)}")
+    if q.meta["game"] != pk.meta["game"] or q.turns != pk.turns:
+        raise Reject(f"판 · 차례 목록이 다름: {q.meta['game']} {q.turns} ≠ {pk.meta['game']} {pk.turns}")
+    diff = [t for t in pk.turns if slot(q.first(t)) != slot(pk.first(t))]
+    if diff:
+        raise Reject(f"처음 답(칸 값)이 다른 차례 {diff} — 같은 마감을 다시 적용할 수 없음")
+    used = any(pk.draft.get(k) for k in ("rereads", "takes", "sets", "asks", "checks"))
+    if used and pk.draft.get("replayed_from") != posix(q.d):
+        raise Reject("이미 손댄 꾸러미 — 재생은 손대지 않은 꾸러미에만")
+    if (pk.d / "reread").exists() and pk.draft.get("replayed_from") == posix(q.d):
+        shutil.rmtree(pk.d / "reread")   # 같은 출처 재생을 다시 부름 — 옮긴 다시 읽기 폴더를 새로
+    src_run, dst_run = posix(q.run_dir), posix(pk.run_dir)
+    rereads = []
+    for x in q.draft["rereads"]:
+        sd, dd = Path(x["dir"]), pk.reread_dir(x["turn"], x["n"])
+        (dd / "work").mkdir(parents=True, exist_ok=True)
+        for f in ("TASK.md", "frames.txt", "events.txt", "answer.json"):
+            if not (sd / f).exists():
+                continue
+            if f == "answer.json":
+                shutil.copyfile(sd / f, dd / f)   # 작업자 답은 바이트 그대로
+            else:
+                wt(dd / f, (sd / f).read_text(encoding="utf-8").replace(posix(sd), posix(dd)).replace(src_run, dst_run))
+        y = dict(x)
+        y.update(dir=posix(dd), replayed_from=posix(sd), message=str(x.get("message") or "").replace(posix(sd), posix(dd)))
+        rereads.append(y)
+    pk.draft = {"turns": json.loads(json.dumps(q.draft["turns"])), "rereads": rereads, "takes": list(q.draft["takes"]), "sets": list(q.draft["sets"]),
+                "asks": list(q.draft["asks"]), "checks": [{**c, "replayed": True} for c in q.draft["checks"]], "done": False,
+                "replayed_from": posix(q.d), "replayed_at": now()}
+    pk.save()
+    c = closure(pk)
+    print(f"재생: {posix(q.d)} → {posix(pk.d)} · 다시 읽기 {len(rereads)} · set {len(pk.draft['sets'])} · ask {len(pk.draft['asks'])} · check {len(pk.draft['checks'])}"
+          f" · 마감 검사 {'통과할 수 있음' if c['ok'] else ' / '.join(c['why'])}")
+    print(f"다음: paifu_sup.py done --pack {posix(pk.d)}")
+    return pk.d, {"from": posix(q.d), "rereads": len(rereads), "sets": len(pk.draft["sets"]), "asks": len(pk.draft["asks"]), "closure_ok": c["ok"]}
+
+
 # ------------------------------------------------------------------ main
 CMDS = {"pack": cmd_pack, "reread": cmd_reread, "take": cmd_take, "set": cmd_set, "check": cmd_check, "ask": cmd_ask,
-        "done": cmd_done, "status": cmd_status, "score": cmd_score}
+        "done": cmd_done, "status": cmd_status, "score": cmd_score, "replay": cmd_replay}
 
 
 def log_dir_of(a):
@@ -1133,6 +1183,9 @@ def main(argv=None):
     p = sp.add_parser("score")
     p.add_argument("--run", required=True)
     p.add_argument("--truth-dir")
+    p = sp.add_parser("replay")
+    p.add_argument("--pack", required=True)
+    p.add_argument("--from", dest="src", required=True, help="다른 실행의 마감된 꾸러미 폴더(<실행>/sup/<판>)")
     a = ap.parse_args(argv)
     args = {k: v for k, v in vars(a).items() if k != "cmd"}
     t0 = time.time()
