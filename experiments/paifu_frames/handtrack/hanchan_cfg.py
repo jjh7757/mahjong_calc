@@ -266,8 +266,11 @@ class Hanchan:
                 continue
             if list(o.get("games") or []) == self.games and o.get("results_dir") and _p(o["results_dir"]).resolve() == self.results_dir.resolve():
                 continue
-            if self.rerun_of and o.get("id") == self.rerun_of and list(o.get("games") or []) == self.games:
-                continue                      # 같은 반장을 다른 실행 폴더에서 다시 돌리는 설정(paifu_auto.py)
+            # 같은 반장 가족(rerun_of, 없으면 id)의 다시 돌리는 설정(paifu_auto.py) — 원래 ↔ 사본 양방향 · 형제 사본끼리. 11-25 h3_1114.json(rerun_of h3_1123)이
+            # 생긴 뒤 원래 설정 h3_1123 과 실행 설정들이 형제 사본에 걸려서, 옛 조건(나 = 사본 · 상대 = 원래만)을 넓힘
+            if ((self.rerun_of or o.get("rerun_of")) and (self.rerun_of or self.id) == (o.get("rerun_of") or o.get("id"))
+                    and o.get("id") != self.id and list(o.get("games") or []) == self.games):
+                continue
             if o.get("id") == self.id:
                 err.append(f"설정 id {self.id} 가 {f.name} 과 같다")
             og = set(o.get("games") or [])

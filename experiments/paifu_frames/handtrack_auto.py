@@ -7,7 +7,8 @@ results/handtrack/ · _work/)에는 쓰지 않는다 — 공용 모듈(features 
 
   python -X utf8 experiments/paifu_frames/handtrack_auto.py frame [--write]                  # 녹화 틀 뽑기(기존 손 설정 → hanchan/h2_1114.json "frame")
   python -X utf8 experiments/paifu_frames/handtrack_auto.py conf --cfg <실행 hanchan.json> --spec <spec.json>   # S6a 판 하나: 설정 + features + t_ready
-  python -X utf8 experiments/paifu_frames/handtrack_auto.py run  --cfg <실행 hanchan.json> <판 id>               # S6b 판 하나: segment · river · game · bandfit
+  python -X utf8 experiments/paifu_frames/handtrack_auto.py run  --cfg <실행 hanchan.json> <판 id> [--no-river]  # S6b 판 하나: segment · river · game · bandfit
+                                                                                                                 # (--no-river: 앱 기록 반장 — 11-25 설계서 8-13 (가))
   python -X utf8 experiments/paifu_frames/handtrack_auto.py rules --spec <spec.json> --out <폴더>                  # 시험용: 규칙만(설정 · 특징을 --out 에만)
 
 자동 규칙(문턱은 아래 상수 — 2반장 아홉 판(본 판)을 보고 정한 값이 있어 정확도 근거가 아님, 각 상수 주석 참고):
@@ -476,13 +477,22 @@ def cmd_rules(a):
 RUN_STEPS = ["segment", "river", "game", "bandfit"]
 
 
-def run_one(gid: str) -> dict:
+def run_one(gid: str, no_river: bool = False) -> dict:
     """segment · river · game(run.py 의 features 뒤 단계 — features 는 S6a 가 이미 돌림, sheets 는 대조표 그림이라 뺌) + bandfit --write.
-    결과가 이미 있으면 그 단계는 건너뜀(멱등)."""
+    결과가 이미 있으면 그 단계는 건너뜀(멱등).
+    (11-25, 설계서 8-13) no_river: 앱 기록 반장 — 강 읽기(river)를 안 돌림(차례 목록이 기록에서 옴). 설정에 reveal_region 이 없으면(기본 길 모드에서
+    답에 공개 영역이 없음) game 도 안 돌림. 뺀 걸음은 skipped 칸에 적음(둘 다 없으면 이 칸 없음 — 옛 출력 그대로)."""
     od = Path(htr.remap(hc.OUT / gid / "segments.json")).parent
     outs = {"segment": od / "segments.json", "river": od / "river_states.json", "game": od / "game.json"}
-    tm, done = {}, []
+    tm, done, skipped = {}, [], {}
+    cf0 = hc.config(gid)
     for st in RUN_STEPS:
+        if st == "river" and no_river:
+            skipped[st] = "앱 기록 반장 — 차례 목록은 기록에서(han3 rturns)"
+            continue
+        if st == "game" and "reveal_region" not in cf0:
+            skipped[st] = "reveal_region 없음 — 공개 손패를 영역으로 안 읽음(끝 손패는 판 결과 값)"
+            continue
         if st == "bandfit":
             if "sheet_band" in hc.config(gid):
                 continue
@@ -494,12 +504,15 @@ def run_one(gid: str) -> dict:
         m.main()
         tm[st] = round(time.time() - t0, 1)
         done.append(st)
-    return {"gid": gid, "ran": done, "timing": tm, "sheet_band": hc.config(gid).get("sheet_band"), "dir": od.as_posix()}
+    out = {"gid": gid, "ran": done, "timing": tm, "sheet_band": hc.config(gid).get("sheet_band"), "dir": od.as_posix()}
+    if skipped:
+        out["skipped"] = skipped
+    return out
 
 
 def cmd_run(a):
     configure(a.cfg)
-    res = run_one(a.gid)
+    res = run_one(a.gid, no_river=a.no_river)
     print("JSON" + json.dumps(res, ensure_ascii=False))
 
 
@@ -514,6 +527,7 @@ def main():
     p = sp.add_parser("run")
     p.add_argument("--cfg", required=True)
     p.add_argument("gid")
+    p.add_argument("--no-river", action="store_true", help="(11-25) 앱 기록 반장: 강 읽기 걸음을 안 돌림(차례 목록은 기록에서)")
     p = sp.add_parser("rules")
     p.add_argument("--spec", required=True)
     p.add_argument("--out", required=True)

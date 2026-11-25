@@ -60,6 +60,16 @@ S9 차례 질문(8-3절 v2): 답의 unsure 또는 확신 말(HEDGE_*)에 걸리�
   S6  판별 설정 · 출력(손 설정 판은 공용 자리, S6a 판은 실행 폴더)이 없으면 멈춤. 칸 틀 캐시(det_<판>.json)도 S6a 판은 실행 폴더 handtrack/_work/slotgrid_1117.
       han3 turns · fix · turncut 뒤 차례 수 검사(s6_turn_check): 차례 목록(turn_fix 끼움 포함) ↔ 고친 기록의 손패 주인 버림 중 t_ready 뒤 것.
       차례 0 인 판이 있으면 멈춤(오류), 다르면 질문 <판>_s6_turns(questions_s6). init --s6-games 면(시험용) 칸 틀 검출 · 차례 꾸러미를 그 판만.
+  (11-25, 설계서 8-13 — 구현 2-③) 앱 기록 반장(rec_path):
+      S6b 는 강 읽기(river)를 안 돌림(handtrack_auto run --no-river). S6 차례 목록은 han3 turns · fix 대신 han3 rturns(고친 기록의 손패 주인 버림 · 울기 중
+      t_ready 뒤 것 → 같은 꼴의 차례 목록 + turn_fix) → turncut build → han3 rcheck(3-9 검사: t_ready 앞 버림 · 창 프레임 · 겹침 · 창 안 band 움직임 0 =
+      쯔모기리 후보 · 줄 장수 ↔ 울기 수 → <prep>/turns_record_check.json · state S6.record_check · report.md, 질문으로는 아직 안 올림).
+      녹화 틀(frame)이 없는 설정(paifu_setup.py 자동 설정)은 S6a 가 손패 주인 쪽 화면 절반에서 손패 줄 후보를 찾아(handtrack_prep.py bandcand →
+      s6a/_cand/<판>.json) wide = 화면 절반 · band · search = 후보 1위로 꾸러미를 낸다(2 · 3위는 그림 · 표에만, 공개 상자는 안 만듦 —
+      spec regions_mode "half").
+  (11-25, 설계서 8-14 — 구현 2-④) 녹화 틀 없는 설정의 강 · 울기 영역 = 반장 모든 판의 버림 기록기 덤프에서 자리마다 상자 하나(dump_regions.py →
+      s6a/_dump_regions.json · report.md) — 준비 에이전트에 묻지 않고 그림에만, 답에 있어도 이 값. 설정에 reveal_region 이 없는 판은 S6b 가 game.json 을
+      판 결과(result_read hand) · 기록(손패 주인 울기)에서 만든다(s6b_game_json — S6 뒤 걸음이 읽는 칸만).
   멈출 때마다(꾸러미 · 오류) report.md(진행 보고서: 앱 판 목록 · W5 · 창 앞당기기 · S5)를 씀.
 기존 스크립트는 하위 프로세스로 부른다: headrec_dump.py · headrec_run.py(--hanchan) · handtrack/han3.py(--hanchan) · han3_paifu.py(--hanchan --out).
 공용 모듈(htcommon · turncut · opusread · sam2track · rebuild_opus · paifu_examples · truthprep)은 고치지 않는다. 보호 폴더에는 쓰지 않는다:
@@ -87,6 +97,7 @@ ROOT = HERE.parents[1]
 HT = HERE / "handtrack"
 sys.path.insert(0, str(HT))
 import hanchan_cfg as hcfg  # noqa: E402
+import dump_regions  # noqa: E402  (11-25, 설계서 8-14 (가)) 강 · 울기 영역을 버림 기록기 덤프에서
 
 PY = sys.executable
 KST = timezone(timedelta(hours=9))
@@ -275,7 +286,9 @@ def cmd_init(a):
     hand = Path(a.hand_settings).resolve() if a.hand_settings else None
     cfg = {"_note": f"paifu_auto.py init 이 {rel(src_cfg.path)} 에서 만든 실행 설정({now()}). results_dir · prep_dir · read_root · 기록기 · 패보 출력만 실행 폴더로 바꿈. "
                     "hand.call_turns · hand.row_at · paifu.event_fix 는 원래 설정 값(설정) — S5 · S6 가 자동 규칙으로 따로 만든 것과 견줌.",
-           "id": rid, "rerun_of": src_cfg.id, "label": raw.get("label", src_cfg.label),
+           # rerun_of = 반장 가족(원래 설정이 이미 다른 설정의 다시 돌리기면 그 가족 — 11-25 paifu_setup 자동 설정 · h3_1114 처럼 rerun_of 가 있는 설정에서 init 할 때
+           # 실행 설정이 원래 설정 쪽과 겹침 검사 ④ 의 가족이 달라 멈추지 않게). rerun_of 없는 설정(h2_1114 · h3_1123)은 전과 같음(= 그 id)
+           "id": rid, "rerun_of": src_cfg.rerun_of or src_cfg.id, "label": raw.get("label", src_cfg.label),
            "results_dir": rel(rd), "prep_dir": rel(rd / "_prep"), "read_root": (rd / "read").as_posix(),
            "recording": raw.get("recording"), "games": list(src_cfg.games), "turn_prefix": dict(src_cfg.turn_prefix),
            "replaces_base": list(src_cfg.replaces_base), "files": dict(raw.get("files") or {}),
@@ -300,6 +313,8 @@ def cmd_init(a):
         r.state["s6_games"] = [x for x in a.s6_games.split(",") if x]
     if a.s6a_rules:     # 견줌용: S6a 를 옛 화소 규칙(handtrack_auto.py conf)으로 — 기본 흐름은 준비 읽기
         r.state["s6a_mode"] = "rules"
+    if a.slotgrid_seed:   # 시험용(11-25, 설계서 8-14 끝 조건 4): 칸 틀 검출 캐시를 다른 실행에서 — 그 판의 side · band · sheet_band 가 같을 때만(slotgrid_seed)
+        r.state["slotgrid_seed"] = rel(Path(a.slotgrid_seed).resolve())
     r.save()
     r.cfg()   # 겹침 검사
     print(f"→ {rel(r.d)} (state.json · hanchan.json) · 판 {len(r.games())}")
@@ -449,7 +464,7 @@ def s1_app(r: Run):
     date = cfg.recording["date"]
     d = r.d / "s1"
     ans = d / "answer.json"
-    rows, lst, missing_at = [], [], []
+    rows, lst, missing_at, track_win = [], [], [], []
     prev_end = None
     for g in r.games():
         a = r.app_round(g)
@@ -458,10 +473,17 @@ def s1_app(r: Run):
         win = {"reveal": [hms_of(end_ms + APP_REVEAL_WIN_S[0] * 1000), hms_of(end_ms + APP_REVEAL_WIN_S[1] * 1000)] if end_ms else None,
                "start": [hms_of(prev_end) if prev_end else None, hms_of(sm["first_at_ms"]) if sm.get("first_at_ms") else None]}
         rows.append((g, a, win))
+        how = "app"
         if not (a and sm.get("has_at")):
-            missing_at.append(g)
-        else:
-            first, last = sm["first_at_ms"], sm["last_at_ms"]
+            # 8-12 (나): 앱 버림에 시각이 없는 판(빈 기록) — 추적 프레임의 처음 · 끝 시각과 끝 닻으로 판 구간을 코드로. 추적도 없을 때만 꾸러미
+            tfa, tla = (a or {}).get("anchors", {}).get("track_first"), (a or {}).get("anchors", {}).get("track_last")
+            if a and tfa and tla:
+                how = "track"
+                track_win.append(g)
+            else:
+                missing_at.append(g)
+        if how == "track" or g not in missing_at:
+            first, last = (sm["first_at_ms"], sm["last_at_ms"]) if how == "app" else (to_ms(date, tfa), to_ms(date, tla))
             t_rev = last + APP_REVEAL_AFTER_MS if end_ms is None else min(last + APP_REVEAL_AFTER_MS, end_ms - 1000)
             t_rev = max(t_rev, last + 300)
             res = a.get("result") or {}
@@ -469,9 +491,13 @@ def s1_app(r: Run):
                         "t_clear": None, "dealer_side": {"first": a["dealer_side"], "first_t": hms_of(first)}, "end": a["end"],
                         "revealed_sides": (res.get("tenpai_sides") or []) if a["end"] == "draw" else ([SIDES[(res["winner"] - a["bottom_seat"]) % 4]] if res.get("winner") is not None else []),
                         "win_type": {"ron": "론", "tsumo": "쯔모"}.get(res.get("type")), "win_basis": f"앱 {a.get('result_source')} {a['folders']['end']}",
-                        "result": f"{a['round_label']} {a['end']}", "windows": win, "source": "app_record(코드, LLM 0)",
-                        "note": f"앱 닻(태블릿 시계): 첫 버림 at {hms_of(first)} · 마지막 버림 at {hms_of(last)} · 끝 폴더 {a['anchors'].get('end')}. "
-                                f"t_start = 첫 버림 at − {APP_START_LEAD_MS / 1000:g}초, t_reveal = min(마지막 버림 at + {APP_REVEAL_AFTER_MS / 1000:g}초, 끝 닻 − 1초)(추정)"})
+                        "result": f"{a['round_label']} {a['end']}", "windows": win,
+                        "source": "app_record(코드, LLM 0)" if how == "app" else "app_record 추적 프레임 시각(코드, LLM 0 — 앱 버림에 시각 없음)",
+                        "note": (f"앱 닻(태블릿 시계): 첫 버림 at {hms_of(first)} · 마지막 버림 at {hms_of(last)} · 끝 폴더 {a['anchors'].get('end')}. "
+                                 f"t_start = 첫 버림 at − {APP_START_LEAD_MS / 1000:g}초, t_reveal = min(마지막 버림 at + {APP_REVEAL_AFTER_MS / 1000:g}초, 끝 닻 − 1초)(추정)")
+                                if how == "app" else
+                                (f"앱 버림에 시각이 없음(빈 기록) — 추적 프레임 처음 {hms_of(first)} · 끝 {hms_of(last)} · 끝 폴더 {a['anchors'].get('end')}. "
+                                 f"t_start = 추적 첫 프레임 − {APP_START_LEAD_MS / 1000:g}초, t_end_play = 추적 끝 프레임, t_reveal = min(추적 끝 + {APP_REVEAL_AFTER_MS / 1000:g}초, 끝 닻 − 1초)(추정)")})
         prev_end = end_ms
     qs = []
     if missing_at:
@@ -493,6 +519,9 @@ def s1_app(r: Run):
     missing = [g for g in r.games() if g not in rounds]
     if missing:
         qs.append({"id": "s1_rounds", "kind": "boundary", "stage": "S1", "current": {"missing": missing}, "why": "판 경계가 없는 판"})
+    for g in track_win:
+        qs.append({"id": f"s1_{g}_track_window", "kind": "boundary", "stage": "S1", "game": g, "current": {k: rounds[g].get(k) for k in ("t_start", "t_end_play", "t_reveal")} if g in rounds else None,
+                   "why": "앱 버림에 시각이 없어(빈 기록) 판 구간을 추적 프레임 처음 · 끝 시각으로 잡음 — 판 시작 · 끝이 실제보다 넓거나 좁을 수 있음"})
     sys.path.insert(0, str(HERE))
     import headrec_dump as hd
     lst = [rounds[g] for g in r.games() if g in rounds]
@@ -1541,6 +1570,30 @@ def s5(r: Run):
 
 
 # ------------------------------------------------------------------ S5 앱 기록 판(W4 — 설계서 8-6): 앱 기록이 1차, 헤드 녹화 기록기는 시각 · 맞춰 보기 · 구멍 채우기
+# 빈 기록 검사(설계서 3-8 · 8-12 (나)): 결과가 있는 판인데 앱 버림이 0, 또는 자리별 버림 수의 차(최대 − 최소, 버림이 없는 자리는 0)가
+# APP_EMPTY_SPREAD + APP_EMPTY_PER_CALL × 울기 수 를 넘으면 "앱 기록 못 씀". APP_EMPTY_SPREAD = 2 는 2반장 한 반장을 보고 정한 숫자다(맞는 기록 아홉 판의
+# 차 0 ~ 2 — 2 는 울기 0 인 w16, 깨진 기록은 7 ~ 18). APP_EMPTY_PER_CALL = 1 은 규칙에서: 울기 하나가 건너뛴 자리들의 버림 수를 다른 자리보다 하나씩 줄인다.
+APP_EMPTY_SPREAD = 2
+APP_EMPTY_PER_CALL = 1
+
+
+def app_empty_check(a: dict, A: list | None) -> dict:
+    """앱 버림 기록이 쓸 만한가(빈 기록 검사) → {"ok", "why", "per_seat", "calls", "spread", "limit"}. 결과가 없는 판은 검사하지 않음(ok)."""
+    ev = A or []
+    per = [sum(1 for e in ev if e["type"] == "discard" and e["seat"] == s) for s in range(4)]
+    calls = sum(1 for e in ev if e["type"] == "call" and e.get("kind") != "kakan")
+    spread, limit = max(per) - min(per), APP_EMPTY_SPREAD + APP_EMPTY_PER_CALL * calls
+    out = {"per_seat": per, "calls": calls, "spread": spread, "limit": limit, "ok": True, "why": ""}
+    if not ((a.get("result") or {}).get("recorded")):
+        out["note"] = "앱 결과 없음 — 검사 안 함"
+        return out
+    if A is None or sum(per) == 0:
+        out.update(ok=False, why="결과가 있는 판인데 앱 버림이 0")
+    elif spread > limit:
+        out.update(ok=False, why=f"자리별 버림 수 {per} 의 차 {spread} > {APP_EMPTY_SPREAD} + {APP_EMPTY_PER_CALL}×울기 {calls} = {limit}")
+    return out
+
+
 APP_HERO_RULE = ("유국 텐파이가 둘 이상이면 하나만 손패 주인: 울기가 적은 자리(차례 읽기로 손패를 더 많이 복원) → 같으면 리치한 자리 → "
                  "같으면 선부터 차례 순서로 앞 자리. 나머지 텐파이 자리는 hero_skipped(못 한 것)")
 
@@ -1921,8 +1974,8 @@ def s5_app(r: Run):
         a = r.app_round(g)
         A = r.app_events(g)
         pre = cfg.prefix_of(g)
-        if not a or A is None:
-            raise SystemExit(f"S5 앱: {g} 의 앱 판 · 버림 기록이 없다 — 앱 기록 없는 판의 S5 는 아직 없음")
+        if not a:
+            raise SystemExit(f"S5 앱: {g} 의 앱 판이 없다(app_rounds.json) — 앱 기록 없는 판의 S5 는 아직 없음")
         if a["bottom_seat"] != bottom:
             raise SystemExit(f"S5 앱: {g} 아래 자리 {a['bottom_seat']} ≠ {bottom}")
         wr = w5["rounds"].get(g) or {}
@@ -1932,15 +1985,49 @@ def s5_app(r: Run):
         hdir = r.d / g / sub if sub else r.d / g
         H = jl(hdir / "paifu_rec.json")
         Hd = jl(hdir / "dart_overlay.json")
+        uncertain = []      # "탁자 기록 불확실"(설계서 8-12 (나)) — 질문으로
+        sub_how = "W5 가"
+        if H.get("dealer") != a["dealer"] and not sub:
+            # 8-12 (나): W5 가 앱 버림이 없어 건너뛴 판 — 선은 앱 값(국 · 결과에서 온 값)으로 헤드 녹화 기록기를 다시 돌린다(전: SystemExit)
+            od = r.d / g / "rec_app_dealer"
+            if not (od / "paifu_rec.json").exists():
+                hr.replay("overlay", r.d / g / "overlay_dump_c2x.json", a["dealer_side"], od, [], paifu_bottom=bottom)
+            sub, hdir, sub_how = "rec_app_dealer", od, "S5 가(W5 가 앱 버림이 없어 건너뜀)"
+            H, Hd = jl(od / "paifu_rec.json"), jl(od / "dart_overlay.json")
         if H.get("dealer") != a["dealer"]:
-            raise SystemExit(f"S5 앱: {g} 헤드 녹화 기록기 선 {H.get('dealer')} ≠ 앱 선 {a['dealer']}({rel(hdir)})")
-        tf = to_ms(date, a["anchors"]["track_first"]) + off if a["anchors"].get("track_first") else to_ms(date, a["anchors"]["discard_first"]) + off
-        F, D, ops, src, stats = app_merge(A, H["events"], Hd, bottom, tf, off, a["dealer"])
-        if sub:
-            ops.insert(0, {"op": "use_run", "run": sub, "dealer": a["dealer_side"],
-                           "why": f"S3 기록기 선 ≠ 앱 선 → W5 가 앱 선 {a['dealer_side']} 로 다시 돌린 헤드 녹화 기록기({sub})를 바탕으로"})
+            uncertain.append(f"헤드 녹화 기록기 선 {H.get('dealer')} ≠ 앱 선 {a['dealer']}({rel(hdir)}) — 앱 선으로 다시 돌려도 안 맞음")
         rr_f = r.d / g / "result_read.json"
         rr = jl(rr_f)
+        # 헤드 녹화 1차로 갈지(설계서 3-8 의 2-5 · 8-12 (나)): 격자 어긋남(펠트로도 못 고침) · 빈 기록 · 앞뒤 검사(앱 기록만으로) 실패 중 하나라도
+        head_why = []
+        gcv = ((cfg.app_record or {}).get("grid_check") or {}).get((a["folders"].get("track") or "_").split("_")[1])
+        if gcv and str(gcv.get("flag") or "").startswith("앱 격자 어긋남") and not gcv.get("fixed_by_felt"):
+            head_why.append(f"grid: {gcv['flag']}(앱 {gcv.get('app')} · gridShiftOf {gcv.get('shift') or gcv.get('shift_track')})")
+        emp = app_empty_check(a, A)
+        if not emp["ok"]:
+            head_why.append(f"empty: 빈 기록 — {emp['why']}")
+        chk_app = {}
+        if A and emp["ok"] and (r.d / "app" / g / "dart_app.json").exists():
+            F0 = [dict(e) for e in A if e["type"] in ("discard", "call")]
+            chk_app = app_checks(F0, jl(r.d / "app" / g / "dart_app.json"), rr, a, bottom)
+            bad_app = [k for k, v in chk_app.items() if not v.get("ok")]
+            if bad_app:
+                head_why.append("checks: 앱 기록만의 앞뒤 검사 실패 " + " · ".join(f"{k}({chk_app[k].get('why')})" for k in bad_app))
+        tf_anchor = a["anchors"].get("track_first") or a["anchors"].get("discard_first")
+        if head_why:
+            F = [dict(e) for e in H["events"] if e["type"] in ("discard", "call")]
+            D = Hd
+            ops = [{"op": "head_primary", "why": "헤드 녹화 기록을 1차로(설계서 3-8 의 2-5 — 옆길 나와 같은 길): " + " / ".join(head_why)}]
+            src = [["h", k] for k in range(len(F))]
+            stats = {"app_events": len(A or []), "head_events": len(F), "final_events": len(F), "matched": 0, "app_only": 0, "pre_filled": 0,
+                     "dropped_head": 0, "order_moved": 0, "head_primary": True}
+            tf = to_ms(date, tf_anchor) + off if tf_anchor else (F[0]["at"] if F and F[0].get("at") else 0)
+        else:
+            tf = to_ms(date, tf_anchor) + off
+            F, D, ops, src, stats = app_merge(A, H["events"], Hd, bottom, tf, off, a["dealer"])
+        if sub:
+            ops.insert(0, {"op": "use_run", "run": sub, "dealer": a["dealer_side"],
+                           "why": f"S3 기록기 선 ≠ 앱 선 → {sub_how} 앱 선 {a['dealer_side']} 로 다시 돌린 헤드 녹화 기록기({sub})를 바탕으로"})
         # 손패 주인
         res = a.get("result") or {}
         n_calls = Counter(e["seat"] for e in F if e["type"] == "call" and e.get("kind") != "kakan")
@@ -1981,6 +2068,14 @@ def s5_app(r: Run):
                 qs.append({"id": f"{pre}_app5_hero_hand", "kind": "record", "stage": "S5", "game": g, "current": None,
                            "why": f"손패 주인 {hero_side} 의 공개 손패 읽기가 없음", "covered_by_setting": False})
         chk = app_checks(F, D, rr, a, bottom)
+        if head_why:
+            bad_h = [k for k, v in chk.items() if not v.get("ok")]
+            emp_h = app_empty_check(a, F)
+            if not emp_h["ok"]:
+                chk["empty"] = {"ok": False, "why": emp_h["why"], "detail": emp_h}
+                bad_h.append("empty")
+            if bad_h:
+                uncertain.append("헤드 녹화 1차 기록도 앞뒤 검사 실패 " + " · ".join(f"{k}({chk[k].get('why')})" for k in bad_h))
         # 앱 기록만(채우기 전)의 엮임도 견줌 — 구멍 채우기가 차례 규칙을 맞췄는지
         F0 = [dict(A_) for A_ in A if A_["type"] in ("discard", "call")]
         chk["turn_order_app_only"] = {**turn_order_check(F0, a["dealer"]), "note": "참고: 앱 버림 기록만(헤드 녹화로 채우기 전) — 질문 안 함"}
@@ -2007,7 +2102,8 @@ def s5_app(r: Run):
         od = r.prep / "rec" / g
         log = [f"{o['op']} {o.get('side', '')} {o.get('tile') or o.get('to') or o.get('kind') or ''} — {o['why']}".strip() for o in ops]
         pr = {**{k: v for k, v in H.items() if k != "events"}, "dealer": a["dealer"], "hero": bottom, "events": F,
-              "note": (H.get("note") or "") + " · paifu_auto S5 앱 기록 판: 사건 = 앱 버림 기록(시각은 헤드 녹화 시계) + 앱 추적 전 칸은 헤드 녹화로 채움 — "
+              "note": (H.get("note") or "") + (" · paifu_auto S5 앱 기록 판 — 헤드 녹화 1차: 사건 = 헤드 녹화 기록기(앱 기록을 안 씀) — " if head_why else
+                                              " · paifu_auto S5 앱 기록 판: 사건 = 앱 버림 기록(시각은 헤드 녹화 시계) + 앱 추적 전 칸은 헤드 녹화로 채움 — ")
                       + ("; ".join(log) if log else "고침 없음")}
         wj(od / "paifu_rec.json", pr)
         wj(od / "dart_overlay.json", D)
@@ -2025,10 +2121,19 @@ def s5_app(r: Run):
                                                  "events": F, "src": [list(x) for x in src], "track_first_head": hms_of(tf), "offset_ms": off})
         fixes[g] = ops
         comp[g] = {"stats": stats, "checks": chk, "ops": [o["op"] for o in ops], "hero": hero, "hero_rule": hero_rule, "hero_skipped": skipped,
+                   "head_primary": bool(head_why), "head_primary_why": head_why, "empty_check": emp, "app_only_checks_failed": [k for k, v in chk_app.items() if not v.get("ok")],
+                   "grid_check": gcv, "table_record_uncertain": uncertain,
                    "track_first_head": hms_of(tf), "offset_ms": off, "head": rel(hdir)}
         # 질문
+        if head_why:
+            qs.append({"id": f"{pre}_app5_head_primary", "kind": "record", "stage": "S5", "game": g, "signal": "head_primary", "current": "헤드 녹화 기록(1차)",
+                       "candidates": ["앱 기록(1차)"], "why": next(o["why"] for o in ops if o["op"] == "head_primary"), "covered_by_setting": False,
+                       "impact_summary": {"max_hand_turns": None, "result_changed": None, "zero": False}})
+        if uncertain:
+            qs.append({"id": f"{pre}_app5_uncertain", "kind": "record", "stage": "S5", "game": g, "signal": "table_record_uncertain", "current": "탁자 기록 불확실",
+                       "why": " / ".join(uncertain), "covered_by_setting": False, "impact_summary": {"max_hand_turns": None, "result_changed": None, "zero": False}})
         for o in ops:
-            if o["op"] in ("use_run", "order", "call_keep_pre"):
+            if o["op"] in ("use_run", "order", "call_keep_pre", "head_primary"):
                 continue
             hero_seat = o.get("seat") == hero
             red_only = o["op"] == "retile" and norm(o["from"]) == norm(o["to"])
@@ -2140,7 +2245,7 @@ def ht_spec(gid: str, mrow: dict, bottom: int, events: list, rr: dict, regions: 
             "dealer": mrow.get("dealer"), "end": "draw" if end == "draw" else "win", "win_type": None if end == "draw" else end,
             "loser_side": rr.get("loser_side") if rr.get("loser_side") not in (None, "None") else None,
             "n_calls": n_calls, "n_closed_end": 13 - 3 * n_calls, "hero_riichi": any(x["riichi"] for x in hd),
-            "regions": {k: list(regions[k]) for k in ("band", "river", "meld", "reveal_region", "wide", "search")}, "frame_from": frame_from,
+            "regions": {k: list(regions[k]) for k in ("band", "river", "meld", "reveal_region", "wide", "search") if k in regions}, "frame_from": frame_from,
             "prev_last_ms": prev_last_ms, "first_ms": min(ats), "last_ms": max(ats), "hero_discards": hd, "hero_calls": calls,
             "t_reveal_read_ms": t_reveal_read_ms if end == "draw" else None, "events_title": events_title,
             "side_rule": f"rounds_meta 손패 주인 {hero}({mrow.get('hero_rule', '')}) − 아래 자리 {bottom} → {side}",
@@ -2152,7 +2257,89 @@ def s6a_frame(r: Run, cfg):
     if not frame:
         frame = hcfg.load(r.state["source_cfg"], check=False).frame
         frame_from = r.state["source_cfg"]
+    if not frame:   # (11-25, 설계서 8-13 (다)) 녹화 틀이 없는 설정(paifu_setup.py 자동 설정) — 손패 줄 후보를 화면 절반에서(s6a_half_regions)
+        frame_from = HALF_FROM
     return frame, frame_from
+
+
+HALF_FROM = "화면 절반 손패 줄 후보(handtrack_prep.py bandcand — 설계서 8-13 (나) · (다))"
+
+
+def S6A_DUMP_REGIONS(r) -> Path:
+    """(11-25, 설계서 8-14 (가)) 기본 길 모드 강 · 울기 영역(dump_regions.make 출력) — 실행마다 한 번 만들고 그대로 씀(지우면 다시 만듦)."""
+    return r.d / "s6a" / "_dump_regions.json"
+
+
+def rec_path(r: Run, cfg) -> bool:
+    """(11-25, 설계서 8-13 (가)) 앱 기록 반장 — S6 차례 목록을 고친 기록에서(han3 rturns), S6b 는 강 읽기를 안 돌림. 3반장(app_record 없음)은 옛 흐름."""
+    return bool(cfg.app_record and r.app())
+
+
+def ht_need(r: Run, cfg, g: str) -> list:
+    """S6 가 읽는 판별 설정 · 출력. 앱 기록 반장의 실행 폴더 판은 river_states.json 을 안 만들고(강 읽기 안 함), 설정에 reveal_region 이 없으면
+    game.json 도 없다(공개 손패를 영역으로 안 읽음)."""
+    if g not in set(cfg.ht_games):
+        return ht_shared(g)
+    fs = ht_run_files(r, g)
+    if rec_path(r, cfg):
+        fs = [p for p in fs if p.name != "river_states.json"]
+        c = fs[0]
+        # (11-25, 설계서 8-14 (나)) reveal_region 이 없으면 S6b 가 game.json 을 판 결과 · 기록에서 만든다 — 판 결과에 끝 손패가 없으면 못 만듦(옛 그대로 안 봄)
+        if c.exists() and "reveal_region" not in jl(c) and not result_hand(r, g):
+            fs = [p for p in fs if p.name != "game.json"]
+    return fs
+
+
+def result_hand(r: Run, g: str):
+    f = r.d / g / "result_read.json"
+    return list(jl(f).get("hand") or []) if f.exists() else []
+
+
+def s6b_game_json(r: Run, g: str) -> dict:
+    """(11-25, 설계서 8-14 (나)) 설정에 reveal_region 이 없는 판(기본 길 모드 — 공개 읽기 game.py 를 안 돌림): S6 뒤 걸음이 읽는 칸만 든 game.json 을
+    판 결과 · 기록에서 만든다. 읽히는 칸(칸 표 — results/_setup_dev/f_report.md): final_hand.closed(rebuild_opus.rebuild · han3_paifu · han3 HAN3_FINAL) ·
+    final_hand.meld_detail(rebuild_opus.call_hand_tiles — turn_fix 에 call_hand 가 있으면 han3 가 그것을 씀).
+    끝 손패 = <판>/result_read.json 의 hand, 울기 = S5 가 확정한 기록(_prep/rec/<판>/paifu_rec.json)의 손패 주인 울기(시각 순 — n 번째 울기 = meld_detail
+    [3(n−1) : 3n] 몫, 받은 패 = 준 자리의 바로 앞 버림 → sideways). 판 결과에 끝 손패가 없으면 안 만든다(None)."""
+    hand = result_hand(r, g)
+    if not hand:
+        return None
+    meta = {x["id"]: x for x in jl(r.d / r.cfg().meta_file.name)["rounds"]}
+    hero = meta[g]["hero"]
+    rec_f = r.prep / "rec" / g / "paifu_rec.json"
+    ev = jl(rec_f)["events"]
+    md, last, notes, n = [], {}, [], 0
+    for e in ev:
+        if e["type"] == "discard":
+            last[e["seat"]] = e["tile"]
+        elif e["type"] == "call" and e["seat"] == hero:
+            n += 1
+            got = last.get(e.get("from")) if e.get("from") not in (None, hero) else None
+            k = next((i for i, t in enumerate(e.get("tiles") or []) if norm(t) == norm(got)), None) if got else None
+            if got and k is None:
+                notes.append(f"{e.get('kind')} {e.get('tiles')}: 준 자리 {e.get('from')} 의 바로 앞 버림 {got} 이 묶음에 없음 — 가로 패 없음")
+            for i, t in enumerate(e.get("tiles") or []):
+                md.append({"tile": t, "call": n, "kind": e.get("kind"), "from": e.get("from"), **({"sideways": True} if i == k else {})})
+    out = {"id": g, "_source": "paifu_auto S6b — 공개 읽기(game.py) 없이 판 결과 · 기록에서(설계서 8-14 (나)): S6 뒤 걸음이 읽는 칸만",
+           "final_hand": {"closed": hand, "closed_from": f"{rel(r.d / g / 'result_read.json')} hand",
+                          "meld_detail": md, "meld_detail_from": f"{rel(rec_f)} 손패 주인({hero}) 울기 — 시각 순, 받은 패 = 준 자리의 바로 앞 버림(sideways)"}}
+    if notes:
+        out["final_hand"]["meld_notes"] = notes
+    return out
+
+
+def s6a_half_regions(r: Run, cfg, g: str, side: str, t0: int, t1: int) -> dict:
+    """녹화 틀 없는 설정: 손패 줄 후보(handtrack_prep.py bandcand, 결과 s6a/_cand/<판>.json — 있으면 그대로) → 영역 wide · band · search + 후보 셋.
+    후보가 없으면 멈춤(값을 지어내지 않음)."""
+    f = r.d / "s6a" / "_cand" / f"{g}.json"
+    if not f.exists():
+        run([PY, "-X", "utf8", HERE / "handtrack_prep.py", "bandcand", "--cfg", r.cfg_f, "--side", side, "--t0", str(t0), "--t1", str(t1), "--out", f],
+            log=r.log(f"s6a_bandcand_{g}.log"))
+    c = jl(f)
+    cs = c.get("candidates") or []
+    if not cs:
+        raise SystemExit(f"S6a 멈춤 — {g}: 녹화 틀이 없고 화면 절반({side})에서 손패 줄 후보를 못 찾음(뒷면 상자 줄 {c.get('rows')}) — {rel(f)}")
+    return {"wide": c["wide"], "band": list(cs[0]["band"]), "search": list(cs[0]["band"]), "_cands": cs, "_picks": len(c.get("frames") or []), "_rule": c.get("rule")}
 
 
 def s6a_setup(r: Run, cfg, auto: list):
@@ -2168,16 +2355,17 @@ def s6a_setup(r: Run, cfg, auto: list):
             bad.append(f"{g}: 손패 주인 없음(rounds_meta hero null)")
             continue
         sd = SIDES[(h - bottom) % 4]
-        if not frame or sd not in (frame.get("sides") or {}):
+        if frame and sd not in (frame.get("sides") or {}):   # 틀이 아예 없으면(자동 설정) 화면 절반 후보로 — 틀이 있는데 그 자리만 빠졌으면 옛 그대로 멈춤
             bad.append(f"{g}: 손패 주인 자리 {sd} 의 녹화 틀 없음(반장 설정 frame.sides.{sd} — band · river · meld · reveal_region · wide · search)")
     if bad:
         raise SystemExit("S6a 멈춤 — " + "; ".join(bad))
     raw = jl(r.cfg_f)
     want = {"dir": rel(r.d / "handtrack"), "games": auto,
             "_note": "paifu_auto S6a: 이 판들의 손 추적 판별 설정 · 출력은 dir 아래(config/ · <판>/ · _work/) — handtrack/ht_redirect.py 가 실행 중에 경로를 돌림"}
-    if raw.get("handtrack") != want or not raw.get("frame"):
+    if raw.get("handtrack") != want or (frame and not raw.get("frame")):
         raw["handtrack"] = want
-        raw.setdefault("frame", frame)
+        if frame:
+            raw.setdefault("frame", frame)
         wj(r.cfg_f, raw)
     return frame, frame_from, meta
 
@@ -2217,6 +2405,13 @@ def s6a(r: Run):
     date = cfg.recording["date"]
     s1r = {x["id"]: x for x in jl(r.d / "s1" / "rounds.json")["rounds"]} if (r.d / "s1" / "rounds.json").exists() else {}
     title = "앱 기록에서 온 시각(헤드 녹화 시계로 바꾼 것)" if cfg.app_record and r.app() else "헤드 녹화 버림 기록기에서 온 시각(헤드 녹화 시계)"
+    dreg = None
+    if not frame:   # (11-25, 설계서 8-14 (가)) 강 · 울기 영역 — 반장 모든 판의 버림 기록기 덤프에서 자리마다 상자 하나(리치봉 값이 같은 판끼리)
+        f = S6A_DUMP_REGIONS(r)
+        if not f.exists():
+            wj(f, dump_regions.make(r.d, r.games()))
+        dreg = jl(f)
+        st["dump_regions"] = {"file": rel(f), "lines": dump_regions.source_lines(dreg)}
     specs, prev_last = {}, None
     for g in r.games():
         ev = jl(r.prep / "rec" / g / "paifu_rec.json")["events"]
@@ -2228,7 +2423,16 @@ def s6a(r: Run):
                 t = rr.get("t_reveal_read") or (s1r.get(g) or {}).get("t_reveal")
                 trr = to_ms(date, t) if t else None
             sd = SIDES[(mrow[g]["hero"] - bottom) % 4]
-            specs[g] = ht_spec(g, mrow[g], bottom, ev, rr, frame["sides"][sd], prev_last, trr, frame_from, title)
+            if frame:
+                specs[g] = ht_spec(g, mrow[g], bottom, ev, rr, frame["sides"][sd], prev_last, trr, frame_from, title)
+            else:   # 녹화 틀 없음(설계서 8-13 (다)): wide = 화면 절반, band · search = 손패 줄 후보 1위(2 · 3위는 꾸러미 그림 · 표에만), 공개 상자는 안 만듦
+                hr = s6a_half_regions(r, cfg, g, sd, min(ats), max(ats))
+                # (11-25, 설계서 8-14 (가)) 강 · 울기 = 버림 기록기 덤프에서 자리마다 상자 하나(반장 전체) — 묻지 않고 그림에만, 답 값보다 이 값
+                hr.update(dump_regions.regions_for(dreg, g, sd))
+                specs[g] = ht_spec(g, mrow[g], bottom, ev, rr, hr, prev_last, trr, frame_from, title)
+                specs[g].update(regions_mode="half", band_candidates=hr["_cands"], band_candidates_picks=hr["_picks"], band_candidates_rule=hr["_rule"],
+                                regions_code=["river", "meld"], regions_code_from=f"{rel(S6A_DUMP_REGIONS(r))} — dump_regions.py(설계서 8-14 (가))",
+                                regions_code_src={k: dump_regions.source_of(dreg, g, sd, k) for k in ("river", "meld")})
             wj(r.d / "s6a" / "_spec" / f"{g}.json", specs[g])
         prev_last = max(ats) if ats else prev_last
     # S6a-1 꾸러미
@@ -2246,6 +2450,8 @@ def s6a(r: Run):
         if not answered(p):
             pend.append(p)
     st.update(packed=packed, auto=auto, hand_settings=hand, frame_from=frame_from, mode="read")
+    if not frame:
+        st["half"] = {g: {"band": specs[g]["regions"]["band"], "candidates": [c["band"] for c in specs[g]["band_candidates"]]} for g in auto}
     r.save()
     if pend:
         return pend
@@ -2385,20 +2591,31 @@ def s6b(r: Run):
     """손 추적 판별(run.py 의 segment · river · game — features 는 S6a 가 돌림, sheets 는 대조표 그림이라 뺌) + bandfit --write(sheet_band).
     S6a 가 자동으로 설정을 만든 판만. 판마다 결과가 있으면 그 단계는 건너뜀(handtrack_auto.run_one)."""
     a = r.stage("S6a")
+    cfg = r.cfg()
+    no_river = rec_path(r, cfg)   # (11-25, 설계서 8-13 (가)) 앱 기록 반장은 강 읽기를 안 돌림 — 차례 목록은 S6 에서 기록으로
     res = dict(r.stage("S6b").get("games") or {})
     for g in a.get("auto") or []:
         t0 = time.time()
-        p = run([PY, "-X", "utf8", HERE / "handtrack_auto.py", "run", "--cfg", r.cfg_f, g], log=r.log(f"s6b_{g}.log"))
+        p = run([PY, "-X", "utf8", HERE / "handtrack_auto.py", "run", "--cfg", r.cfg_f, g] + (["--no-river"] if no_river else []), log=r.log(f"s6b_{g}.log"))
         o = json.loads(p.stdout[p.stdout.rindex("JSON") + 4:].strip())
         o["wall_s"] = round(time.time() - t0, 1)
         if o["ran"] or g not in res:
             res[g] = o
+        # (11-25, 설계서 8-14 (나)) 공개 읽기를 안 돈 판(설정에 reveal_region 없음): game.json 을 판 결과 · 기록에서
+        gf = r.d / "handtrack" / g / "game.json"
+        if "game" in (o.get("skipped") or {}) and not gf.exists():
+            gj = s6b_game_json(r, g)
+            res[g]["game_json"] = "판 결과 · 기록에서 만듦(설계서 8-14 (나))" if gj else "판 결과에 끝 손패 없음 — 안 만듦"
+            if gj:
+                wj(gf, gj)
         wj(r.d / "s6b" / f"{g}.json", res[g])
-    miss = {g: [rel(p) for p in ht_run_files(r, g) if not p.exists()] for g in a.get("auto") or []}
+    miss = {g: [rel(p) for p in ht_need(r, cfg, g) if not p.exists()] for g in a.get("auto") or []}
     miss = {g: v for g, v in miss.items() if v}
     if miss:
         raise SystemExit(f"S6b: 판별 출력이 없음 {miss}")
-    r.done("S6b", games={g: {"ran": v["ran"], "timing": v["timing"], "wall_s": v["wall_s"], "sheet_band": v["sheet_band"]} for g, v in res.items()})
+    r.done("S6b", games={g: {"ran": v["ran"], "timing": v["timing"], "wall_s": v["wall_s"], "sheet_band": v["sheet_band"],
+                             **({"skipped": v["skipped"]} if v.get("skipped") else {}),
+                             **({"game_json": v["game_json"]} if v.get("game_json") else {})} for g, v in res.items()})
     return []
 
 
@@ -2415,6 +2632,15 @@ def ht_report_lines(r: Run) -> list:
             bb = (b.get("games") or {}).get(g) or {}
             L.append(f"| {g} | {v['side']} | {v['t_ready']} | {v.get('pre_ready')} | {v['t_reveal']} | {v['reveal_frame']} | {v.get('changed')} | {v.get('failed')} | "
                      f"{v.get('unsure')} | {bb.get('wall_s', '')} | {bb.get('sheet_band', '')} |")
+        if a.get("half"):   # (11-25, 설계서 8-13 (다)) 녹화 틀 없음 — band 는 화면 절반 손패 줄 후보 1위에서 시작
+            diff = [g for g, v in (a.get("games") or {}).items() if "band" in (v.get("changed") or [])]
+            L += ["", f"- 녹화 틀 없음 → band · search = 화면 절반 손패 줄 후보 1위(공개 상자는 안 만듦). 준비 답의 band 가 후보 1위와 다른 판 "
+                      f"{len(diff)}/{len(a.get('games') or {})}: {diff} (답 쪽을 씀)",
+                  "- 후보(1 ~ 3위): " + " · ".join(f"{g} {v['candidates']}" for g, v in a["half"].items())]
+            fd = S6A_DUMP_REGIONS(r)
+            if fd.exists():   # (11-25, 설계서 8-14 (가)) 강 · 울기 = 버림 기록기 덤프(묻지 않음 · 답 값보다 이 값)
+                L += [f"- 강 · 울기 영역 = 버림 기록기 덤프에서 자리마다 상자 하나(`{rel(fd)}` — 원본 [x0, y0, x1, y1], 괄호 = 출처 · 관측 수):"]
+                L += ["  " + x for x in dump_regions.source_lines(jl(fd))]
         if a.get("status") != "done" and a.get("packed"):
             L += ["", "꾸러미(답 기다림): " + ", ".join(f"{g}(프레임 {v['window_ready'][2]} + {v['window_reveal'][2]}, 그림 {v['overview']})" for g, v in a["packed"].items())]
         return L
@@ -2465,6 +2691,37 @@ def slotgrid_todo(r: Run) -> dict:
     p = run([PY, "-X", "utf8", "-c", code], log=r.log("s6_slotgrid_check.log"))
     s = p.stdout
     return json.loads(s[s.index("JSON") + 4:].strip())
+
+
+def slotgrid_seed(r: Run, cfg, todo: dict) -> dict:
+    """(시험용 — init --slotgrid-seed, 설계서 8-14 끝 조건 4) 캐시가 아직 없는 실행 폴더 판에, 다른 실행(seed)의 칸 틀 검출 캐시를 복사한다 —
+    두 판별 설정의 side · band · sheet_band 가 같을 때만(검출 · 가림 열이 이 셋에 달림). 복사는 이 실행 폴더 쪽으로만. 빠진 프레임은 그 뒤 detect 가 셈."""
+    seed = ROOT / r.state["slotgrid_seed"]
+    out = {}
+    dst_dir = (r.d / "handtrack" / "_work" / "slotgrid_1117").resolve()
+    for g, v in todo.items():
+        if g not in set(cfg.ht_games):
+            out[g] = "실행 폴더 판 아님 — 안 함"
+            continue
+        if v.get("cache"):
+            out[g] = "캐시 있음 — 안 함"
+            continue
+        src = seed / "handtrack" / "_work" / "slotgrid_1117" / f"det_{g}.json"
+        a, b = seed / "handtrack" / "config" / f"{g}.json", r.d / "handtrack" / "config" / f"{g}.json"
+        if not (src.exists() and a.exists() and b.exists()):
+            out[g] = "seed 캐시 · 설정 없음 — 안 함"
+            continue
+        ca, cb = jl(a), jl(b)
+        diff = [k for k in ("side", "band", "sheet_band") if ca.get(k) != cb.get(k)]
+        if diff:
+            out[g] = f"설정 다름 {diff} — 안 함(새로 detect)"
+            continue
+        dst = dst_dir / src.name
+        assert r.d.resolve() in dst.parents, dst
+        dst_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(src, dst)
+        out[g] = f"복사 {rel(src)} (side · band · sheet_band 같음)"
+    return out
 
 
 def turns_after_fix(cfg, g: str) -> list:
@@ -2533,14 +2790,53 @@ def s6_turn_check(r: Run) -> dict:
     return {"games": games, "questions": qs, "zero": zero}
 
 
+REC_CHECK_FILE = "turns_record_check.json"   # han3 rturns · rcheck 가 <prep>/ 에 씀
+
+
+def rec_check_summary(r: Run) -> dict:
+    """han3 rturns · rcheck 검사(설계서 3-9 검사 표 가운데 지금 낼 수 있는 것) 판마다 요약 — 질문으로 올리는 것은 구현 4번(여기는 보고만)."""
+    f = r.prep / REC_CHECK_FILE
+    if not f.exists():
+        return {}
+    out = {}
+    for g, v in jl(f).items():
+        if v.get("error"):
+            out[g] = {"error": v["error"]}
+            continue
+        fl = v.get("flags") or {}
+        out[g] = {"turns": v.get("turns"), "pre_ready": v.get("pre_ready"), "no_at": v.get("no_at"), "call_turns": v.get("call_turns"),
+                  "seg_how": v.get("seg_how"), "empty_windows": fl.get("empty_windows"), "overlap_windows": fl.get("overlap_windows"),
+                  "tsumogiri_candidates": fl.get("tsumogiri_candidates"), "rows_ok": not fl.get("rows_mismatch"), "rows": v.get("rows")}
+    return out
+
+
+def rec_report_lines(r: Run) -> list:
+    st = r.stage("S6")
+    rc = st.get("record_check")
+    if not rc:
+        return []
+    L = ["", "## S6 차례 목록 — 기록에서(설계서 8-13 (가)) · 검사(3-9)", "",
+         f"- 차례 목록 출처: {st.get('turn_source')} · 검사 파일 `{rel(r.prep / REC_CHECK_FILE)}`(질문으로는 아직 안 올림 — 구현 4번)", "",
+         "| 판 | 차례 | t_ready 앞 손패 주인 버림 | 시각 없는 버림 | 울기 차례 | 빈 창 | 겹친 창 | 쯔모기리 후보(창 안 band 움직임 0) | 줄 장수 ↔ 울기 수 |",
+         "|---|---|---|---|---|---|---|---|---|"]
+    for g, v in rc.items():
+        if v.get("error"):
+            L.append(f"| {g} | 오류 {v['error']} | | | | | | | |")
+            continue
+        rw = v.get("rows") or {}
+        L.append(f"| {g} | {v['turns']} | {len(v['pre_ready'] or [])} {v['pre_ready'] or ''} | {v['no_at'] or ''} | {v['call_turns'] or ''} | {v['empty_windows'] or ''} | "
+                 f"{v['overlap_windows'] or ''} | {v['tsumogiri_candidates'] or ''} | {'맞음' if v['rows_ok'] else '**다름**'}"
+                 f"(판 결과 끝 손패 {rw.get('result_hand')} · 13 − 3 × 울기 {rw.get('hero_calls_not_kakan')} = {rw.get('want_closed_end')}) |")
+    return L
+
+
 def s6(r: Run):
     cfg = r.cfg()
     st = r.stage("S6")
     if not st.get("prepared"):
         # S6 재료(han3 turns → truthprep · turncut · slotgrid)는 판마다 손 추적 판별 설정 · 출력을 읽는다 — 손 설정 판은 공용 자리, S6a 가 자동으로
         # 만든 판은 실행 폴더 handtrack/(실행 설정 handtrack 칸 — han3 가 경로를 돌림). 어느 쪽에도 없으면 멈춤.
-        ht_games = set(cfg.ht_games)
-        need = {g: [p for p in (ht_run_files(r, g) if g in ht_games else ht_shared(g)) if not p.exists()] for g in r.games()}
+        need = {g: [p for p in ht_need(r, cfg, g) if not p.exists()] for g in r.games()}
         miss = {g: [rel(p) for p in v] for g, v in need.items() if v}
         st.pop("missing_handtrack", None)
         if miss:
@@ -2552,9 +2848,16 @@ def s6(r: Run):
         r.save()
     if not st.get("prepared"):
         t0 = time.time()
-        han3(r, "turns", log=r.log("s6_turns.log"))
-        han3(r, "fix", "--write", log=r.log("s6_fix.log"))
-        han3(r, "turncut", "build", *r.games(), log=r.log("s6_turncut.log"))
+        if rec_path(r, cfg):   # (11-25, 설계서 8-13 (가)) 앱 기록 반장: 차례 목록 · turn_fix 를 고친 기록에서 바로 → turncut → 검사(3-9 표)
+            han3(r, "rturns", log=r.log("s6_rturns.log"))
+            han3(r, "turncut", "build", *r.games(), log=r.log("s6_turncut.log"))
+            han3(r, "rcheck", log=r.log("s6_rcheck.log"))
+            st["turn_source"] = "기록(han3 rturns)"
+            st["record_check"] = rec_check_summary(r)
+        else:
+            han3(r, "turns", log=r.log("s6_turns.log"))
+            han3(r, "fix", "--write", log=r.log("s6_fix.log"))
+            han3(r, "turncut", "build", *r.games(), log=r.log("s6_turncut.log"))
         # 차례 수 검사(설계서 8-8 "S6 뒤 검사") — han3 fix 는 차례 목록이 빈 판을 조용히 건너뛰므로 여기서 드러냄
         tc = s6_turn_check(r)
         st["turn_check"] = tc["games"]
@@ -2566,6 +2869,10 @@ def s6(r: Run):
                              + " (S6a 답을 고치고 next --redo S6a)")
         only = r.state.get("s6_games")   # 시험용(init --s6-games): 칸 틀 검출 · 차례 꾸러미를 이 판들만
         todo = slotgrid_todo(r)
+        if r.state.get("slotgrid_seed"):   # 시험용(init --slotgrid-seed)
+            st["slotgrid_seed"] = slotgrid_seed(r, cfg, todo)
+            st["slotgrid_before_seed"] = todo
+            todo = slotgrid_todo(r)
         st["slotgrid"] = todo
         miss = [g for g, v in todo.items() if v["missing"] and (not only or g in only)]
         if miss:   # 새 반장이면 detect 가 캐시 폴더(_work/slotgrid_1117)에 쓴다 — 3반장 재생에서는 0 이어야 함
@@ -3308,6 +3615,19 @@ def app_report_lines(r: Run) -> list:
                      f"{bad or '—'} | {sum(1 for q in qs5 if q.get('game') == g)} |")
         for x in c.get("not_done") or []:
             L.append(f"- 못 한 것: {x['game']} {x['what']} {x['seats']} — {x['why']}")
+        hp = {g: v for g, v in c["games"].items() if v.get("head_primary")}
+        L += ["", f"- 헤드 녹화 1차(설계서 3-8 의 2-5): {len(hp)}판" + ("" if hp else " — 없음")]
+        for g, v in hp.items():
+            L.append(f"  - {g}: " + " / ".join(v.get("head_primary_why") or []))
+        for g, v in c["games"].items():
+            if v.get("table_record_uncertain"):
+                L.append(f"- 탁자 기록 불확실 {g}: " + " / ".join(v["table_record_uncertain"]))
+            em = v.get("empty_check") or {}
+            if em and not em.get("ok"):
+                L.append(f"- 빈 기록 {g}: {em.get('why')}")
+            gc = v.get("grid_check") or {}
+            if gc.get("flag"):
+                L.append(f"- 격자 {g}: {gc['flag']} · 앱 {gc.get('app')} · 펠트 {gc.get('felt')} · gridShiftOf {gc.get('shift')} · 씀 {gc.get('used')}")
     return L
 
 
@@ -3329,6 +3649,7 @@ def write_progress_report(r: Run, stage: str, pend: list, error: str | None = No
     L += ["", f"- 지금까지 질문 후보: {qn}(S9 에서 questions.jsonl 로 모음 — W5 것은 w5_questions.jsonl 에 먼저 씀, S5 가 W5 의 record 질문을 대신함)", ""]
     L += app_report_lines(r)
     L += ht_report_lines(r)
+    L += rec_report_lines(r)
     L += ["", "## 정답", "", "정답 없음. 이 보고서까지 LLM 호출 0 · 하위 에이전트 0.", ""]
     wt(r.d / "report.md", "\n".join(L))
 
@@ -3559,6 +3880,8 @@ def main():
     p.add_argument("--verify-dump")
     p.add_argument("--s6-games", help="시험용: S6 칸 틀 검출 · 차례 꾸러미를 이 판들만(쉼표) — 차례 목록 · 차례 수 검사는 모든 판")
     p.add_argument("--s6a-rules", action="store_true", help="견줌용: S6a 를 옛 화소 규칙(handtrack_auto.py conf)으로")
+    p.add_argument("--slotgrid-seed", help="시험용: S6 칸 틀 검출 캐시(det_<판>.json)를 이 실행 폴더의 handtrack/_work/slotgrid_1117 에서 복사 — "
+                                            "그 판 판별 설정의 side · band · sheet_band 가 같을 때만(새로 계산할 프레임만 detect)")
     for name in ("status", "unapply"):
         sp.add_parser(name).add_argument("--run", required=True)
     p = sp.add_parser("next")

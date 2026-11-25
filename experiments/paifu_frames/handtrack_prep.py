@@ -19,6 +19,14 @@
       만들어 쓰므로 공용 자리 · 실행 폴더의 handtrack/ · _prep 에 안 쓰고, 여러 판(같은 판의 다른 번호도)을 동시에 돌려도 안 겹친다.
       재료는 pack.json 의 try 칸(pack 이 넣음 — 반장 설정 · 기록 폴더 · 판 결과 경로)만 쓴다. 판당 MAX_TRIES 번까지(넘으면 멈춤).
 
+(11-25, 설계서 8-13) 손패 줄 후보(bandcand):  python -X utf8 experiments/paifu_frames/handtrack_prep.py bandcand --cfg <반장 설정> --side <자리> --t0 <시각> --t1 <시각> --out <json>
+      손패 주인 쪽 화면 절반에서 검출기 뒷면 상자가 한 줄로 선 곳 → 후보 셋(band_candidates 머리 주석의 규칙 — 21개 손 설정에 맞춰 다듬지 않음).
+  기본 길 모드(spec regions_mode "half" — 반장 설정에 녹화 틀 frame 이 없을 때 paifu_auto S6a 가 만듦): 영역 = wide(화면 절반) · band · search(후보 1위),
+      후보 2 · 3위는 그림 · 표에만. pack 의 TASK.md 는 강 · 울기 · 공개 영역을 묻지 않음(task_half). 공개 영역이 없으면 공개 앞면 상자 검사 · game.py 를 안 함.
+      (11-25, 설계서 8-14 (가)) river · meld 는 paifu_auto S6a 가 버림 기록기 덤프에서 낸 코드 값(dump_regions.py)이 spec regions 에 들어 온다 —
+      그림에만 그리고 묻지 않으며, 답에 그 영역이 있어도 답 값이 아니라 코드 값을 쓴다(CODE_REGIONS). 그래도 없으면 멈춘다(features.py 가 읽음).
+  앱 기록 반장(설정 app_record): try 는 강 읽기(river) 걸음을 빼고(handtrack_auto run --no-river) 차례 목록을 기록에서(han3 rturns) 만든다(8-13 (가)).
+
 spec(paifu_auto.ht_spec 가 만듦 — 3반장 시험 스크립트도 같은 함수):
   gid · round_label · side · hero · bottom · dealer · end(win/draw) · win_type · loser_side · n_calls · n_closed_end · hero_riichi ·
   regions(녹화 틀 — band · river · meld · reveal_region · wide · search) · frame_from · prev_last_ms · first_ms · last_ms ·
@@ -63,8 +71,12 @@ FRONT = {"bottom": "위쪽(y 가 작아지는 쪽)", "right": "왼쪽(x 가 작�
 CORNER = {"bottom": "오른쪽 아래", "right": "오른쪽 위", "top": "왼쪽 위", "left": "왼쪽 아래"}
 AXIS = {"bottom": "x", "top": "x", "left": "y", "right": "y"}       # 줄 방향 = 원본 좌표 축
 ROW_TEXT = {"bottom": "가로로(x 방향) 놓인다", "top": "가로로(x 방향) 놓인다", "left": "세로로(y 방향) 놓인다", "right": "세로로(y 방향) 놓인다"}
-COLORS = {"band": (255, 225, 0), "river": (0, 220, 255), "meld": (255, 0, 220), "reveal_region": (255, 130, 0), "search": (235, 235, 235)}
-COLOR_KO = {"band": "노랑", "river": "하늘", "meld": "자홍", "reveal_region": "주황", "search": "흰색(가는 선)"}
+COLORS = {"band": (255, 225, 0), "river": (0, 220, 255), "meld": (255, 0, 220), "reveal_region": (255, 130, 0), "search": (235, 235, 235),
+          "band_cand2": (0, 235, 120), "band_cand3": (255, 70, 70)}
+COLOR_KO = {"band": "노랑", "river": "하늘", "meld": "자홍", "reveal_region": "주황", "search": "흰색(가는 선)", "band_cand2": "초록", "band_cand3": "빨강"}
+CAND_KEYS = ["band_cand2", "band_cand3"]   # 기본 길 모드(녹화 틀 없음, 설계서 8-13 (다)): 손패 줄 후보 2 · 3위 — 그림 · 표에 같이 보여 주기만(답 칸 아님)
+MUST_FOR_FEATURES = ["river", "meld"]       # features.py(공용 판별 — 안 고침)가 읽는 영역. 기본 길 모드는 이 둘을 묻지 않으므로 답에 없으면 적용이 멈춘다(보고)
+CODE_REGIONS = ["river", "meld"]            # (11-25, 설계서 8-14 (가)) 기본 길 모드: 코드 값(버림 기록기 덤프 — paifu_auto S6a)만 씀 — 답 값은 안 씀(묻지 않은 것)
 # 꾸러미 창(설계서 8-8: 앞 판 끝 ~ 손패 주인 첫 몇 버림 뒤, 마지막 버림 ~ 공개 뒤)
 A_FIRST_LOOKBACK_S = 150     # 앞 판이 없으면 판 첫 버림 이만큼 앞부터
 A_HERO_DISCARDS = 3          # 손패 주인 이 번째 버림까지(없으면 마지막)
@@ -145,6 +157,116 @@ def back_row(ms: int, band: list, side: str) -> dict:
             "faces": sum(center_in(b, box) for b in faces), "_faces": faces}
 
 
+# ------------------------------------------------------------------ 손패 줄 후보를 화면 절반에서(설계서 8-13 (나), 11-25)
+# 손패 주인 쪽 화면 절반(wide) 안에서, 판 구간에 고르게 뽑은 프레임의 검출기 뒷면 상자가 한 줄로 선 곳을 찾는다. 규칙은 21개 손 설정을 보기 전에 정했고
+# (12:56 대국 ② — 21판 밖 — 의 프레임 하나에서 검출기 출력 꼴만 봄: 손패 줄 · 패산이 둘 다 뒷면 줄로 잡히고, 손패 줄이 가장자리 쪽 · 패산이 가운데 쪽,
+# 줄은 조금 기울어 있음) 판을 보고 고치지 않는다.
+#   ① 프레임 CAND_FRAMES 장 = 판 구간(기록의 첫 버림 ~ 마지막 버림)을 고르게. 프레임마다 중심이 wide 안인 뒷면 상자.
+#   ② 한 프레임 안 줄: 상자를 줄 방향 가운데 순으로 보며, 열린 줄 가운데 마지막 상자와 줄 방향 틈 ≤ JOIN × 한 장 폭이고 깊이(줄에 수직) 가운데 차 ≤
+#      CAND_DEPTH_TOL × 한 장 깊이인 것(그중 깊이 차가 가장 작은 것)에 붙이고, 없으면 새 줄. 상자 CAND_ROW_MIN 장 이상인 줄만(울기 셋 = 닫힌 4장).
+#   ③ 프레임 사이 묶기: 줄을 깊이 가운데가 가까운 후보(차 ≤ CAND_TRACK_TOL × 한 장 깊이 · 줄 방향으로 겹침 > 0)에 붙임, 없으면 새 후보.
+#   ④ 후보 상자: 줄 방향 = 줄 시작의 CAND_PCT 백분위 − 한 장 폭 ~ 줄 끝의 100 − CAND_PCT 백분위 + 한 장 폭, 깊이 = 줄 깊이 시작 · 끝 중앙값 ∓ 한 장 깊이의 1/4.
+#   ⑤ 점수 순: 자격(나온 프레임 비율 ≥ CAND_MIN_FRAC 이고 장수 중앙값 ≥ CAND_MIN_TILES) 있는 것 먼저 → 그 안에서 화면 가장자리에 가까운 것
+#      (손패 줄은 패산보다 그 사람 쪽) → 나온 프레임 수. 위 셋까지 근거(프레임 수 · 장수 중앙값 · 깊이 퍼짐 · 줄 방향 범위)와 함께.
+CAND_FRAMES = 24
+CAND_ROW_MIN = 4
+CAND_DEPTH_TOL = 0.5
+CAND_TRACK_TOL = 1.0
+CAND_PCT = 5
+CAND_MIN_FRAC = 0.3
+CAND_MIN_TILES = 5
+CAND_TOP = 3
+OUTER = {"bottom": 1, "right": 1, "top": -1, "left": -1}       # 깊이 축(원본 y · x)에서 그 사람 가장자리 쪽 = 큰 쪽(+1) · 작은 쪽(−1)
+
+
+def half_screen(side: str) -> list:
+    """손패 주인 쪽 화면 절반(원본 1496 좌표) — 기본 길 모드의 wide."""
+    H = 1496
+    return {"bottom": [0, H // 2, H, H], "top": [0, 0, H, H // 2], "left": [0, 0, H // 2, H], "right": [H // 2, 0, H, H]}[side]
+
+
+def band_candidates(side: str, t0: int, t1: int, n_frames: int = CAND_FRAMES) -> dict:
+    """화면 절반에서 손패 줄 후보(설계서 8-13 (나)) → {"wide", "frames", "candidates": [{"band", "frames", "frac", "tiles_med", "depth_spread", "along", ...}], "rule"}."""
+    wide = half_screen(side)
+    ax = 0 if AXIS[side] == "x" else 1          # 줄 방향 축(원본 x = 0 · y = 1)
+    dx = 1 - ax
+    step = (t1 - t0) / max(1, n_frames - 1)
+    picks = sorted({hc.nearest(int(t0 + k * step)) for k in range(n_frames)})
+    rows_all = []                                # (프레임 번호, a0, a1, d0, d1, 장수, 한 장 폭, 한 장 깊이)
+    for fi, ms in enumerate(picks):
+        _f, backs = raw_boxes(ms)
+        bs = [b for b in backs if center_in(b, wide)]
+        if len(bs) < CAND_ROW_MIN:
+            continue
+        pa = float(np.median([b[ax + 2] for b in bs]))
+        pd = float(np.median([b[dx + 2] for b in bs]))
+        rows = []                                # 열린 줄: [a0, a1, 마지막 상자 깊이 가운데, d0, d1, 장수]
+        for b in sorted(bs, key=lambda b: b[ax] + b[ax + 2] / 2):
+            a0, a1 = b[ax], b[ax] + b[ax + 2]
+            dc = b[dx] + b[dx + 2] / 2
+            ok = [r for r in rows if a0 - r[1] <= JOIN * pa and abs(dc - r[2]) <= CAND_DEPTH_TOL * pd]
+            if ok:
+                r = min(ok, key=lambda r: abs(dc - r[2]))
+                r[1], r[2], r[3], r[4], r[5] = max(r[1], a1), dc, min(r[3], b[dx]), max(r[4], b[dx] + b[dx + 2]), r[5] + 1
+            else:
+                rows.append([a0, a1, dc, b[dx], b[dx] + b[dx + 2], 1])
+        rows_all += [(fi, r[0], r[1], r[3], r[4], r[5], pa, pd) for r in rows if r[5] >= CAND_ROW_MIN]
+    tracks = []                                  # 후보: {"rows": [...]} — 깊이 가운데 중앙값으로 붙임
+    for row in sorted(rows_all, key=lambda r: (r[0], -r[5])):
+        fi, a0, a1, d0, d1, n, pa, pd = row
+        dc = (d0 + d1) / 2
+        best = None
+        for tr in tracks:
+            tdc = float(np.median([(x[3] + x[4]) / 2 for x in tr["rows"]]))
+            ta0, ta1 = min(x[1] for x in tr["rows"]), max(x[2] for x in tr["rows"])
+            if abs(dc - tdc) <= CAND_TRACK_TOL * pd and min(a1, ta1) - max(a0, ta0) > 0:
+                if best is None or abs(dc - tdc) < best[0]:
+                    best = (abs(dc - tdc), tr)
+        if best:
+            best[1]["rows"].append(row)
+        else:
+            tracks.append({"rows": [row]})
+    out = []
+    for tr in tracks:
+        R = tr["rows"]
+        fr = sorted({x[0] for x in R})
+        pa = float(np.median([x[6] for x in R]))
+        pd = float(np.median([x[7] for x in R]))
+        lo = float(np.percentile([x[1] for x in R], CAND_PCT)) - pa
+        hi = float(np.percentile([x[2] for x in R], 100 - CAND_PCT)) + pa
+        d0 = float(np.median([x[3] for x in R])) - pd / 4
+        d1 = float(np.median([x[4] for x in R])) + pd / 4
+        lo, hi = max(lo, wide[ax]), min(hi, wide[ax + 2])
+        d0, d1 = max(d0, 0), min(d1, 1496)
+        box = [0, 0, 0, 0]
+        box[ax], box[ax + 2], box[dx], box[dx + 2] = int(round(lo)), int(round(hi)), int(round(d0)), int(round(d1))
+        dcs = [(x[3] + x[4]) / 2 for x in R]
+        tiles = float(np.median([x[5] for x in R]))
+        frac = len(fr) / max(1, len(picks))
+        out.append({"band": box, "frames": len(fr), "frac": round(frac, 2), "tiles_med": tiles, "tiles_max": max(x[5] for x in R),
+                    "depth_center": round(float(np.median(dcs)), 1), "depth_spread": round(float(np.percentile(dcs, 90) - np.percentile(dcs, 10)), 1),
+                    "along": [int(min(x[1] for x in R)), int(max(x[2] for x in R))], "tile_px": [round(pa, 1), round(pd, 1)],
+                    "qualified": frac >= CAND_MIN_FRAC and tiles >= CAND_MIN_TILES})
+    out.sort(key=lambda c: (not c["qualified"], -OUTER[side] * c["depth_center"] if c["qualified"] else 0, -c["frames"]))
+    for k, c in enumerate(out, 1):
+        c["rank"] = k
+    rule = (f"화면 절반 {wide} · 판 구간 {hc.hms(t0)} ~ {hc.hms(t1)} 에서 고르게 {len(picks)}장 · 검출기 뒷면 상자 줄(틈 ≤ {JOIN} 장 · 깊이 차 ≤ {CAND_DEPTH_TOL} 장, "
+            f"{CAND_ROW_MIN}장 이상) → 프레임 사이 묶음(깊이 차 ≤ {CAND_TRACK_TOL} 장) → 자격(프레임 ≥ {CAND_MIN_FRAC:.0%} · 장수 중앙값 ≥ {CAND_MIN_TILES}) 먼저, "
+            f"그 안에서 가장자리({side}) 쪽 먼저")
+    return {"side": side, "wide": wide, "frames": [hc.hms(m) for m in picks], "rows": len(rows_all), "candidates": out[:CAND_TOP], "all": len(out), "rule": rule}
+
+
+def cmd_bandcand(a):
+    """S6a(기본 길 모드)가 부름: 손패 줄 후보 → --out json."""
+    cfg = hcfg.load(a.cfg, check=False)
+    cfg.apply_recording(hc)
+    t0 = time.time()
+    r = band_candidates(a.side, hc.to_ms(a.t0) if ":" in a.t0 else int(a.t0), hc.to_ms(a.t1) if ":" in a.t1 else int(a.t1), a.n)
+    r["wall_s"] = round(time.time() - t0, 1)
+    wj(a.out, r)
+    print("JSON" + json.dumps({k: v for k, v in r.items() if k != "frames"}, ensure_ascii=False))
+
+
 # ------------------------------------------------------------------ 그림
 def _font(size, ko=False):
     from PIL import ImageFont
@@ -175,7 +297,7 @@ def overview(ms: int, regions: dict, title: str, out: Path):
         for xy in ((2, v + 2), (W - 40, v + 2)):
             d.rectangle([xy[0] - 1, xy[1] - 1, xy[0] + 36, xy[1] + 16], fill=(0, 0, 0, 150))
             d.text(xy, str(v), fill=(255, 255, 255, 255), font=f_s)
-    for k in ASK:
+    for k in ASK + [x for x in CAND_KEYS if x in regions]:   # 후보 2 · 3(기본 길 모드에서만 regions 에 들어옴 — 꾸러미 그림에만)
         if k not in regions:
             continue
         x0, y0, x1, y1 = regions[k]
@@ -365,6 +487,49 @@ REVEAL_DEF_WIN = """- t_reveal = 화료자(이 판은 손패 주인)가 손패�
 REVEAL_DEF_DRAW = """- t_reveal = **{t_reveal}** — 판 결과 읽기(공개 손패 읽기)가 정한 값이다. 그대로 쓰고 답의 t_reveal 은 null 로 둔다(다르게 보이면 unsure 에 적는다)."""
 
 
+def is_half(sp: dict) -> bool:
+    """spec 이 기본 길 모드(녹화 틀 없음 — 영역 = 화면 절반 wide + 손패 줄 후보 band · search, 설계서 8-13 (다))인가."""
+    return sp.get("regions_mode") == "half"
+
+
+def task_half(t: str, sp: dict) -> str:
+    """기본 길 모드(녹화 틀 없음 — 설계서 8-13 (다), 3-9 "준비 에이전트는 손패 줄 · 줄이 선 때 · 공개 프레임만")의 TASK.md:
+    옛 지시문에서 묻는 영역이 준 만큼만 고친다 — 강 · 울기 · 공개 영역(② ③ ④)과 그 답 칸 · 그 영역을 보라는 보고서 읽는 법을 빼고,
+    영역 출처(녹화 틀 → 화면 절반 후보)와 차례 목록 출처(강 사진 → 기록)를 바꿔 적는다. 바꿀 곳이 안 맞으면 멈춘다(옛 틀이 바뀐 것)."""
+    cs = sp.get("band_candidates") or []
+    ev = " / ".join(f"{c['rank']}위 {c['band']}(프레임 {c['frames']}/{sp.get('band_candidates_picks', '?')} · 장수 중앙값 {c['tiles_med']:g} · "
+                    f"깊이 퍼짐 {c['depth_spread']:g}px)" for c in cs)
+    subs = [
+        ("판마다 영역 다섯과 시각 셋을 정해야 한다.", "판마다 영역 둘(손패 줄 band · 참고 search)과 시각 셋을 정해야 한다."),
+        ("지금 녹화 틀 영역(아래 표)과 100px 눈금", "지금 영역(아래 표 — 손패 줄 후보 1 ~ 3위)과 100px 눈금"),
+        ("## 지금 녹화 틀 영역 — 같은 녹화의 다른 판 손 설정에서 뽑은 값이라 이 판에 맞는지 모른다\n",
+         "## 지금 영역 — 코드가 이 판 손패 주인 쪽 화면 절반에서 찾은 손패 줄 후보라 이 판에 맞는지 모른다\n"
+         "- 찾은 법: 판 구간에서 고르게 뽑은 프레임마다 검출기 뒷면 상자가 한 줄로 선 곳을 모아, 여러 프레임에 나오고 장수가 많은 줄 가운데 그 사람 가장자리 쪽을 1위로 둠"
+         "(기계 판독 — 패산 · 남의 줄을 잡았을 수 있다). band · search = 1위. 2 · 3위는 그림과 아래 표에만(맞는 것이 있으면 그 값을 band 로 적어도 된다).\n"
+         f"- 후보 근거: {ev or '후보 없음'}\n"),
+        ("가만한 구간마다 강을 읽어 그 사이 움직임 구간을 차례로 묶는다.", "기록의 손패 주인 버림 시각으로 움직임 구간을 차례에 붙인다(강 사진은 읽지 않는다)."),
+        ("  공개 쪽 표에는 지금 틀 reveal_region 안 앞면 상자 수도 있다.\n", ""),
+        ('  "river":         {"value": [x0, y0, x1, y1], "changed": false, "why": "…"},\n', ""),
+        ('  "meld":          {"value": [x0, y0, x1, y1], "changed": false, "why": "…"},\n', ""),
+        ('  "reveal_region": {"value": [x0, y0, x1, y1], "changed": false, "why": "…"},\n', ""),
+        (" river 쪽 비율이 크면 river 에 피부색 물체 · 손이 들었는지 본다.", ""),
+        ("- ③ 공개 프레임에서 읽은 끝 손패 장수가 기대와 다르거나 판 결과의 패와 다르다 → reveal_frame · reveal_region 을 본다\n"
+         "  (세 장 모두에서 눕힌 줄이 가지런한지, 영역이 줄 끝 · 떼어 둔 패를 자르지 않는지, 남의 패가 들지 않는지).\n",
+         "- ③ 이 판은 공개 손패를 영역으로 읽지 않는다(끝 손패는 판 결과 값) — reveal_frame 은 프레임을 보고 정한다.\n"),
+    ]
+    for a, b in subs:
+        assert t.count(a) == 1, a[:60]
+        t = t.replace(a, b)
+    i0 = t.index("### ② river — 손패 주인 강")
+    i1 = t.index("### ⑤ search — 참고 영역")
+    t = t[:i0] + t[i1:]
+    i0 = t.index("- ① 차례 목록 ↔ 기록의 손패 주인 버림:\n")
+    i1 = t.index("- ② 활동 구간이 판 전체로 붙었다")
+    t = t[:i0] + ("- ① 차례 목록은 기록에서 바로 만든다(강 사진을 읽지 않는다 — 기록의 t_ready 뒤 버림이 모두 차례가 된다).\n"
+                  "  \"t_ready 앞(차례 아님)\" 버림이 네가 적은 pre_ready_discards 와 다르다 → t_ready 를 다시 본다.\n") + t[i1:]
+    return t
+
+
 def frame_lines(t0: int, t1: int) -> list:
     rec = hc.rec_of(t1)
     f = hc.frames(rec)
@@ -379,6 +544,10 @@ def cmd_pack(a):
     out = Path(a.out).resolve()
     gid, side = sp["gid"], sp["side"]
     R = sp["regions"]
+    half = is_half(sp)                     # 기본 길 모드(녹화 틀 없음): 영역 = wide · band · search(후보 1위), 2 · 3위는 그림 · 표에만
+    Rv = dict(R)
+    for k_, c in zip(CAND_KEYS, (sp.get("band_candidates") or [])[1:]):
+        Rv[k_] = list(c["band"])
     hd = sp.get("hero_discards") or []
     # 창
     a0 = sp["prev_last_ms"] if sp.get("prev_last_ms") else sp["first_ms"] - A_FIRST_LOOKBACK_S * 1000
@@ -404,15 +573,16 @@ def cmd_pack(a):
         ms = hc.nearest(t)
         name = f"ov{n}_{hc.hms(ms).replace(':', '').replace('.', '_')}.jpg"
         if not a.task_only:
-            overview(ms, R, f"{gid} {hc.hms(ms)} {why} · 손패 주인 = 사진 {SIDE_KO[side]}", out / "overview" / name)
+            overview(ms, Rv, f"{gid} {hc.hms(ms)} {why} · 손패 주인 = 사진 {SIDE_KO[side]}", out / "overview" / name)
         ov.append(f"  - `overview/{name}` — {hc.hms(ms)}({why})")
     # 검출기 표(--task-only 면 그대로 둠)
     rows_a, rows_b = [], []
     if a.task_only:
         old = jl(out / "pack.json")
         rows_a, rows_b = [None] * old["backs_rows"][0], [None] * old["backs_rows"][1]
-    for rows, t0, t1, with_rev in (((rows_a, a0, a1, False), (rows_b, b0, b1, True)) if not a.task_only else ()):
-        t0 = max(t0, A[0][0] if not with_rev else B[0][0])
+    has_rev = "reveal_region" in R
+    for rows, t0, t1, with_rev, is_b in (((rows_a, a0, a1, False, False), (rows_b, b0, b1, has_rev, True)) if not a.task_only else ()):
+        t0 = max(t0, A[0][0] if not is_b else B[0][0])
         last = None
         for t in range(int(t0), int(t1) + 1, 1000):
             ms = hc.nearest(t)
@@ -429,7 +599,10 @@ def cmd_pack(a):
           f"## 줄이 서는 쪽({A[0][1]} ~ {A[-1][1]})", "",
           f"| 시각 | 뒷면 상자 | 가장 큰 덩어리 | 덩어리 범위(원본 {ax}) | 앞면 상자 |", "|---|---|---|---|---|", *rows_a, "",
           f"## 공개 쪽({B[0][1]} ~ {B[-1][1]})", "",
-          f"| 시각 | 뒷면 상자 | 가장 큰 덩어리 | 덩어리 범위(원본 {ax}) | 앞면 상자 | reveal_region 안 앞면 상자 |", "|---|---|---|---|---|---|", *rows_b, ""]
+          *([f"| 시각 | 뒷면 상자 | 가장 큰 덩어리 | 덩어리 범위(원본 {ax}) | 앞면 상자 | reveal_region 안 앞면 상자 |", "|---|---|---|---|---|---|"] if has_rev else
+            [f"| 시각 | 뒷면 상자 | 가장 큰 덩어리 | 덩어리 범위(원본 {ax}) | 앞면 상자 |", "|---|---|---|---|---|"]), *rows_b, ""]
+    if half:
+        md[2] = md[2].replace("녹화 틀 band", "band(손패 줄 후보 1위)", 1)
     if not a.task_only:
         wt(out / "backs.md", "\n".join(md))
     # TASK.md
@@ -452,7 +625,10 @@ def cmd_pack(a):
         if A[0][0] <= a0 + 100 else f"녹화 첫 프레임({A[0][1]})",
         a_to=(f"손패 주인 {k}번째 버림 + {A_AFTER_S}초" if k else f"판 첫 버림 + 120초") + f"({A[-1][1]})", n_a=len(A),
         b_from=f"판 마지막 버림 {B_BEFORE_S}초 앞({B[0][1]})", b_to=(f"마지막 버림 + {B_AFTER_S}초" + (f" · 판 결과 읽기 공개 + {B_DRAW_AFTER_S}초 중 늦은 쪽" if tr else "")) + f"({B[-1][1]})",
-        n_b=len(B), region_rows="\n".join(f"| {k_} | {R[k_]} | {COLOR_KO[k_]} |" for k_ in ASK),
+        n_b=len(B), region_rows="\n".join([f"| {k_} | {R[k_]} | {COLOR_KO[k_]} |" for k_ in ASK if k_ in R and not (half and k_ in CODE_REGIONS)]
+                                          + [f"| ({k_} — 버림 기록기가 본 패에서 코드가 낸 값 · 답 칸 아님) | {R[k_]} | {COLOR_KO[k_]} |"
+                                             for k_ in CODE_REGIONS if half and k_ in R]
+                                          + [f"| (손패 줄 후보 {n_ + 2}위 — 답 칸 아님) | {Rv[k_]} | {COLOR_KO[k_]} |" for n_, k_ in enumerate(CAND_KEYS) if k_ in Rv]),
         ev_title=sp.get("events_title") or "기록에서 온 시각", first=hc.hms(sp["first_ms"]), last=hc.hms(sp["last_ms"]),
         prev_text=(f" · 앞 판 마지막 버림: {hc.hms(sp['prev_last_ms'])}" if sp.get("prev_last_ms") else ""),
         n_hd=len(hd), hd_rows=hd_rows, calls_text=calls_text, reveal_text=reveal_text,
@@ -460,6 +636,8 @@ def cmd_pack(a):
         reveal_tiles=f"닫힌 손패 {sp['n_closed_end']}장과 떼어 둔 화료패" if win else f"공개한 손패 {sp['n_closed_end']}장이",
         pad=BACK_PAD, join=JOIN, answer=(out / "answer.json").as_posix(), t_reveal_example='"HH:MM:SS.s"' if win else "null", work=(out / "work").as_posix(),
         script=SCRIPT.as_posix())
+    if half:
+        t = task_half(t, sp)
     wt(out / "TASK.md", t)
     pk = {"gid": gid, "spec": sp, "window_ready": [A[0][1], A[-1][1], len(A)], "window_reveal": [B[0][1], B[-1][1], len(B)], "overview": [x.split("`")[1] for x in ov],
           "backs_rows": [len(rows_a), len(rows_b)], "task": (out / "TASK.md").as_posix(), "answer": (out / "answer.json").as_posix(),
@@ -497,14 +675,20 @@ def parse_answer(ans: dict, sp: dict) -> tuple:
     R = dict(sp["regions"])
     fatal, changed = [], []
     for k in ASK:
+        if is_half(sp) and k in CODE_REGIONS and k in R:   # (설계서 8-14 (가)) 묻지 않은 강 · 울기 — 답에 있어도 코드 값
+            continue
         v = _region(ans.get(k))
         if v is None:
             if ans.get(k) is not None:
                 fatal.append(f"{k}: 좌표 꼴이 아님({ans.get(k)!r:.80})")
             continue
-        if v != R[k]:
+        if v != R.get(k):          # 기본 길 모드: 묻지 않은 영역(river · meld · reveal_region)이 답에 있으면 그 값을 씀(고친 영역으로 적힘)
             changed.append(k)
         R[k] = v
+    miss = [k for k in MUST_FOR_FEATURES if k not in R]
+    if miss:
+        fatal.append(f"{miss} 없음 — 공용 판별 features.py 가 이 영역을 읽고(segment.py 는 river 움직임을 활동으로, turncut 은 river 피부로 버림 때를 셈) "
+                     "기본 길 모드는 이 영역을 묻지 않는다(설계서 8-13 (다) 와 지금 판별 코드가 안 맞음 — 구현 2-③ 보고)")
     T = {"t_ready": _hms(ans.get("t_ready")), "reveal_frame": _hms(ans.get("reveal_frame"))}
     T["t_reveal"] = sp["t_reveal_read_ms"] if sp["end"] != "win" and sp.get("t_reveal_read_ms") else _hms(ans.get("t_reveal"))
     for k, v in T.items():
@@ -532,7 +716,7 @@ def purge(gid: str) -> list:
 
 def check_coords(R: dict, side: str) -> list:
     bad = []
-    for k in ASK:
+    for k in [x for x in ASK if x in R]:
         x0, y0, x1, y1 = R[k]
         if not (0 <= x0 < x1 <= 1496 and 0 <= y0 < y1 <= 1496):
             bad.append(f"{k} {R[k]}: 그림 밖이거나 x0 ≥ x1 · y0 ≥ y1")
@@ -562,7 +746,7 @@ def cmd_apply(a):
     t_start = t_ready - T_START_LEAD_S * 1000
     post = max(4, math.ceil((rf - t_rev) / 1000 + 2))
     cf = {"id": gid, "side": side, "t_start": hc.hms(t_start), "t_ready": hc.hms(hc.nearest(t_ready)), "t_reveal": hc.hms(t_rev),
-          "reveal_frame": hc.hms(hc.nearest(rf)), "post_sec": post, **{k: list(R[k]) for k in REGIONS},
+          "reveal_frame": hc.hms(hc.nearest(rf)), "post_sec": post, **{k: list(R[k]) for k in REGIONS if k in R},
           "result": {"draw": "draw_tenpai"}.get(sp["end"], sp.get("win_type") or sp["end"]), "riichi": bool(sp.get("hero_riichi")),
           "auto": "s6a_read", "s6a_answer": Path(a.answer).as_posix(),
           "winner_side_how": f"자동: {sp.get('side_rule', '')}", "result_how": f"자동: {sp.get('result_how', '')}",
@@ -570,6 +754,12 @@ def cmd_apply(a):
           "notes": [f"S6a 준비 읽기 답({Path(a.answer).as_posix()}) — 영역 고침 {changed or '없음'}, t_start = t_ready − {T_START_LEAD_S}초(features 구간 시작일 뿐), "
                     f"post_sec = max(4, ⌈reveal_frame − t_reveal + 2⌉)" + ("" if sp["end"] == "win" else " · 유국 t_reveal = 판 결과 읽기 값"),
                     f"reveal: {ans.get('reveal_why', '')}"[:600]] + [f"{k}: {(ans.get(k) or {}).get('why', '')}"[:300] for k in changed if isinstance(ans.get(k), dict)]}
+    if is_half(sp):
+        code = [k for k in CODE_REGIONS if k in sp["regions"]]
+        unused = {k: ans.get(k) for k in code if ans.get(k) is not None} or "없음"
+        cf["regions_note"] = (f"기본 길 모드(녹화 틀 없음, 설계서 8-13 (다)): wide = 화면 절반, band · search 는 손패 줄 후보 1위 {sp['regions'].get('band')} 에서 시작해 답 값. "
+                              f"{code} 는 코드 값({sp.get('regions_code_from') or 'spec regions'} — 설계서 8-14 (가)), 답에 있던 값 {unused} 은 안 씀. "
+                              f"답에 있던 그 밖의 묻지 않은 영역 {[k for k in ('river', 'meld', 'reveal_region') if k in R and k not in code]} 은 답 값 그대로")
     cpath = Path(htr.remap(hc.CONFIG / f"{gid}.json"))
     old = jl(cpath) if cpath.exists() else None
     gone = []
@@ -621,16 +811,20 @@ def cmd_apply(a):
                 + (f" · 덩어리 중 {br['cluster_out_of_band']}장이 band 밖" if br["cluster_out_of_band"] > READY_OUT_OK else "") + f" — 답의 closed_at_ready {ans.get('closed_at_ready')}",
           clip={"t0": hc.hms(t_ready - 10000), "t1": hc.hms(t_ready + 10000)})
     ms_f = hc.nearest(rf)
-    faces, _b = raw_boxes(ms_f)
-    n_in = sum(center_in(b, R["reveal_region"]) for b in faces)
-    x0, y0, x1, y1 = R["reveal_region"]
-    big = [x0 - FACE_EDGE_PX, y0 - FACE_EDGE_PX, x1 + FACE_EDGE_PX, y1 + FACE_EDGE_PX]
-    n_edge = sum(center_in(b, big) and not center_in(b, R["reveal_region"]) for b in faces)
-    need = sp["n_closed_end"] - REVEAL_MISS_OK
-    check("reveal_faces", n_in >= need, f"reveal_frame {hc.hms(ms_f)} reveal_region 안 앞면 상자 {n_in}(닫힌 장수 {sp['n_closed_end']} − {REVEAL_MISS_OK} = {need} 이상이어야) · "
-          f"영역 둘레 {FACE_EDGE_PX}px 에만 있는 앞면 상자 {n_edge}",
-          q_why=f"공개 프레임 {hc.hms(ms_f)} 의 reveal_region 안 앞면 상자 {n_in}장 — 손패 {sp['n_closed_end']}장보다 많이 모자람(영역 · 프레임 확인)",
-          clip={"t0": hc.hms(t_rev - 3000), "t1": hc.hms(rf + 5000)})
+    n_in = n_edge = None
+    if "reveal_region" in R:
+        faces, _b = raw_boxes(ms_f)
+        n_in = sum(center_in(b, R["reveal_region"]) for b in faces)
+        x0, y0, x1, y1 = R["reveal_region"]
+        big = [x0 - FACE_EDGE_PX, y0 - FACE_EDGE_PX, x1 + FACE_EDGE_PX, y1 + FACE_EDGE_PX]
+        n_edge = sum(center_in(b, big) and not center_in(b, R["reveal_region"]) for b in faces)
+        need = sp["n_closed_end"] - REVEAL_MISS_OK
+        check("reveal_faces", n_in >= need, f"reveal_frame {hc.hms(ms_f)} reveal_region 안 앞면 상자 {n_in}(닫힌 장수 {sp['n_closed_end']} − {REVEAL_MISS_OK} = {need} 이상이어야) · "
+              f"영역 둘레 {FACE_EDGE_PX}px 에만 있는 앞면 상자 {n_edge}",
+              q_why=f"공개 프레임 {hc.hms(ms_f)} 의 reveal_region 안 앞면 상자 {n_in}장 — 손패 {sp['n_closed_end']}장보다 많이 모자람(영역 · 프레임 확인)",
+              clip={"t0": hc.hms(t_rev - 3000), "t1": hc.hms(rf + 5000)})
+    else:   # 기본 길 모드에서 답에 reveal_region 이 없음 — 공개 손패를 영역으로 안 읽음(끝 손패는 판 결과 값), 이 검사는 안 함(표시)
+        ck.append({"name": "reveal_faces", "ok": True, "skipped": True, "detail": "reveal_region 없음 — 안 봄(기본 길 모드: 끝 손패는 판 결과 값)"})
     unsure = ans.get("unsure") or []
     if unsure:
         res["unsure"] = unsure
@@ -752,11 +946,14 @@ def cmd_try(a):
     shutil.copytree(ti["rec_dir"], d / "prep" / "rec" / gid)
     T, err = {}, None
     PY = sys.executable
+    # 앱 기록 반장(설정 app_record — 설계서 8-13 (가)): 강 읽기(river) 걸음을 안 돌리고 차례 목록은 기록에서(han3 rturns). 아니면 옛 그대로(turns · fix)
+    rec_mode = bool(hcfg.load(cfgf, check=False).app_record)
     steps = [("apply", [PY, "-X", "utf8", SCRIPT, "apply", "--cfg", cfgf, "--spec", d / "spec.json", "--answer", d / "answer.json", "--out", d / "applied.json"]),
-             ("run", [PY, "-X", "utf8", HERE / "handtrack_auto.py", "run", "--cfg", cfgf, gid]),
-             ("turns", [PY, "-X", "utf8", HT / "han3.py", "turns", gid, "--hanchan", cfgf]),
-             ("fix", [PY, "-X", "utf8", HT / "han3.py", "fix", "--write", gid, "--hanchan", cfgf]),
-             ("turncut", [PY, "-X", "utf8", HT / "han3.py", "turncut", "build", gid, "--hanchan", cfgf])]
+             ("run", [PY, "-X", "utf8", HERE / "handtrack_auto.py", "run", "--cfg", cfgf, gid] + (["--no-river"] if rec_mode else []))]
+    steps += ([("rturns", [PY, "-X", "utf8", HT / "han3.py", "rturns", gid, "--hanchan", cfgf])] if rec_mode else
+              [("turns", [PY, "-X", "utf8", HT / "han3.py", "turns", gid, "--hanchan", cfgf]),
+               ("fix", [PY, "-X", "utf8", HT / "han3.py", "fix", "--write", gid, "--hanchan", cfgf])])
+    steps += [("turncut", [PY, "-X", "utf8", HT / "han3.py", "turncut", "build", gid, "--hanchan", cfgf])]
     fatal = None
     for name, args in steps:
         p = _step(name, args, d, T)
@@ -789,7 +986,7 @@ def try_report(d: Path, n: int, pk: dict, cfgf: Path, T: dict, err, fatal) -> tu
     gid, side = sp["gid"], sp["side"]
     L = [f"# try {n} 보고서 — 판 `{gid}`({sp.get('round_label', '')}) · 손패 주인 = 사진 {SIDE_KO[side]}", "",
          f"- 초안 답: `{(d / 'answer.json').as_posix()}` · 시험 자리 `{d.as_posix()}` · 걸린 시간 {T.get('total')}초"
-         f"(적용 · 특징 {T.get('apply', '—')} · 판별 {T.get('run', '—')} · 차례 {round(T.get('turns', 0) + T.get('fix', 0) + T.get('turncut', 0), 1)})",
+         f"(적용 · 특징 {T.get('apply', '—')} · 판별 {T.get('run', '—')} · 차례 {round(T.get('turns', 0) + T.get('fix', 0) + T.get('rturns', 0) + T.get('turncut', 0), 1)})",
          f"- 남은 시도: {max(0, MAX_TRIES - n)}번(판당 {MAX_TRIES}번까지)", ""]
     js = {"gid": gid, "n": n, "timing": T, "error": err, "fatal": fatal}
     if fatal:
@@ -809,7 +1006,7 @@ def try_report(d: Path, n: int, pk: dict, cfgf: Path, T: dict, err, fatal) -> tu
     applied = jl(d / "applied.json") if (d / "applied.json").exists() else {}
     sections = [("① 차례 목록 ↔ 기록의 손패 주인 버림", _sec_turns), ("② 활동 구간(손이 움직인 때 · 가만한 때)", _sec_activity),
                 ("③ 공개 — 끝 손패 읽기", _sec_reveal), ("④ 적용 검사(apply)", _sec_checks), (f"⑤ 첫 {TRY_TURNS_SHOWN} 차례의 창 — 프레임을 열어 볼 곳", _sec_first)]
-    ctx = {"d": d, "sp": sp, "gid": gid, "side": side, "cfg": cfg, "cf": cf, "t_ready": t_ready, "applied": applied, "pk": pk}
+    ctx = {"d": d, "sp": sp, "gid": gid, "side": side, "cfg": cfg, "cf": cf, "t_ready": t_ready, "applied": applied, "pk": pk, "rec": bool(cfg.app_record)}
     for title, fn in sections:
         L += ["", f"## {title}", ""]
         try:
@@ -857,7 +1054,8 @@ def _sec_turns(ctx):
     cfg, gid, sp, t_ready, d = ctx["cfg"], ctx["gid"], ctx["sp"], ctx["t_ready"], ctx["d"]
     raw = next((g for g in jl(cfg.turns_file)["games"] if g["id"] == gid), None) if cfg.turns_file.exists() else None
     turns = turns_after_fix(cfg, gid)
-    raw_tile = {t["id"]: t.get("tile") for t in (raw or {}).get("turns") or []}
+    rec = ctx.get("rec")                  # 앱 기록 반장: 차례 목록이 기록에서(han3 rturns) — 강 사진이 읽은 패가 없음
+    raw_tile = {} if rec else {t["id"]: t.get("tile") for t in (raw or {}).get("turns") or []}
     W = _windows(ctx)
     ctx["turns"], ctx["W"] = turns, W
     hd = sp.get("hero_discards") or []
@@ -887,11 +1085,13 @@ def _sec_turns(ctx):
     first_i = (raw or {}).get("first_i")
     L = [f"- 기록 = {sp.get('events_title') or '버림 기록'}(TASK.md 의 손패 주인 버림 표와 같은 것)",
          f"- t_ready(적용한 값) = **{hc.hms(t_ready)}** · 판 구간 끝 = t_reveal {ctx['cf']['t_reveal']} + {ctx['cf']['post_sec']}초",
-         f"- 차례 **{len(turns)}**(강 사진이 잡은 것 {len(turns) - n_syn} + 강 사진이 못 잡아 기록으로 끼운 것 {n_syn}) · "
-         f"기록의 손패 주인 버림 {len(hd)}장 = t_ready 앞 {len(before)} + 뒤 **{len(after)}**" + (f" + 시각 모름 {len(noat)}" if noat else ""),
+         (f"- 차례 **{len(turns)}**(기록에서 바로 — 강 사진 읽기 없음) · " if rec else
+          f"- 차례 **{len(turns)}**(강 사진이 잡은 것 {len(turns) - n_syn} + 강 사진이 못 잡아 기록으로 끼운 것 {n_syn}) · ")
+         + f"기록의 손패 주인 버림 {len(hd)}장 = t_ready 앞 {len(before)} + 뒤 **{len(after)}**" + (f" + 시각 모름 {len(noat)}" if noat else ""),
          f"- 기록의 t_ready 뒤 버림 중 차례로 잡힘 {len(after) - len(missed)} · **차례에서 빠짐 {len(missed)}** · **기록에 없는 차례 {len(extra)}**",
-         f"- 강 사진이 t_ready 프레임에서 본 이 사람 강 장수 = {first_i - 1 if first_i else '—'}(첫 차례의 강 번호 {first_i} − 1) · "
-         f"기록의 t_ready 앞 버림 {len(before)}장" + ("" if first_i is None or first_i - 1 == len(before) else " — **다름**"),
+         (f"- 첫 차례의 강 번호 {first_i} − 1 = {first_i - 1 if first_i else '—'}(기록에서 셈 — 남이 울어 간 버림은 강에서 빠짐) · " if rec else
+          f"- 강 사진이 t_ready 프레임에서 본 이 사람 강 장수 = {first_i - 1 if first_i else '—'}(첫 차례의 강 번호 {first_i} − 1) · ")
+         + f"기록의 t_ready 앞 버림 {len(before)}장" + ("" if first_i is None or first_i - 1 == len(before) else " — **다름**"),
          f"- 답의 pre_ready_discards: {[x.get('tile') for x in (ctx['applied'].get('detail') or {}).get('answer_pre_ready') or []]} · "
          f"기록의 t_ready 앞 버림: {[x['tile'] for x in before]}", "",
          "### 차례 목록(코드가 나눈 것)", "",
@@ -989,6 +1189,9 @@ def _sec_activity(ctx):
 
 def _sec_reveal(ctx):
     d, gid, sp, pk = ctx["d"], ctx["gid"], ctx["sp"], ctx["pk"]
+    if not (d / "handtrack" / gid / "game.json").exists() and "reveal_region" not in ctx["cf"]:
+        ctx["headline_rev"] = "공개 읽기 안 함"
+        return ["- 공개 프레임 읽기를 안 했다 — reveal_region 이 없다(기본 길 모드: 끝 손패 순서는 판 결과 값, 설계서 8-13 (다))."], None
     g = jl(d / "handtrack" / gid / "game.json")
     f = g.get("final_hand") or {}
     closed, det = list(f.get("closed") or []), list(f.get("detached") or [])
@@ -1097,8 +1300,15 @@ def main():
     p.add_argument("--answer", required=True)
     p.add_argument("--n", type=int, help="시도 번호(기본: 다음 빈 번호)")
     p.add_argument("--force", action="store_true", help=f"시험용: 한도 {MAX_TRIES}번을 넘겨도 돌림")
+    p = sp.add_parser("bandcand", help="(설계서 8-13 (나)) 손패 줄 후보를 화면 절반에서 — S6a 기본 길 모드가 부름")
+    p.add_argument("--cfg", required=True)
+    p.add_argument("--side", required=True, choices=SIDES)
+    p.add_argument("--t0", required=True, help="판 구간 시작(HH:MM:SS.s 또는 epoch ms)")
+    p.add_argument("--t1", required=True)
+    p.add_argument("--n", type=int, default=CAND_FRAMES)
+    p.add_argument("--out", required=True)
     a = ap.parse_args()
-    {"pack": cmd_pack, "apply": cmd_apply, "try": cmd_try}[a.cmd](a)
+    {"pack": cmd_pack, "apply": cmd_apply, "try": cmd_try, "bandcand": cmd_bandcand}[a.cmd](a)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,8 @@
   python -X utf8 han3.py turns [판…]                    # truthprep 꼴 차례 목록 → results/han3_1123/_prep/turns_han3.json (+ turn_fix.json 적용)
   python -X utf8 han3.py link <판…>                     # 기록기 결과를 turncut 이 읽는 자리로: _prep/rec/<판>/dart_overlay_v2.json · overlay_dump.json
   python -X utf8 han3.py fix <판…> [--write]            # 기록기 paifu_rec.json 과 차례 목록을 맞춰 turn_fix 후보(패 · 리치 · 울기 · 줄 장수)를 보임/씀
+  python -X utf8 han3.py rturns [판…]                   # (11-25, 설계서 8-13 (가)) 앱 기록 반장: 차례 목록 · turn_fix 를 고친 기록에서 바로(turns · fix 대신) + 검사 파일
+  python -X utf8 han3.py rcheck [판…]                   # (11-25) rturns · turncut build 뒤 검사(차례 창 프레임 · 겹침 · 창 안 band 움직임 · 줄 장수 ↔ 울기 수)
   python -X utf8 han3.py turncut build <판…>            # = turncut.py build --out _prep/turns_cut_han3.json(--out 을 안 주면 이 파일)
   python -X utf8 han3.py slotgrid detect <판…>          # = slotgrid.py detect(칸 틀 검출 캐시 _work/slotgrid_1117/det_<판>.json)
   python -X utf8 han3.py opusread prep --ids a,b --root rawread_han3_1123 --nosam --fromplan
@@ -369,6 +371,200 @@ def cmd_turns(games: list):
         bad = [t["id"] for t in g["turns"] if t.get("n_calc") is None]
         print(f"{g['id']}: 차례 {len(g['turns'])} · 첫 강 번호 {g['first_i']} · 패 모름 {sum(t['tile'] is None for t in g['turns'])} · "
               f"리치(가로) {[t['label'] for t in g['turns'] if t['sideways']]} · 줄 장수 모름 {bad}")
+
+
+# ------------------------------------------------------------------ 차례 목록을 기록에서(설계서 8-13 (가), 11-25)
+# 앱 기록이 있는 반장(설정 app_record — 자동 패보 기본 길 · 옆길 가)은 S5 가 확정한 기록(_prep/rec/<판>/paifu_rec.json)에서 손패 주인의
+# 버림 · 울기를 바로 읽어 차례 목록을 만든다 — 강 읽기(river.py → truthprep)와 다시 맞추기(fix)를 안 거친다. 파일 꼴은 truthprep 것과 같게
+# (turncut · slotgrid · opusread · rebuild_opus · han3_paifu 를 안 고치고 쓰려고), turn_fix 칸은 fix --write 가 쓰던 칸을 같은 셈으로 쓴다.
+#   차례 = 손패 주인 버림 중 기록기가 처음 본 때(at)가 t_ready(판별 설정) 뒤인 것. at 이 없는 버림은 차례로 못 만들고 검사 파일에 남김.
+#   i = 그 버림을 놓은 뒤 이 사람 강의 장수(= 손패 주인 몇 번째 버림 − 그 앞에 남이 울어 간 이 사람 버림 수) — 강 읽기의 강 순서 번호와 같은 뜻.
+#   id = <접두사>_d<i 두 자리><b, c …>(같은 i 가 두 번째면 b — 울려 나가 강이 줄었다 다시 늚, truthprep 과 같음). 강 읽기가 못 봐 fix 가 끼우던
+#   …r 차례는 생기지 않는다(모든 버림이 기록에서 옴).
+#   segs = 그 버림이 놓인 활동 구간(segments.json) + 앞뒤 REC_CTX 개(truthprep 과 같은 셈). 버림이 놓인 구간 = [at − REC_LAG_MS, at] 와 겹치는 첫
+#   활동 구간 → 없으면 at 앞에서 시작한 마지막 구간 → 없으면 첫 구간. 앞 차례 구간보다 앞이면 앞 차례 구간으로(순서 맞춤).
+REC_CTX = 2            # truthprep.CTX 와 같음
+REC_EDGE_MS = 300      # truthprep.EDGE_MS 와 같음
+REC_LAG_MS = 3000      # 기록기가 처음 본 때는 놓인 때보다 0 ~ 3초 늦다(약 3초 간격 프레임 — handtrack_prep TASK 의 기록 설명과 같은 성질)
+REC_CHECK = "turns_record_check.json"   # <prep>/ — rturns · rcheck 가 쓰는 검사(설계서 3-9 검사 표 가운데 지금 낼 수 있는 것)
+
+
+def record_turns(gid: str, events: list, hero: int, t_ready_ms: int, acts: list, prefix: str, side: str) -> dict:
+    """고친 기록 사건 → {"game": truthprep 꼴 판 하나, "fix": {차례 id: turn_fix 칸}, "check": 검사}. 파일은 안 씀(대조 스크립트도 이 함수를 부름)."""
+    acts = sorted(acts, key=lambda a: a["ms0"])
+    hd, last_dis, calls, pend_call, away = [], {}, 0, None, 0
+    for n, e in enumerate(events):
+        if e["type"] == "discard":
+            last_dis[e["seat"]] = e["tile"]
+            if e["seat"] != hero:
+                continue
+            nx = events[n + 1] if n + 1 < len(events) else None
+            taken = bool(nx and nx["type"] == "call" and nx.get("from") == hero and nx["seat"] != hero)
+            k = len(hd) + 1
+            hd.append({"k": k, "i": k - away, "tile": e["tile"], "riichi": bool(e.get("riichi")), "at": e.get("at"), "c": calls,
+                       "after_call": pend_call, "taken": taken})
+            pend_call = None
+            away += taken
+        elif e["type"] == "call" and e["seat"] == hero:     # cmd_fix 와 같은 셈: 받은 패 = 울림 당한 자리의 마지막 버림, 손에서 = 묶음 − 받은 패
+            tiles = list(e.get("tiles") or [])
+            got = last_dis.get(e.get("from"))
+            hand = list(tiles)
+            if got in hand:
+                hand.remove(got)
+            else:
+                hand = hand[1:]
+            calls += 1
+            pend_call = {"call": e, "hand": hand, "got": got}
+    pre = [x for x in hd if x["at"] is not None and x["at"] <= t_ready_ms]
+    no_at = [x for x in hd if x["at"] is None]
+    tt = [x for x in hd if x["at"] is not None and x["at"] > t_ready_ms]
+    ps, how = [], []
+    for x in tt:
+        lo, hi = x["at"] - REC_LAG_MS, x["at"]
+        p = next((q for q, a in enumerate(acts) if a["ms0"] <= hi and a["ms1"] >= lo), None)
+        h = "겹침"
+        if p is None:
+            bef = [q for q, a in enumerate(acts) if a["ms0"] <= hi]
+            p, h = (bef[-1], "앞에서 시작한 마지막 구간") if bef else ((0, "첫 구간") if acts else (None, "활동 구간 없음"))
+        if p is not None and ps and ps[-1] is not None and p < ps[-1]:
+            p, h = ps[-1], h + " → 앞 차례 구간(순서 맞춤)"
+        ps.append(p)
+        how.append(h)
+    seen, turns, fix, used = {}, [], {}, set()
+    for n, x in enumerate(tt):
+        seen[x["i"]] = seen.get(x["i"], 0) + 1
+        suf = "" if seen[x["i"]] == 1 else "abcdefgh"[seen[x["i"]] - 1]
+        p = ps[n]
+        segs, more_a, more_b = [], False, False
+        if p is not None:
+            pp = ps[n - 1] if n and ps[n - 1] is not None else -1
+            nx = ps[n + 1] if n + 1 < len(tt) and ps[n + 1] is not None else len(acts)
+            order = [(q, "앞") for q in range(max(pp + 1, p - REC_CTX), p)] + [(p, "버림")] + [(q, "뒤") for q in range(p + 1, min(nx, p + 1 + REC_CTX))]
+            last = 0
+            for q, role in order:
+                a = acts[q]
+                ms = [m for m in hc.frame_range(a["ms0"] - REC_EDGE_MS, a["ms1"] + REC_EDGE_MS) if m > last]
+                if not ms:
+                    continue
+                last = ms[-1]
+                used.update(ms)
+                segs.append({"seg": a["seg"], "role": role, "t0": hc.hms(ms[0])[3:], "frames": ms})
+            more_a, more_b = nx - (p + 1) > REC_CTX, p - (pp + 1) > REC_CTX
+        c = x["c"]
+        f = {"tile": x["tile"], "sideways": x["riichi"], "n_calc": 13 - 3 * c, "meld_tiles": [3 * c, 3 * c]}
+        if x["after_call"] is not None:
+            f.update(kind="call", n_calc=13 - 3 * (c - 1), meld_tiles=[3 * (c - 1), 3 * c], call_hand=x["after_call"]["hand"],
+                     why=f"기록기 울기 {x['after_call']['call']} 바로 뒤 버림(받은 패 {x['after_call']['got']})")
+        tid = f"{prefix}_d{x['i']:02d}{suf}"
+        turns.append({"id": tid, "label": f"{x['i']}{suf}", "repeat": bool(suf), "game": gid, "i": x["i"], "tile": f["tile"], "sideways": f["sideways"],
+                      "meld_tiles": f["meld_tiles"], "n_calc": f["n_calc"], "same_seg": sum(1 for q in ps if q == p), "more_after": more_a,
+                      "more_before": more_b, "segs": segs})
+        fix[tid] = f
+    han = 3 if gid.startswith("n") else (1 if int(gid.split("_")[1][:2]) < 13 else 2)   # truthprep.build 과 같은 식(읽는 코드 없음 — 꼴만 같게)
+    game = {"id": gid, "han": han, "skip": han == 1, "side": side, "first_i": turns[0]["i"] if turns else None, "turns": turns, "n_frames": len(used)}
+    tm = lambda x: f"{x['tile']}@{hc.hms(x['at'])}" if x["at"] is not None else x["tile"]  # noqa: E731
+    check = {"hero": hero, "t_ready": hc.hms(t_ready_ms), "hero_discards": len(hd), "turns": len(turns), "pre_ready": [tm(x) for x in pre],
+             "no_at": [tm(x) for x in no_at], "taken_away": [f"{x['k']}:{x['tile']}" for x in hd if x["taken"]],
+             "hero_calls": calls, "call_turns": [t["id"] for t in turns if fix[t["id"]].get("kind") == "call"], "acts": len(acts),
+             "seg_how": dict(sorted({h: how.count(h) for h in how}.items())),
+             "seg_of": {t["id"]: (acts[p]["seg"] if p is not None else None) for t, p in zip(turns, ps)}}
+    return {"game": game, "fix": fix, "check": check}
+
+
+def cmd_rturns(games: list):
+    """차례 목록을 기록에서(설계서 8-13 (가)) — 판마다 record_turns → turns 파일(그 판 몫만 바꿈) · turn_fix(그 판 몫을 지우고 다시) · 검사 파일."""
+    m = _orig_jload(META)
+    rows = {x["id"]: x for x in m["rounds"]}
+    have = {g["id"]: g for g in _orig_jload(TURNS_H3)["games"]} if TURNS_H3.exists() else {}
+    fx = _fix()
+    chk = _orig_jload(PREP / REC_CHECK) if (PREP / REC_CHECK).exists() else {}
+    for gid in games:
+        hero = rows[gid].get("hero")
+        if hero is None:
+            print(f"{gid}: 손패 주인 없음(rounds_meta hero null) — 차례 목록 안 만듦")
+            have.pop(gid, None)
+            chk[gid] = {"error": "rounds_meta hero null"}
+            continue
+        p = _orig_jload(rec_src(gid)["paifu"])
+        cf = hc.config(gid)
+        if hero_seat(gid, p) != hero:
+            raise SystemExit(f"{gid}: rounds_meta 손패 주인 {hero} ≠ 기록(아래 자리 {p['hero']}) + 판별 설정 자리 {cf['side']} 로 셈한 {hero_seat(gid, p)}")
+        acts = hc.jload(hc.OUT / gid / "segments.json")["active"]
+        r = record_turns(gid, p["events"], hero, hc.to_ms(cf["t_ready"]), acts, CFG.prefix_of(gid), cf["side"])
+        have[gid] = r["game"]
+        fx = {k: v for k, v in fx.items() if k.startswith("__") or not CFG.owns(k, gid)}
+        if "__insert__" in fx:
+            fx["__insert__"] = [x for x in fx["__insert__"] if not CFG.owns(x["id"], gid)]
+        fx.update(r["fix"])
+        chk[gid] = {**r["check"], "source": rel_posix(rec_src(gid)["paifu"])}
+        c = r["check"]
+        print(f"{gid}: 차례 {c['turns']}(기록에서) · 손패 주인 버림 {c['hero_discards']} = t_ready({c['t_ready']}) 앞 {len(c['pre_ready'])} + 차례 {c['turns']}"
+              + (f" + 시각 없음 {len(c['no_at'])}" if c["no_at"] else "") + f" · 울기 차례 {c['call_turns']} · 활동 구간 고른 방법 {c['seg_how']}")
+    _wj(TURNS_H3, {"games": [have[g] for g in H3 if g in have], "scale": 1.5,
+                   "note": f"han3.py rturns — {CFG.label} 차례 목록을 S5 가 확정한 기록(_prep/rec/<판>/paifu_rec.json)에서 만듦(설계서 8-13 (가), 강 읽기 · fix 안 거침). "
+                           f"{FIX.name} 의 이 판 몫도 같은 셈으로 다시 씀"})
+    _wj(FIX, fx)
+    _wj(PREP / REC_CHECK, chk)
+    print("→", TURNS_H3, "·", FIX, "·", PREP / REC_CHECK)
+
+
+def rel_posix(p) -> str:
+    try:
+        return Path(p).resolve().relative_to(HERE.parents[2]).as_posix()
+    except ValueError:
+        return Path(p).as_posix()
+
+
+REC_STILL_MOVE_S = 0.0   # rcheck: 차례 창 안 손패 띠(band) 화소가 바뀐 시간(초)이 이 값 이하면 "쯔모기리 후보"(움직임 없음 — 3-9 검사 표 그대로)
+
+
+def cmd_rcheck(games: list):
+    """turncut 뒤 검사(설계서 3-9 의 검사 표 가운데 지금 낼 수 있는 것) → <prep>/turns_record_check.json 의 판마다 windows · rows 칸.
+    ① 차례 창마다 프레임 수 · 앞 창과 겹침(겹치는 프레임 수 · 시작이 앞 창 끝 앞) ② 창 안 band 화소가 바뀐 시간(초) — 0 이면 쯔모기리 후보(읽기는 그대로)
+    ③ 줄 장수 ↔ 울기 수: 판 결과 끝 손패 장수(result_read.json hand) = 13 − 3 × 손패 주인 울기(가깡 뺌) · 차례 n_calc 가 13 − 3k 꼴."""
+    import numpy as np
+    import segment as sgm
+    import turncut as tc
+    chk = _orig_jload(PREP / REC_CHECK) if (PREP / REC_CHECK).exists() else {}
+    meta = {x["id"]: x for x in _orig_jload(META)["rounds"]}
+    for gid in games:
+        if gid not in chk or chk[gid].get("error"):
+            continue
+        try:
+            cut = tc.turns_of(gid)
+        except KeyError:
+            cut = []
+        z = np.load(hc.WORK / f"{gid}_feat.npz")
+        zms = z["ms"]
+        bact = (z["band_d1"] > sgm.ACT_DIFF) | (z["band_d3"] > sgm.ACT_DIFF)
+        rows, prev, prev_w1 = [], set(), None
+        for t in cut:
+            fr = sorted({m for s in t["segs"] for m in s["frames"]})
+            w0, w1 = (fr[0], fr[-1]) if fr else (None, None)
+            k = (zms >= w0) & (zms <= w1) if fr else np.zeros(len(zms), bool)
+            moved = round(float(bact[k].sum()) / 10, 1)
+            rows.append({"id": t["id"], "frames": len(fr), "w0": hc.hms(w0) if fr else None, "w1": hc.hms(w1) if fr else None,
+                         "by": (t.get("cut") or {}).get("by"), "overlap_frames": len(prev & set(fr)),
+                         "starts_before_prev_end": bool(fr and prev_w1 is not None and w0 <= prev_w1), "band_moved_s": moved,
+                         "tsumogiri_candidate": bool(fr) and moved <= REC_STILL_MOVE_S})
+            prev, prev_w1 = set(fr), (w1 if fr else prev_w1)
+        ev = _orig_jload(rec_src(gid)["paifu"])["events"]
+        hero = meta[gid]["hero"]
+        calls = sum(1 for e in ev if e["type"] == "call" and e["seat"] == hero and e.get("kind") != "kakan")
+        rr_p = H3DIR / gid / "result_read.json"
+        hand = list((_orig_jload(rr_p).get("hand") or [])) if rr_p.exists() else None
+        ts = turns_h3(gid)
+        bad_n = [t["id"] for t in ts if t.get("n_calc") is None or (13 - t["n_calc"]) % 3]
+        chk[gid]["windows"] = rows
+        chk[gid]["rows"] = {"hero_calls_not_kakan": calls, "want_closed_end": 13 - 3 * calls, "result_hand": len(hand) if hand is not None else None,
+                            "ok": hand is not None and len(hand) == 13 - 3 * calls and not bad_n, "bad_n_calc": bad_n}
+        chk[gid]["flags"] = {"empty_windows": [x["id"] for x in rows if not x["frames"]],
+                             "overlap_windows": [x["id"] for x in rows if x["overlap_frames"] or x["starts_before_prev_end"]],
+                             "tsumogiri_candidates": [x["id"] for x in rows if x["tsumogiri_candidate"]],
+                             "rows_mismatch": not chk[gid]["rows"]["ok"], "pre_ready": len(chk[gid].get("pre_ready") or [])}
+        print(f"{gid}: 창 {len(rows)} · 빈 창 {chk[gid]['flags']['empty_windows']} · 겹침 {chk[gid]['flags']['overlap_windows']} · "
+              f"쯔모기리 후보 {chk[gid]['flags']['tsumogiri_candidates']} · 줄 장수 {'맞음' if chk[gid]['rows']['ok'] else '다름 ' + str(chk[gid]['rows'])}")
+    _wj(PREP / REC_CHECK, chk)
 
 
 def rec_src(gid: str) -> dict:
@@ -896,6 +1092,10 @@ def main():
         cmd_link(games)
     elif cmd == "fix":
         cmd_fix(games, "--write" in rest)
+    elif cmd == "rturns":
+        cmd_rturns(games)
+    elif cmd == "rcheck":
+        cmd_rcheck(games)
     elif cmd == "ids":
         for g in games:
             print(g, ",".join(read_ids(g)))
