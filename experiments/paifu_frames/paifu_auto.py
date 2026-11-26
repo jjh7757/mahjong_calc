@@ -31,16 +31,16 @@ replay 는 S1 · S4(3반장 result_read · 앱 유국 공개 읽기 s4/<판>/<a|
 
 단계(설계서 3절): S0 준비 · S1 판 경계(LLM) · S2 프레임 · S3 버림 기록 · S4 판 결과(LLM, 둘이 따로) · S5 대조 · 고침 ·
   S6 손패 차례 재료 + 읽기(LLM) · S7 앞뒤 검사 · 다시 읽기(LLM, 한 판 2회) · S7s 판 supervisor(LLM, 판당 하나) · S8 조립 · S9 질문 목록 · 영향 · 보고서.
-S9 차례 질문(8-3절 v2): 답의 unsure 또는 확신 말(HEDGE_*) 또는 낮은 p(8-18)에 걸리면 질문(questions.jsonl 의 signal 칸), 안 걸린 차례는 영향을 재서
+S9 차례 질문(8-3절 v2): 답의 unsure 또는 확신 말(HEDGE_*) 또는 낮은 p(8-18 — 8-22 부터 LOW_P_ACTS 가 True 일 때만)에 걸리면 질문(questions.jsonl 의 signal 칸), 안 걸린 차례는 영향을 재서
   판마다 위 2차례를 표본(samples.jsonl, signal sample:impact — 바뀌는 순 수 0 인 차례는 표본에서 뺌). 질문은 영향 0 · 사용자 답(apply) 숨김,
   표본은 사용자 답만 숨김. — supervisor 단계가 꺼진 실행(--no-sup · S7 이 이미 끝난 옛 실행 폴더)만 이렇다.
 판 supervisor 단계 S7s(설계서 8-17 4-① · 3-10 · 3-11, 11-25 밤): 읽은 차례가 있는 판마다 paifu_sup.py pack → 판 꾸러미 하나(sup/<판>/TASK.md,
   끝난 표시 = sup/<판>/decision.json — supervisor 가 done 으로 씀. supervisor 가 다시 읽기 작업자를 스스로 띄우는 방식은 그대로)를 내고 멈춘다.
   모든 판이 마감되면 S8. 이 단계가 켜진 실행의 S9:
-  - 차례 질문 = supervisor 의 ask(sup/<판>/questions_sup.jsonl, signal sup:ask) + supervisor 를 안 거친 판의 unsure · 낮은 p 차례(signal unsure · low_p).
+  - 차례 질문 = supervisor 의 ask(sup/<판>/questions_sup.jsonl, signal sup:ask) + supervisor 를 안 거친 판의 unsure 차례(signal unsure — 낮은 p(low_p)는 LOW_P_ACTS 일 때만, 8-22).
     낱말 규칙(v2)은 질문을 만들지 않고 "그 규칙이었다면" 수만 state signals.v2_compare · report.md 에. 그 밖의 질문(S0 ~ S6 · 판 결과)은 그대로.
-  - 표본 = 반장당 SAMPLE_PER_HANCHAN(5): supervisor 가 직접 정한 차례(set) → 다시 읽기로 답이 바뀐 차례 → 처음 답이 낮은 p 인데 마감 초안이
-    처음 답 그대로(8-18) → 영향 큰 순(바뀌는 순 수 0 은 뺌),
+  - 표본 = 반장당 SAMPLE_PER_HANCHAN(5): supervisor 가 직접 정한 차례(set) → 다시 읽기로 답이 바뀐 차례 → (LOW_P_ACTS 일 때만: 처음 답이 낮은 p 인데 마감 초안이
+    처음 답 그대로(8-18)) → 영향 큰 순(바뀌는 순 수 0 은 뺌),
     같은 순위 안에서는 영향 큰 순 · 이른 순(판 순서 · 차례 번호). 질문에 오른 차례(숨김 포함)는 표본에 안 넣음.
   - 차례별 출처 파일 paifu_source/<판>.json(패보 형식은 안 바꿈): 손패 주인 버림마다 SOURCE_KINDS 가운데 하나와 근거 파일 이름.
   - report.md 에 판마다 간 길 · supervisor 가 손댄 차례 · 질문 출처(묶음별) · 숨긴 질문 수 · 질문 > 10 경고.
@@ -62,6 +62,9 @@ S9 차례 질문(8-3절 v2): 답의 unsure 또는 확신 말(HEDGE_*) 또는 낮
   - supervisor 를 안 거친 판(--no-sup · --sup-games 밖)의 차례 질문에 낮은 p 차례를 더함(signal low_p — 다른 신호와 같이 걸리면 목록).
   - 표본 tier 2(위) · 보고서 supervisor 절의 p 셈 한 줄 · paifu_source 차례 줄의 p(처음 답 값). 처음 답 = first_answer_file.
   - 사용자 답(apply)은 p 를 넣지 않고 읽기 답의 옛 p 를 지운다. 옛 답(p 없음)으로는 질문 · 표본 · 패보가 전과 같다.
+  - 설계서 8-22(11-26 오후): 낮은 p 는 기록만 — LOW_P_ACTS = False 면 위 low_p 질문 신호 · 표본 tier 2 · supervisor 마감 검사 ① 의 낮은 p(paifu_sup)
+    를 만들지 않는다. 남는 것: 읽기 지시문의 p 칸 · 답의 p · 보고서 p 셈 줄 · paifu_source p · pack.json low_p_first · game.md p 열 · status p.
+    True 로 돌리면 8-18 동작 그대로.
 
 앱 기록 우선(설계서 8-5 · 8-6 W1 ~ W5, 11-24 저녁) — 반장 설정에 app_record 칸이 있을 때만(없으면 위 흐름 그대로 · 3반장):
   S0  W1 · W2: app_record.build → app_rounds.json(판 목록 · 국 · 본장 · 선 · 아래 자리 · 화료/유국 · 닻 시각 · 결과 · 근거 폴더 · 버림 출처)
@@ -169,6 +172,10 @@ HEDGE_WORDS = ["아마", "추정", "짐작", "것 같", "가능성", "애매", "
                "다른 후보", "대안", "둘 중"]                             # 다른 답 말
 # 설계서 8-18(11-26): 읽기 답의 확신 숫자 칸 p. 공용 모듈(opusread · han3) 템플릿은 안 고치고, S6 이 만든 read/<차례>/TASK.md 의 답 꼴 줄
 # (TASK_P_ANCHOR — 꼭 한 번)에 TASK_P_ADD 를 끼운다. 낮은 p = answer_p(답) < HEDGE_PCT_MAX(8-3 의 숫자 확신 문턱을 그대로).
+# 설계서 8-22(11-26 오후, 사용자 "그냥 모델 출력이 옳다고 믿고 가는게 나을듯" → "꺼"): 낮은 p 는 기록만. False 면 낮은 p 가 질문 신호(low_p) ·
+# 표본 tier 2 · supervisor 마감 검사 ①(paifu_sup) 을 만들지 않는다 — p 칸 · 답의 p · 보고서 p 셈 · paifu_source p · pack.json low_p_first 는 그대로.
+# True 면 8-18 동작 그대로(지우지 않고 가둠).
+LOW_P_ACTS = False
 TASK_P_ANCHOR = '"unsure": 맞을 가능성 70% 밑이면 true,'
 TASK_P_ADD = {"hand": ' "p": kind · k · j · end_order 가 모두 맞을 가능성(%, 0 ~ 100 정수 — 어림이라도 꼭 적는다),',
               "call": ' "p": kind · gone · k · end_order 가 모두 맞을 가능성(%, 0 ~ 100 정수 — 어림이라도 꼭 적는다),'}   # 울기 답 꼴에는 j 가 없고 gone 이 있음
@@ -3748,7 +3755,7 @@ def s9(r: Run):
     p_first = {t: answer_p(jl(first_answer_file(r, t, cfg))) for t in all_ids}
     # 설계서 8-19 (다) 4: 준비 읽기 alt 로 돌리면 창만 움직인 차례(창 흔들림) — supervisor 없는 길은 차례 질문 신호 s6a_window(없으면 전과 같음)
     win = s6a_window_turns(r)
-    q_sig = {t: sigs[t][0] + (["low_p"] if p_low(answers[t]) else []) + (["s6a_window"] if t in win else []) for t in all_ids}
+    q_sig = {t: sigs[t][0] + (["low_p"] if LOW_P_ACTS and p_low(answers[t]) else []) + (["s6a_window"] if t in win else []) for t in all_ids}   # low_p 는 8-22 스위치
     raised_q = [t for t in all_ids if q_sig[t]]
     p_bad = [t for t in all_ids if "p" in jl(first_answer_file(r, t, cfg)) and p_first[t] is None]
     p_stat = {"turns": len(all_ids), "with_p": sum(1 for t in all_ids if p_first[t] is not None),
@@ -3828,7 +3835,7 @@ def s9(r: Run):
     if not sup:
         samples, no_impact, zero_pool = v2_samples(r, cfg, all_ids, set(raised_q), imp, turn_row)
     else:
-        # 설계서 8-17 4-① 표본: 반장당 SAMPLE_PER_HANCHAN — set → 다시 읽기로 바뀜 → 낮은 p · 다시 읽기와 같음(8-18) → 영향 큰 순. 질문에 오른 차례(숨김 포함)는 뺌
+        # 설계서 8-17 4-① 표본: 반장당 SAMPLE_PER_HANCHAN — set → 다시 읽기로 바뀜 → (LOW_P_ACTS 일 때만) 낮은 p · 다시 읽기와 같음(8-18) → 영향 큰 순. 질문에 오른 차례(숨김 포함)는 뺌
         q_turns = {q["id"] for q in asked[:n_turn_asked] + hidden if q.get("kind") == "turn_slot"}
         cands, no_impact, zero_pool = sup_sample_cands(all_ids, r.games(), cfg.game_of, imp, su["turns"], q_turns, p_first)
         samples = []
@@ -3970,7 +3977,7 @@ def sup_turn_questions(r: Run, cfg, all_ids: list, answers: dict, su: dict, turn
                                 sup_file=rel(r.d / "sup" / g / "questions_sup.jsonl"),
                                 rule="판 supervisor 의 ask(설계서 8-17 4-① — supervisor 가 못 푼 차례)"))
         else:   # supervisor 를 안 거친 판: unsure · 낮은 p(설계서 8-18 — 둘 다면 목록)
-            sig = (["unsure"] if answers[t].get("unsure") else []) + (["low_p"] if p_low(answers[t]) else []) + (["s6a_window"] if t in win else [])
+            sig = (["unsure"] if answers[t].get("unsure") else []) + (["low_p"] if LOW_P_ACTS and p_low(answers[t]) else []) + (["s6a_window"] if t in win else [])
             if not sig:
                 continue
             if sig == ["unsure"]:
@@ -3990,7 +3997,8 @@ def sup_sample_cands(all_ids: list, games: list, game_of, imp: dict, sup_turn: d
     """표본 후보(설계서 8-17 4-① · 8-18). tier 0 = supervisor 가 직접 정한 차례(마감 초안이 set), 1 = 다시 읽기로 답이 바뀐 차례(마감 초안이 r<n> 이고 반영됨),
     2 = 마감된 판에서 처음 답이 낮은 p(p_first < HEDGE_PCT_MAX)인데 마감 초안이 처음 답 그대로(칸 값이 같음 — 다시 읽기가 같아서 닫은 것),
     3 = 그 밖에서 영향(바뀌는 순 수 최대)이 0 보다 큰 차례. 질문에 오른 차례(exclude)는 뺌. tier 3 에 못 서는 차례: 영향을 못 잰 것(no_impact) · 0(zero).
-    tier 0 · 1 · 2 는 영향이 0 이거나 못 재도 넣는다(supervisor 가 손댄 표시 — 3-10 정한 것 2 · 3-5). p_first 가 없으면(옛 호출) tier 2 는 없음."""
+    tier 0 · 1 · 2 는 영향이 0 이거나 못 재도 넣는다(supervisor 가 손댄 표시 — 3-10 정한 것 2 · 3-5). p_first 가 없으면(옛 호출) tier 2 는 없음.
+    LOW_P_ACTS(설계서 8-22)가 False 면 tier 2 도 없음 — 8-18 전 순서(set → 다시 읽기로 바뀜 → 영향 큰 순)."""
     gi = {g: i for i, g in enumerate(games)}
     cands, no_impact, zero = [], {}, {}
     for t in all_ids:
@@ -4005,7 +4013,7 @@ def sup_sample_cands(all_ids: list, games: list, game_of, imp: dict, sup_turn: d
             tier = 0
         elif re.fullmatch(r"r\d+", fr) and v.get("applied"):
             tier = 1
-        elif v and (p_first or {}).get(t) is not None and p_first[t] < HEDGE_PCT_MAX and not v.get("changed"):
+        elif LOW_P_ACTS and v and (p_first or {}).get(t) is not None and p_first[t] < HEDGE_PCT_MAX and not v.get("changed"):
             tier = 2
         else:
             if not ok:
@@ -4185,14 +4193,15 @@ def sup_report_lines(r: Run, asked, hidden, samples, sup: dict) -> list:
     L += ["", f"## 질문 출처(묶음별, `questions.jsonl` {len(asked)}개)", "", "| 묶음 | 질문 |", "|---|---|"]
     L += [f"| {k} | {n} |" for k, n in sorted(bc.items())] or ["| (없음) | 0 |"]
     ts = Counter(str(q.get("signal")) for q in asked if q.get("kind") == "turn_slot")
-    L += ["", f"- 차례 질문 신호: " + (" · ".join(f"{k} {n}" for k, n in ts.items()) or "없음") + " (sup:ask = supervisor 가 못 푼 차례 · unsure = supervisor 를 안 거친 판의 unsure 차례 · low_p = 그 판의 낮은 p 차례)"]
+    L += ["", f"- 차례 질문 신호: " + (" · ".join(f"{k} {n}" for k, n in ts.items()) or "없음") + " (sup:ask = supervisor 가 못 푼 차례 · unsure = supervisor 를 안 거친 판의 unsure 차례"
+          + (" · low_p = 그 판의 낮은 p 차례)" if LOW_P_ACTS else ")")]
     hc = Counter(q.get("hidden_reason") for q in hidden)
     L += [f"- 숨긴 질문 {len(hidden)}개: " + (" · ".join(f"{k} {n}" for k, n in hc.items()) or "없음")]
     L += ["", "## 낱말 규칙(v2)이었다면 — 견줌용(질문은 안 만듦)", "",
           f"- 차례 질문 {v2.get('turn_questions')} + 그 밖의 질문 {v2.get('other_questions')} = 질문 {v2.get('questions')} · 표본(판마다 {SAMPLE_PER_GAME}) {v2.get('samples')} → "
           f"**볼 양 {v2.get('total')}** (지금 규칙: 질문 {len(asked)} + 표본 {len(samples)} = {len(asked) + len(samples)})",
           f"- v2 가 올린 차례 {v2.get('raised')}(영향 0 숨김 {len(v2.get('turn_hidden_zero') or [])}): {', '.join(v2.get('turn_questions_ids') or []) or '—'}"]
-    L += ["", f"## 표본(반장당 {SAMPLE_PER_HANCHAN}, `samples.jsonl` {len(samples)}개 — set → 다시 읽기로 바뀜 → 낮은 p · 다시 읽기와 같음 → 영향 큰 순)", "",
+    L += ["", f"## 표본(반장당 {SAMPLE_PER_HANCHAN}, `samples.jsonl` {len(samples)}개 — set → 다시 읽기로 바뀜 → " + ("낮은 p · 다시 읽기와 같음 → " if LOW_P_ACTS else "") + "영향 큰 순)", "",
           "| 순위 | id | 고른 까닭 | 바뀌는 손패 순 최대 | 결과 | supervisor | 영상 구간 |", "|---|---|---|---|---|---|---|"]
     for q in samples:
         s = q.get("impact_summary") or {}

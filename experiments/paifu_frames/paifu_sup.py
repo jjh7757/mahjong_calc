@@ -27,6 +27,8 @@ S7 이 끝난 자동 패보 실행 폴더(paifu_auto.py)에 판마다 꾸러미(
   version 1 꾸러미(rereads[] 에 note 칸)도 status · score · done 이 그대로 읽는다.
   pack.json version 3(11-26, 설계서 8-18): 읽기 답의 확신 숫자 칸 p — low_p_first(처음 답이 낮은 p 인 차례, 낮은 p = paifu_auto.answer_p < P_LOW) 칸 ·
   game.md 차례 표의 p 열 · TASK.md 에 p 한 줄. version 1 · 2 꾸러미(low_p_first 없음)는 status · score · done · replay 가 전과 같이 읽는다.
+  설계서 8-22(11-26 오후): 낮은 p 는 기록만 — paifu_auto.LOW_P_ACTS 가 False 면 마감 검사 ① 이 low_p_first 를 안 보고, TASK.md 의 "의심으로 볼 것" p 줄 ·
+  done 거절 까닭의 p 구절(TASK_P_LINES)을 뺀다. low_p_first · game.md p 열 · status 의 p 는 그대로(기록). True 면 8-18 동작 그대로.
   pack.json version 4(11-26, 설계서 8-19 (다) 4): window_shift(차례 → 초 — 준비 읽기 unsure 의 alt 로 돌리면 그 차례 창이 1.0초 넘게 움직인 "창 흔들림",
   paifu_auto.s6a_window_turns) 칸 · game.md 차례 표의 "창 흔들림" 열. version 1 ~ 3 꾸러미(칸 없음)는 전과 같이 읽는다.
   넣지 않는 것: 사용자 확인값 · 11-23 사람 고름(human_picked_1123) · v2 낱말 규칙 목록(questions.jsonl · signals) · 다른 판 · 옛 손 설정 메모.
@@ -36,7 +38,7 @@ S7 이 끝난 자동 패보 실행 폴더(paifu_auto.py)에 판마다 꾸러미(
   score 가 <실행>/sup/score.md · score.json · log.jsonl · _score/ 를 쓴다. score 는 마감(decision.json)된 판만 센다 — 마감 전 판은 이름만.
 한도(설계서 3-10 의 시작값): 다시 읽기 판당 ⌈읽은 차례 수 ÷ 2⌉ · 차례당 2번, check 판당 6번, set 제한 없음(모두 표시).
 "바뀐 차례" = 초안의 칸 값(kind · k · j · end_order · gone)이 처음 답과 다름. 칸 값이 같은 다시 읽기를 take 하면 처음 답 파일을 그대로 둔다(글만 다른 답으로 덮지 않음).
-마감 검사(done): ① 처음 답이 unsure: true 이거나 낮은 p(version 3 의 low_p_first)이거나 창 흔들림(version 4 의 window_shift)인 차례는 reread · set · ask 중 하나 ② 바뀐 차례가 있으면 마지막 check 가 지금 초안 그대로 돌았고 통과 —
+마감 검사(done): ① 처음 답이 unsure: true 이거나 낮은 p(version 3 의 low_p_first — 설계서 8-22 부터 paifu_auto.LOW_P_ACTS 가 True 일 때만)이거나 창 흔들림(version 4 의 window_shift)인 차례는 reread · set · ask 중 하나 ② 바뀐 차례가 있으면 마지막 check 가 지금 초안 그대로 돌았고 통과 —
   통과 못 했으면 바뀐 차례가 모두 ask 여야 하고, 그 차례들은 처음 답으로 반영(초안은 질문 줄의 supervisor 안으로 남김) ③ 답이 안 온 다시 읽기 꾸러미 없음 ④ 한도 안
   ⑤ 답이 온 다시 읽기 가운데 칸 값이 마감 초안과 다른 것이 있는 차례는 초안이 그 차례의 set 이거나 · ask 가 있거나 · 초안 칸 값이 독립 읽기
   (처음 답 + 다시 읽기들) 가운데 둘 이상과 같아야 함(설계서 3-10 "다르면 셋째 읽기 · 직접 정하기 · 질문" 의 코드 문 — 11-25 검토에서 더함).
@@ -72,6 +74,8 @@ FROM_CHOICES = ["first"] + [f"r{i}" for i in range(1, REREAD_PER_TURN + 1)]
 SLOT_KEYS = ("kind", "k", "j", "end_order", "gone")
 MSG_ASK = "남은 의심 차례는 ask 로"
 P_LOW = pa.HEDGE_PCT_MAX   # 설계서 8-18: 낮은 p = 처음 답의 p 가 None 이 아니고 이 값 밑
+# 설계서 8-22: paifu_auto.LOW_P_ACTS 가 False 면 pack 이 TASK.md 에서 빼는 글(TASK_TMPL 에 꼭 한 번씩 — 템플릿 자체는 안 바꿈)
+TASK_P_LINES = (" · 처음 답의 p 가 @P_LOW@ 밑인 차례를 그냥 둠", "- 답의 `p`(읽기가 스스로 적은 맞을 가능성)가 @P_LOW@ 밑\n")
 PACK_VERSION = 4   # 4 = 설계서 8-19 window_shift
 
 
@@ -588,7 +592,13 @@ def write_pack(d: Path, r_dir: Path, g: str, c: dict):
     H += ["", f"시작 줄 정렬 어긋남 합: {tot}"]
     wt(d / "hands.md", "\n".join(H) + "\n")
     # TASK.md
-    task = (TASK_TMPL.replace("@GAME@", g).replace("@PACK@", posix(d)).replace("@ROOT@", ROOT.as_posix())
+    tmpl = TASK_TMPL
+    if not pa.LOW_P_ACTS:   # 설계서 8-22: 낮은 p 는 기록만 — 의심 줄 · 거절 까닭 구절을 뺌
+        for x in TASK_P_LINES:
+            if tmpl.count(x) != 1:
+                raise SystemExit(f"TASK_TMPL 에 뺄 p 글이 꼭 한 번이 아님({tmpl.count(x)}번): {x!r} — 설계서 8-22")
+            tmpl = tmpl.replace(x, "")
+    task = (tmpl.replace("@GAME@", g).replace("@PACK@", posix(d)).replace("@ROOT@", ROOT.as_posix())
             .replace("@RR_GAME@", str(lim["reread_game"])).replace("@RR_TURN@", str(lim["reread_turn"])).replace("@CHECK@", str(lim["check"]))
             .replace("@P_LOW@", str(P_LOW)))
     wt(d / "TASK.md", task)
@@ -863,7 +873,7 @@ def closure(pk: Pack) -> dict:
     rr_turns = {x["turn"] for x in pk.draft["rereads"]}
     set_turns = {x["turn"] for x in pk.draft["sets"]}
     unsure_first = list(pk.meta.get("unsure_first") or [])
-    low_first = list(pk.meta.get("low_p_first") or [])   # version 3(설계서 8-18) — 옛 꾸러미는 칸이 없어 전과 같음
+    low_first = list(pk.meta.get("low_p_first") or []) if pa.LOW_P_ACTS else []   # version 3(설계서 8-18) — 옛 꾸러미는 칸이 없어 전과 같음 · 8-22 스위치가 꺼지면 기록만
     win = dict(pk.meta.get("window_shift") or {})          # version 4(설계서 8-19) — 옛 꾸러미는 칸이 없어 전과 같음
     order = unsure_first + [x for x in low_first if x not in unsure_first]
     order += [x for x in pk.turns if x in win and x not in order]
