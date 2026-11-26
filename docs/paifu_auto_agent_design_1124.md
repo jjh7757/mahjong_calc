@@ -1166,6 +1166,48 @@ Python 은 Claude Code 하위 에이전트를 직접 부를 수 없다. 두 방�
 
 **이 조각이 못 보는 것:** supervisor 가 실제로 내는 질문의 수와 질(구현 5번) · 표본 5 가 조용한 틀림을 얼마나 놓치는지(표본은 틀림을 찾는 장치가 아니다) · 확인 페이지를 사용자가 실제로 써 본 느낌(4-② 뒤에 한 번 봐 달라고 할 것) · supervisor 가 다시 읽기 작업자를 스스로 띄우는 방식이 API 실행기에서 그대로 되는지.
 
+## 8-18. 읽기 답에 확신 숫자 칸 `p` — 판 supervisor · 질문 · 표본 규칙이 쓰게 (11-26, 사용자 "고쳐", 구현 전 명세 — 세션이 `paifu_auto.py`(S6 꾸러미 · `turn_signal` · `sup_turn_questions` · `sup_sample_cands`) · `paifu_sup.py`(pack · `closure` · `cmd_reread` · TASK 글) · `handtrack/opusread.py` · `han3.py` 의 답 꼴 줄을 읽고 씀)
+
+**왜(metrics 표 12-135 덧붙임 2 · problem_log 86번 이어서 12):** 읽기 지시문의 답 꼴은 `"unsure": 맞을 가능성 70% 밑이면 true` 이다. 2반장 재현에서 읽기 78 가운데 아홉이 세션에게 한 끝 보고 글에 "70 ~ 80%" 라고 적고 규칙대로 `unsure` false 를 냈고, 그 아홉(확인값 있는 일곱)에서 둘이 틀렸다 — 조용한 틀림 둘이 모두 여기였다. 숫자는 보고 글에만 있고 답 파일에는 둘로 자른 값만 남아, 판 supervisor · 질문 · 표본 규칙이 볼 수 없다. 읽기가 이미 내는 정보를 답 파일로 흘려보낸다.
+
+**이 걸음이 하지 않는 것:** 문턱 · 규칙을 이번 두 차례에 맞추지 않는다. 문턱은 8-3 의 `HEDGE_PCT_MAX`(90 — 11-24 에 정한 "숫자 % 가 90 밑이면 확신 낮음")를 그대로 쓴다. 효과(조용한 틀림이 줄었는가)는 이 걸음의 끝 조건이 아니다 — LLM 읽기를 다시 돌려야 잴 수 있고 따로 묻는다.
+
+### (가) 답 꼴에 `p` 칸 — 꾸러미를 만든 뒤 `paifu_auto.py` 가 TASK.md 에 덧붙임
+- 공용 모듈(`handtrack/opusread.py` · `han3.py` — 3반장 복구에도 쓰임)은 고치지 않는다. S6 에서 `opusread prep` · `callprep` 이 `read/<차례>/TASK.md` 를 만든 바로 뒤에 `paifu_auto.py` 가 그 TASK.md 의 답 꼴 줄을 고쳐 쓴다.
+- 고치는 법: 글 `"unsure": 맞을 가능성 70% 밑이면 true,` 가 **꼭 한 번** 나오는지 보고(0번 · 2번 이상이면 그 차례에서 멈추고 까닭을 찍음 — 템플릿이 바뀐 것), 그 뒤에 ` "p": kind · k · j · end_order 가 모두 맞을 가능성(%, 0 ~ 100 정수 — 어림이라도 꼭 적는다),` 를 끼운다. `unsure` 줄은 그대로 둔다(옛 답 · 옛 코드와 맞물림).
+- 이미 `"p":` 가 든 TASK.md 는 다시 고치지 않는다(같은 단계를 두 번 불러도 같음).
+- 다시 읽기 꾸러미(`paifu_sup.py reread` · S7 의 다시 읽기)는 `read/<차례>/TASK.md` 를 베끼므로 저절로 같은 답 꼴이 된다 — 그렇게 되는지 끝 조건에서 확인만 한다.
+- 답의 `p` 를 읽는 함수 하나(`paifu_auto.py` 에 두고 `paifu_sup.py` 가 가져다 씀): 0 ~ 100 의 정수 · 실수면 그 값, 없거나 다른 꼴이면 `None`. `None` 은 "모름" 이지 "낮음" 이 아니다(옛 답은 모두 `None` → 전과 같은 동작).
+- 사용자 답(`user_turn_answer`)에는 `p` 를 넣지 않는다. 읽기 답을 덮을 때 옛 `p` 가 남지 않게 지운다.
+
+### (나) 판 supervisor 꾸러미 — `paifu_sup.py`
+- 상수 `P_LOW = pa.HEDGE_PCT_MAX`. "낮은 p" = 처음 답의 `p` 가 `None` 이 아니고 `P_LOW` 밑.
+- `pack`: `pack.json` 을 version 3 으로, `low_p_first`(처음 답이 낮은 p 인 차례 목록) 칸을 더함. `game.md` 차례 표에 `p` 열(`None` 은 `—`). version 1 · 2 꾸러미(칸 없음)는 `status` · `score` · `done` · `replay` 가 전과 같이 읽는다.
+- 마감 검사 ① 을 넓힘: 처음 답이 `unsure: true` **이거나 낮은 p** 인 차례는 reread · set · ask 가운데 하나가 있어야 함. 거절 글은 어느 쪽인지(`unsure` / `p 72 < 90`) 적는다.
+- `status`: 차례 줄에 처음 답의 p, 다시 읽기 답마다 그 답의 p 를 보여 줌(칸 값 비교는 그대로 kind · k · j · end_order · gone — `p` 는 "바뀐 차례" 셈에 넣지 않는다).
+- TASK.md(지시문 템플릿): ① 답 칸 목록에 `p` ② "3. 의심으로 볼 것" 에 한 줄 — "답의 `p`(읽기가 스스로 적은 맞을 가능성)가 @P_LOW@ 밑" ③ `done` 설명의 거절 까닭에 "처음 답의 p 가 낮은 차례를 그냥 둠" ④ "4. 풀었다고 볼 때" 는 고치지 않는다(판단 규칙을 더하지 않음).
+- `replay`: 두 꾸러미의 처음 답 칸 값 비교는 그대로(`p` 는 비교 밖).
+
+### (다) 질문 · 표본 · 보고서 — `paifu_auto.py`
+- supervisor 를 안 거친 판(`--no-sup` · `--sup-games` 밖 · 마감 전)의 차례 질문: 지금은 `unsure` 차례만. 여기에 낮은 p 차례를 더함(signal `"low_p"`, 둘 다면 목록 — `sig_field` 꼴). 견줌용 v2 낱말 규칙(`turn_signal` · `hedge_hits`)은 고치지 않는다.
+- supervisor 를 거친 판의 표본 후보(`sup_sample_cands`): tier 를 하나 끼움 — 0 = set · 1 = 다시 읽기로 바뀜 · **2 = 처음 답이 낮은 p 인데 마감 초안이 처음 답 그대로(다시 읽기가 같아서 닫은 것)** · 3 = 영향 큰 순(지금의 2). 새 tier 2 는 tier 0 · 1 처럼 영향이 0 이거나 못 재도 넣는다. `SAMPLE_TIERS` 글 · 보고서 표의 "고른 까닭" 을 맞춘다. 반장당 5 는 그대로(볼 양은 안 늘어남).
+- 보고서: "판마다 간 길 · 판 supervisor" 절 아래에 한 줄 — 읽은 차례 가운데 p 가 있는 수 · 낮은 p 수 · p 없는 수(판마다 낮은 p 차례 id). `paifu_source/<판>.json` 의 차례 줄에 `p`(처음 답 값, 없으면 null) 칸을 더한다(출처 종류 · 셈은 그대로).
+- S6 답 검사: `p` 가 없어도 받는다(멈추지 않음). 꼴이 틀린 `p`(글 · 범위 밖)는 `None` 으로 치고 보고서의 "p 없는 수" 에 든다.
+
+### 끝 조건(LLM 0 — 구현 에이전트가 내고 세션이 따로 다시 견준다)
+1. **옛 답으로는 전과 바이트 같음:** 3반장을 `paifu_run.py start` → `go`(재생 · supervisor n04 · n06 — 4-③ 끝 조건 1 과 같은 길, 새 실행 폴더 `results/auto_h3_5b_on`)로 돌린 패보 14개 · `questions.jsonl` · `samples.jsonl` · `questions_hidden.jsonl` 이 `results/auto_h3_4c_s1` 과 바이트 같음. `--no-sup` 실행(`auto_h3_5b_off`)도 `auto_h3_4c_off` 와 같음. `paifu_source/` 는 `p` 칸이 더해지므로 그 칸을 뺀 내용이 같음.
+2. **공용 모듈 안 고침:** `git diff --stat -- experiments/paifu_frames/handtrack experiments/paifu_frames/han3*.py` 가 비어 있음. 고친 파일은 `paifu_auto.py` · `paifu_sup.py` 뿐(+ `_setup_dev/m_*`).
+3. **새 꾸러미의 답 꼴:** 조건 1 의 새 실행에서 `read/<차례>/TASK.md`(손 차례 하나 · 울기 차례 하나)에 `"p":` 줄이 답 꼴 블록 안에 한 번 있고, 그 차례로 `paifu_sup.py reread` 한 꾸러미의 TASK.md 에도 있음. 같은 단계를 한 번 더 불러도 TASK.md 가 안 바뀜.
+4. **만든 사례 — supervisor 길:** 3반장 한 판(n04)의 처음 답 사본에 `p` 를 넣은 실행(`auto_h3_5b_p` — 두 차례 72 · 한 차례 "높음"(틀린 꼴) · 나머지 95)에서 ① `pack.json` `low_p_first` 가 그 둘 ② `game.md` 표에 p 열 ③ 아무 것도 안 하고 `done` → 거절 · 까닭에 두 차례와 `p 72 < 90` ④ 한 차례는 reread(답은 처음 답 사본으로 채움) · 한 차례는 ask 뒤 `done` 통과 ⑤ S9 표본에 reread 로 닫은 그 차례가 tier 2("낮은 p · 다시 읽기와 같음")로 오름 ⑥ 보고서 줄 "p 있는 수 · 낮은 p 2 · p 없는 수" 가 맞음.
+5. **만든 사례 — supervisor 없는 길:** 같은 답으로 `--no-sup` 실행(`auto_h3_5b_pn`)에서 낮은 p 두 차례가 `questions.jsonl` 에 signal `low_p` 로 오름(`unsure` 도 참인 차례가 있으면 목록).
+6. **옛 꾸러미 읽기:** `results/auto_h2_5a/sup/w15_134151`(version 2 · 마감됨)에 `status` · `score` 가 오류 없이 돎(쓰기 없는 명령만 — 그 실행은 사용자 답이 반영된 결과물이라 고치지 않는다).
+
+### 지킬 것
+- 보호 폴더(쓰기 금지): `results/han3_1123/` · `results/handtrack/_work/` 의 `rawread_han3_1123` · `testtruth_1116` · `slotgrid_1117` · `assets/paifu_h3/` · `assets/paifu/`. **`results/auto_h2_5a/` 에도 쓰지 않는다**(사용자 답이 반영된 결과물 · 조건 6 의 읽기 명령만).
+- LLM · 하위 에이전트 · API 0. git 쓰기 명령 0(커밋 · add · stash · checkout 금지 — 작업 트리에 다른 세션의 변경이 섞여 있다).
+- 여러 줄 Python 은 파일로(`python -c` 여러 줄 · `python -` 금지 — 이 PC 에서 멈춤). 임시 스크립트 · 보고서는 `results/_setup_dev/m_*`.
+- 고치는 범위 밖에서 흠을 찾으면 고치지 말고 보고서에 적는다.
+
 ## 9. 사용자에게 물을 것(설계 확인)
 
 1. 하위 에이전트 띄우는 방식: (가) 세션이 지휘(권장) / (나) `claude -p` 로 완전 무인 — (나)는 Claude Code 를 새 방식으로 쓰는 것이라 허락 필요.
@@ -1462,3 +1504,9 @@ Python 은 Claude Code 하위 에이전트를 직접 부를 수 없다. 두 방�
   - **사람 손이 든 곳(= 아직 자동이 아닌 곳):** ① 세션이 꾸러미마다 하위 에이전트를 띄움(실행기는 목록만 냄 — 설계대로) ② 동시 하위 에이전트 한도 20 에 걸린 supervisor 둘의 다시 읽기를 세션이 대신 띄우고 이어 부름 ③ 사용량 한도 뒤 사용자 "재개해".
   - **측정 조건의 흠:** 하위 에이전트 맥락에 `MEMORY.md` 색인이 들어가 있었고 w17 준비 읽기 힌트가 거기 있었다 — w17 이 사용자 확인값과 맞은 것(14:04:21.4)은 8-16(늦은 후보 규칙)의 근거로 못 쓴다. 색인 줄은 고쳤으나 같은 세션에서는 옛 색인이 그대로 들어가 다시 잰 한 번도 깨끗하지 않다.
   - **다음(사용자가 정할 것):** w17 준비 읽기를 새 세션에서 다시 재기(꾸러미 사본 `results/auto_h2_5a_w17chk/` — `answer.json` · `try/` · `work/` 를 비우고) · 동시 한도 대책(실행기가 supervisor 를 나눠 내기 / 다시 읽기를 실행기 꾸러미로) · 준비 읽기 알림을 질문 수에서 빼거나 묶기 · 확인 페이지에서 26개를 실제로 답해 `answer` 까지 돌려 보기.
+  - **덧붙임(09:50 ~ 09:59) — 사용자가 확인 페이지에서 답함 → `answer`:** 차례 7 · 울기 묶음 1(7분 39초) → 반영 7(같음 6 · 바뀜 1 = w18_d03, 읽기 j 1 · 다시 읽기 j 2 · 사용자 j 3) · 추가 질문 0 → 확인 끝. w18 패보의 1 ~ 3순 5사건이 바뀜(나머지 여덟 판 바이트 같음). `answer` 가 진짜 사용자 답으로 돈 첫 기록. 옛 예시 r18 과 달라졌다 — 예시를 바꿀지는 사용자 결정. → 사용자 "바꿔" 로 예시 r18 의 다섯 사건을 고침(테스트 218 통과).
+- **8-18 구현 끝 — 읽기 답의 확신 숫자 칸 `p`(11-26 낮, 사용자 "고쳐", 새 Opus 높음 에이전트 57분 · 끝 맥락 33.6만 토큰, LLM 0 · 11-26 낮 커밋, metrics 표 12-136 · 보고 `results/_setup_dev/m_report.md`):**
+  - **고친 것:** `paifu_auto.py`(+140 −33 — `task_add_p` · `answer_p` · `p_low` · `first_answer_file` · 질문 신호 `low_p` · 표본 tier 2 · 보고서 한 줄 · `paifu_source` 의 `p` 칸) · `paifu_sup.py`(+40 −13 — `pack.json` version 3 `low_p_first` · `game.md` p 열 · 마감 검사 ① · `status` · 지시문 세 줄). 공용 모듈 변경 0.
+  - **세션이 따로 본 것:** 옛 답으로 3반장 두 실행(`auto_h3_5b_on` · `auto_h3_5b_off`)이 기준과 패보 14/14 · 질문 파일 셋 바이트 같음 · 새 지시문 97/97 에 `"p":` 한 번(옛 것과 그 한 줄만 다름) · 만든 사례의 `low_p_first` · 거절 글 · 표본 tier · 질문 신호를 꾸러미 파일에서 직접 읽음 · 원본 `auto_h2_5a` 와 보호 폴더에 새로 바뀐 파일 없음 · 두 파일의 diff 를 읽음.
+  - **명세와 다르게 정한 것(에이전트 — 받아들임):** 울기 차례 지시문의 p 글은 "kind · gone · k · end_order"(울기 답에는 j 가 없음) · `--no-sup` 길은 지금도 낱말 규칙(v2)이 질문을 만들어서 그 신호 목록 뒤에 `low_p` 를 붙임(명세의 "지금은 unsure 차례만" 은 세션이 틀리게 적은 것) · "처음 답" 은 supervisor 꾸러미의 사본 → `answer_r0.json` → `answer_before_apply.json` → 지금 답 순서로 찾음.
+  - **안 한 것:** 효과 측정(새 답 꼴로 다시 읽기 — 토큰이 들어 사용자에게 물음).

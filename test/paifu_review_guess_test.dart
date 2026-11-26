@@ -18,7 +18,8 @@ const _before = {
   'r12_131655': (100, 'graded:best graded:best graded:best graded:best graded:best graded:best graded:best forced:- forced:- forced:- forced:- forced:- forced:- forced:-'),
   'r13_132644': (91, 'graded:best graded:inaccuracy graded:inaccuracy graded:best graded:good graded:inaccuracy graded:inaccuracy graded:best graded:best forced:- forced:- forced:- forced:- forced:- forced:- forced:- forced:- forced:-'),
   'r14_133610': (100, 'graded:best graded:best'),
-  'r15_134151': (79, 'graded:best graded:good graded:good graded:good graded:mistake graded:good graded:good graded:best graded:inaccuracy graded:best graded:blunder graded:blunder graded:best graded:best graded:best graded:mistake forced:-'),
+  // 11-26: 3순에 뽑은 패 · 1 ~ 3순 손패를 사용자 영상 확인으로 고침(예시 json) → 패효율 79 → 80 · 2순 good → best.
+  'r15_134151': (80, 'graded:best graded:best graded:good graded:good graded:mistake graded:good graded:good graded:best graded:inaccuracy graded:best graded:blunder graded:blunder graded:best graded:best graded:best graded:mistake forced:-'),
   'r16_135321': (87, 'graded:best graded:blunder graded:best graded:best graded:best graded:best graded:inaccuracy graded:mistake graded:best graded:best graded:best graded:good graded:inaccuracy graded:best graded:inaccuracy graded:best forced:- forced:-'),
   'r17_140450': (99, 'graded:best graded:inaccuracy graded:best graded:best graded:best graded:best graded:best graded:best graded:best graded:best graded:best forced:-'),
   'r18_141259': (100, 'graded:best graded:best graded:best graded:best graded:best graded:best graded:best forced:- forced:- forced:-'),

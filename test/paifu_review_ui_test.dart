@@ -414,12 +414,13 @@ void main() {
     });
   });
 
-  testWidgets('단계 말풍선: r15 배패(3샹텐) → 다음 → 첫 내 버림, r11 남의 리치 단계', (tester) async {
+  // 11-26: r15 1 ~ 3순 손패를 사용자 영상 확인으로 고쳐(예시 json) 배패가 3샹텐 → 4샹텐.
+  testWidgets('단계 말풍선: r15 배패(4샹텐) → 다음 → 첫 내 버림, r11 남의 리치 단계', (tester) async {
     await pump(tester, _load('r15_134151'));
     await startReview(tester);
     expect(step(tester), 0);
     expect(title(tester), '배패');
-    expect(sentence(tester), '배패는 3샹텐이었습니다.');
+    expect(sentence(tester), '배패는 4샹텐이었습니다.');
     await tap(tester, _go);
     expect(step(tester), 5);
     expect(title(tester), '북 버림 · 최선입니다');
