@@ -2061,10 +2061,11 @@ def s5_app(r: Run):
     date = cfg.recording["date"]
     w5 = jl(r.d / "w5" / "align.json")
     winds = ["동", "남", "서", "북"]
-    bs = sorted({r.app_round(g)["bottom_seat"] for g in r.games() if r.app_round(g)})
+    unit = unit_on(r)   # 8-23 판 실행(H2): 아래 자리는 반장 전체 판의 앱 값(S0 — 공통)에서, 판 사이 이어지는 값(공탁 · 국 · 본장 검사)은 반장 조립이 S5 를 다시 돌려 셈
+    bs = sorted({r.app_round(g)["bottom_seat"] for g in all_games(r) if r.app_round(g)})
     bottom = bs[0]
     qs, fixes, comp, rows, not_done = [], {}, {}, [], []
-    if len(bs) > 1:
+    if len(bs) > 1 and not unit:
         qs.append({"id": "s5_app_bottom", "kind": "boundary", "stage": "S5", "why": f"판마다 아래 자리가 다름 {bs} — rounds_meta 는 {bottom} 하나", "covered_by_setting": False})
     prev = None
     rnd_rule, honba_rule, pot = None, 0, 0
@@ -2177,8 +2178,10 @@ def s5_app(r: Run):
         # 앱 기록만(채우기 전)의 엮임도 견줌 — 구멍 채우기가 차례 규칙을 맞췄는지
         F0 = [dict(A_) for A_ in A if A_["type"] in ("discard", "call")]
         chk["turn_order_app_only"] = {**turn_order_check(F0, a["dealer"]), "note": "참고: 앱 버림 기록만(헤드 녹화로 채우기 전) — 질문 안 함"}
-        # 국 · 본장 · 공탁(meta_rules 와 같은 셈) — 앱 값과 견줌
-        if prev is not None:
+        # 국 · 본장 · 공탁(meta_rules 와 같은 셈) — 앱 값과 견줌. 판 실행(unit)이면 앞 판 결과가 이 실행에 없으므로 셈 · 질문을 건너뛰고 공탁은 null(반장 조립의 S5 가 채움)
+        if unit:
+            pass
+        elif prev is not None:
             pdealer, pend_, pwin, ptenpai, priichi = prev
             if (pend_ == "draw" and pdealer in ptenpai) or (pend_ != "draw" and pwin == pdealer):
                 honba_rule += 1
@@ -2188,12 +2191,12 @@ def s5_app(r: Run):
             pot = pot + priichi if pend_ == "draw" else 0
         else:
             rnd_rule, honba_rule = a["kyoku_index"], a["honba"]
-        name_rule = f"{winds[rnd_rule // 4]}{rnd_rule % 4 + 1}국"
-        if (name_rule, honba_rule) != (a["round"], a["honba"]) or rnd_rule % 4 != a["dealer"]:
+        name_rule = f"{winds[rnd_rule // 4]}{rnd_rule % 4 + 1}국" if not unit else None
+        if not unit and ((name_rule, honba_rule) != (a["round"], a["honba"]) or rnd_rule % 4 != a["dealer"]):
             qs.append({"id": f"{pre}_app5_round", "kind": "boundary", "stage": "S5", "game": g, "current": {"round": a["round"], "honba": a["honba"], "dealer": a["dealer"]},
                        "candidates": [{"round": name_rule, "honba": honba_rule, "dealer": rnd_rule % 4}],
                        "why": "앱 국 · 본장 · 선이 앞 판 결과로 셈한 값과 다름(앱 값을 씀)", "covered_by_setting": False})
-        rows.append({"id": g, "round": a["round"], "honba": a["honba"], "kyotaku": pot, "dealer": a["dealer"], "hero": hero, "end": end,
+        rows.append({"id": g, "round": a["round"], "honba": a["honba"], "kyotaku": pot if not unit else None, "dealer": a["dealer"], "hero": hero, "end": end,
                      "hero_rule": hero_rule, "hero_skipped": skipped, "source": f"앱 {a.get('result_source')} {a['folders']['end']}"})
         prev = (a["dealer"], "draw" if a["end"] == "draw" else end, res.get("winner"), list(res.get("tenpai") or []), len(riichi_seats))
         # 고친 기록 쓰기(han3 recfix 출력 꼴)
@@ -2278,7 +2281,7 @@ def s5_app(r: Run):
                                              "retile · drop 밖의 op 는 han3 recfix 가 모름). op: use_run · retile · drop · add · keep_pre · call_keep_pre · recall · "
                                              "call_drop · call_add · riichi · unriichi · order", **fixes})
     wj(r.d / "s5" / "auto_recorder_fix.json", {"_note": "= recorder_fix.json(앱 기록 판)", **fixes})
-    run([PY, "-X", "utf8", HT / "han3.py", "link", "--hanchan", r.cfg_f], log=r.log("s5_link.log"))
+    run([PY, "-X", "utf8", HT / "han3.py", "link", *(r.games() if unit else []), "--hanchan", r.cfg_f], log=r.log("s5_link.log"))
     # W5 의 record 질문(둘이 다른 칸 · 울기 · 리치)은 S5 질문이 대신함 — boundary(판 시작 · 시계)만 남김
     w5q = r.state.get("questions_w5") or []
     w5f = r.d / "w5_questions.jsonl"   # W5 가 쓴 원본(S5 를 다시 돌려도 바뀐 목록을 같게 적으려고)
@@ -2361,6 +2364,30 @@ def s6a_frame(r: Run, cfg):
 
 
 HALF_FROM = "화면 절반 손패 줄 후보(handtrack_prep.py bandcand — 설계서 8-13 (나) · (다))"
+
+
+def unit_on(r: Run) -> bool:
+    """8-23 판 실행(paifu_graph go --games): state.unit 이 있으면 이 실행은 반장의 일부 판만 돈다(game_ids = 그 판들)."""
+    return bool((r.state.get("unit") or {}).get("all_games"))
+
+
+def all_games(r: Run) -> list:
+    """반장 전체 판 순서 — 판 실행이면 state.unit.all_games, 아니면 r.games()."""
+    return list((r.state.get("unit") or {}).get("all_games") or r.games())
+
+
+def unit_prev_last(r: Run, g: str):
+    """판 실행에서 g 의 앞 판 마지막 버림 시각(ms): 반장 판 순서로 g 앞의 판을 거꾸로 보며 고친 기록(_prep/rec/<판>/paifu_rec.json)에 버림 시각이 있는 첫 판의 최댓값
+    (반장 한 덩어리 S6a 고리의 prev_last 와 같은 값 — 앞 판 S5 결과에 기댐: 설계서 8-23 판 실행 · r_unit_audit M1). 없으면 None."""
+    ag = all_games(r)
+    for pg in reversed(ag[:ag.index(g)] if g in ag else []):
+        f = r.prep / "rec" / pg / "paifu_rec.json"
+        if not f.exists():
+            continue
+        ats = [e["at"] for e in jl(f)["events"] if e["type"] == "discard" and e.get("at") is not None]
+        if ats:
+            return max(ats)
+    return None
 
 
 def S6A_DUMP_REGIONS(r) -> Path:
@@ -2507,11 +2534,13 @@ def s6a(r: Run):
     if not frame:   # (11-25, 설계서 8-14 (가)) 강 · 울기 영역 — 반장 모든 판의 버림 기록기 덤프에서 자리마다 상자 하나(리치봉 값이 같은 판끼리)
         f = S6A_DUMP_REGIONS(r)
         if not f.exists():
-            wj(f, dump_regions.make(r.d, r.games()))
+            wj(f, dump_regions.make(r.d, all_games(r)))   # 8-23 판 실행: 상자는 반장 전체 판에서(판 실행이 아니면 r.games() 와 같음)
         dreg = jl(f)
         st["dump_regions"] = {"file": rel(f), "lines": dump_regions.source_lines(dreg)}
     specs, prev_last = {}, None
     for g in r.games():
+        if unit_on(r):   # 8-23 판 실행: 앞 판 마지막 버림은 반장 판 순서의 앞 판 고친 기록에서(판 실행이 아니면 이 줄을 안 거침 — 전과 같음)
+            prev_last = unit_prev_last(r, g)
         ev = jl(r.prep / "rec" / g / "paifu_rec.json")["events"]
         ats = [e["at"] for e in ev if e["type"] == "discard" and e.get("at") is not None]
         if g in auto:
@@ -3111,9 +3140,10 @@ def s6(r: Run):
     if not st.get("prepared"):
         t0 = time.time()
         if rec_path(r, cfg):   # (11-25, 설계서 8-13 (가)) 앱 기록 반장: 차례 목록 · turn_fix 를 고친 기록에서 바로 → turncut → 검사(3-9 표)
-            han3(r, "rturns", log=r.log("s6_rturns.log"))
+            ug = r.games() if unit_on(r) else []   # 8-23 판 실행: 반장 한 파일을 쓰는 han3 명령은 이 실행의 판만(판 아닌 실행은 전과 같이 인자 없음 = 설정의 모든 판)
+            han3(r, "rturns", *ug, log=r.log("s6_rturns.log"))
             han3(r, "turncut", "build", *r.games(), log=r.log("s6_turncut.log"))
-            han3(r, "rcheck", log=r.log("s6_rcheck.log"))
+            han3(r, "rcheck", *ug, log=r.log("s6_rcheck.log"))
             st["turn_source"] = "기록(han3 rturns)"
             st["record_check"] = rec_check_summary(r)
         else:
@@ -4474,6 +4504,9 @@ def cmd_next(a):
     for s in stl:
         if r.stage(s)["status"] == "done":
             continue
+        if s in ("S8", "S9") and unit_on(r):   # 8-23 판 실행: 판 몫 단계(S7s)까지만 — S8 · S9 는 반장 조립 뒤 반장 실행에서
+            print(f"판 실행(state.unit) — 판 몫 단계 끝, {s} 는 반장 조립 뒤")
+            break
         t0 = time.time()
         try:
             pend = STEP[s](r)

@@ -54,8 +54,11 @@ MAX_IMAGES = ca.MAX_IMAGES       # 560
 MAX_BYTES = ca.MAX_BYTES         # 120MB
 ENV = ca.ENV
 RUN_USD_DEFAULT = 15.0
-PKG_USD = {"hand": 3.0, "call": 3.0, "reread": 3.0, "ht_prep": 6.0, "app_draw_reveal": 3.0, "result_read": 3.0, "boundary_read": 3.0, "manager": 3.0}
-KINDS = tuple(PKG_USD)
+PKG_USD = {"hand": 3.0, "call": 3.0, "reread": 3.0, "ht_prep": 6.0, "app_draw_reveal": 3.0, "result_read": 3.0, "boundary_read": 3.0, "manager": 3.0,
+           "game": 3.0}   # game = 판 LLM(설계서 8-23 — 그 판 LLM 이 부른 다시 읽기 돈은 순 꾸러미 한도로 따로)
+KINDS = tuple(k for k in PKG_USD if k != "game")
+GAME_MAX_CALLS = 60       # 판 LLM 호출 수 안전띠
+GAME_TOOL_MAX = 40        # 판 LLM 도구 호출 한도(넘으면 그래프가 closed_by_limit 로 닫음)
 MAX_CALLS = 150                  # 꾸러미 하나의 호출 수 안전띠(돈 한도가 먼저 걸리는 것이 보통)
 FINAL_EXTRA = 2                  # 마지막 단계 글 뒤에 답을 기다려 줄 호출 수(claudeagent 와 같음)
 RETRY_WAIT = 30.0                # 429 · 529 · 연결 오류: SDK 재시도 2번 뒤 이만큼 쉬고 한 번 더
@@ -199,6 +202,8 @@ def kind_of(p: dict) -> str:
     st, k = p.get("stage"), p.get("kind")
     if st == "manager" or k == "manager":
         return "manager"
+    if st == "game" or k == "game":
+        return "game"
     if st == "S6a":
         return "ht_prep"
     if st == "S4":
@@ -972,13 +977,18 @@ def fake_script(p: dict, kind: str, answer_text: str, mode: str = "normal") -> l
 
 def parse_fake(spec: str) -> dict:
     """--api-fake 글: "replay" 또는 "replay:out=50000"(호출마다 출력 토큰)."""
-    o = {"mode": "replay", "out": 300}
+    o = {"mode": "replay", "out": 300, "game": None, "rr_alt": False, "rr_first": False}
     head, _, rest = (spec or "replay").partition(":")
     o["mode"] = head or "replay"
     for kv in [x for x in rest.split(",") if x]:
         k, _, v = kv.partition("=")
         if k == "out":
             o["out"] = int(v)
+        elif k == "game":          # 8-23: game=test 면 판 LLM 가짜 걸음을 끝 조건 4 시험 걸음으로
+            o["game"] = v
+        elif k == "rr":            # 8-23: rr=alt 면 가짜 다시 읽기 답을 처음 답의 다른 후보로(마감 거절 시험) · rr=first 면 처음 답 그대로(재생 계획 답을 안 씀)
+            o["rr_alt"] = v == "alt"
+            o["rr_first"] = v == "first"
     return o
 
 
@@ -1007,6 +1017,199 @@ def fill_graph_pkg(run, p: dict, opts: dict, answer_text_fn) -> dict:
     res = run_package(p, client, meter, kind)
     if res["status"] != "ok":
         raise ApiFail(f"{p['id']}({kind}) {res['status']}: {res['why']} — 기록 {Path(p['dir']).as_posix()}/api_log.jsonl")
+    return res
+
+
+# ------------------------------------------------------------------ 판 LLM(설계서 8-23 — 판마다 하나, 지휘자. 도구만 부르고 아무것도 띄우지 않음)
+GAME_SYSTEM = """너는 대국 뒤 패보 흐름에서 판 하나를 맡은 지휘자다. 첫 사용자 메시지가 지시문과 그 판의 결과 파일 초안이다.
+일은 이 요청에 실린 도구로만 한다. 영상 · 프레임 · 다른 판 · 다른 파일을 여는 도구는 없다. 순 답을 직접 고쳐 쓰는 길도 없다 —
+다시 읽기를 맡기고(reread) · 고르고(take) · 검사하고(check) · 묻고(ask) · 마감한다(finish). finish 가 통과하면 일이 끝난다.
+"""
+
+
+def game_tool_defs() -> list:
+    s, it = {"type": "string"}, {"type": "integer"}
+    nul = {"type": ["string", "null"]}
+    return [
+        {"name": "read_game", "description": "이 판의 결과 파일(지금 것) · game.md(판 요약 · 차례 표) · hands.md(복원 매 순 손패) · 마지막 검사 보고.",
+         "input_schema": {"type": "object", "properties": {}, "additionalProperties": False}},
+        {"name": "read_turn", "description": "그 차례의 결과 파일 전부(첫 읽기 · 다시 읽기들). 이 판의 차례만.",
+         "input_schema": {"type": "object", "properties": {"turn": s}, "required": ["turn"], "additionalProperties": False}},
+        {"name": "reread", "description": "그 차례를 독립으로 다시 읽힌다(코드가 순 호출을 냄). frames = 더 볼 프레임 번호 범위(\"053-058\" · \"053-058,060-068\", 3개까지) 또는 null. 끝나면 그 다시 읽기의 결과 파일을 돌려줌.",
+         "input_schema": {"type": "object", "properties": {"turn": s, "frames": nul, "why": s}, "required": ["turn", "why"], "additionalProperties": False}},
+        {"name": "take", "description": "그 차례의 초안 답을 first · r1 · r2 가운데 하나로 고른다.",
+         "input_schema": {"type": "object", "properties": {"turn": s, "from": {"type": "string", "enum": ["first", "r1", "r2"]}, "why": s},
+                          "required": ["turn", "from", "why"], "additionalProperties": False}},
+        {"name": "check", "description": "지금 초안으로 이 판을 거꾸로 복원 · 검사한다.", "input_schema": {"type": "object", "properties": {}, "additionalProperties": False}},
+        {"name": "ask", "description": "사용자 질문 한 줄(후보 · 까닭).",
+         "input_schema": {"type": "object", "properties": {"turn": s, "candidates": s, "why": s}, "required": ["turn", "candidates", "why"], "additionalProperties": False}},
+        {"name": "finish", "description": "마감(판 보고 한 단락). 마감 검사를 통과 못 하면 까닭이 돌아온다.",
+         "input_schema": {"type": "object", "properties": {"report": s}, "required": ["report"], "additionalProperties": False}},
+    ]
+
+
+def blocks_to_input(content) -> list:
+    """응답 content → 다음 요청에 그대로 붙일 수 있는 dict 목록(thinking 서명 포함) · 캐시 기록용."""
+    out = []
+    for b in content:
+        t = b["type"] if isinstance(b, dict) else b.type
+        g = (lambda k: b.get(k)) if isinstance(b, dict) else (lambda k: getattr(b, k, None))
+        if t == "text":
+            out.append({"type": "text", "text": g("text")})
+        elif t == "thinking":
+            out.append({"type": "thinking", "thinking": g("thinking"), "signature": g("signature")})
+        elif t == "redacted_thinking":
+            out.append({"type": "redacted_thinking", "data": g("data")})
+        elif t == "tool_use":
+            out.append({"type": "tool_use", "id": g("id"), "name": g("name"), "input": dict(g("input") or {})})
+    return out
+
+
+def _sha(s: str) -> str:
+    import hashlib
+    return hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+
+_RUNPATH_RE = re.compile(r"(?:[A-Za-z]:(?:\\\\|\\|/)[^\s\"'`<>|]*?(?:\\\\|\\|/))?experiments(?:\\\\|\\|/)paifu_frames(?:\\\\|\\|/)results(?:\\\\|\\|/)auto_[A-Za-z0-9_\-]+")
+_TS_RE = re.compile(r"\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}")
+
+
+def norm_any(s: str) -> str:
+    """판 LLM 캐시 사슬용 정규화(11-26 밤 — sv3m 에서 찾은 틈): 어느 실행 폴더 경로든 <RUN>(앞 실행의 응답에 든 경로), 시각(check 보고 머리)은 <T>."""
+    return _TS_RE.sub("<T>", _RUNPATH_RE.sub("<RUN>", s))
+
+
+def game_prefix0(first_text: str, norm) -> str:
+    return _sha("game/1\n" + norm(GAME_SYSTEM) + "\n" + json.dumps(game_tool_defs(), ensure_ascii=False, sort_keys=True) + "\n" + norm(first_text))
+
+
+def game_prefix_next(prefix: str, resp: list, follow: str, norm) -> str:
+    """앞 prefix + 이번 응답(도구 id 포함) + 이어 보낸 글(도구 결과 · 재촉 — 정규화)."""
+    return _sha(prefix + "\n" + norm(json.dumps(resp, ensure_ascii=False, sort_keys=True)) + "\n" + norm(follow))
+
+
+def run_game_agent(*, pid: str, first_text: str, exec_tools, client_fn, meter: Meter, adir: Path, reuse_lookup, norm,
+                   tool_max: int = GAME_TOOL_MAX, limit: float = PKG_USD["game"]) -> dict:
+    """판 LLM 고리. exec_tools(uses) → [(글, is_error)] · 마감 여부(dict "finished"). 캐시: 이 실행의 calls.jsonl(재개) · reuse_lookup(prefix)(--reuse-from).
+    → {"status": ok | budget | tool_limit | no_finish | refusal | max_tokens | error | calls, "usd", "calls", "reused_calls", "tools", "s"}
+    재개(11-26 밤 고침 — w15 진짜 실행에서 실행 한도로 끊긴 뒤 이어 가기가 새 대화로 처음부터 감): 이 실행에서 이미 실행한 도구의 결과는 conv.jsonl
+    (응답 prefix → 그 뒤에 보낸 도구 결과 그대로)에 남기고, 재개 때는 도구를 다시 돌리지 않고 그 결과를 붙여 앞 대화를 그대로 잇는다(도구 결과가 그 뒤 바뀐
+    판 상태 — 다시 읽기 시도 목록 등 — 를 담아 prefix 사슬이 어긋나던 틈). 결과가 없는 마지막 응답(도구 도중 끊김)만 도구를 실행해 그 결과를 돌려준다.
+    첫 메시지는 부르는 쪽(GameRun.run_api)이 첫 시도 것으로 고정해 넘김."""
+    adir.mkdir(parents=True, exist_ok=True)
+    _norm0 = norm
+    norm = lambda s: norm_any(_norm0(s))   # noqa: E731
+    log, callsf, convf = adir / "api_log.jsonl", adir / "calls.jsonl", adir / "conv.jsonl"
+    conv = {x["prefix_sha"]: x for x in jlines(convf) if x.get("prefix_sha") and x.get("kind") == "tools"}
+    replayed = 0
+    kw = {"model": MODEL, "max_tokens": MAX_TOKENS, "system": [{"type": "text", "text": GAME_SYSTEM, "cache_control": {"type": "ephemeral"}}],
+          "tools": game_tool_defs(), "output_config": {"effort": EFFORT}, "cache_control": {"type": "ephemeral"}}
+    msgs = [{"role": "user", "content": [{"type": "text", "text": first_text}]}]
+    prefix = game_prefix0(first_text, norm)
+    own = {x["prefix_sha"]: x for x in jlines(callsf) if x.get("response") is not None}
+    append(log, {"at": now(), "start": pid, "kind": "game", "model": MODEL, "effort": EFFORT, "pkg_usd_limit": limit, "first_bytes": len(first_text.encode("utf-8")),
+                 "prefix0": prefix})
+    usd = orig_usd = 0.0
+    calls = reused = n_tools = step = 0
+    nudged, client, t0 = False, None, time.time()
+    status, why, state = None, None, {"finished": False}
+    while True:
+        step += 1
+        hit = own.get(prefix)
+        src_run = None
+        if hit is None and reuse_lookup is not None:
+            h2 = reuse_lookup(prefix)
+            if h2:
+                src_run, hit = h2
+        if hit is not None:
+            resp, stop = hit["response"], hit["stop"]
+            reused += 1
+            orig_usd += float(hit.get("usd") or 0) if not hit.get("reused") else float(hit.get("orig_usd") or 0)
+            row = {"at": now(), "step": step, "prefix_sha": prefix, "response": resp, "stop": stop, "in": 0, "out": 0, "cache_read": 0, "cache_write": 0,
+                   "usd": 0.0, "reused": True, "orig_usd": float(hit.get("usd") or 0) if not hit.get("reused") else float(hit.get("orig_usd") or 0),
+                   "from_run": (str(src_run) if src_run else "이 실행(재개)")}
+            if prefix not in own:
+                append(callsf, row)
+                own[prefix] = row
+            append(log, {"at": now(), "call": step, "reused": True, "tools": [b["name"] for b in resp if b["type"] == "tool_use"], "stop": stop})
+        else:
+            if usd >= limit:
+                status, why = "budget", f"판 LLM 한도 {limit:g}달러에 닿음({usd:.4f})"
+                break
+            if calls >= GAME_MAX_CALLS:
+                status, why = "calls", f"판 LLM 호출 {GAME_MAX_CALLS}번"
+                break
+            try:
+                meter.check(pid)
+            except ApiStop as e:
+                append(log, {"at": now(), "end": "run_limit", "why": str(e), "usd": round(usd, 6), "calls": calls})
+                raise
+            client = client or client_fn(step)
+            t1 = time.time()
+            try:
+                r, retried = call(client, kw, msgs)
+            except Exception as e:  # noqa: BLE001
+                status, why = "error", f"{type(e).__name__}: {e}"[:600]
+                break
+            calls += 1
+            c_usd, tok = usd_of(r.usage)
+            usd += c_usd
+            resp, stop = blocks_to_input(r.content), r.stop_reason
+            row = {"at": now(), "step": step, "prefix_sha": prefix, "response": resp, "stop": stop, **tok, "usd": round(c_usd, 6), "reused": False,
+                   "s": round(time.time() - t1, 2)}
+            append(callsf, row)
+            own[prefix] = row
+            append(log, {"at": now(), "call": step, **tok, "usd": round(c_usd, 6), "usd_pkg": round(usd, 6), "stop": stop,
+                         "tools": [b["name"] for b in resp if b["type"] == "tool_use"], "s": row["s"]})
+            meter.add({"at": row["at"], "pkg": pid, "kind": "game", "call": calls, **tok, "usd": round(c_usd, 6)})
+        msgs.append({"role": "assistant", "content": resp})
+        uses = [b for b in resp if b["type"] == "tool_use"]
+        if stop == "refusal":
+            status, why = "refusal", "판 LLM 거절(refusal)"
+            break
+        if stop == "max_tokens":
+            status, why = "max_tokens", f"max_tokens({MAX_TOKENS})"
+            break
+        if not uses:
+            if not nudged:
+                nudged = True
+                txt = "finish 를 불러 마감하라(마감 검사를 못 넘기면 까닭이 돌아온다). 남은 의심 차례가 있으면 reread · ask 를 먼저."
+                msgs.append({"role": "user", "content": [{"type": "text", "text": txt}]})
+                prefix = game_prefix_next(prefix, resp, txt, norm)
+                append(log, {"at": now(), "nudge": "finish"})
+                continue
+            status, why = "no_finish", "finish 없이 끝냄(한 번 더 일렀는데도)"
+            break
+        stored = conv.get(prefix)
+        if stored is not None and stored.get("tool_ids") == [b["id"] for b in uses]:   # 재개: 앞 시도에서 이미 실행한 도구 — 그 결과를 그대로(다시 안 돌림)
+            results = stored["follow"]
+            replayed += 1
+            if stored.get("finished"):
+                state["finished"] = True
+            append(log, {"at": now(), "call": step, "replayed_tools": [b["name"] for b in uses], "from": "conv.jsonl(재개 — 앞 시도의 도구 결과)"})
+        else:
+            outs = exec_tools(uses, state)
+            results = []
+            for b, (txt, err) in zip(uses, outs):
+                results.append({"type": "tool_result", "tool_use_id": b["id"], "content": txt, **({"is_error": True} if err else {})})
+                append(log, {"at": now(), "call": step, "tool": b["name"], "args": short(b.get("input")), "ok": not err, "result": short(txt, 300)})
+            row = {"at": now(), "step": step, "prefix_sha": prefix, "kind": "tools", "tool_ids": [b["id"] for b in uses], "follow": results,
+                   "finished": bool(state.get("finished"))}
+            append(convf, row)
+            conv[prefix] = row
+        msgs.append({"role": "user", "content": results})
+        prefix = game_prefix_next(prefix, resp, json.dumps(results, ensure_ascii=False, sort_keys=True), norm)
+        n_tools += len(uses)
+        if state.get("finished"):
+            status = "ok"
+            break
+        if n_tools >= tool_max:
+            status, why = "tool_limit", f"도구 호출 한도 {tool_max}번"
+            break
+    res = {"id": pid, "kind": "game", "status": status, "why": why, "usd": round(usd, 6), "orig_usd": round(orig_usd, 6), "calls": calls,
+           "reused_calls": reused, "replayed_tool_steps": replayed, "tools": n_tools, "s": round(time.time() - t0, 1)}
+    append(log, {"at": now(), "end": status, "why": why, "usd": round(usd, 6), "calls": calls, "reused_calls": reused, "replayed_tool_steps": replayed,
+                 "s": res["s"]})
     return res
 
 
