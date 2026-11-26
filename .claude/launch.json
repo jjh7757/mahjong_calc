@@ -2708,6 +2708,21 @@
       "autoPort": false
     },
     {
+      "name": "paifu-confirm-h2",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-X",
+        "utf8",
+        "experiments/paifu_frames/paifu_run.py",
+        "page",
+        "--run",
+        "experiments/paifu_frames/results/auto_h2_5a",
+        "8317"
+      ],
+      "port": 8317,
+      "autoPort": false
+    },
+    {
       "name": "web-riskcal",
       "runtimeExecutable": "python",
       "runtimeArgs": [
