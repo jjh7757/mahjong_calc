@@ -30,6 +30,10 @@
   apply · try 는 그 값이 답의 t_ready 보다 뒤면 그것을 판별 설정 t_ready 로 쓴다(같거나 앞이면 무시 · 그 뒤 손패 주인 버림이 0 이면 안 쓰고 질문 ·
   t_reveal 과 같거나 뒤면 답 꼴 오류). 적용 결과 ready_late 에 답의 값 · 늦은 후보 · 쓴 값을 남김. 칸이 없거나 time 이 null 이면 옛 그대로.
   지시문 글(늦은 후보 · 사실 고침 세 곳)은 기본 길 모드(task_half)에만 — 옛 길의 TASK.md 는 그대로.
+(11-26, 설계서 8-19) 답의 unsure 줄 = {"what": 칸, "alt": 다른 후보 값 또는 null, "why"}(지시문 답 꼴 · 설명 줄 — 두 모드 모두).
+  대안 돌리기(alt):  python -X utf8 experiments/paifu_frames/handtrack_prep.py alt --pack <꾸러미> --answer <답> --out <대안 자리> [--result <json>]
+      → <대안 자리>/0(답 그대로 — 기준) · <n>(n 번째 unsure 의 what 칸만 alt 로)에서 try 와 같은 걸음(_try_steps)을 돌려 차례 목록 · 창을 견줌(cmd_alt 주석).
+      try 번호 · MAX_TRIES 와 무관하고 꾸러미의 try/ 는 안 건드림. paifu_auto S6a-3 이 판마다 부르고 결과(s6a/_alt/<판>.json)로 질문을 가른다.
 
 spec(paifu_auto.ht_spec 가 만듦 — 3반장 시험 스크립트도 같은 함수):
   gid · round_label · side · hero · bottom · dealer · end(win/draw) · win_type · loser_side · n_calls · n_closed_end · hero_riichi ·
@@ -44,6 +48,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import hashlib
 import json
 import math
 import os
@@ -465,14 +470,17 @@ TASK = """# 손 추적 준비 읽기 — 판 `{gid}`({round_label})
   "t_reveal": {t_reveal_example},
   "reveal_frame": "HH:MM:SS.s",
   "reveal_why": "공개 시작 · 읽을 프레임을 고른 근거",
-  "unsure": [{{"what": "칸 이름", "why": "왜 확신이 낮은지 · 다른 후보"}}],
+  "unsure": [{{"what": "칸 이름", "alt": 다른 후보 값 또는 null, "why": "왜 확신이 낮은지"}}],
   "tries": ["1: 보고서 · 프레임에서 본 것 → 고친 것(또는 고칠 것 없음)", "2: …"]
 }}
 ```
 - 영역 value 는 늘 적는다(맞으면 위 표의 값 그대로, changed false). 좌표는 원본 프레임 정수.
 - pre_ready_discards 는 t_ready 앞에 이 사람이 버린 패(없으면 []).
 - tries 는 `try` 를 돌린 번호 순서로 한 줄씩. 마지막 답이 마지막 시도 값과 다르면(보고서를 보고 한 번 더 고치고 안 돌림) 그 줄에 그렇게 적는다.
-- 확신이 없는 것을 그럴듯하게 채우지 않는다. 모르는 칸도 가장 그럴듯한 값을 적되 unsure 에 까닭과 다른 후보를 적는다.
+- 확신이 없는 것을 그럴듯하게 채우지 않는다. 모르는 칸도 가장 그럴듯한 값을 적되 unsure 에 까닭을 적고, 다른 후보는 `alt` 에 그 칸과 같은 꼴의 값으로
+  하나만 적는다(둘 넘으면 그다음으로 그럴듯한 하나 — 영역은 `[x0, y0, x1, y1]`, 시각은 `"HH:MM:SS.s"`, t_ready_late 는 시각 또는 null. null 도 후보 값이다:
+  "늦은 후보를 안 씀"). 값으로 못 적는 걱정이면 `alt` 는 null.
+- 코드가 `alt` 로 한 번 더 돌려 차례 목록 · 차례 창이 바뀌는지 보고, 바뀌는 것만 사용자에게 묻는다.
 
 ## 지킬 것
 - 패 인식 모델 · 서버 · API 를 부르지 않는다. **예외는 위 `try` 명령 하나**(그 안에서 검출기 · 분류기가 돈다). 그 밖의 코드는 프레임 고르기 · 자르기 ·
@@ -1003,9 +1011,23 @@ def cmd_try(a):
     n, d = _claim(pack / "try", a.n, a.force)
     wj(d / "answer.json", ans)
     wj(d / "spec.json", sp)
+    T = {}
+    cfgf, err, fatal = _try_steps(d, ti, gid, T)
+    T["total"] = round(time.time() - t_all, 1)
+    md, js = try_report(d, n, pk, cfgf, T, err, fatal)
+    wt(d / "report.md", md)
+    wj(d / "report.json", js)
+    print(md)
+    if err:
+        raise SystemExit(1)
+
+
+def _try_steps(d: Path, ti: dict, gid: str, T: dict) -> tuple:
+    """시험 자리 d(d/answer.json · d/spec.json 이 있어야 함)에서 try 의 걸음: 반장 설정 사본 · 기록 복사 → apply → run → rturns(앱 기록) 또는 turns · fix
+    → turncut. try 와 alt(설계서 8-19)가 같이 쓴다. T 에 걸음마다 초. → (시험 자리 설정 파일, 걸음 실패 글 또는 None, 적용 fatal 또는 None)."""
     cfgf = try_cfg(d, ti, gid)
     shutil.copytree(ti["rec_dir"], d / "prep" / "rec" / gid)
-    T, err = {}, None
+    err = None
     PY = sys.executable
     # 앱 기록 반장(설정 app_record — 설계서 8-13 (가)): 강 읽기(river) 걸음을 안 돌리고 차례 목록은 기록에서(han3 rturns). 아니면 옛 그대로(turns · fix)
     rec_mode = bool(hcfg.load(cfgf, check=False).app_record)
@@ -1026,13 +1048,212 @@ def cmd_try(a):
             if o.get("fatal"):
                 fatal = o["fatal"]
                 break
-    T["total"] = round(time.time() - t_all, 1)
-    md, js = try_report(d, n, pk, cfgf, T, err, fatal)
-    wt(d / "report.md", md)
-    wj(d / "report.json", js)
-    print(md)
-    if err:
-        raise SystemExit(1)
+    return cfgf, err, fatal
+
+
+# ------------------------------------------------------------------ 대안 돌리기(alt — 설계서 8-19, 11-26, LLM 0)
+# 답의 unsure 줄마다 {"what": 칸, "alt": 다른 후보 값 또는 null, "why"} — 코드가 alt 로 try 와 같은 걸음을 한 번 더 돌려 차례 목록 · 차례 창을 기준(답 그대로)과 견준다.
+ALT_WIN_S = 1.0            # 창 차이 문턱: id 가 같은 차례의 창(첫 · 끝 프레임)이 이만큼 넘게 움직이면 "창 흔들림"(8-15 의 줄이 선 때 ±1.0초 잣대 그대로)
+ALT_PARALLEL = 4           # 기준 · 대안 시험 자리를 동시에 몇 개(try 는 여러 자리를 나란히 돌려도 안 겹침)
+ALT_REGION_KEYS = ["band", "river", "meld", "reveal_region", "search"]
+ALT_MARK = ".alt_dir"      # alt 가 만든 자리 표시(다시 부를 때 이 표시가 있는 자리만 지우고 새로)
+
+
+def alt_whats(sp: dict) -> list:
+    """alt 를 쓸 수 있는 what = 답 꼴에서 값을 갖는 칸(설계서 8-19 (가)). 기본 길 모드는 묻는 칸만(강 · 울기는 코드 값 — 답 값을 안 씀)."""
+    if is_half(sp):
+        return ["band", "search", "t_ready", "t_ready_late", "t_reveal", "reveal_frame"]
+    return ["band", "river", "meld", "reveal_region", "search", "t_ready", "t_ready_late", "t_reveal", "reveal_frame"]
+
+
+def alt_value_of(ans: dict, what: str):
+    """답의 그 칸 지금 값(alt 와 같은 꼴 — 영역 [x0, y0, x1, y1] · 시각 글 · t_ready_late 는 time)."""
+    v = ans.get(what)
+    if what in ALT_REGION_KEYS:
+        return _region(v)
+    if what == "t_ready_late":
+        return v.get("time") if isinstance(v, dict) else v
+    return v
+
+
+def alt_memo(u, sp: dict):
+    """unsure 줄 하나가 대안으로 돌릴 수 있는가 — 못 돌리면 메모 까닭(글), 돌릴 수 있으면 None.
+    순서: 꼴(사전 아님) → alt 칸 없음(옛 답) → 쓸 수 없는 what → null(t_ready_late 밖) → 값 꼴 틀림."""
+    if not isinstance(u, dict):
+        return "unsure 줄 꼴 틀림(사전이 아님) — 대안을 못 돌림"
+    if "alt" not in u:
+        return "alt 칸 없음(옛 답 꼴) — 대안을 못 돌림"
+    what, v = u.get("what"), u.get("alt")
+    if what not in alt_whats(sp):
+        return f"쓸 수 없는 what {what!r} — 대안을 돌릴 수 있는 칸은 {', '.join(alt_whats(sp))}"
+    if what == "t_reveal" and sp.get("end") != "win":
+        return "유국 판의 t_reveal 은 판 결과 읽기 값(답의 값을 안 씀) — 대안을 돌릴 칸이 아님"
+    if v is None:
+        return None if what == "t_ready_late" else "alt 가 null — 값으로 적은 다른 후보 없음"
+    if what in ALT_REGION_KEYS:
+        ok = isinstance(v, (list, tuple)) and len(v) == 4 and all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in v)
+        return None if ok else f"alt 꼴 틀림 — 영역은 [x0, y0, x1, y1]({v!r:.60})"
+    return None if _hms(v) is not None else f"alt 꼴 틀림 — 시각은 'HH:MM:SS.s'({v!r:.40})"
+
+
+def alt_variant(ans: dict, what: str, v) -> dict:
+    """답 사본에서 what 칸만 alt 값으로(영역은 value · t_ready_late 는 time — 나머지 글 칸은 그대로)."""
+    a = json.loads(json.dumps(ans, ensure_ascii=False))
+    if what in ALT_REGION_KEYS:
+        vv = [int(round(float(x))) for x in v]
+        a[what] = {**a[what], "value": vv} if isinstance(a.get(what), dict) else vv
+    elif what == "t_ready_late":
+        old = a.get("t_ready_late") if isinstance(a.get("t_ready_late"), dict) else {}
+        a["t_ready_late"] = {**old, "time": v, "why": old.get("why") or "(설계서 8-19 대안 돌리기 — unsure 의 alt)"}
+    else:
+        a[what] = v
+    a["_alt"] = {"what": what, "alt": v, "note": "handtrack_prep.py alt 가 만든 대안 사본(설계서 8-19) — 이 칸만 답과 다름"}
+    return a
+
+
+def alt_cut_turns(cfgf: Path, gid: str) -> list:
+    """시험 자리 차례 자르기 파일의 그 판 차례 — (id · 버린 패 · 기록 버림 시각 · 창 첫 · 끝 프레임 ms)."""
+    cfg = hcfg.load(cfgf, check=False)
+    g = next((x for x in jl(cfg.cut_file)["games"] if x["id"] == gid), None)
+    out = []
+    for t in (g or {}).get("turns") or []:
+        fr = [m for s in t.get("segs") or [] for m in s.get("frames") or []]
+        out.append({"id": t["id"], "tile": t.get("tile"), "discard": (t.get("cut") or {}).get("discard"),
+                    "w0": fr[0] if fr else None, "w1": fr[-1] if fr else None})
+    return out
+
+
+def alt_compare(base: list, alt: list) -> dict:
+    """목록 차이(차례의 (버린 패 · 기록 버림 시각) 순서열 — 더해진 · 빠진 차례) · 창 차이(id 가 같은 차례의 창이 움직인 초 — 문턱 아래도 모두 적고,
+    ALT_WIN_S 넘은 차례 목록)."""
+    key = lambda t: (norm(t.get("tile")), t.get("discard"))   # noqa: E731
+    A, B = [key(t) for t in base], [key(t) for t in alt]
+    ma, mb = set(), set()
+    for blk in difflib.SequenceMatcher(None, A, B, autojunk=False).get_matching_blocks():
+        for k in range(blk.size):
+            ma.add(blk.a + k)
+            mb.add(blk.b + k)
+    fmt = lambda t: {"id": t["id"], "tile": t.get("tile"), "discard": t.get("discard")}   # noqa: E731
+    removed = [fmt(base[i]) for i in range(len(base)) if i not in ma]
+    added = [fmt(alt[i]) for i in range(len(alt)) if i not in mb]
+    bi = {t["id"]: t for t in base}
+    moves, shifted = {}, []
+    for t in alt:
+        b = bi.get(t["id"])
+        if not b or None in (b["w0"], b["w1"], t["w0"], t["w1"]):
+            continue
+        d0, d1 = t["w0"] - b["w0"], t["w1"] - b["w1"]
+        m = max(abs(d0), abs(d1))
+        if m:
+            moves[t["id"]] = {"w0_s": round(d0 / 1000, 1), "w1_s": round(d1 / 1000, 1), "max_s": round(m / 1000, 1)}
+        if m > ALT_WIN_S * 1000:
+            shifted.append(t["id"])
+    return {"base_turns": len(base), "alt_turns": len(alt), "added": added, "removed": removed, "moves": moves, "shifted": shifted, "win_s": ALT_WIN_S}
+
+
+def _alt_job(d: Path, ti: dict, sp: dict, gid: str, ans: dict) -> dict:
+    t0 = time.time()
+    d.mkdir(parents=True)
+    wj(d / "answer.json", ans)
+    wj(d / "spec.json", sp)
+    T, err, fatal, cfgf = {}, None, None, None
+    try:
+        cfgf, err, fatal = _try_steps(d, ti, gid, T)
+    except Exception as e:  # noqa: BLE001 — 한 자리가 죽어도 나머지는 냄(까닭은 결과에)
+        err = f"{type(e).__name__}: {e}"
+    T["total"] = round(time.time() - t0, 1)
+    o = {"dir": d.as_posix(), "timing": T, "error": err, "fatal": fatal}
+    if err or fatal:
+        return o
+    try:
+        app = jl(d / "applied.json")
+        o["failed_checks"] = [c["name"] for c in app.get("checks") or [] if not c["ok"]]
+        o["t_ready_used"] = (app.get("config") or {}).get("t_ready")
+        o["ready_late"] = app.get("ready_late")
+        o["turns"] = alt_cut_turns(cfgf, gid)
+    except Exception as e:  # noqa: BLE001
+        o["error"] = f"적용 결과 · 차례 자르기 파일을 못 읽음 — {type(e).__name__}: {e}"
+    return o
+
+
+def cmd_alt(a):
+    """(설계서 8-19 (나)) 대안 돌리기: 답(--answer)의 unsure 줄마다 alt 를 가린 뒤, 돌릴 수 있는 것이 있으면 시험 자리 <out>/0(답 그대로 — 기준) ·
+    <out>/<n>(n 번째 unsure 의 what 칸만 alt 로 바꾼 사본)에서 try 와 같은 걸음을 돌려 차례 목록 · 차례 창을 견준다. 꾸러미의 try/ · 실행 폴더 handtrack/ ·
+    공용 자리에는 안 쓴다(시험 자리 설정 — try_cfg). 결과 한 파일(--result, 기본 <out>/result.json). 줄마다 status:
+    memo(못 돌림 — 까닭) · fail(대안 걸음 실패 · 적용 fatal · 기준에 없던 검사 실패 — 메모) · diff(목록 차이) · window(목록 같음 · 창 차이) · zero(둘 다 없음) ·
+    base_fail(기준 alt/0 이 실패 — 영향을 못 잼)."""
+    t_all = time.time()
+    pack = Path(a.pack).resolve()
+    pk = jl(pack / "pack.json")
+    ti = pk.get("try")
+    if not ti:
+        raise SystemExit(f"{pack}/pack.json 에 try 칸이 없다 — 꾸러미를 새 코드로 다시 만들어라(handtrack_prep.py pack --task-only)")
+    sp = pk["spec"]
+    gid = sp["gid"]
+    ans_src = Path(a.answer).resolve()
+    raw = ans_src.read_bytes()
+    ans = json.loads(raw.decode("utf-8"))
+    out = Path(a.out).resolve()
+    resf = Path(a.result).resolve() if a.result else out / "result.json"
+    if out == pack or out in pack.parents or (pack / "try") in [out, *out.parents]:
+        raise SystemExit(f"--out {out} 이 꾸러미 · 꾸러미의 try/ 와 겹친다 — 대안 자리는 따로")
+    rows = []
+    for n, u in enumerate(ans.get("unsure") or [], 1):
+        why = alt_memo(u, sp)
+        what = u.get("what") if isinstance(u, dict) else None
+        row = {"n": n, "what": what, "alt": u.get("alt") if isinstance(u, dict) else None, "has_alt": isinstance(u, dict) and "alt" in u,
+               "why": (u.get("why") if isinstance(u, dict) else str(u)), "answer_value": alt_value_of(ans, what) if isinstance(what, str) else None}
+        row.update({"status": "memo", "memo": why} if why else {"status": "run"})
+        rows.append(row)
+    res = {"_note": "handtrack_prep.py alt — 준비 읽기 unsure 의 alt 대안 돌리기(설계서 8-19 (나))", "gid": gid, "pack": pack.as_posix(),
+           "answer": ans_src.as_posix(), "answer_sha": hashlib.sha256(raw).hexdigest(), "out": out.as_posix(), "win_s": ALT_WIN_S,
+           "rows": rows, "base": None}
+    run_rows = [x for x in rows if x["status"] == "run"]
+    if run_rows or a.base_always:
+        if out.exists():
+            if not (out / ALT_MARK).exists() and any(out.iterdir()):
+                raise SystemExit(f"--out {out} 이 alt 가 만든 자리가 아닌데 비어 있지 않다 — 지우지 않고 멈춤")
+            shutil.rmtree(out)
+        out.mkdir(parents=True)
+        wt(out / ALT_MARK, f"handtrack_prep.py alt 자리 — 다시 부르면 지우고 새로 만든다 · 답 {ans_src.as_posix()}\n")
+        if ti.get("rec_missing"):
+            res["base"] = {"error": f"기록 폴더 {ti['rec_dir']} 에 {ti['rec_missing']} 가 없다", "timing": {}}
+            done = {}
+        else:
+            from concurrent.futures import ThreadPoolExecutor
+            jobs = [(0, ans)] + [(x["n"], alt_variant(ans, x["what"], x["alt"])) for x in run_rows]
+            with ThreadPoolExecutor(max_workers=min(ALT_PARALLEL, len(jobs))) as ex:
+                futs = {n: ex.submit(_alt_job, out / str(n), ti, sp, gid, va) for n, va in jobs}
+                done = {n: f.result() for n, f in futs.items()}
+            b = done[0]
+            res["base"] = {**{k: b.get(k) for k in ("dir", "timing", "error", "fatal", "failed_checks", "t_ready_used", "ready_late")},
+                           "turns": b.get("turns")}
+        b = res["base"]
+        base_bad = b.get("error") or b.get("fatal")
+        for x in run_rows:
+            j = done.get(x["n"]) or {}
+            x.update(dir=j.get("dir"), timing=j.get("timing"), t_ready_used=j.get("t_ready_used"), ready_late=j.get("ready_late"))
+            if base_bad:
+                x.update(status="base_fail", reason=f"기준 alt/0 실패 — {str(base_bad)[:400]}")
+                continue
+            if j.get("error") or j.get("fatal"):
+                x.update(status="fail", memo=f"대안 걸음 실패 — {str(j.get('fatal') or j.get('error'))[:400]}")
+                continue
+            newf = [c for c in j.get("failed_checks") or [] if c not in (b.get("failed_checks") or [])]
+            if newf:
+                x.update(status="fail", memo=f"기준에 없던 검사 실패 {newf} — 덜 그럴듯한 후보가 검사에 걸림")
+                continue
+            cmp = alt_compare(b.get("turns") or [], j.get("turns") or [])
+            x["compare"] = cmp
+            x["status"] = "diff" if (cmp["added"] or cmp["removed"]) else ("window" if cmp["shifted"] else "zero")
+    else:
+        res["note"] = "돌릴 대안 없음(unsure 모두 메모) — 기준도 안 돌림"
+    res["counts"] = dict(Counter(x["status"] for x in rows))
+    res["wall_s"] = round(time.time() - t_all, 1)
+    wj(resf, res)
+    view = {k: v for k, v in res.items() if k not in ("rows", "base")}
+    view["rows"] = [{k: v for k, v in x.items() if k in ("n", "what", "alt", "status", "memo", "reason")} for x in rows]
+    print("JSON" + json.dumps(view, ensure_ascii=False))
 
 
 def _hms_near(mmss: str, ref_ms: int) -> str:
@@ -1306,7 +1527,8 @@ def _sec_checks(ctx):
         L.append(f"| {c['name']} | {'통과' if c['ok'] else '**실패**'} | {c['detail']} |")
     bad = [c["name"] for c in o.get("checks") or [] if not c["ok"]]
     if o.get("unsure"):
-        L += ["", f"- 답의 unsure {len(o['unsure'])}개(흐름에서는 모두 질문으로 오른다)"]
+        L += ["", f"- 답의 unsure {len(o['unsure'])}개(흐름에서는 코드가 `alt` 값으로 한 번 더 돌려 차례 목록 · 차례 창이 바뀌는 것만 사용자에게 묻는다 — "
+                  "`alt` 가 없거나 값으로 못 쓰면 보고서에 메모로만 남는다)"]
     ctx["headline_chk"] = f"검사 실패 {bad}" if bad else "검사 모두 통과"
     return L, {"failed": bad}
 
@@ -1374,8 +1596,14 @@ def main():
     p.add_argument("--t1", required=True)
     p.add_argument("--n", type=int, default=CAND_FRAMES)
     p.add_argument("--out", required=True)
+    p = sp.add_parser("alt", help="(설계서 8-19 (나)) 답의 unsure alt 로 한 번 더 돌려 차례 목록 · 창을 기준과 견줌 — S6a-3 이 부름(LLM 0)")
+    p.add_argument("--pack", required=True)
+    p.add_argument("--answer", required=True)
+    p.add_argument("--out", required=True, help="대안 시험 자리 폴더(<out>/0 = 기준 · <out>/<n> = n 번째 unsure 대안)")
+    p.add_argument("--result", help="결과 json(기본 <out>/result.json)")
+    p.add_argument("--base-always", action="store_true", help="시험용: 돌릴 대안이 없어도 기준 <out>/0 을 돌림")
     a = ap.parse_args()
-    {"pack": cmd_pack, "apply": cmd_apply, "try": cmd_try, "bandcand": cmd_bandcand}[a.cmd](a)
+    {"pack": cmd_pack, "apply": cmd_apply, "try": cmd_try, "bandcand": cmd_bandcand, "alt": cmd_alt}[a.cmd](a)
 
 
 if __name__ == "__main__":

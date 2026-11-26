@@ -27,6 +27,8 @@ S7 이 끝난 자동 패보 실행 폴더(paifu_auto.py)에 판마다 꾸러미(
   version 1 꾸러미(rereads[] 에 note 칸)도 status · score · done 이 그대로 읽는다.
   pack.json version 3(11-26, 설계서 8-18): 읽기 답의 확신 숫자 칸 p — low_p_first(처음 답이 낮은 p 인 차례, 낮은 p = paifu_auto.answer_p < P_LOW) 칸 ·
   game.md 차례 표의 p 열 · TASK.md 에 p 한 줄. version 1 · 2 꾸러미(low_p_first 없음)는 status · score · done · replay 가 전과 같이 읽는다.
+  pack.json version 4(11-26, 설계서 8-19 (다) 4): window_shift(차례 → 초 — 준비 읽기 unsure 의 alt 로 돌리면 그 차례 창이 1.0초 넘게 움직인 "창 흔들림",
+  paifu_auto.s6a_window_turns) 칸 · game.md 차례 표의 "창 흔들림" 열. version 1 ~ 3 꾸러미(칸 없음)는 전과 같이 읽는다.
   넣지 않는 것: 사용자 확인값 · 11-23 사람 고름(human_picked_1123) · v2 낱말 규칙 목록(questions.jsonl · signals) · 다른 판 · 옛 손 설정 메모.
   사용자 답이 apply 된 실행(state.answered)이면 pack 을 거절한다(처음 답 자리에 사용자 값이 있으므로).
 명령이 쓰는 곳: 꾸러미 폴더 안(reread/<차례>_r<n>/ · try/<n>/ · _impact/ · _base/ · draft.json · decision.json · questions_sup.jsonl · log.jsonl).
@@ -34,7 +36,7 @@ S7 이 끝난 자동 패보 실행 폴더(paifu_auto.py)에 판마다 꾸러미(
   score 가 <실행>/sup/score.md · score.json · log.jsonl · _score/ 를 쓴다. score 는 마감(decision.json)된 판만 센다 — 마감 전 판은 이름만.
 한도(설계서 3-10 의 시작값): 다시 읽기 판당 ⌈읽은 차례 수 ÷ 2⌉ · 차례당 2번, check 판당 6번, set 제한 없음(모두 표시).
 "바뀐 차례" = 초안의 칸 값(kind · k · j · end_order · gone)이 처음 답과 다름. 칸 값이 같은 다시 읽기를 take 하면 처음 답 파일을 그대로 둔다(글만 다른 답으로 덮지 않음).
-마감 검사(done): ① 처음 답이 unsure: true 이거나 낮은 p(version 3 의 low_p_first)인 차례는 reread · set · ask 중 하나 ② 바뀐 차례가 있으면 마지막 check 가 지금 초안 그대로 돌았고 통과 —
+마감 검사(done): ① 처음 답이 unsure: true 이거나 낮은 p(version 3 의 low_p_first)이거나 창 흔들림(version 4 의 window_shift)인 차례는 reread · set · ask 중 하나 ② 바뀐 차례가 있으면 마지막 check 가 지금 초안 그대로 돌았고 통과 —
   통과 못 했으면 바뀐 차례가 모두 ask 여야 하고, 그 차례들은 처음 답으로 반영(초안은 질문 줄의 supervisor 안으로 남김) ③ 답이 안 온 다시 읽기 꾸러미 없음 ④ 한도 안
   ⑤ 답이 온 다시 읽기 가운데 칸 값이 마감 초안과 다른 것이 있는 차례는 초안이 그 차례의 set 이거나 · ask 가 있거나 · 초안 칸 값이 독립 읽기
   (처음 답 + 다시 읽기들) 가운데 둘 이상과 같아야 함(설계서 3-10 "다르면 셋째 읽기 · 직접 정하기 · 질문" 의 코드 문 — 11-25 검토에서 더함).
@@ -70,7 +72,7 @@ FROM_CHOICES = ["first"] + [f"r{i}" for i in range(1, REREAD_PER_TURN + 1)]
 SLOT_KEYS = ("kind", "k", "j", "end_order", "gone")
 MSG_ASK = "남은 의심 차례는 ask 로"
 P_LOW = pa.HEDGE_PCT_MAX   # 설계서 8-18: 낮은 p = 처음 답의 p 가 None 이 아니고 이 값 밑
-PACK_VERSION = 3
+PACK_VERSION = 4   # 4 = 설계서 8-19 window_shift
 
 
 def reread_limit(n_turns: int) -> int:
@@ -383,8 +385,10 @@ def collect(r: pa.Run, g: str, d: Path) -> dict:
     if "_error" in base or not base.get("first", {}).get("ok"):
         raise Reject(f"{g}: 처음 답 조립 실패 — {base.get('_error') or base.get('first', {}).get('error')}")
     imp = impacts(r, g, tids, answers, d / "_impact")
+    win = pa.s6a_window_turns(r)   # 설계서 8-19 (다) 4: 준비 읽기 alt 로 창만 움직인 차례(이 판의 읽은 차례만)
     return {"tids": tids, "answers": answers, "meta": meta, "turns_all": turns_all, "rr": rr, "s7_last": s7_last, "s7_bad": s7_bad,
-            "base": base["first"], "impact": imp, "plan_hand": list(r.stage("S6")["plan"]["hand"].get(g, []))}
+            "base": base["first"], "impact": imp, "plan_hand": list(r.stage("S6")["plan"]["hand"].get(g, [])),
+            "window_shift": {t: win[t] for t in tids if t in win}}
 
 
 def impacts(r: pa.Run, g: str, tids: list, answers: dict, work: Path) -> dict:
@@ -476,7 +480,7 @@ TASK_TMPL = """# 판 supervisor — 판 `@GAME@`
 - `ask --turn <차례> --candidates "<후보>" --why "<글>"` — 사용자 질문 한 줄을 더한다.
 - 긴 글은 파일로: `set` 은 `--evidence-file` · `--why-file`, `ask` 는 `--candidates-file` · `--why-file`(UTF-8 파일, 글 인자와 둘 중 하나).
 - `status` — 라운드 · 다시 읽기 수 · 초안 상태 · 남은 한도 · 다시 읽기 답이 처음과 같은지(칸 값 비교).
-- `done` — 마감. 거절되면 까닭을 찍는다(처음 답이 unsure 인 차례를 그냥 둠 · 처음 답의 p 가 @P_LOW@ 밑인 차례를 그냥 둠 · 처음과 다른 초안인데 마지막 check 가 그 초안으로 통과하지 않음 · 답이 안 온 다시 읽기 · 다시 읽기가 초안과 다른데 set · ask · 둘 이상 일치가 없음 · 한도).
+- `done` — 마감. 거절되면 까닭을 찍는다(처음 답이 unsure 인 차례를 그냥 둠 · 처음 답의 p 가 @P_LOW@ 밑인 차례를 그냥 둠 · game.md 의 창 흔들림 차례를 그냥 둠 · 처음과 다른 초안인데 마지막 check 가 그 초안으로 통과하지 않음 · 답이 안 온 다시 읽기 · 다시 읽기가 초안과 다른데 set · ask · 둘 이상 일치가 없음 · 한도).
 
 ## 3. 의심으로 볼 것(예시가 아니라 종류)
 - 답 글이 스스로 확신이 낮다고 하거나 다른 답을 저울질함
@@ -528,7 +532,8 @@ def write_pack(d: Path, r_dir: Path, g: str, c: dict):
          "", "## 차례 표", "",
          "영향 = 그 답이 다른 후보(답에 적힌 후보, 없으면 k · j ±1)로 바뀌면 손패가 바뀌는 순의 수(가장 큰 값) · 결과가 바뀌는지.", "",
          "p = 읽기가 답에 적은 맞을 가능성(%) — `—` 는 없음(또는 꼴이 틀림).", "",
-         "| 차례 | 순 | 버린 패 | 리치 | kind | k | j | end_order | unsure | p | 영향 |", "|---|---|---|---|---|---|---|---|---|---|---|"]
+         "창 흔들림 = 준비 읽기(줄이 선 때 · 공개 · 손패 줄 영역)의 다른 후보로 돌리면 이 차례의 프레임 창이 움직인 초(1.0초 넘게) — 빈 칸은 없음.", "",
+         "| 차례 | 순 | 버린 패 | 리치 | kind | k | j | end_order | unsure | p | 창 흔들림 | 영향 |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     riichi_seen = False
     code_turns = []
     for t in c["turns_all"]:
@@ -546,11 +551,11 @@ def write_pack(d: Path, r_dir: Path, g: str, c: dict):
             else:
                 imp_s = f"— ({im.get('src')})"
             L.append(f"| {tid} | {t.get('label')} | {t.get('tile')} | {rch} | {a.get('kind')} | {a.get('k')} | {a.get('j')} | {' '.join(str(x) for x in a.get('end_order') or [])}"
-                     + (f" (gone {a.get('gone')})" if a.get("gone") else "") + f" | {'true' if a.get('unsure') else 'false'} | {pa.p_txt(pa.answer_p(a))} | {imp_s} |")
+                     + (f" (gone {a.get('gone')})" if a.get("gone") else "") + f" | {'true' if a.get('unsure') else 'false'} | {pa.p_txt(pa.answer_p(a))} | {(str(c['window_shift'][tid]) + '초') if tid in c['window_shift'] else ''} | {imp_s} |")
         else:
             why = "리치 뒤 — 규칙(쯔모기리)" if riichi_seen else "읽지 않음(코드로 정함)"
             code_turns.append((tid, t.get("label"), t.get("tile"), why))
-            L.append(f"| {tid} | {t.get('label')} | {t.get('tile')} | {rch} | (코드) | | | | | | {why} |")
+            L.append(f"| {tid} | {t.get('label')} | {t.get('tile')} | {rch} | (코드) | | | | | | | {why} |")
         if t.get("sideways"):
             riichi_seen = True
     L += ["", "## 코드로 정한 차례", ""]
@@ -590,7 +595,7 @@ def write_pack(d: Path, r_dir: Path, g: str, c: dict):
     wj(d / "pack.json", {"_note": "paifu_sup.py pack — 판 supervisor 꾸러미(설계서 8-10). 이 파일 · turns/ 는 바꾸지 않는다(초안은 draft.json).",
                          "version": PACK_VERSION, "created": now(), "run": posix(r_dir), "game": g, "turns": tids,
                          "unsure_first": [t for t in tids if answers[t].get("unsure")],
-                         "low_p_first": [t for t in tids if is_low_p(answers[t])], "read_dirs": read_dirs,
+                         "low_p_first": [t for t in tids if is_low_p(answers[t])], "window_shift": c["window_shift"], "read_dirs": read_dirs,
                          "first_sha": {t: pa.sha(r_dir / "read" / t / "answer.json") for t in tids}, "limits": lim,
                          "files": ["TASK.md", "game.md", "hands.md", "turns/", "pack.json", "base_rows.json", "impact.json", "draft.json", "log.jsonl", "scratch/"]})
     wj(d / "draft.json", {"turns": {t: {"from": "first"} for t in tids}, "rereads": [], "takes": [], "sets": [], "asks": [], "checks": [], "done": False})
@@ -859,9 +864,13 @@ def closure(pk: Pack) -> dict:
     set_turns = {x["turn"] for x in pk.draft["sets"]}
     unsure_first = list(pk.meta.get("unsure_first") or [])
     low_first = list(pk.meta.get("low_p_first") or [])   # version 3(설계서 8-18) — 옛 꾸러미는 칸이 없어 전과 같음
-    for t in unsure_first + [x for x in low_first if x not in unsure_first]:
+    win = dict(pk.meta.get("window_shift") or {})          # version 4(설계서 8-19) — 옛 꾸러미는 칸이 없어 전과 같음
+    order = unsure_first + [x for x in low_first if x not in unsure_first]
+    order += [x for x in pk.turns if x in win and x not in order]
+    for t in order:
         if t not in asked and t not in rr_turns and t not in set_turns:
-            what = (["unsure"] if t in unsure_first else []) + ([f"p {pa.p_txt(pa.answer_p(pk.first(t)))} < {P_LOW}"] if t in low_first else [])
+            what = ((["unsure"] if t in unsure_first else []) + ([f"p {pa.p_txt(pa.answer_p(pk.first(t)))} < {P_LOW}"] if t in low_first else [])
+                    + ([f"창 흔들림 {win[t]}초"] if t in win else []))
             why.append(f"① {t}: 처음 답이 {' · '.join(what)} 인데 reread · set · ask 가 없음")
     changed = pk.changed()
     drafts = pk.drafts()
@@ -940,6 +949,8 @@ def cmd_done(a):
                     "how": how, "unsure_first": t in (pk.meta.get("unsure_first") or []), "marked": bool(set(how) - {"ask"}) and t in c["apply"]}
         if "low_p_first" in pk.meta:   # version 3(설계서 8-18)
             turns[t]["low_p_first"] = t in pk.meta["low_p_first"]
+        if "window_shift" in pk.meta:  # version 4(설계서 8-19)
+            turns[t]["window_shift"] = pk.meta["window_shift"].get(t)
         if v["from"] == "set":
             turns[t].update(evidence=v.get("evidence"), why=v.get("why"))
     for t, ans in c["apply"].items():
@@ -997,6 +1008,7 @@ def cmd_status(a):
         rs = ", ".join(f"r{x['n']} = {rstate(x['n'])}" for x in rr)
         print(f"  {t}: 초안 {v['from']}{' · 처음과 다름' if t in ch else ''}{' · unsure(처음)' if t in (pk.meta.get('unsure_first') or []) else ''}"
               f"{(' · p(처음) ' + p_show(first) + ('(낮음)' if is_low_p(first) else '')) if 'p' in first else ''}"
+              f"{(' · 창 흔들림 ' + str(pk.meta['window_shift'][t]) + '초') if t in (pk.meta.get('window_shift') or {}) else ''}"
               f"{' · 다시 읽기 ' + rs if rr else ''}{' · ask' if t in asked else ''}")
     c = closure(pk)
     print("마감 검사: " + ("통과할 수 있음" if c["ok"] else " / ".join(c["why"])))

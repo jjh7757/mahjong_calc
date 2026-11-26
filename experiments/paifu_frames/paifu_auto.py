@@ -89,6 +89,11 @@ S9 차례 질문(8-3절 v2): 답의 unsure 또는 확신 말(HEDGE_*) 또는 낮
       결과는 실행 폴더 handtrack/(config · <판>/ · _work/) — 실행 설정 handtrack 칸으로 han3 · han3_paifu 가 경로를 돌림(handtrack/ht_redirect.py).
       (11-25 밤, 설계서 8-16) 답의 t_ready_late(늦은 후보)가 t_ready 보다 뒤면 apply 가 그것을 판별 설정 t_ready 로 쓴다 — 상태 games.<판>.ready_late 에
       답의 값 · 늦은 후보 · 쓴 값, report.md 에 표시(쓴 판은 질문 아님 · 그 뒤 버림이 0 이라 못 쓴 판은 검사 ready_late 질문).
+      (11-26, 설계서 8-19) 답의 unsure 줄 {"what", "alt", "why"}: S6a-3 이 판마다 handtrack_prep.py alt 로 alt 값을 한 번 더 돌려(기준 s6a/<판>/alt/0 ·
+      대안 alt/<n>, 결과 s6a/_alt/<판>.json — s6a_alt_run) 줄마다 가른다(s6a_unsure_sort): 메모(alt 없음 · 못 씀 · 대안 걸음 실패 — 질문 아님, 보고서 S6a 절) ·
+      숨김(목록 · 창 차이 0 — <판>_s6a_alt_<what> 을 questions_hidden 으로) · 고르기(목록 차이 — <판>_s6a_alt_<what> kind pick, 확인 페이지 B) ·
+      창 흔들림(창만 1.0초 넘게 — 질문 없이 그 차례를 S9 차례 질문 길로: signal s6a_window / supervisor 판은 꾸러미 window_shift · 마감 검사 ①) ·
+      알림(기준 alt/0 실패 · 명령 실패 — 옛 <판>_s6a_unsure_<n> + "영향을 못 잼"). 적용 검사 질문(coords · time_order · ready_backs …)은 그대로.
   S6b 손 추적 판별: handtrack_auto.py run = segment · river · game(run.py 의 features 뒤, sheets 뺌) + bandfit --write(sheet_band). 있으면 건너뜀.
   S6  판별 설정 · 출력(손 설정 판은 공용 자리, S6a 판은 실행 폴더)이 없으면 멈춤. 칸 틀 캐시(det_<판>.json)도 S6a 판은 실행 폴더 handtrack/_work/slotgrid_1117.
       han3 turns · fix · turncut 뒤 차례 수 검사(s6_turn_check): 차례 목록(turn_fix 끼움 포함) ↔ 고친 기록의 손패 주인 버림 중 t_ready 뒤 것.
@@ -2557,22 +2562,174 @@ def s6a(r: Run):
         for q in o["questions"]:
             qs.append({"id": f"{pre}_s6a_{q['check']}", "kind": "boundary", "stage": "S6a", "game": g, "current": o["config"].get("t_ready") if "ready" in q["check"] else None,
                        "why": q["why"], "clip": q.get("clip"), "covered_by_setting": False})
-        for n, u in enumerate(o.get("unsure") or [], 1):
-            what = u.get("what") if isinstance(u, dict) else None
-            why = u.get("why") if isinstance(u, dict) else str(u)
-            qs.append({"id": f"{pre}_s6a_unsure_{n}", "kind": "boundary", "stage": "S6a", "game": g, "signal": "unsure", "current": what,
-                       "why": f"준비 읽기 unsure — {what}: {why}" if what else f"준비 읽기 unsure — {why}", "covered_by_setting": False})
+        alt_sum = None
+        if o.get("unsure"):   # (설계서 8-19 (다)) unsure 줄마다 alt 로 한 번 더 돌린 결과로 메모 · 숨김 · 고르기 · 창 흔들림 · 알림 가운데 하나
+            ta = time.time()
+            alt = s6a_alt_run(r, g)
+            srt = s6a_unsure_sort(r, cfg, g, o["unsure"], alt)
+            qs += srt["questions"]
+            alt_sum = {**srt["summary"], "wall_s": round(time.time() - ta, 1)}
         res[g] = {"side": o["config"]["side"], "t_ready": o["config"]["t_ready"], "t_reveal": o["config"]["t_reveal"], "reveal_frame": o["config"]["reveal_frame"],
                   "post_sec": o["config"]["post_sec"], "changed": o["changed_regions"], "failed": [c["name"] for c in o["checks"] if not c["ok"]],
                   "unsure": len(o.get("unsure") or []), "pre_ready": o.get("hero_discards_before_ready"), "config_written": o.get("config_written"),
                   "purged": len(o.get("purged") or []), "purged_fix": purged_fix, "wall_s": round(time.time() - t0, 1)}
         if o.get("ready_late"):   # (11-25 밤, 설계서 8-16) 답에 늦은 후보가 있던 판 — 답의 값 · 늦은 후보 · 쓴 값(늦은 쪽을 쓴 판은 질문 아님 · report 에 표시)
             res[g]["ready_late"] = o["ready_late"]
+        if alt_sum:
+            res[g]["alt"] = alt_sum
     if fatal:
         raise SystemExit("S6a 답 꼴 이상 — " + " / ".join(fatal) + " (그 판의 s6a/<판>/answer.json 을 지우고 next 하면 같은 꾸러미가 다시 나옴)")
     r.state["questions_s6a"] = qs
     r.done("S6a", mode="read", hand_settings=hand, auto=auto, games=res, frame_from=frame_from, questions=len(qs))
     return []
+
+
+S6A_TIME_WHAT = ("t_ready", "t_ready_late", "t_reveal", "reveal_frame")
+S6A_ALT_KINDS = ["memo", "hidden", "pick", "window", "alert"]   # 설계서 8-19 (다) 다섯 가르기 — 보고서 · state 의 셈 순서
+S6A_ALT_KO = {"memo": "메모", "hidden": "숨김(영향 0)", "pick": "고르기", "window": "창 흔들림", "alert": "알림"}
+
+
+def s6a_alt_file(r: Run, g: str) -> Path:
+    return r.d / "s6a" / "_alt" / f"{g}.json"
+
+
+def s6a_alt_run(r: Run, g: str) -> dict:
+    """(설계서 8-19 (나)) handtrack_prep.py alt — 판의 준비 답 unsure 를 alt 로 한 번 더 돌린 결과(s6a/_alt/<판>.json · 대안 자리 s6a/<판>/alt/).
+    결과 파일의 답 sha 가 지금 답과 같으면 다시 안 돌림. 명령이 죽으면 {"error": …}(흐름은 멈추지 않고 그 판 unsure 를 알림으로)."""
+    ans = r.d / "s6a" / g / "answer.json"
+    f = s6a_alt_file(r, g)
+    if f.exists():
+        try:
+            o = jl(f)
+            if o.get("answer_sha") == sha(ans):
+                return {**o, "_reused": True}
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            pass
+        f.unlink()
+    p = run([PY, "-X", "utf8", HERE / "handtrack_prep.py", "alt", "--pack", r.d / "s6a" / g, "--answer", ans, "--out", r.d / "s6a" / g / "alt", "--result", f],
+            log=r.log(f"s6a_alt_{g}.log"), check=False)
+    if p.returncode != 0 or not f.exists():
+        return {"error": f"handtrack_prep.py alt 실패(rc {p.returncode}) — " + " ".join(((p.stderr or "") + (p.stdout or "")).split())[-400:],
+                "log": rel(r.log(f"s6a_alt_{g}.log"))}
+    return jl(f)
+
+
+def s6a_unsure_sort(r: Run, cfg, g: str, unsure: list, alt: dict) -> dict:
+    """(설계서 8-19 (다)) 준비 답의 unsure 줄마다 다섯 가운데 하나: 메모(alt 없음 · 못 씀 · 대안 걸음 실패 — 질문 아님) · 숨김(목록 · 창 차이 없음 —
+    questions_hidden 길) · 고르기(목록 차이 — <판>_s6a_alt_<what>, kind pick) · 창 흔들림(창만 차이 — 질문 없음, 그 차례를 차례 질문 길로: s6a_window_turns) ·
+    알림(대안 돌리기 자체가 실패 — 옛 <판>_s6a_unsure_<n> + "영향을 못 잼"). → {"questions": [...], "summary": {...}}."""
+    pre = cfg.prefix_of(g)
+    date = cfg.recording["date"]
+    rows = {x["n"]: x for x in (alt or {}).get("rows") or []}
+    err = (alt or {}).get("error")
+    base = (alt or {}).get("base") or {}
+    qs, out, ids = [], {k: [] for k in S6A_ALT_KINDS}, Counter()
+    for n, u in enumerate(unsure, 1):
+        what = u.get("what") if isinstance(u, dict) else None
+        why = u.get("why") if isinstance(u, dict) else str(u)
+        x = rows.get(n)
+        st = "base_fail" if err else ((x or {}).get("status") or "base_fail")
+        head = {"n": n, "what": what, "alt": (u.get("alt") if isinstance(u, dict) else None), "why": why}
+        if st in ("memo", "fail"):
+            out["memo"].append({**head, "reason": x.get("memo")})
+            continue
+        if st == "base_fail":
+            reason = err or (x or {}).get("reason") or "대안 돌리기 결과에 이 줄이 없음"
+            qs.append({"id": f"{pre}_s6a_unsure_{n}", "kind": "boundary", "stage": "S6a", "game": g, "signal": "unsure", "current": what,
+                       "why": (f"준비 읽기 unsure — {what}: {why}" if what else f"준비 읽기 unsure — {why}") + f" (영향을 못 잼 — {reason})",
+                       "covered_by_setting": False})
+            out["alert"].append({**head, "reason": reason})
+            continue
+        cmp = x.get("compare") or {}
+        if st == "window":
+            mv = cmp.get("moves") or {}
+            out["window"].append({**head, "turns": {t: (mv.get(t) or {}).get("max_s") for t in cmp.get("shifted") or []}})
+            continue
+        # 숨김(zero) · 고르기(diff): 같은 꼴의 질문 줄(숨김은 S9 가 questions_hidden 으로)
+        if what == "t_ready_late":   # 후보 = 두 쪽이 실제로 쓰는 줄이 선 때(null = 늦은 후보 안 씀 → 답의 t_ready) — 페이지에 null 을 못 보이므로
+            cands = [base.get("t_ready_used"), x.get("t_ready_used")]
+        else:
+            cands = [x.get("answer_value"), x.get("alt")]
+        clip = None
+        if what in S6A_TIME_WHAT:
+            ms = [to_ms(date, v) for v in cands if isinstance(v, str)]
+            if ms:
+                clip = {"t0": hms_of(min(ms) - 5000), "t1": hms_of(max(ms) + 10000)}
+        ids[what] += 1
+        qid = f"{pre}_s6a_alt_{what}" + (f"_{ids[what]}" if ids[what] > 1 else "")
+        moved = len(cmp.get("added") or []) + len(cmp.get("removed") or [])
+        q = {"id": qid, "kind": "pick", "stage": "S6a", "game": g, "signal": "s6a_alt", "what": what, "unsure_n": n,
+             "current": cands[0], "candidates": cands, "alt_pair": {"answer": x.get("answer_value"), "alt": x.get("alt")},
+             "why": f"준비 읽기 unsure — {what}: {why}", "clip": clip,
+             "alt_impact": {"added": cmp.get("added"), "removed": cmp.get("removed"), "moves": cmp.get("moves"), "shifted": cmp.get("shifted")},
+             "impact_summary": {"max_hand_turns": moved, "result_changed": False, "zero": st == "zero"},
+             "rule": "8-19 준비 읽기 unsure 의 alt 로 돌리면 " + ("차례 목록 · 창이 같음(영향 0)" if st == "zero" else
+                                                          f"차례 목록이 바뀜(더해짐 {[a['tile'] for a in cmp.get('added') or []]} · 빠짐 {[a['tile'] for a in cmp.get('removed') or []]})"),
+             "covered_by_setting": False}
+        if st == "zero":
+            q["hidden_reason"] = "hidden_zero_impact"
+        qs.append(q)
+        out["hidden" if st == "zero" else "pick"].append({**head, "id": qid, "added": [a["tile"] for a in cmp.get("added") or []],
+                                                          "removed": [a["tile"] for a in cmp.get("removed") or []], "moves": cmp.get("moves")})
+    summ = {"n": len(unsure), **{k: len(v) for k, v in out.items()}, "rows": out, "file": rel(s6a_alt_file(r, g)) if not err else None,
+            "error": err, "alt_wall_s": (alt or {}).get("wall_s"), "reused": bool((alt or {}).get("_reused")),
+            "runs": {"base": (base.get("timing") or {}).get("total"),
+                     "alts": {str(k): (v.get("timing") or {}).get("total") for k, v in rows.items() if v.get("timing")}}}
+    return {"questions": qs, "summary": summ}
+
+
+def s6a_window_turns(r: Run) -> dict:
+    """(설계서 8-19 (다) 4) 창 흔들림 차례 → 움직인 초(그 차례에서 가장 큰 값) — s6a/_alt/<판>.json 의 status window 줄(목록 차이가 있는 줄은 고르기라 뺌).
+    파일이 없으면 빈 사전(옛 실행 · 3반장 — 전과 같음)."""
+    out = {}
+    d = r.d / "s6a" / "_alt"
+    if not d.exists():
+        return out
+    for f in sorted(d.glob("*.json")):
+        try:
+            o = jl(f)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        for x in o.get("rows") or []:
+            if x.get("status") != "window":
+                continue
+            mv = (x.get("compare") or {}).get("moves") or {}
+            for t in (x.get("compare") or {}).get("shifted") or []:
+                out[t] = max(out.get(t, 0), (mv.get(t) or {}).get("max_s") or 0)
+    return out
+
+
+def s6a_alt_report_lines(r: Run) -> list:
+    """보고서 S6a 절(설계서 8-19 (다)): 판마다 unsure n = 메모 · 숨김 · 고르기 · 창 흔들림(차례 id) · 알림, 대안 돌리기 걸린 시간 + 메모 글 그대로."""
+    gs = {g: v["alt"] for g, v in (r.stage("S6a").get("games") or {}).items() if v.get("alt")}
+    if not gs:
+        return []
+    L = ["", "## S6a 준비 읽기 unsure — alt 대안 돌리기(설계서 8-19)", "",
+         "| 판 | unsure | 메모 | 숨김(영향 0) | 고르기 | 창 흔들림(차례 · 초) | 알림 | 대안 돌리기 초(기준 · 대안마다) |", "|---|---|---|---|---|---|---|---|"]
+    tot = Counter()
+    for g, v in gs.items():
+        win = {t: s for w in v["rows"]["window"] for t, s in (w.get("turns") or {}).items()}
+        tot.update({k: v.get(k, 0) for k in ["n"] + S6A_ALT_KINDS})
+        runs = v.get("runs") or {}
+        L.append(f"| {g} | {v['n']} | {v['memo']} | {v['hidden']} | {v['pick']} | {v['window']}" + (f" {win}" if win else "") + f" | {v['alert']} | "
+                 f"{v.get('alt_wall_s')}{' (다시 씀)' if v.get('reused') else ''} (기준 {runs.get('base')} · {runs.get('alts')}) |")
+    L.append(f"| 합 | {tot['n']} | {tot['memo']} | {tot['hidden']} | {tot['pick']} | {tot['window']} | {tot['alert']} | |")
+    memo = [(g, m) for g, v in gs.items() for m in v["rows"]["memo"]]
+    if memo:
+        L += ["", f"메모 {len(memo)}(질문 아님 — 준비 읽기 unsure 글 그대로 · 까닭):"]
+        L += [f"- {g} #{m['n']} {m['what']}: {m['why']} — 까닭: {m['reason']}" for g, m in memo]
+    qrow = {q["id"]: q for q in r.state.get("questions_s6a") or []}
+    for g, v in gs.items():
+        for k in ("pick", "hidden"):
+            for x in v["rows"][k]:
+                L.append(f"- {g} #{x['n']} {x['what']} → {S6A_ALT_KO[k]} `{x['id']}` (후보 {json.dumps((qrow.get(x['id']) or {}).get('candidates'), ensure_ascii=False)} · "
+                         f"alt {json.dumps(x.get('alt'), ensure_ascii=False)} · "
+                         f"더해짐 {x.get('added')} · 빠짐 {x.get('removed')} · 창 움직임 {x.get('moves') or '없음'})")
+        for x in v["rows"]["window"]:
+            L.append(f"- {g} #{x['n']} {x['what']} → 창 흔들림 {x.get('turns')} — 차례 질문 길로(S9 signal s6a_window · supervisor 판은 마감 검사 ①)")
+        for x in v["rows"]["alert"]:
+            L.append(f"- {g} #{x['n']} {x['what']} → 알림(영향을 못 잼 — {x.get('reason')})")
+    return L
 
 
 def s6a_rules(r: Run):
@@ -2740,6 +2897,7 @@ def ht_report_lines(r: Run) -> list:
                 L += ["  " + x for x in dump_regions.source_lines(jl(fd))]
         if a.get("status") != "done" and a.get("packed"):
             L += ["", "꾸러미(답 기다림): " + ", ".join(f"{g}(프레임 {v['window_ready'][2]} + {v['window_reveal'][2]}, 그림 {v['overview']})" for g, v in a["packed"].items())]
+        L += s6a_alt_report_lines(r)   # 설계서 8-19 — unsure 를 alt 로 돌린 가르기(없으면 빈 목록)
         return L
     L = ["", "## S6a · S6b 손 추적 설정 · 판별(자동 — 옛 화소 규칙, 견줌용)", "", f"- 손 설정(공용 자리) 그대로: {a.get('hand_settings')} · 자동: {a.get('auto')} · 틀 출처 {a.get('frame_from')}", "",
          "| 판 | 자리 | t_start | t_ready(규칙) | t_reveal | reveal_frame | S6a 초 | S6b 초 | sheet_band |", "|---|---|---|---|---|---|---|---|---|"]
@@ -3588,7 +3746,9 @@ def s9(r: Run):
     raised = [t for t in all_ids if sigs[t][0]]       # 신호 1(확신 말) 또는 unsure — 8-2절 · 말 목록과 숫자 확신은 8-3(v2)
     # 설계서 8-18: 확신 숫자 칸 p. 처음 답의 p(표본 tier 2 · 보고서 · 출처 파일), supervisor 없는 길의 질문 신호 = v2 신호 + 낮은 p(지금 답)
     p_first = {t: answer_p(jl(first_answer_file(r, t, cfg))) for t in all_ids}
-    q_sig = {t: sigs[t][0] + (["low_p"] if p_low(answers[t]) else []) for t in all_ids}
+    # 설계서 8-19 (다) 4: 준비 읽기 alt 로 돌리면 창만 움직인 차례(창 흔들림) — supervisor 없는 길은 차례 질문 신호 s6a_window(없으면 전과 같음)
+    win = s6a_window_turns(r)
+    q_sig = {t: sigs[t][0] + (["low_p"] if p_low(answers[t]) else []) + (["s6a_window"] if t in win else []) for t in all_ids}
     raised_q = [t for t in all_ids if q_sig[t]]
     p_bad = [t for t in all_ids if "p" in jl(first_answer_file(r, t, cfg)) and p_first[t] is None]
     p_stat = {"turns": len(all_ids), "with_p": sum(1 for t in all_ids if p_first[t] is not None),
@@ -3617,14 +3777,16 @@ def s9(r: Run):
                 return "답의 unsure: true"
             if s == "low_p":
                 return f"8-18 답의 p {p_txt(answer_p(answers[tid]))} < {HEDGE_PCT_MAX}"
+            if s == "s6a_window":
+                return f"8-19 준비 읽기 alt 로 돌리면 이 차례 창이 {win[tid]}초 움직임(창 흔들림)"
             return f"8-3 신호 1 확신 말({s[6:]})"
         for tid in raised_q:
             sig, hh = q_sig[tid], sigs[tid][1]
             q = turn_row(tid, signal=sig_field(sig), hedge_hits=hh, rule=" · ".join(rule_of(s, tid) for s in sig),
-                         **({"p": answer_p(answers[tid])} if "low_p" in sig else {}))
+                         **({"p": answer_p(answers[tid])} if "low_p" in sig else {}), **({"window_shift": win[tid]} if "s6a_window" in sig else {}))
             (hidden if q["impact_summary"]["zero"] else asked).append(q)
     else:
-        for q in sup_turn_questions(r, cfg, all_ids, answers, su, turn_row):
+        for q in sup_turn_questions(r, cfg, all_ids, answers, su, turn_row, win):
             (hidden if q["impact_summary"]["zero"] else asked).append(q)
     n_turn_asked = len(asked)   # 여기까지가 차례 질문 — 아래(판 결과 · S0 ~ S6 질문)는 두 길 모두 같음
     for q in result_jobs(r):
@@ -3651,6 +3813,8 @@ def s9(r: Run):
                 q["impact_summary"] = {"max_hand_turns": 0, "result_changed": False, "river_cells": 1, "zero": False}
             if q.get("covered_by_setting"):
                 hidden.append({**q, "hidden_reason": "설정(11-23 손 파일)이 덮음"})
+            elif q.get("stage") == "S6a" and (q.get("impact_summary") or {}).get("zero"):   # 설계서 8-19: alt 로 돌려 목록 · 창 차이 0 인 준비 알림
+                hidden.append(q)
             else:
                 asked.append(q)
     asked += check_questions(r)   # 설계서 8-17 4-③: 검사에 걸린 채 남은 판 → 알림 질문 <판>_s7_check(걸린 판이 없으면 0 — 질문 파일은 전과 같음)
@@ -3717,6 +3881,8 @@ def s9(r: Run):
                                              "sample_ids": v2s, "total": len(v2q) + len(other_q) + len(v2s),
                                              "note": "낱말 규칙(8-3 v2)이 차례 질문을 만들고 표본이 판마다 2 였다면의 수(사용자 답 칸은 뺌) — 질문은 만들지 않음, 견줌용"},
                               "other_asked_before_user_hide": n_other_asked, "p": p_stat}
+    if win:   # 설계서 8-19 (다) 4 — 창 흔들림 차례(읽은 차례가 아니면 차례 질문 길이 없음 — 보고만)
+        r.state["signals"]["s6a_window"] = {"turns": win, "not_read": sorted(t for t in win if t not in all_ids)}
     r.state["human_compare"] = {"turns": {t: {**imp[t], "summary": summarize_impact(imp[t]["impact"]), "unsure": answers[t].get("unsure"),
                                               "signal": sig_field(sigs[t][0]) if sigs[t][0] else None,
                                               "in_asked": t in qids, "in_sample": t in sids, "in_hidden": t in hid,
@@ -3786,9 +3952,11 @@ def v2_samples(r: Run, cfg, all_ids: list, raised_set: set, imp: dict, turn_row)
     return samples, no_impact, zero_pool
 
 
-def sup_turn_questions(r: Run, cfg, all_ids: list, answers: dict, su: dict, turn_row) -> list:
+def sup_turn_questions(r: Run, cfg, all_ids: list, answers: dict, su: dict, turn_row, win: dict | None = None) -> list:
     """supervisor 단계가 켜진 실행의 차례 질문(설계서 8-17 4-①): 마감된 판은 supervisor 의 ask(questions_sup.jsonl — 한 차례에 ask 가 여럿이면 한 줄),
-    supervisor 를 안 거친 판(--sup-games 로 건너뜀 · 마감 전)은 답의 unsure 차례. 낱말 규칙은 질문을 만들지 않음."""
+    supervisor 를 안 거친 판(--sup-games 로 건너뜀 · 마감 전)은 답의 unsure 차례 · 낮은 p(8-18) · 창 흔들림(8-19 — win: 차례 → 초, 마감된 판은
+    supervisor 꾸러미의 마감 검사 ① 이 맡음). 낱말 규칙은 질문을 만들지 않음."""
+    win = win or {}
     out = []
     done_games = set(su["games"])
     for t in all_ids:
@@ -3802,16 +3970,19 @@ def sup_turn_questions(r: Run, cfg, all_ids: list, answers: dict, su: dict, turn
                                 sup_file=rel(r.d / "sup" / g / "questions_sup.jsonl"),
                                 rule="판 supervisor 의 ask(설계서 8-17 4-① — supervisor 가 못 푼 차례)"))
         else:   # supervisor 를 안 거친 판: unsure · 낮은 p(설계서 8-18 — 둘 다면 목록)
-            sig = (["unsure"] if answers[t].get("unsure") else []) + (["low_p"] if p_low(answers[t]) else [])
+            sig = (["unsure"] if answers[t].get("unsure") else []) + (["low_p"] if p_low(answers[t]) else []) + (["s6a_window"] if t in win else [])
             if not sig:
                 continue
             if sig == ["unsure"]:
                 out.append(turn_row(t, signal="unsure", rule="답의 unsure: true — supervisor 를 안 거친 판(설계서 8-17 4-①)"))
                 continue
             pv = answer_p(answers[t])
-            out.append(turn_row(t, signal=sig_field(sig), p=pv,
-                                rule=" · ".join(["답의 unsure: true" if s == "unsure" else f"답의 p {p_txt(pv)} < {HEDGE_PCT_MAX}" for s in sig])
-                                + " — supervisor 를 안 거친 판(설계서 8-17 4-① · 8-18)"))
+            txt = {"unsure": "답의 unsure: true", "low_p": f"답의 p {p_txt(pv)} < {HEDGE_PCT_MAX}",
+                   "s6a_window": f"준비 읽기 alt 로 돌리면 창이 {win.get(t)}초 움직임(8-19 창 흔들림)"}
+            out.append(turn_row(t, signal=sig_field(sig), **({"p": pv} if "low_p" in sig or "s6a_window" not in sig else {}),
+                                **({"window_shift": win[t]} if "s6a_window" in sig else {}),
+                                rule=" · ".join(txt[s] for s in sig)
+                                + " — supervisor 를 안 거친 판(설계서 8-17 4-① · 8-18" + (" · 8-19" if "s6a_window" in sig else "") + ")"))
     return out
 
 
@@ -4060,6 +4231,7 @@ def write_report(r: Run, asked, hidden, samples=None, sup=None):
         keep = {k: v[k] for k in v if k not in ("status", "detail", "checks", "plan", "slotgrid", "history", "games", "same_as_reuse", "final_bad", "summary", "verify", "call_turns",
                                                  "sup_decided", "packed")}
         L.append(f"| {s} {STAGE_NAME[s]} | {v.get('status')} | {json.dumps(keep, ensure_ascii=False)[:300]} |")
+    L += s6a_alt_report_lines(r)   # 설계서 8-19 (다): 보고서 S6a 절(준비 읽기 unsure 가 없거나 S6a 를 안 돈 실행은 빈 목록 — 전과 같음)
     if sup is not None:
         L += [""] + sup_report_lines(r, asked, hidden, samples, sup)
     L += ["", "## 판마다", "", "| 판 | 읽은 차례 | 질문 | 표본 | 영향 0 숨김 | 사용자 답 숨김 | 기록 불확실(S5) | 다시 읽기 |", "|---|---|---|---|---|---|---|---|"]
@@ -4423,6 +4595,9 @@ Q_FORMS = [
     ("app5_head_primary", rf"^{_P3}_app5_head_primary$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
     ("app5_uncertain", rf"^{_P3}_app5_uncertain$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
     ("app5_chk", rf"^{_P3}_app5_chk_\w+$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
+    ("s6a_alt", rf"^{_P3}_s6a_alt_(?P<what>\w+)$", "B", "후보 고르기(섞음) + 모르겠다 + 메모",
+     "S6a(8-19): 두 후보 시각 가운데 이른 것 −5초 ~ 늦은 것 +10초(영역 칸은 영상 없음)",
+     "안 함(보고서 — 줄이 선 때가 바뀌면 차례를 새로 읽어야 해서 손으로)"),   # 설계서 8-19 (다) 3 — 아래 s6a(C) 보다 먼저
     ("s6a", rf"^{_P3}_s6a_\w+$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
     ("s6_turns", rf"^{_P3}_s6_turns$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),
     ("reveal", rf"^{_P3}_reveal$", "C", "확인함 · 문제 있음 · 모르겠다 + 메모", "없음", "안 함(보고서)"),

@@ -56,6 +56,17 @@ B_LABEL = {"ev": "울기 · 리치 사건", "w5_cell": "강 칸(앱 · 헤드 �
            "rec_cell": "강 칸", "app5_tile": "강 칸 패", "app5_pre": "앱 추적 전 버림", "app5_call": "울기 묶음",
            "app5_call_headonly": "헤드 녹화에만 있는 울기", "app5_call_apponly": "앱 기록에만 있는 울기", "app5_headonly": "헤드 녹화에만 있는 버림",
            "app5_apponly": "앱 기록에만 있는 버림", "app5_riichi": "리치 표시", "app5_hero": "손패 주인", "app5_hero_hand": "손패 주인의 공개 손패", "hero": "손패 주인"}
+B_LABEL["s6a_alt"] = "준비 읽기(줄이 선 때 · 공개 · 손패 줄 영역)"
+# 설계서 8-19 (다) 3: 준비 읽기 고르기 질문(<판>_s6a_alt_<what>)의 물음 글 — what 마다 하나(코드가 만듦). 앞에서부터 같은 이름 → 앞머리가 같은 이름 순.
+S6A_ASK = [("t_ready_late", "손패 주인이 배패 정리를 끝내고 손패 줄이 가만해진 때는 어느 쪽인가요?"),
+           ("t_ready", "손패 주인이 배패 정리를 끝내고 손패 줄이 가만해진 때는 어느 쪽인가요?"),
+           ("t_reveal", "화료한 사람이 손패를 앞면으로 눕히기 시작한 때는 어느 쪽인가요?"),
+           ("reveal_frame", "공개한 손패가 한 줄로 가지런하고 손 · 팔이 가리지 않는 때는 어느 쪽인가요?"),
+           ("band", "손패 주인의 손패 줄이 판 내내 놓이는 곳(원본 프레임 좌표 [x0, y0, x1, y1])은 어느 쪽인가요?"),
+           ("search", "손패 주인의 손패 줄을 감싸는 넓은 곳(원본 프레임 좌표 [x0, y0, x1, y1])은 어느 쪽인가요?"),
+           ("river", "손패 주인의 강이 놓이는 곳(원본 프레임 좌표 [x0, y0, x1, y1])은 어느 쪽인가요?"),
+           ("meld", "손패 주인의 울기 묶음이 놓이는 곳(원본 프레임 좌표 [x0, y0, x1, y1])은 어느 쪽인가요?"),
+           ("reveal_region", "공개한 손패가 놓이는 곳(원본 프레임 좌표 [x0, y0, x1, y1])은 어느 쪽인가요?")]
 ID_RE = re.compile(r"^[\w.-]{1,80}$")
 
 
@@ -217,6 +228,10 @@ def ask_text(q: dict, fm: dict) -> str:
     if fm["bundle"] == "A":   # 강 한 칸 패 종류
         where = f"강의 {fm['m'].get('pos')}번째 칸" if fm["form"] == "rec_cell" else f"헤드 녹화 기준 {fm['m'].get('pos')}번째 버림"
         return f"{pre} 판 {SIDE_KO.get(side, side)} 자리 {where} 패는 무엇인가요?"
+    if fm["bundle"] == "B" and fm["form"] == "s6a_alt":   # 설계서 8-19 (다) 3 — 준비 읽기 칸마다 물음 글(어느 쪽이 지금 값인지 · why 는 안 보냄)
+        w = q.get("what") or fm["m"].get("what") or ""
+        ask = next((v for k, v in S6A_ASK if w == k), None) or next((v for k, v in S6A_ASK if w.startswith(k)), "준비 읽기 칸은 어느 쪽인가요?")
+        return f"{pre} 판: {ask} 아래 가운데 영상과 맞는 것을 고르세요(순서는 뜻 없음)."
     if fm["bundle"] == "B":
         what = B_LABEL.get(fm["form"], fm["form"])
         return f"{pre} 판{(' ' + SIDE_KO.get(side, side) + ' 자리') if side else ''} {what}: 아래 가운데 영상과 맞는 것을 고르세요(순서는 뜻 없음)."
