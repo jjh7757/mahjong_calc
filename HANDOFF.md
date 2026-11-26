@@ -4,7 +4,24 @@
 
 ## ★ 다음 세션은 여기부터 (2026-11-22 밤 적음 — 이 컴퓨터 시계 기준. 앞 세션은 같은 날을 11-23 으로 적었다)
 
-**★ 자동 패보 에이전트 — 새 세션은 이 문단부터(11-26 낮 다시 적음. 바로 아래 "(기록)" 문단과 "덧붙임" 들은 지난 일의 기록이고, 할 일은 이 문단이 모아 둔다).**
+**★ 자동 패보 에이전트 — 새 세션은 이 문단부터(11-26 저녁 적음. 바로 아래 "11-26 낮" 문단은 그 앞의 할 일 목록 — 그 1번만 남았고, 나머지는 끝났거나 이 문단이 이어 받음).**
+
+- **어디까지 왔나:** 설계서 `docs/paifu_auto_agent_design_1124.md` 7-1 의 구현 1 ~ 5번 + 8-18(확신 숫자 칸 `p`) · 8-19(준비 읽기 `alt`) · 8-22(낮은 p 는 기록만 — 다른 세션) + **구조 바꿈 8-20(LangGraph 그래프 `experiments/paifu_frames/paifu_graph.py`) · 8-21(`api` 손 `paifu_apihand.py` · `fork` 명령)**. 모두 커밋함(`01c012e` 까지 · **push 안 함 — 원격보다 8커밋 앞**). 돌고 있는 에이전트 · 프로세스 · 서버 없음. 숫자는 metrics 표 12-138(그래프 재생) · 12-141(`api` 손 가짜 시험).
+- **지금 구조(8-20 · 8-21):** 에이전트를 띄우는 곳은 그래프 하나. 반장에 관리자 하나(라운드마다 결정만 파일로 · 영상 안 봄 · `set` 없음), 읽기 작업자는 꾸러미 하나씩. 손 셋: `replay`(옛 답 베낌, LLM 0) · `session`(그래프가 목록을 내고 멈춤 → 세션이 하위 에이전트로 채우고 `resume`) · `api`(Claude API — `--i-mean-it` 없으면 안 돎). 읽기 답은 `unsure` 가 아니면 믿는다(8-22, `paifu_auto.LOW_P_ACTS = False` — 그래프도 따름). 옛 실행기 `paifu_run.py` 는 옛 실행 재현용으로만 둔다.
+- **새 세션이 할 일 — 먼저 사용자에게 무엇부터 할지 묻는다(권고 순서):**
+  1. **`fork --at S4` 를 LLM 0 으로 한 번 확인.** 시험은 `--at S6` 만 했다. `python -X utf8 experiments/paifu_frames/paifu_graph.py fork --from experiments/paifu_frames/results/auto_h2_api1 --at S4 --run experiments/paifu_frames/results/auto_h2_apiS4` → `go --run … --hands replay --replay-from experiments/paifu_frames/results/auto_h2_5a --before-user` → 확인 전 재생 기준 `auto_h2_api0r` 과 패보 · `questions` · `samples` · `paifu_source` · `read/*/answer.json` 을 견줌(실행 이름만 다른 줄은 따로 셈 — 견줌 스크립트는 `results/_setup_dev/o_compare.py`). 끝 맥락 · 시간이 작다.
+  2. **진짜 API 한 판 — 사용자가 크레딧을 넣고 "돌려" 라고 할 때만**(Claude API 는 11-19 부터 무료 크레딧 소진으로 금지였고, 11-26 사용자가 "결국 반장 전체 api 테스트 해야" 로 방향만 정함). 어림 3 ~ 5달러. 명령: `paifu_graph.py fork --from …/auto_h2_api1 --at S4 --run …/auto_h2_apiR1` → `paifu_graph.py go --run …/auto_h2_apiR1 --hands api --api-games w14_133610 --replay-from …/auto_h2_5a --max-usd 5 --i-mean-it`. 볼 것: 끝까지 도는가 · 꾸러미별 돈(`api_log.jsonl`) · 시간 · w14 차례 답이 정답과 같은가(채점은 아래 함정의 정답 합치기 규칙).
+  3. **반장 전체 API** — 같은 fork 로 `auto_h2_apiR2` → `go --run …/auto_h2_apiR2 --hands api --reuse-api-from …/auto_h2_apiR1 --max-usd 50 --i-mean-it`(관리자도 api). 어림 40달러 안팎(11-19 표 12-71 의 판당 3.2달러에서 거꾸로 잡은 값 — 8-22 로 다시 읽기가 줄어 더 적을 수 있음). 표 12-135(Claude Code 하위 에이전트 + 판 supervisor 아홉)와 차례 답 맞음 · 질문 수 · 돈 · 시간을 견줌. 2반장은 본 판이라 개발 숫자다.
+  4. **w17 준비 읽기 깨끗한 재측정** — 아래 "11-26 낮" 문단의 1번 그대로(아직 안 함).
+  5. **push**(사용자가 시킬 때만). 8커밋 가운데 앱 쪽 파일(`assets/paifu` · `test/`)이 든 것이 있어 CI 가 돈다.
+- **이번에 새로 확인된 함정:**
+  - **같은 입력이면 같은 출력인 코드 단계는 다시 돌리지 않는다** — 끝난 실행을 `fork --from <실행> --at <단계>` 로 베껴 그 단계부터(사용자 "지금까지 실행했던 데이터로 대체했으면 됐잖아"). 하위 에이전트에 맡길 때도 지시문에 적는다. 2반장 처음부터는 약 60분.
+  - **재생 견줌의 기준은 사용자 답 반영 전 상태**여야 한다 — `auto_h2_g3c` 는 반영 뒤라 차례 답 7 이 다르게 보였다(고장 아님). 반영 전 기준은 `auto_h2_api0r`.
+  - 진짜 API 키는 `handtrack/claudeagent.py` 의 `ENV`(`.env`)에서 읽어 클라이언트에만 넘긴다. 가짜 모드(`--api-fake`)는 `.env` 를 안 읽고 SDK 클라이언트 생성을 막는다.
+  - `_setup_dev/` 임시 파일 접두사를 세션끼리 같이 쓴다(`o_*` = 8-20, `p_*` = 8-21 과 8-22 다른 세션이 함께) — 새 일은 새 접두사를 고르고 쓰기 전에 `ls` 로 겹침을 본다.
+- **실행 폴더(모두 git 밖, `experiments/paifu_frames/results/`):** 8-20 — `auto_h2_g1a`(옛 실행기) · `auto_h2_g3c`(그래프 · 사용자 답 반영 뒤) · `auto_h2_g6s`(session 손) · 3반장 `auto_h3_g2a` · `auto_h3_g2b`. 8-21 — `auto_h2_api0r`(반영 전 재생 기준) · `auto_h2_api1`(w14 만 가짜 api) · `auto_h2_api2`(reuse · 관리자 가짜 api) · `auto_h2_api3f`(fork). 가짜 시험 자료는 `_setup_dev/p_dry`(첫 요청 다섯 · `SYSTEM.txt`) · `p_img` · `p_pk*` · `p_c*`.
+
+**(앞 목록 — 11-26 낮 적음. 1번(w17 재측정)만 남았고 나머지는 위 문단이 대신한다.)**
 
 - **어디까지 왔나:** 설계서 `docs/paifu_auto_agent_design_1124.md` 7-1 의 구현 순서 여섯 가운데 **1 ~ 5번 끝**, 그리고 5번에서 나온 구조 고침 하나(8-18 — 읽기 답의 확신 숫자 칸 `p`)까지 구현. 모두 커밋함(`1b888f9` · **push 안 함 — 원격보다 5커밋 앞**). 6번(안 본 반장)은 다음 매장 방문 녹화가 있어야 한다. 지금 돌고 있는 에이전트 · 프로세스 · 확인 페이지 서버는 없다.
 - **5번(2반장 재현) 결과 — metrics 표 12-135:** `paifu_run.py start --visit experiments/visit_20261114 --game 4 …` → `go` 다섯 번으로 아홉 판이 끝까지 감(실행 폴더 `experiments/paifu_frames/results/auto_h2_5a`). 차례 답은 사용자 확인값이 있는 71 가운데 **69**(처음 읽기 68), 틀린 둘(w15 3 · 4순)은 읽기 · 판 supervisor · 질문 · 표본 어디에도 안 걸린 **조용한 틀림**. 끝에 볼 양 질문 21 + 표본 5(질문 가운데 16 은 준비 읽기 알림). 끝 맥락 합 1,354만 토큰 · 벽시계 2시간 3분. 사용자가 확인 페이지에서 차례 7 · 울기 묶음 1 에 답했고(약 8분 · 추가 질문 0), 영상으로 두 차례(w15 3 · 4순)를 더 확인 → 모두 반영해 **새 패보 아홉 판이 예시 `assets/paifu/r11 ~ r19` 와 내용 같음**(예시 r15 · r18 은 사용자 "바꿔" 로 고침 · 그 값을 박아 둔 테스트 기대값 셋도 고침 · 전체 테스트 1,788 통과).
