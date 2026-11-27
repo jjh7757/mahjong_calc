@@ -12,6 +12,7 @@ LLM 이 필요한 곳(S1 판 경계 · S4 판 결과 · S6 손패 차례 · S7 �
   python -X utf8 experiments/paifu_frames/paifu_auto.py next   --run <실행 폴더> --redo S9   # 그 단계부터만 다시(S6 재료는 그대로)
   python -X utf8 experiments/paifu_frames/paifu_auto.py unapply --run <실행 폴더>        # 시험용: apply 전 답으로 되돌리고 S7 · S8 · S9 다시
   python -X utf8 experiments/paifu_frames/paifu_auto.py status --run <실행 폴더>
+  python -X utf8 experiments/paifu_frames/paifu_auto.py autoconfirm --run <실행 폴더>   # 설계서 8-26: S9 뒤 확인 페이지 대신 자동 확정(짐작 표시 · estimates · 출처 · 보고서 절)
 (저장소 루트에서. 실행 폴더 기본값 = experiments/paifu_frames/results/auto_<설정 id>/)
 
 init 옵션
@@ -2951,7 +2952,8 @@ def han3(r: Run, *args, log=None, check=True):
 
 def read_plan(r: Run) -> dict:
     """판마다 읽을 차례(han3 ids = 리치 뒤 · 울기 · skip 뺌) + 울기 차례(turn_fix kind call)."""
-    p = han3(r, "ids", log=r.log("s6_ids.log"))
+    ug = r.games() if unit_on(r) else []   # 8-23 판 실행(11-27): 이 실행의 판만(인자 없으면 설정의 모든 판 — 판 실행 차례 목록에 다른 판이 없어 StopIteration)
+    p = han3(r, "ids", *ug, log=r.log("s6_ids.log"))
     ids = {}
     for ln in p.stdout.splitlines():
         if not ln.strip():
@@ -2965,6 +2967,7 @@ def read_plan(r: Run) -> dict:
 
 def slotgrid_todo(r: Run) -> dict:
     """칸 틀 검출 캐시(_work/slotgrid_1117/det_<판>.json)에 빠진 프레임 수 — 0 이면 detect 를 안 돌림(캐시는 읽기만)."""
+    loop = repr(list(r.games())) if unit_on(r) else "han3.H3"   # 8-23 판 실행(11-27): 이 실행의 판만(판 실행 turns_cut 에는 그 판만 — 다른 판은 KeyError)
     code = (
         "import sys, json\n"
         f"sys.path.insert(0, {str(HT)!r})\n"
@@ -2973,7 +2976,7 @@ def slotgrid_todo(r: Run) -> dict:
         "han3.patch()\n"
         "import htcommon as hc, slotgrid as sg, turncut as tc\n"
         "out = {}\n"
-        "for gid in han3.H3:\n"
+        f"for gid in {loop}:\n"
         "    f = sg.OUT / f'det_{gid}.json'\n"
         "    have = set(int(k) for k in hc.jload(f)) if f.exists() else set()\n"
         "    need = {ms for t in tc.turns_of(gid) for ms in hc.frame_range(*sg.window(t))[::2]}   # slotgrid detect --step 기본 2 와 같게\n"
@@ -4167,6 +4170,288 @@ def write_sources(r: Run, asked: list, hidden: list, su: dict, p_first: dict | N
     return res
 
 
+# ------------------------------------------------------------------ 8-26 자동 확정 — 확인 페이지 없이 끝내고 질문감 · 낮은 확신 순에 짐작(guess) 표시
+AUTO_SOURCE = "낮은 확신(자동 확정)"            # 설계서 8-26 4: ② 최종 답 unsure 순의 출처(① · ③ 은 지금처럼 '확인 안 된 추정')
+AUTO_SOURCE_KINDS = SOURCE_KINDS + [AUTO_SOURCE]
+AUTO_SRC_KEEP = ("사용자 확인", "복원 안 함")    # 표시가 달려도 출처를 안 바꾸는 줄(사용자 답 · 줄이 선 때 앞 — 이미 짐작 순)
+AUTO_ADD_TOL_MS = 10_000                        # ③ 대안에서만 생기는 차례(지금 목록에 없음)를 패보 버림에 맞출 때: 같은 패 · 기록 버림 시각 차 한도
+AUTO_RULES = {"①": "차례 질문에 오른 순", "②": "최종 답 unsure 순", "③": "준비 질문(S6a)에서 후보끼리 달라지는 순"}
+
+
+def hero_turn_events(r: Run, cfg, g: str, P: dict) -> list:
+    """패보의 손패 주인 버림마다 {jun, turn(차례 id · 줄이 선 때 앞이면 None), discard(사건 번호), draw(바로 앞 손패 주인 사건이 뽑기면 그 번호 — 울기 뒤 버림은 None), at}.
+    차례 맞춤은 write_sources 와 같음(차례 목록을 손패 주인 버림에 끝에서부터)."""
+    hero = P.get("hero")
+    ev_ = P["events"]
+    di = [i for i, e in enumerate(ev_) if e.get("seat") == hero and e.get("type") == "discard"]
+    turns_all = turns_after_fix(cfg, g)
+    n_pre = len(di) - len(turns_all)
+    out = []
+    for n, i in enumerate(di):
+        k = n - n_pre
+        t = turns_all[k] if 0 <= k < len(turns_all) else None
+        dr = None
+        for q in range(i - 1, -1, -1):
+            if ev_[q].get("seat") == hero:
+                dr = q if ev_[q].get("type") == "draw" else None
+                break
+        out.append({"jun": n + 1, "turn": t["id"] if t else None, "discard": i, "draw": dr, "tile": ev_[i].get("tile"), "at": ev_[i].get("at")})
+    return out
+
+
+def _mmss_ms(at_ms: int, mmss: str):
+    """대안 비교의 기록 버림 시각("MM:SS.s" — 시는 없음)을 그 버림 근처(같은 시 · 앞뒤 시)의 epoch ms 로 — at_ms 와 가장 가까운 것."""
+    try:
+        mm, ss = str(mmss).split(":")
+        mm, ss = int(mm), float(ss)
+    except (ValueError, AttributeError):
+        return None
+    d = datetime.fromtimestamp(at_ms / 1000, KST)
+    best = None
+    for dh in (-1, 0, 1):
+        base = d.replace(minute=0, second=0, microsecond=0) + timedelta(hours=dh)
+        v = round((base.timestamp() + mm * 60 + ss) * 1000)
+        if best is None or abs(v - at_ms) < abs(best - at_ms):
+            best = v
+    return best
+
+
+def s6a_affected_juns(r: Run, g: str, q: dict, rows: list) -> tuple:
+    """③ 준비 질문 하나가 바꾸는 순(jun 목록)과 못 맞춘 것. 대안 돌리기 결과(alt_impact)의 빠짐 · 창 흔들림(shifted) 은 차례 id 로,
+    더해짐(대안에서만 생기는 차례 — 지금 목록에 없음)은 같은 패 · 가장 가까운 손패 주인 버림(AUTO_ADD_TOL_MS 안)으로. 영향 순을 못 가리면(alt_impact 없음 ·
+    맞출 버림 없음) 그 판의 줄이 선 때(t_ready)부터 첫 다시 정렬(늦은 후보 t_ready_late — 없으면 첫 순만) 앞까지(설계서 8-26 ③)."""
+    by_turn = {x["turn"]: x for x in rows if x["turn"]}
+    imp = q.get("alt_impact")
+    juns, miss = [], []
+    if isinstance(imp, dict):
+        for x in list(imp.get("removed") or []) + list(imp.get("added") or []):
+            tid = x.get("id")
+            if tid in by_turn:
+                juns.append(by_turn[tid]["jun"])
+                continue
+            cands = []
+            for y in rows:
+                if norm(y["tile"]) != norm(x.get("tile")) or y["at"] is None:
+                    continue
+                v = _mmss_ms(y["at"], x.get("discard"))
+                if v is not None and abs(v - y["at"]) <= AUTO_ADD_TOL_MS:
+                    cands.append((abs(v - y["at"]), y["jun"]))
+            if cands:
+                juns.append(min(cands)[1])
+            else:
+                miss.append(f"{tid}({x.get('tile')}@{x.get('discard')})")
+        for tid in imp.get("shifted") or []:
+            if tid in by_turn:
+                juns.append(by_turn[tid]["jun"])
+            else:
+                miss.append(str(tid))
+        if not miss:
+            return sorted(set(juns)), [], None
+    # 못 가림 → 줄이 선 때부터 첫 다시 정렬 앞까지
+    pf = r.d / "s6a" / g / "answer.json"
+    ans = jl(pf) if pf.exists() else {}
+    date = r.cfg().recording["date"]
+    try:
+        t0 = to_ms(date, ans["t_ready"]) if ans.get("t_ready") else None
+    except (ValueError, KeyError):
+        t0 = None
+    late = (ans.get("t_ready_late") or {}).get("time") if isinstance(ans.get("t_ready_late"), dict) else None
+    try:
+        t1 = to_ms(date, late) if late else None
+    except ValueError:
+        t1 = None
+    after = [y for y in rows if y["at"] is not None and (t0 is None or y["at"] >= t0)]
+    if t1 is not None and (t0 is None or t1 > t0):
+        fb = [y["jun"] for y in after if y["at"] < t1]
+        how = f"영향 순을 못 가림({', '.join(miss) or '대안 결과 없음'}) — 줄이 선 때 {ans.get('t_ready')} ~ 첫 다시 정렬(늦은 후보) {late} 앞"
+    else:
+        fb = [after[0]["jun"]] if after else []
+        how = f"영향 순을 못 가림({', '.join(miss) or '대안 결과 없음'}) — 다시 정렬 시각이 없어 줄이 선 때({ans.get('t_ready')}) 뒤 첫 순만"
+    return sorted(set(juns + fb)), miss, how
+
+
+def auto_confirm(r: Run) -> dict:
+    """설계서 8-26: 답 0개로 끝낸 것과 같은 결과(S8 패보 · S9 질문 파일 그대로) + 짐작 표시.
+    ① 차례 질문(questions.jsonl 의 turn_slot — 판 LLM ask · 창 흔들림 포함)에 오른 순 ② 최종 답(read/<차례>/answer.json)이 unsure 인 순
+    ③ 준비 질문(stage S6a)에서 후보끼리 달라지는 순 → 그 순의 뽑기 · 버림 사건에 guess: true(이미 달린 것은 그대로, 버린 패 · 결과는 안 바꿈).
+    ④ 그 밖 질문(판 정보 · 기록 · 결과 · 검사) → 사건에 안 달고 패보 머리 estimates: [{id, field, value, why}].
+    사용자 답(apply)이 들어간 차례는 표시 안 함. 표본(samples.jsonl)은 사람 확인용이라 안 씀. 패보 머리 auto_confirm 에 단 사건 번호를 적어 다시 불러도 같게
+    (fork 로 베낀 패보면 앞 표시를 걷고 다시 닮). paifu_source 출처: ① · ③ → '확인 안 된 추정', ② 만 → AUTO_SOURCE. report.md 맨 위에 한 절."""
+    cfg = r.cfg()
+    if (r.stage("S9") or {}).get("status") != "done":
+        raise SystemExit("자동 확정: S9 가 안 끝남")
+    asked = jlines(r.d / "questions.jsonl")
+    answered_ = set(r.state.get("answered") or [])
+    plan = r.stage("S6")["plan"]
+    all_ids = [t for g in r.games() for t in plan["hand"].get(g, [])] + plan["call"]
+    G = {}
+    for g in r.games():
+        pf = r.paifu / f"{g}.json"
+        if not pf.exists():
+            continue
+        P = jl(pf)
+        prev = P.pop("auto_confirm", None)
+        if prev is not None:
+            for i in prev.get("marked") or []:
+                if 0 <= i < len(P["events"]):
+                    P["events"][i].pop("guess", None)
+            P.pop("estimates", None)
+        rows = hero_turn_events(r, cfg, g, P)
+        G[g] = {"pf": pf, "P": P, "rows": rows, "by_turn": {x["turn"]: x for x in rows if x["turn"]}, "juns": {}, "estimates": [], "notes": []}
+
+    def put(g, jun, rule, why):
+        G[g]["juns"].setdefault(jun, {"rules": [], "why": []})
+        m = G[g]["juns"][jun]
+        if rule not in m["rules"]:
+            m["rules"].append(rule)
+        m["why"].append(why)
+
+    hanchan_est, unmapped = [], []
+    for q in asked:
+        g = q.get("game") or (cfg.game_of(q["id"]) if q.get("id") else None)
+        if q.get("kind") == "turn_slot":   # ①
+            tid = q["id"]
+            if tid in answered_:
+                continue
+            x = (G.get(g) or {}).get("by_turn", {}).get(tid)
+            if x is None:
+                unmapped.append(f"① {tid} — 패보 손패 주인 버림에 맞출 차례가 없음")
+                continue
+            put(g, x["jun"], "①", f"{tid} 질문({q.get('signal')})")
+        elif q.get("stage") == "S6a" and g in G:   # ③
+            juns, miss, how = s6a_affected_juns(r, g, q, G[g]["rows"])
+            for j in juns:
+                put(g, j, "③", q["id"])
+            if how:
+                G[g]["notes"].append(f"③ {q['id']}: {how}")
+        else:   # ④
+            est = {"id": q["id"], "field": q.get("what") or q_form(q)["form"], "value": q.get("current"),
+                   "why": (q.get("why") or q.get("rule") or "")[:500]}
+            if g in G:
+                G[g]["estimates"].append(est)
+            else:
+                hanchan_est.append({**est, "game": g})
+    for t in all_ids:   # ②
+        if t in answered_:
+            continue
+        af = active_answer(r, t)
+        if not af.exists() or not jl(af).get("unsure"):
+            continue
+        g = cfg.game_of(t)
+        x = (G.get(g) or {}).get("by_turn", {}).get(t)
+        if x is None:
+            unmapped.append(f"② {t} — 패보 손패 주인 버림에 맞출 차례가 없음")
+            continue
+        put(g, x["jun"], "②", f"{t} 답 unsure")
+    # 사건에 달기 · 패보 쓰기
+    per_game, tot = {}, Counter()
+    for g, v in G.items():
+        P, ev_ = v["P"], v["P"]["events"]
+        marked, already = [], []
+        rows_by_jun = {x["jun"]: x for x in v["rows"]}
+        for jun in sorted(v["juns"]):
+            x = rows_by_jun[jun]
+            for i in (x["draw"], x["discard"]):
+                if i is None:
+                    continue
+                if ev_[i].get("guess"):
+                    already.append(i)
+                else:
+                    ev_[i]["guess"] = True
+                    marked.append(i)
+        if v["estimates"]:
+            P["estimates"] = v["estimates"]
+        P["auto_confirm"] = {"_note": "paifu_auto.py 자동 확정(설계서 8-26) — marked = 이 단계가 guess 를 단 사건 번호(이미 달린 것은 already). 앱은 안 읽어도 됨",
+                             "at": now(), "marked": sorted(marked), "already": sorted(already),
+                             "turns": {str(j): {"turn": rows_by_jun[j]["turn"], "rules": m["rules"]} for j, m in sorted(v["juns"].items())}}
+        wj(v["pf"], P)
+        n_ev = len(P["events"])
+        per_game[g] = {"turns": len(v["juns"]), "events_marked": len(marked), "events_already": len(already),
+                       "events_guess_total": sum(1 for e in ev_ if e.get("guess")), "events": n_ev,
+                       "hero_turns": len(v["rows"]), "by_rule": {k: [rows_by_jun[j]["turn"] or f"{j}순(차례 목록 밖)" for j, m in sorted(v["juns"].items()) if k in m["rules"]] for k in AUTO_RULES},
+                       "estimates": len(v["estimates"]), "notes": v["notes"]}
+        tot.update({"turns": len(v["juns"]), "events_marked": len(marked), "events_already": len(already), "estimates": len(v["estimates"])})
+    # paifu_source 출처
+    sd = r.d / "paifu_source"
+    src_tot = Counter()
+    for g, v in G.items():
+        f = sd / f"{g}.json"
+        if not f.exists():
+            continue
+        doc = jl(f)
+        for x in doc["rows"]:
+            m = v["juns"].get(x["jun"])
+            if not m:
+                continue
+            x["auto_guess"] = m["rules"]
+            if x["source"] in AUTO_SRC_KEEP:
+                continue
+            if "①" in m["rules"] or "③" in m["rules"]:
+                if x["source"] != "확인 안 된 추정":
+                    x["note"] = f"자동 확정 — 질문({', '.join(m['why'])})에 오름 · 답 없이 짐작 표시 · 원래 출처 {x['source']}: {x.get('note') or ''}"
+                    x["files"] = ["questions.jsonl"] + list(x.get("files") or [])
+                    x["source"] = "확인 안 된 추정"
+            else:
+                x["note"] = f"자동 확정 — 최종 답 unsure(질문 없음) · 짐작 표시 · 원래 출처 {x['source']}: {x.get('note') or ''}"
+                x["source"] = AUTO_SOURCE
+        c = Counter(x["source"] for x in doc["rows"])
+        doc["counts"] = {k: c.get(k, 0) for k in AUTO_SOURCE_KINDS}
+        doc["check"]["sum"] = sum(c.values())
+        doc["check"]["sum_ok"] = doc["check"]["sum"] == doc["check"]["hero_discards"]
+        doc["auto_confirm"] = {"turns": per_game[g]["turns"], "by_rule": per_game[g]["by_rule"]}
+        wj(f, doc)
+        src_tot.update(c)
+    if (sd / "_summary.json").exists():
+        sm = jl(sd / "_summary.json")
+        sm["totals"] = {k: src_tot.get(k, 0) for k in AUTO_SOURCE_KINDS}
+        for g in G:
+            if g in sm.get("games", {}) and (sd / f"{g}.json").exists():
+                d = jl(sd / f"{g}.json")
+                sm["games"][g]["counts"] = d["counts"]
+                sm["games"][g]["check"] = d["check"]
+        sm["auto_confirm"] = True
+        wj(sd / "_summary.json", sm)
+    summ = {"at": now(), "events_marked": tot["events_marked"], "events_already": tot["events_already"], "turns": tot["turns"],
+            "estimates": tot["estimates"] + len(hanchan_est), "questions": len(asked), "samples": len(jlines(r.d / "samples.jsonl")),
+            "games": per_game, "hanchan_estimates": hanchan_est, "unmapped": unmapped, "sources": {k: src_tot.get(k, 0) for k in AUTO_SOURCE_KINDS}}
+    r.state["auto_confirm"] = summ
+    r.state["events"].append({"at": now(), "auto_confirm": {k: summ[k] for k in ("events_marked", "turns", "estimates")}})
+    r.save()
+    put_auto_report(r, summ)
+    return summ
+
+
+def put_auto_report(r: Run, summ: dict):
+    """report.md 맨 위(제목 줄 다음)에 '자동 확정' 한 절 — 앞서 단 절이 있으면 바꿈."""
+    f = r.d / "report.md"
+    if not f.exists():
+        return
+    L = [f"## 자동 확정 — 짐작 표시 사건 {summ['events_marked']} · 순 {summ['turns']} · 판 정보 추정 {summ['estimates']}(설계서 8-26)", "",
+         f"- 확인 페이지 없이 끝냄(`--confirm auto`). 질문 {summ['questions']} · 표본 {summ['samples']} 는 기록으로만(`questions.jsonl` · `samples.jsonl` · `questions_hidden.jsonl`) — 표본은 표시에 안 씀.",
+         "- 표시 규칙: ① 차례 질문에 오른 순 · ② 최종 답 unsure 순 · ③ 준비 질문(S6a)에서 후보끼리 달라지는 순 → 그 순의 뽑기 · 버림 사건에 `guess: true`. "
+         "④ 그 밖 질문은 패보 머리 `estimates`. 버린 패 이름 · 결과는 안 바꿈. 이미 짐작이던 사건(울기 뒤 · 줄이 선 때 앞)은 그대로(셈은 '이미').",
+         "", "| 판 | 손패 주인 순 | 표시 순 | ① | ② | ③ | 새로 단 사건 | 이미 짐작 | 판 정보 추정 |", "|---|---|---|---|---|---|---|---|---|"]
+    for g, v in summ["games"].items():
+        br = v["by_rule"]
+        L.append(f"| {g} | {v['hero_turns']} | {v['turns']} | {', '.join(br['①']) or '—'} | {', '.join(br['②']) or '—'} | {', '.join(br['③']) or '—'} | "
+                 f"{v['events_marked']} | {v['events_already']} | {v['estimates']} |")
+    notes = [n for v in summ["games"].values() for n in v["notes"]] + summ["unmapped"]
+    if notes:
+        L += [""] + [f"- {n}" for n in notes]
+    if summ["hanchan_estimates"]:
+        L += ["", f"- 판이 없는 추정 {len(summ['hanchan_estimates'])}: " + " · ".join(x["id"] for x in summ["hanchan_estimates"])]
+    L += ["", "- 출처(paifu_source): " + " · ".join(f"{k} {n}" for k, n in summ["sources"].items()), ""]
+    lines = f.read_text(encoding="utf-8").split("\n")
+    head, rest = lines[:1], lines[1:]
+    if any(x.startswith("## 자동 확정 — ") for x in rest):   # 앞 절을 걷어 냄(다음 '## ' 앞까지)
+        i = next(k for k, x in enumerate(rest) if x.startswith("## 자동 확정 — "))
+        j = next((k for k in range(i + 1, len(rest)) if rest[k].startswith("## ")), len(rest))
+        rest = rest[:i] + rest[j:]
+    while rest and rest[0] == "":
+        rest = rest[1:]
+    wt(f, "\n".join(head + [""] + L + rest))
+
+
 # ------------------------------------------------------------------ 보고서
 def q_bundle(q) -> str:
     """질문이 나온 묶음(설계서 3-1 · 3-11 표): 차례 칸 = 묶음 4, S0 = 묶음 1, S1 ~ S5(W5 포함 · 판 결과 S4) = 묶음 2, S6a · S6(차례 수 검사) = 묶음 3."""
@@ -5058,6 +5343,12 @@ def cmd_unapply(a):
     cmd_next(argparse.Namespace(run=a.run))
 
 
+def cmd_autoconfirm(a):
+    """설계서 8-26 자동 확정(S9 뒤 · 확인 페이지 대신) — 요약을 표준 출력에 JSON 한 덩어리."""
+    summ = auto_confirm(Run(a.run))
+    sys.stdout.write(json.dumps(summ, ensure_ascii=False) + "\n")
+
+
 def cmd_status(a):
     r = Run(a.run)
     on = sup_on(r)
@@ -5091,7 +5382,7 @@ def main():
                                             "그 판 판별 설정의 side · band · sheet_band 가 같을 때만(새로 계산할 프레임만 detect)")
     p.add_argument("--no-sup", action="store_true", help="판 supervisor 단계(S7s)를 끔 — 단계 · 질문 규칙 v2 · 표본 판마다 2(설계서 8-17 4-① 전과 같음)")
     p.add_argument("--sup-games", help="시험용: 판 supervisor 를 이 판들만(쉼표) 거치게 — 나머지 판은 S7s 에서 건너뜀(그 판 unsure 차례는 질문으로)")
-    for name in ("status", "unapply"):
+    for name in ("status", "unapply", "autoconfirm"):
         sp.add_parser(name).add_argument("--run", required=True)
     p = sp.add_parser("next")
     p.add_argument("--run", required=True)
@@ -5104,7 +5395,8 @@ def main():
     p.add_argument("--run", required=True)
     p.add_argument("--answers", action="append", required=True)
     a = ap.parse_args()
-    {"init": cmd_init, "next": cmd_next, "replay": cmd_replay, "apply": cmd_apply, "unapply": cmd_unapply, "status": cmd_status}[a.cmd](a)
+    {"init": cmd_init, "next": cmd_next, "replay": cmd_replay, "apply": cmd_apply, "unapply": cmd_unapply, "status": cmd_status,
+     "autoconfirm": cmd_autoconfirm}[a.cmd](a)
 
 
 if __name__ == "__main__":

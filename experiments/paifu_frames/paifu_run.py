@@ -2,7 +2,9 @@
 
   python -X utf8 experiments/paifu_frames/paifu_run.py start  --visit <방문 폴더> [--game <대국>] --run <실행 폴더> [make 옵션] [init 옵션]
   python -X utf8 experiments/paifu_frames/paifu_run.py start  --hanchan <반장 설정 json> --run <실행 폴더> [init 옵션]
-  python -X utf8 experiments/paifu_frames/paifu_run.py go     --run <실행 폴더> [시험용: --replay-from <폴더> [--before-user] [--replay-sup-from <실행>] [--replay-stages S4,…]]
+  python -X utf8 experiments/paifu_frames/paifu_run.py go     --run <실행 폴더> [--confirm auto|page] [시험용: --replay-from <폴더> [--before-user] [--replay-sup-from <실행>] [--replay-stages S4,…]]
+  (설계서 8-26, 11-27: 기본 --confirm auto = S9 뒤 확인 페이지 없이 자동 확정 — paifu_auto.py autoconfirm 이 질문감 · 낮은 확신 순에 짐작 표시, finished 에 요약.
+   아래 page · answer 는 --confirm page(옛 길 — 개발 · 정답 만들기용)일 때만.)
   python -X utf8 experiments/paifu_frames/paifu_run.py page   --run <실행 폴더> [포트 8315] [--ans <답 파일>]
   python -X utf8 experiments/paifu_frames/paifu_run.py answer --run <실행 폴더>
 (저장소 루트에서. 흐름 자체는 paifu_auto.py · 설정 만들기는 paifu_setup.py · 페이지는 paifu_confirm.py — 이 파일은 그 셋을 하위 프로세스로 부르는 고리다.
@@ -252,6 +254,26 @@ def round_view(r: Runner, rd: dict) -> dict:
             "questions_file": rd["questions_file"], "confirm": rd["confirm"], "prep_log": rd["prep_log"]}
 
 
+CONFIRM_MODES = ("auto", "page")   # 설계서 8-26: auto(기본) = 확인 페이지 없이 자동 확정 · page = 옛 길(개발 · 정답 만들기용)
+
+
+def auto_confirm(r: Runner) -> dict:
+    """설계서 8-26 자동 확정: paifu_auto.py autoconfirm(짐작 표시 · estimates · 출처 · report.md 절) → runner.json finished 에 요약. 확인 페이지 자료(confirm/)는 안 만듦.
+    실패하면 RuntimeError."""
+    rc, txt, log = r.sub("autoconfirm", [AUTO, "autoconfirm", "--run", rp(r.d)])
+    if rc != 0:
+        raise RuntimeError(f"paifu_auto autoconfirm 실패(rc {rc}) — {rp(log)}: {tail(txt, 1500)}")
+    try:
+        summ = json.loads(txt.strip().splitlines()[-1])
+    except (json.JSONDecodeError, IndexError):
+        raise RuntimeError(f"paifu_auto autoconfirm 출력을 못 읽음 — {rp(log)}: {tail(txt, 800)}")
+    r.o["finished"] = {"at": now(), "round": 0, "remaining": [], "why": "자동 확정(--confirm auto, 설계서 8-26) — 확인 페이지 없음",
+                       "auto": {k: summ.get(k) for k in ("events_marked", "events_already", "turns", "estimates", "questions", "samples", "unmapped")},
+                       "log": rp(log)}
+    r.save()
+    return summ
+
+
 def finished_view(r: Runner) -> dict:
     return {"run": rp(r.d), "finished": r.o["finished"], "rounds": [round_view(r, x) for x in r.o["rounds"]], "report": rp(r.d / "report.md")}
 
@@ -300,7 +322,14 @@ def cmd_go(a):
             emit({"run": rp(r.d), "why": "next 가 끝났는데 꾸러미도 없고 S9 도 안 끝남", "log": rp(log)}, "error")
     else:
         emit({"run": rp(r.d), "why": f"go 한 번에 {MAX_STEPS}걸음을 넘김"}, "error")
-    # 끝(S9) — 확인 1차례 자료(처음 한 번만 — 그 뒤 go 는 열린 차례를 알림)
+    # 끝(S9) — 설계서 8-26: 기본은 자동 확정(확인 페이지 없음). --confirm page 면 옛 길(확인 1차례 자료 — 처음 한 번만, 그 뒤 go 는 열린 차례를 알림)
+    if a.confirm == "auto" and not r.o["rounds"]:
+        try:
+            summ = auto_confirm(r)
+        except RuntimeError as e:
+            emit({"run": rp(r.d), "why": str(e)}, "error")
+        emit({**finished_view(r), "auto": {k: summ[k] for k in ("events_marked", "events_already", "turns", "estimates", "unmapped")},
+              "timing": r.state().get("timing")}, "done")
     if not r.o["rounds"]:
         rd = make_round(r, 1, round_rows(r))
     else:
@@ -429,6 +458,8 @@ def main():
     p.add_argument("--before-user", action="store_true", help="시험용: replay --before-user(S7s 꾸러미에는 안 붙임)")
     p.add_argument("--replay-sup-from", help="시험용: S7s(판 supervisor) 꾸러미 재생 출처(마감된 sup/ 이 있는 실행)")
     p.add_argument("--replay-stages", help="시험용: 이 단계 꾸러미만 재생(쉼표) — 나머지 단계에서는 목록을 내고 멈춤")
+    p.add_argument("--confirm", choices=CONFIRM_MODES, default="auto",
+                   help="설계서 8-26: auto(기본) = S9 뒤 확인 페이지 없이 자동 확정(짐작 표시) · page = 옛 길(확인 1차례 자료 → page · answer)")
     p = sp.add_parser("page")
     p.add_argument("--run", required=True)
     p.add_argument("port", nargs="?", type=int, default=PORT)

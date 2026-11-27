@@ -2,7 +2,7 @@
 
   python -X utf8 experiments/paifu_frames/paifu_graph.py start  --run <실행> (--visit <방문> [--game <대국>] | --hanchan <설정>) [init 옵션]
   python -X utf8 experiments/paifu_frames/paifu_graph.py go     --run <실행> --hands replay|session|api [--replay-from <실행>] [--replay-sup-from <실행>]
-                                                                 [--before-user] [--max-concurrency 8]
+                                                                 [--before-user] [--max-concurrency 8] [--confirm auto|page]
                                                                  [api 손: --api-games <판>[,…][,manager] · --reuse-api-from <앞 실행> · --max-usd 15 ·
                                                                   --api-fake replay[:out=<출력 토큰>](가짜 클라이언트 — API 0) | --i-mean-it(진짜 API)]
   python -X utf8 experiments/paifu_frames/paifu_graph.py resume --run <실행> [--answers <답 파일>] [--max-usd <새 한도>] [--i-mean-it]
@@ -22,8 +22,13 @@
   (예: 진짜 API auto_h2_apiR1)은 api 손 꾸러미를 그 자리에서 열쇠로 셈(paifu_results.ReuseIndex._backfill). 옛 꼴은 --layout manager(8-20 — 옛 실행 재현용).
   실행도 판 단위: go --run <반장 실행> --games <판>[,…]|all — 판마다 판 실행 폴더 <반장 실행>__<판>(반장 실행을 --at S4 로 베끼고 state 의 판만 좁힘)에서
   판 몫 단계(S4 → S5 판 몫 → S6a → S6b → S6 → S7 → 판 LLM)를 --unit-parallel 개씩 나란히(동시 LLM 수는 --max-concurrency 하나가 모든 판 실행에 걸쳐 셈),
-  <판 실행>/games/<판>.json 에서 멈춤. 모든 판의 판 실행이 끝나면 반장 조립(assemble — 판 몫 파일 · 반장 한 파일의 판 줄 · state 합침) → 반장 S5(판 사이
-  이어지는 값: 공탁 · 국 · 본장 검사 · 아래 자리) → S8 · S9 → 확인 멈춤.
+  <판 실행>/games/<판>.json 에서 멈춤. 11-27: 처음 시작한 반장(start 만 — state.json 없음 또는 S0 ~ S3 가 안 끝남)에 go --games 를 걸면 먼저 반장 공통 앞 단계
+  (paifu_auto init + next 를 한 단계씩 — S4 앞에서 끊는 감싸개 _next_upto, 꾸러미는 이 go 의 손)를 그래프 thread <실행>#prefix 로 돌린 뒤 판 실행으로 이어짐
+  (끊기면 같은 go — 끝난 단계는 state.json 으로 건너뜀, 기록 graph/prefix.json). 모든 판의 판 실행이 끝나면 반장 조립(assemble — 판 몫 파일 · 반장 한 파일의 판 줄 · state 합침) → 반장 S5(판 사이
+  이어지는 값: 공탁 · 국 · 본장 검사 · 아래 자리) → S8 · S9 → 자동 확정(기본) 또는 확인 멈춤(--confirm page).
+11-27 설계서 8-26: S9 뒤 갈림 하나 — 기본 --confirm auto 는 확인 페이지 없이 paifu_run.auto_confirm(paifu_auto.py autoconfirm — 질문감 · 낮은 확신 순의
+  뽑기 · 버림 사건에 guess · 판 정보 질문은 패보 머리 estimates · paifu_source 출처 · report.md 절)으로 done. --confirm page 는 옛 길(확인 페이지 멈춤).
+  판 실행 · 반장 조립 · fork 뒤 go · resume 모두 graph 상태의 opts.confirm(없으면 auto)을 따름. 이미 확인 차례를 연 실행(옛 page 멈춤)을 resume 하면 옛 길 그대로.
 (저장소 루트에서. 시험용 옵션 go · resume: --hand-delay <초>(손이 꾸러미 하나를 채우기 전에 쉼 — 동시 수를 보려고) · --die-after <k>(이 프로세스에서
  k번째 꾸러미를 채운 바로 뒤 os._exit — 재개 시험).)
 
@@ -40,7 +45,7 @@
 마디: stage(paifu_auto next — 꾸러미가 있으면 work 로 Send, S7s 판 supervisor 꾸러미는 손에 안 보내고 관리자 고리로) · work(꾸러미 하나를 손으로) ·
   join(답 꼴 검사 — 차례 답은 paifu_auto.answer_form_error, 틀리면 한 번 다시 냄) · mgr_prep(열린 판 요약 · 관리자 지시문) · manager(관리자 꾸러미를 손으로) ·
   mgr_apply(결정 → paifu_sup reread · take · ask · (재생만) set — 다시 읽기는 work 로 Send) · mgr_close(손댄 판 check → accept 판 done → 열린 판이 남으면 다음
-  라운드, MAX_ROUNDS 넘으면 마감 검사 ① 대상 차례를 ask 로 올리고 done) · confirm(paifu_confirm prep 뒤 interrupt) · answer(paifu_run.py answer 와 같은 일 —
+  라운드, MAX_ROUNDS 넘으면 마감 검사 ① 대상 차례를 ask 로 올리고 done) · confirm(기본 = 자동 확정 · --confirm page = paifu_confirm prep 뒤 interrupt) · answer(paifu_run.py answer 와 같은 일 —
   그것을 부름, 추가 질문이 있으면 confirm 으로 한 번 더).
 관리자 재생(replay 손): 옛 실행의 판 꾸러미 sup/<판>/log.jsonl 명령 순서를 라운드로 자름(연달아 나온 reread 묶음이 끝나는 곳이 경계, status · check · pack 은 버림,
   done → accept, set → replay_set, 로그가 paifu_sup replay 뿐이면 그 출처 꾸러미를 따라감). 글(set 답 · 근거 · 까닭, ask 후보 · 까닭)은 그 꾸러미 draft.json 에서
@@ -105,7 +110,7 @@ PLAN_LOCK = threading.Lock()  # 재생 계획 파일(graph/replay_plan.json)
 SLOT = {"sem": None}          # game 꼴: 판 LLM · 그 다시 읽기 순 호출이 함께 쓰는 자리(max_concurrency 개)
 LAYOUTS = ("game", "manager")
 GAME_TASK = HERE / "paifu_game_task.md"   # 판 LLM 지시문 템플릿(설계서 8-23 — 8-10 판 supervisor 판단 기준을 옮김)
-TEST = {"hand_delay": 0.0, "die_after": None, "fills": 0}
+TEST = {"hand_delay": 0.0, "die_after": None, "fills": 0, "die_after_stage": None}
 _CACHE = {}
 
 
@@ -546,7 +551,11 @@ def n_stage(s: GS):
         if rc != 0 or r.state() is None:
             raise GraphError(f"paifu_auto init 실패(rc {rc}) — {rp(log)}: {prun.tail(txt, 800)}")
     last, same = None, 0
+    until = s["opts"].get("until")   # 11-27: 이 단계 앞에서 멈춤 — "S4" = 처음 시작한 반장의 공통 앞 단계(S0 ~ S3) · "S6a" = 판 실행 앞부분(S4 · S5, 다음 판이 쓸 고친 기록)
     for _ in range(prun.MAX_STEPS):
+        if until and until_done(run, until):
+            ev(run, "stage", stage=until, to="until_end")
+            return {"phase": "until_end", "stage": until, "todo_all": [], "batch": []}
         if s["opts"].get("games") and ((r.state()["stages"].get("S7s") or {}).get("status") == "done"):   # 8-23 판 실행: 판 몫 단계 뒤(반장 마무리 전)에서 멈춤
             ev(run, "stage", stage="S8", to="games_end", games=s["opts"]["games"])
             return {"phase": "games_end", "stage": "S8", "todo_all": [], "batch": []}
@@ -579,6 +588,18 @@ def n_stage(s: GS):
         else:
             same = 0
         last = key
+        if until:   # until 앞 단계는 한 번에 한 단계씩(paifu_auto next 를 그 단계 뒤에서 끊는 감싸개 _next_upto — paifu_auto 는 안 고침)
+            up = next(x for x in stages_before(run, until) if (r.state()["stages"].get(x) or {}).get("status") != "done")
+            rc, txt, log = r.sub(f"next_{up}", [Path(__file__).resolve(), "_next_upto", "--run", rp(r.d), "--upto", up])
+            if rc != 0:
+                raise GraphError(f"paifu_auto next({up} 까지) 오류(rc {rc}) — {rp(log)}: {prun.tail(txt, 1500)}")
+            if (r.state()["stages"].get(up) or {}).get("status") == "done":
+                ev(run, "upto_stage", stage=up, until=until, s=(r.state().get("timing") or {}).get(up))
+                if TEST.get("die_after_stage") == up and until == PREFIX_UNTIL:   # 시험: 공통 앞 단계 하나가 끝난 바로 뒤 죽음(재개 시험)
+                    ev(run, "test_die", after_stage=up)
+                    sys.stdout.flush()
+                    os._exit(137)
+            continue
         rc, txt, log = r.sub("next", [AUTO, "next", "--run", rp(r.d)])
         if rc != 0:
             raise GraphError(f"paifu_auto next 오류(rc {rc}) — {rp(log)}: {prun.tail(txt, 1500)}")
@@ -604,7 +625,7 @@ def r_stage(s: GS):
         return sends(s)
     if s["phase"] == "games":
         return [Send("game", {"game": g, "opts": s["opts"], "run": s["run"]}) for g in s["batch"]]
-    if s["phase"] == "games_end":
+    if s["phase"] in ("games_end", "until_end"):
         return END
     return "mgr_prep" if s["phase"] == "mgr" else "confirm"
 
@@ -1721,12 +1742,25 @@ def write_user_turns(run):
             pr.wj(pr.turn_file(run, t, "user"), doc)
 
 
+def confirm_mode(opts: dict) -> str:
+    """설계서 8-26: S9 뒤 갈림 — auto(기본 · opts 에 칸이 없는 옛 그래프 기록도) = 자동 확정, page = 확인 페이지 멈춤(옛 길)."""
+    return (opts or {}).get("confirm") or "auto"
+
+
 def n_confirm(s: GS):
     run = s["run"]
     refresh_games(run, s["opts"])
     r = runner(run)
     if r.o.get("finished"):
         return {"phase": "done"}
+    if confirm_mode(s["opts"]) == "auto" and not r.o["rounds"]:   # 8-26 자동 확정(확인 차례를 이미 연 실행 — 옛 page 멈춤에서 resume — 은 옛 길 그대로)
+        try:
+            summ = prun.auto_confirm(r)
+        except RuntimeError as e:
+            raise GraphError(f"자동 확정 실패 — {e}")
+        ev(run, "auto_confirm", events_marked=summ["events_marked"], events_already=summ["events_already"], turns=summ["turns"],
+           estimates=summ["estimates"], unmapped=summ["unmapped"])
+        return {"phase": "done", "answer": {"auto": {k: summ[k] for k in ("events_marked", "events_already", "turns", "estimates", "unmapped")}}}
     if not r.o["rounds"]:
         try:
             prun.make_round(r, 1, prun.round_rows(r))
@@ -1903,6 +1937,7 @@ def set_api(run: Path, opts: dict, a) -> None:
 def set_test(a):
     TEST["hand_delay"] = float(a.hand_delay or 0)
     TEST["die_after"] = int(a.die_after) if a.die_after else None
+    TEST["die_after_stage"] = getattr(a, "die_after_stage", None)
 
 
 def has_thread(run: Path) -> bool:
@@ -1930,6 +1965,114 @@ def unit_dir(run: Path, g: str) -> Path:
 
 def units_file(run: Path) -> Path:
     return gdir(run) / "units.json"
+
+
+# ------------------------------------------------------------------ 반장 공통 앞 단계(11-27 — 처음 시작한 반장에서 판 실행으로 잇는 길)
+PREFIX_UNTIL = "S4"   # 판 실행이 반장 실행을 베끼는 자리(run_units → fork_run(run, U, "S4")) — 그 앞(S0 ~ S3)이 반장 공통 앞 단계(설계서 8-23)
+
+
+def prefix_stages() -> list:
+    return pa.STAGES[:pa.STAGES.index(PREFIX_UNTIL)]
+
+
+def stages_before(run, until: str) -> list:
+    """이 실행의 단계 목록(paifu_auto.stage_list — S7s 꺼짐 반영)에서 until 앞 단계들. state.json 이 없으면 STAGES 기준."""
+    stl = pa.stage_list(pa.Run(Path(run))) if (Path(run) / "state.json").exists() else pa.STAGES
+    return stl[:stl.index(until)]
+
+
+def until_done(run, until: str) -> bool:
+    """until 앞 단계가 다 끝났나 — 기준은 결과 파일(state.json 의 단계 상태, 설계서 8-20)."""
+    f = Path(run) / "state.json"
+    if not f.exists():
+        return False
+    st = pa.jl(f)
+    return all((st["stages"].get(x) or {}).get("status") == "done" for x in stages_before(run, until))
+
+
+def prefix_done(run) -> bool:
+    """반장 공통 앞 단계(S0 ~ S3)가 끝났나. fork --at S4 로 만든 반장은 늘 참."""
+    return until_done(run, PREFIX_UNTIL)
+
+
+def prefix_thread(run: Path) -> str:
+    """공통 앞 단계 그래프 thread — 반장 실행의 본 thread(조립 뒤 마무리 · thread_of)와 따로(본 thread 가 있으면 go --games 가 조립을 막음)."""
+    return f"{Path(run).name}#prefix"
+
+
+def next_upto_main(argv: list):
+    """하위 프로세스: paifu_auto next 를 --upto 단계까지만(그 뒤 단계 함수를 부르기 직전에 끊음). paifu_auto 는 안 고치고 이 프로세스 안에서만 STEP 를 바꿈.
+    끊었으면 next 가 끝에 하듯 pending.json 을 비움(앞 단계 꾸러미가 남아 그래프가 같은 꾸러미로 next 를 거듭 부르지 않게)."""
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--run", required=True)
+    ap.add_argument("--upto", required=True, choices=pa.STAGES)
+    a = ap.parse_args(argv)
+    stl = pa.stage_list(pa.Run(Path(a.run)))
+
+    class _Stop(BaseException):   # paifu_auto cmd_next 는 SystemExit 만 잡음 — 이것은 그대로 지나감
+        pass
+
+    def _stop(r):
+        raise _Stop()
+    keep = stl[:stl.index(a.upto) + 1]
+    for k in list(pa.STEP):
+        if k not in keep:
+            pa.STEP[k] = _stop
+    try:
+        pa.cmd_next(argparse.Namespace(run=a.run, redo=None))
+    except _Stop:
+        f = pa.Run(a.run).d / "pending.json"
+        if f.exists():
+            pa.wj(f, {"stage": None, "at": now(), "packages": []})
+        print(f"{a.upto} 까지 — 다음 단계 앞에서 멈춤(paifu_graph _next_upto)")
+    raise SystemExit(0)
+
+
+def drive_prefix(run: Path, opts: dict, a, mc: int, go_cmd: str) -> dict:
+    """처음 시작한 반장(state.json 없음 또는 S0 ~ S3 가 안 끝남)에 go --games: 공통 앞 단계를 그래프(thread <실행>#prefix)로 S4 앞까지.
+    꾸러미(S1 등)는 이 go 의 손으로. 끊기면 같은 go 를 다시 — 늘 새 입력으로 stage 부터 걸고, 끝난 단계 · 답이 찬 꾸러미는 결과 파일로 건너뜀(8-20)."""
+    po = {**opts, "until": PREFIX_UNTIL, "games": None}
+    set_api(run, po, a)
+    SLOT["sem"] = threading.BoundedSemaphore(mc)
+    app, conn = build(run)
+    cfg = {"configurable": {"thread_id": prefix_thread(run)}, "max_concurrency": mc, "recursion_limit": 5000}
+    st0 = app.get_state(cfg)
+    how = "new" if not st0.values else ("after_read" if st0.interrupts else ("after_break" if st0.next else "again"))
+    t0 = time.time()
+    st_before = {x: ((pa.jl(run / "state.json")["stages"].get(x) or {}).get("status") if (run / "state.json").exists() else None) for x in prefix_stages()}
+    ev(run, "go_prefix", how=how, thread=prefix_thread(run), before=st_before, **{k: po.get(k) for k in ("hands", "replay_from", "api_games", "api_fake")})
+    base = {"run": rp(run), "prefix": {"thread": prefix_thread(run), "how": how, "stages_before": st_before}}
+    nxt = f"까닭을 본 뒤 같은 명령: {go_cmd}"
+    try:
+        app.invoke({"run": posix(run), "opts": po, "phase": "stage", "log": [], "max_conc": 0}, cfg, durability="sync")
+    except ah.ApiStop as e:
+        conn.close()
+        ev(run, "api_stop", why=str(e)[:2000], where="prefix")
+        emit({**base, "why": f"공통 앞 단계에서 실행 한도 — {str(e)[:2000]}", "next": f"한도를 올려 같은 명령(--max-usd <새 한도>): {go_cmd}"}, "stop")
+    except (ah.ApiFail, GraphError) as e:
+        conn.close()
+        ev(run, "error", why=str(e)[:2000], where="prefix")
+        emit({**base, "why": f"공통 앞 단계 — {str(e)[:3000]}", "next": nxt}, "error")
+    except Exception as e:  # noqa: BLE001
+        conn.close()
+        ev(run, "error", why=f"{type(e).__name__}: {e}"[:2000], where="prefix")
+        emit({**base, "why": f"공통 앞 단계 — {type(e).__name__}: {e}", "trace": traceback.format_exc()[-3000:], "next": nxt}, "error")
+    st = app.get_state(cfg)
+    conn.close()
+    s = round(time.time() - t0, 1)
+    if st.interrupts:   # replay 손에 옛 답이 없는 꾸러미 — 답을 채운 뒤 같은 go(새 입력으로 다시 걸면 찬 꾸러미는 건너뜀)
+        vals = [i.value for i in st.interrupts]
+        emit({**base, "s": s, "packages": [x["pkg"] for x in vals if x.get("why") == "read"], "replay_miss": [x["pkg"]["id"] for x in vals if x.get("replay_miss")],
+              "next": f"꾸러미마다 task 를 읽혀 answer 에 쓴 뒤 같은 명령: {go_cmd}"}, "read")
+    if not prefix_done(run):
+        emit({**base, "s": s, "why": f"공통 앞 단계가 안 끝났는데 그래프가 멈춤(phase {(st.values or {}).get('phase')} · 다음 마디 {list(st.next)})", "next": nxt}, "error")
+    tm = {x: (pa.jl(run / "state.json").get("timing") or {}).get(x) for x in prefix_stages()}
+    f = gdir(run) / "prefix.json"
+    rec = pa.jl(f) if f.exists() else {"_note": "paifu_graph go --games 가 처음 시작한 반장에서 돈 공통 앞 단계(S0 ~ S3) 기록 — 11-27", "thread_id": prefix_thread(run), "runs": []}
+    rec["runs"].append({"at": now(), "how": how, "s": s, "stages_before": st_before, "timing": tm, "hands": po.get("hands")})
+    pa.wj(f, rec)
+    ev(run, "prefix_done", s=s, timing=tm)
+    return {"how": how, "s": s, "timing": tm, "stages_before": st_before}
 
 
 def unit_owned(rel_parts: tuple, prefix: str) -> bool:
@@ -2188,15 +2331,20 @@ def unit_opts(opts: dict, g: str) -> dict:
     return {**opts, "games": [g], "unit_games": None}
 
 
-def drive_unit(U: Path, opts: dict, mc: int) -> dict:
-    """판 실행 하나를 이 프로세스의 스레드에서 판 몫 끝(games_end)까지. 동시 자리(SLOT · CONC)는 모든 판 실행이 같이 씀 — 동시 수는 이 그래프 프로세스 하나가 셈."""
+def drive_unit(U: Path, opts: dict, mc: int, until: str | None = None) -> dict:
+    """판 실행 하나를 이 프로세스의 스레드에서 판 몫 끝(games_end)까지. 동시 자리(SLOT · CONC)는 모든 판 실행이 같이 씀 — 동시 수는 이 그래프 프로세스 하나가 셈.
+    until(11-27) = 그 단계 앞에서 멈춤(따로 thread <판 실행>#upto_<단계> · 늘 새 입력 — 끝난 단계는 state.json 으로 건너뜀). 판 실행 앞부분(S4 · S5)만 먼저 돌려
+    다음 판이 쓸 고친 기록(_prep/rec/<판>/paifu_rec.json)을 만들 때."""
     t0 = time.time()
     app, conn = build(U)
-    cfg = cfg_of(U, mc)
+    cfg = {"configurable": {"thread_id": f"{U.name}#upto_{until}"}, "max_concurrency": mc, "recursion_limit": 5000} if until else cfg_of(U, mc)
     st0 = app.get_state(cfg)
     err, code = None, None
     try:
-        if st0.values and not st0.next and (st0.values or {}).get("phase") == "games_end":
+        if until:
+            if not until_done(U, until):
+                app.invoke({"run": posix(U), "opts": {**opts, "until": until}, "phase": "stage", "log": [], "max_conc": 0}, cfg, durability="sync")
+        elif st0.values and not st0.next and (st0.values or {}).get("phase") == "games_end":
             pass   # 이미 끝난 판 실행
         elif st0.values:
             app.invoke(None, cfg, durability="sync")   # 끊긴 판 실행을 이어 감(마지막 저장부터 — 끝난 꾸러미 · 판은 결과 파일로 건너뜀)
@@ -2214,37 +2362,118 @@ def drive_unit(U: Path, opts: dict, mc: int) -> dict:
     st = app.get_state(cfg)
     conn.close()
     phase = (st.values or {}).get("phase")
-    if code is None:
+    if code is None and until:
+        code = "until_end" if until_done(U, until) else ("read" if st.interrupts else "error")
+        if code != "until_end":
+            err = f"판 실행 앞부분이 {until} 앞에 안 닿음 — phase {phase} · 다음 마디 {list(st.next)} · interrupt {len(st.interrupts)}(판 실행은 replay · api 손만)"
+    elif code is None:
         code = "games_end" if phase == "games_end" and not st.next else ("read" if st.interrupts else "error")
         if code != "games_end":
             err = f"판 실행이 판 몫 끝(games_end)에 안 닿음 — phase {phase} · 다음 마디 {list(st.next)} · interrupt {len(st.interrupts)}(판 실행은 replay · api 손만)"
     if err:
-        ev(U, "unit_error", why=err)
+        ev(U, "unit_error", why=err, until=until)
     g = (opts.get("games") or ["?"])[0]
     gf = U / "games" / f"{g}.json"
     return {"game": g, "run": rp(U), "status": code, "why": err, "s": round(time.time() - t0, 1), "fills": fills_summary(U),
+            **({"until": until} if until else {}),
             "game_file": rp(gf) if gf.exists() else None, "game_status": pa.jl(gf)["status"] if gf.exists() else None,
             **({"api": ah.usage_summary(gdir(U))} if (gdir(U) / "api_usage.jsonl").exists() else {})}
 
 
+# 11-27 판 실행끼리 이어지는 것(설계서 8-23 · r_unit_audit M1): 판 실행의 S6a 준비 창 시작(prev_last_ms)은 반장 판 순서의 앞 판 고친 기록
+# _prep/rec/<앞 판>/paifu_rec.json(앞 판 S5 결과)의 마지막 버림 시각(paifu_auto.unit_prev_last). 끝난 실행을 fork --at S4 한 반장은 옛 실행의 그 파일이
+# 베껴져 있어 판 실행에도 있지만, 처음 시작한 반장(공통 앞 단계만 돈 것)에는 없다 → 없으면 앞 판 판 실행을 S5 까지(S6a 앞) 먼저 돌려 그 파일을 넣는다.
+UNIT_PRE_UNTIL = "S6a"
+
+
+def rec_rel(g: str) -> str:
+    return f"_prep/rec/{g}/paifu_rec.json"
+
+
+def prev_rec_need(U: Path, g: str, allg: list):
+    """판 실행 U(판 g)의 S6a 가 쓸 앞 판 고친 기록 — unit_prev_last 와 같은 길로 앞 판을 거꾸로 봄: 기록이 있고 버림 시각이 있으면 None(채워짐),
+    기록이 없는 판을 먼저 만나면 그 판(채워야 함). 앞 판이 없거나 다 버림이 없으면 None."""
+    for pg in reversed(allg[:allg.index(g)] if g in allg else []):
+        f = U / rec_rel(pg)
+        if not f.exists():
+            return pg
+        if any(e["type"] == "discard" and e.get("at") is not None for e in pa.jl(f)["events"]):
+            return None
+    return None
+
+
+def rec_source(run: Path, pg: str):
+    """앞 판 고친 기록의 출처: 반장 실행(조립 · 옛 fork 사본) → 그 판의 판 실행(S5 가 끝난 것). 없으면 None."""
+    if (run / rec_rel(pg)).exists():
+        return run, run / rec_rel(pg)
+    V = unit_dir(run, pg)
+    if (V / "state.json").exists() and (pa.jl(V / "state.json")["stages"].get("S5") or {}).get("status") == "done" and (V / rec_rel(pg)).exists():
+        return V, V / rec_rel(pg)
+    return None
+
+
+def unit_setup(run: Path, g: str, opts: dict, a, made: dict):
+    """판 실행 폴더 준비 — 없으면 반장 실행을 --at S4 로 베끼고(state 의 판만 좁힘) graph.json · api 설정."""
+    U = unit_dir(run, g)
+    if not U.exists():
+        fo = fork_run(run, U, "S4")
+        made[g] = {"fork_s": fo["s"], "rewritten": fo["rewritten"]}
+    if not has_thread(U):
+        games_setup(U, [g])
+        uo = unit_opts(opts, g)
+        gdir(U).mkdir(parents=True, exist_ok=True)
+        set_api(U, uo, a)
+        pa.wj(gdir(U) / "graph.json", {"_note": "paifu_graph.py 판 실행(설계서 8-23 실행도 판 단위) — 반장 실행 go --games 가 만듦", "at": now(), **uo,
+                                      "thread_id": U.name, "db": rp(U / DB), "unit_of": rp(run)})
+        ev(U, "go", **uo, unit_of=rp(run))
+    else:
+        set_api(U, pa.jl(gdir(U) / "graph.json"), a)
+
+
+def fill_prev_recs(run: Path, games: list, opts: dict, a, mc: int, par: int, made: dict) -> tuple:
+    """판 실행마다 S6a 앞에 앞 판 고친 기록을 채움(없는 앞 판은 그 판 실행을 S6a 앞까지 먼저 — 나란히). → (넣은 것, 앞부분 실행 결과, 못 채운 판 {판: 까닭})."""
+    from concurrent.futures import ThreadPoolExecutor
+    allg = list(pa.Run(run).state["game_ids"])
+    put, pre_res, blocked = {}, {}, {}
+    for _ in range(len(allg)):
+        need = {}
+        for g in games:
+            U = unit_dir(run, g)
+            if g in blocked or (pa.jl(U / "state.json")["stages"].get("S6a") or {}).get("status") == "done":
+                continue
+            pg = prev_rec_need(U, g, allg)
+            if pg:
+                need[g] = pg
+        if not need:
+            break
+        todo = sorted({pg for pg in need.values() if rec_source(run, pg) is None and pg not in pre_res}, key=allg.index)
+        if todo:
+            for pg in todo:
+                unit_setup(run, pg, opts, a, made)
+            ev(run, "unit_pre", games=todo, why="앞 판 고친 기록(S5) — 다음 판 S6a 준비 창", until=UNIT_PRE_UNTIL)
+            with ThreadPoolExecutor(max_workers=max(1, min(par, len(todo)))) as ex:
+                futs = {pg: ex.submit(drive_unit, unit_dir(run, pg), unit_opts(opts, pg), mc, UNIT_PRE_UNTIL) for pg in todo}
+                for pg, fu in futs.items():
+                    pre_res[pg] = fu.result()
+        for g, pg in need.items():
+            src = rec_source(run, pg)
+            if src is None:
+                why = (pre_res.get(pg) or {}).get("why") or "출처 없음"
+                blocked[g] = f"앞 판 {pg} 의 고친 기록({rec_rel(pg)})을 못 만듦 — 앞 판 판 실행 앞부분(S4 · S5): {(pre_res.get(pg) or {}).get('status')} · {why}"
+                continue
+            U = unit_dir(run, g)
+            copy_rewritten(src[1], U / rec_rel(pg), path_rewriter(src[0], U))
+            put[g] = put.get(g, []) + [{"prev": pg, "from": rp(src[1])}]
+            ev(U, "prev_rec", prev=pg, src=rp(src[1]))
+    return put, pre_res, blocked
+
+
 def run_units(run: Path, games: list, opts: dict, a, mc: int, par: int) -> dict:
-    """판 실행들: 없으면 반장 실행을 --at S4 로 베껴 판 실행 폴더를 만들고(state 의 판만 좁힘) 나란히(par 개씩) 판 몫 단계를 돌림."""
+    """판 실행들: 없으면 반장 실행을 --at S4 로 베껴 판 실행 폴더를 만들고(state 의 판만 좁힘) 나란히(par 개씩) 판 몫 단계를 돌림.
+    11-27: 앞 판 고친 기록이 없는 판 실행은 먼저 앞 판 판 실행을 S6a 앞까지 돌려 그 기록을 넣음(fill_prev_recs — fork 로 만든 반장은 이미 있어 안 거침)."""
     made = {}
     for g in games:
-        U = unit_dir(run, g)
-        if not U.exists():
-            fo = fork_run(run, U, "S4")
-            made[g] = {"fork_s": fo["s"], "rewritten": fo["rewritten"]}
-        if not has_thread(U):
-            games_setup(U, [g])
-            uo = unit_opts(opts, g)
-            gdir(U).mkdir(parents=True, exist_ok=True)
-            set_api(U, uo, a)
-            pa.wj(gdir(U) / "graph.json", {"_note": "paifu_graph.py 판 실행(설계서 8-23 실행도 판 단위) — 반장 실행 go --games 가 만듦", "at": now(), **uo,
-                                          "thread_id": U.name, "db": rp(U / DB), "unit_of": rp(run)})
-            ev(U, "go", **uo, unit_of=rp(run))
-        else:
-            set_api(U, pa.jl(gdir(U) / "graph.json"), a)
+        unit_setup(run, g, opts, a, made)
     reg = pa.jl(units_file(run)) if units_file(run).exists() else {"_note": "반장 실행의 판 실행 목록(paifu_graph go --games — 설계서 8-23)", "units": {}}
     for g in games:
         reg["units"][g] = rp(unit_dir(run, g))
@@ -2252,18 +2481,28 @@ def run_units(run: Path, games: list, opts: dict, a, mc: int, par: int) -> dict:
     SLOT["units"] = True
     from concurrent.futures import ThreadPoolExecutor
     t0 = time.time()
-    res = {}
-    with ThreadPoolExecutor(max_workers=max(1, min(par, len(games)))) as ex:
-        futs = {g: ex.submit(drive_unit, unit_dir(run, g), unit_opts(opts, g), mc) for g in games}
-        for g, fu in futs.items():
-            res[g] = fu.result()
+    put, pre_res, blocked = fill_prev_recs(run, games, opts, a, mc, par, made)
+    t_pre = round(time.time() - t0, 1)
+    res = {g: {"game": g, "run": rp(unit_dir(run, g)), "status": "error", "why": blocked[g], "s": 0.0} for g in games if g in blocked}
+    go_g = [g for g in games if g not in blocked]
+    if go_g:
+        with ThreadPoolExecutor(max_workers=max(1, min(par, len(go_g)))) as ex:
+            futs = {g: ex.submit(drive_unit, unit_dir(run, g), unit_opts(opts, g), mc) for g in go_g}
+            for g, fu in futs.items():
+                res[g] = fu.result()
+    res = {g: res[g] for g in games}
     SLOT["units"] = False
-    out = {"units": res, "forked": made, "s": round(time.time() - t0, 1), "conc_max": CONC["max"], "unit_parallel": par}
+    out = {"units": res, "forked": made, "s": round(time.time() - t0, 1), "conc_max": CONC["max"], "unit_parallel": par,
+           **({"prev_rec": put, "pre_units": pre_res, "pre_s": t_pre} if (put or pre_res) else {})}
     reg = pa.jl(units_file(run))
+    for pg in pre_res:
+        reg["units"].setdefault(pg, rp(unit_dir(run, pg)))
     reg.setdefault("runs", []).append({"at": now(), "games": games, "status": {g: v["status"] for g, v in res.items()}, "s": out["s"], "conc_max": CONC["max"],
-                                       "max_concurrency": mc, "unit_parallel": par})
+                                       "max_concurrency": mc, "unit_parallel": par,
+                                       **({"pre_units": {pg: v["status"] for pg, v in pre_res.items()}, "pre_s": t_pre, "prev_rec": put} if (put or pre_res) else {})})
     pa.wj(units_file(run), reg)
-    ev(run, "units", games=games, status={g: v["status"] for g, v in res.items()}, s=out["s"], conc_max=CONC["max"])
+    ev(run, "units", games=games, status={g: v["status"] for g, v in res.items()}, s=out["s"], conc_max=CONC["max"],
+       pre_units={pg: v["status"] for pg, v in pre_res.items()} or None)
     return out
 
 
@@ -2338,18 +2577,8 @@ def cmd_go(a):
     games_only = [x for x in (a.games or "").split(",") if x]
     if games_only and a.layout != "game":
         emit({"run": rp(run), "why": "--games(판 실행)는 --layout game 에서만"}, "stop")
-    if games_only:
-        r0 = pa.Run(run)
-        if r0.state is None:
-            emit({"run": rp(run), "why": "--games: state.json 이 없음 — 반장 공통 앞 단계(S0 ~ S3)가 끝난 실행에서(fork --at S4)"}, "stop")
-        if r0.state.get("unit"):
-            emit({"run": rp(run), "why": "--games: 이 폴더는 판 실행 폴더 — 반장 실행 폴더에 go --games 를 걸 것"}, "stop")
-        allg0 = list(r0.state["game_ids"])
-        if games_only == ["all"]:
-            games_only = allg0
-        bad = [g for g in games_only if g not in allg0]
-        if bad:
-            emit({"run": rp(run), "why": f"--games: 이 실행에 없는 판 {bad}"}, "stop")
+    if games_only and (run / "state.json").exists() and (pa.Run(run).state or {}).get("unit"):
+        emit({"run": rp(run), "why": "--games: 이 폴더는 판 실행 폴더 — 반장 실행 폴더에 go --games 를 걸 것"}, "stop")
     opts = {"hands": a.hands, "replay_from": rp(absp(a.replay_from)) if a.replay_from else None,
             "replay_sup_from": rp(absp(a.replay_sup_from)) if a.replay_sup_from else None, "before_user": bool(a.before_user),
             "max_concurrency": a.max_concurrency, "session_stages": [x for x in (a.session_stages or "").split(",") if x],
@@ -2357,8 +2586,23 @@ def cmd_go(a):
             "reuse_api_from": rp(absp(a.reuse_api_from)) if a.reuse_api_from else None, "api_fake": a.api_fake or None,
             "layout": a.layout, "again": bool(a.again), "games": None, "unit_games": games_only or None,
             "reuse_from": [rp(absp(x)) for x in (a.reuse_from or "").split(",") if x],
-            "test_touch_task": [x for x in (a.test_touch_task or "").split(",") if x]}
+            "test_touch_task": [x for x in (a.test_touch_task or "").split(",") if x],
+            "confirm": a.confirm}
     gdir(run).mkdir(parents=True, exist_ok=True)
+    pre_o = None
+    if games_only and not prefix_done(run):   # 11-27: 처음 시작한 반장 — 공통 앞 단계(S0 ~ S3)를 먼저 그래프로 돌리고 S4 앞에서 멈춘 뒤 판 실행으로
+        pre_o = drive_prefix(run, opts, a, a.max_concurrency, "python -X utf8 experiments/paifu_frames/paifu_graph.py " + " ".join(sys.argv[1:]))
+    if games_only:
+        r0 = pa.Run(run)
+        if r0.state is None:
+            emit({"run": rp(run), "why": "--games: state.json 이 없음(공통 앞 단계 뒤에도)"}, "error")
+        allg0 = list(r0.state["game_ids"])
+        if games_only == ["all"]:
+            games_only = allg0
+        bad = [g for g in games_only if g not in allg0]
+        if bad:
+            emit({"run": rp(run), "why": f"--games: 이 실행에 없는 판 {bad}"}, "stop")
+        opts["unit_games"] = games_only
     r_u = pa.Run(run) if (run / "state.json").exists() else None
     if not games_only and r_u is not None and r_u.state and r_u.state.get("unit"):   # 11-26 밤: 판 실행 폴더(fork --at S7s 등으로 만든 것)에 바로 go — 그 판 몫 끝에서 멈춤
         if a.layout != "game":
@@ -2373,7 +2617,7 @@ def cmd_go(a):
                   and (pa.jl(unit_dir(run, g) / "state.json").get("stages", {}).get("S7s") or {}).get("status") == "done"}
         bad_u = {g: v for g, v in uo["units"].items() if v["status"] != "games_end"}
         base = {"run": rp(run), "units": uo["units"], "unit_parallel": a.unit_parallel, "max_concurrency": a.max_concurrency, "conc_max": uo["conc_max"],
-                "units_s": uo["s"], "registry": rp(units_file(run))}
+                "units_s": uo["s"], "registry": rp(units_file(run)), "prefix": pre_o, **{k: uo[k] for k in ("prev_rec", "pre_units", "pre_s") if k in uo}}
         if bad_u:
             emit({**base, "why": f"판 실행이 판 몫 끝에 못 닿음 {sorted(bad_u)} — 까닭은 units.<판>.why",
                   "next": f"고친 뒤 같은 명령(끝난 판 실행은 건너뜀): python -X utf8 experiments/paifu_frames/paifu_graph.py go --run {rp(run)} --games {a.games} …"},
@@ -2604,6 +2848,8 @@ def cmd_status(a):
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "start":
         cmd_start(sys.argv[2:])
+    if len(sys.argv) > 1 and sys.argv[1] in ("_next_upto", "_next_prefix"):   # 안쪽 하위 명령(n_stage 가 부름 — until 앞 단계를 한 단계씩)
+        next_upto_main(sys.argv[2:])
     ap = argparse.ArgumentParser(description="대국 뒤 자동 패보 — LangGraph 그래프(설계서 8-20)")
     sp = ap.add_subparsers(dest="cmd", required=True)
     sp.add_parser("start", help="paifu_run.py start 와 같은 인자(그것을 부름)")
@@ -2622,12 +2868,16 @@ def main():
     p.add_argument("--games", help="8-23 판 실행: 이 판(쉼표 · all)마다 판 실행 폴더(<실행>__<판> — 이 반장 실행을 --at S4 로 베끼고 state 의 판만 좁힘)를 "
                                     "만들어 나란히 판 몫 단계(S4 → S5 판 몫 → S6a → S6b → S6 → S7 → 판 LLM)를 돌리고 <판 실행>/games/<판>.json 에서 멈춤. "
                                     "모든 판의 판 실행이 끝났으면 반장 조립(판 몫 파일 · 반장 한 파일의 판 줄 · state 합침) → 반장 S5(판 사이 이어지는 값) → S8 · S9 → 확인. "
-                                    "반장 공통 앞 단계(S0 ~ S3)는 이 실행에 끝나 있어야 함(fork --at S4)")
+                                    "반장 공통 앞 단계(S0 ~ S3)가 안 끝난 실행(start 만 한 것)이면 먼저 그것을 그래프(thread <실행>#prefix)로 돌려 S4 앞에서 멈춘 뒤 "
+                                    "판 실행으로(11-27, 끊기면 같은 명령) · fork --at S4 로 만든 실행은 바로 판 실행")
     p.add_argument("--unit-parallel", type=int, default=UNIT_PAR_DEFAULT, help="--games: 판 실행을 동시에 몇 개(계산 단계가 무거움 — 기본 3). LLM 동시 수는 --max-concurrency 하나가 모든 판 실행에 걸쳐 셈")
     p.add_argument("--no-assemble", action="store_true", help="--games: 모든 판이 끝나도 반장 조립 · 마무리를 안 함")
     p.add_argument("--layout", choices=LAYOUTS, default="game", help="game = 판마다 판 LLM(8-23, 기본) · manager = 반장 관리자 하나(8-20 — 옛 실행 재현용)")
     p.add_argument("--reuse-from", help="8-23 캐시 대체: 이 실행들(쉼표)에 입력 sha(정규화 TASK · 그림)가 같은 순 결과 · 꾸러미 · 판 LLM 호출이 있으면 베낌(손 가리지 않음)")
     p.add_argument("--test-touch-task", help="시험용(8-23 끝 조건 6): 이 꾸러미 id(쉼표)의 TASK.md 끝에 한 바이트(줄바꿈)를 더한 뒤 채움")
+    p.add_argument("--confirm", choices=prun.CONFIRM_MODES, default="auto",
+                   help="설계서 8-26: auto(기본) = S9 뒤 확인 페이지 없이 자동 확정(질문감 · 낮은 확신 순에 짐작 표시 → done) · "
+                        "page = 옛 길(확인 페이지 멈춤 → resume --answers — 개발 · 정답 만들기용). 판 실행 · 반장 조립 · resume 은 이 값(없으면 auto)을 따름")
     for q in (p, sp.add_parser("resume")):
         if q is not p:
             q.add_argument("--run", required=True)
@@ -2636,6 +2886,7 @@ def main():
         q.add_argument("--i-mean-it", action="store_true", help="api 손: 진짜 Claude API 를 부른다(이 인자 없이는 진짜 호출 0)")
         q.add_argument("--hand-delay", type=float, default=0.0, help="시험용: 손이 꾸러미 하나를 채우기 전에 쉬는 초")
         q.add_argument("--die-after", type=int, help="시험용: 이 프로세스에서 k번째 꾸러미를 채운 바로 뒤 os._exit(137)")
+        q.add_argument("--die-after-stage", choices=["S0", "S1", "S2", "S3"], help="시험용(go --games 공통 앞 단계): 이 단계가 끝난 바로 뒤 os._exit(137)")
     p = sp.add_parser("status")
     p.add_argument("--run", required=True)
     p = sp.add_parser("fork", help="끝난 실행을 베껴 어느 단계부터만 다시(state 되감기 — 돌리지 않음, 이어서 go)")
