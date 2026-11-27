@@ -233,7 +233,26 @@ class _PlanTurn:
         self.tid, self.rows = tid, rows
 
 
-def prep_fromplan(tid: str):
+# 설계서 8-28(11-27): --fromplan --noev — 사건 목록(events.txt)을 안 만들고 지시문을 표 12-148 · 12-149(nev_w13 · nev_w16 꾸러미)에서 쓴 글로 바꿈(넷).
+# 위 NOEV_SUBS(prep_nosam 용 — 글이 조금 다름)와 따로 둔다. 시험 때 넣은 `auto_*` 금지는 넣지 않음(실행 폴더 이름이 auto_ 로 시작). han3.cmd_callprep 도 씀.
+FROMPLAN_NOEV_SUBS = [
+    ("- `events.txt` — **칸 틀 사건 목록**: 코드가 패 검출 상자로 줄의 칸이 차고 빈 때를 적은 것(시각 옆 괄호가 프레임 번호). 손이 덮은 칸 밑은 못 본다.\n", ""),
+    ("`events.txt` 가 출발점이다. 목록은 손이 덮은 칸 밑을 못 보므로 손 가림 구간은 원본으로 확인한다.", "원본 프레임에서 직접 찾는다(이 차례에는 사건 목록이 없다)."),
+    ("`TASK.md` · `frames.txt` · `events.txt` · `raw/`", "`TASK.md` · `frames.txt` · `raw/`"),
+    ('"events_used": "사건 목록에서 쓴 줄과 원본으로 바로잡은 곳(프레임 번호)"', '"moves": "패가 실제로 움직인 때와 그 동작(프레임 번호)"'),
+]
+
+
+def noev_task(task: str) -> str:
+    """FROMPLAN_NOEV_SUBS 넷을 꼭 한 번씩 — 하나라도 안 맞으면 멈춤(템플릿이 바뀐 것)."""
+    for x, y in FROMPLAN_NOEV_SUBS:
+        assert task.count(x) == 1, x
+        task = task.replace(x, y)
+    assert "events" not in task, task
+    return task
+
+
+def prep_fromplan(tid: str, noev: bool = False):
     import claudeagent as ca
     p = s1.plan(tid)
     assert p["ok"], (tid, p.get("why"))
@@ -249,15 +268,21 @@ def prep_fromplan(tid: str):
         lines.append(f"{i:03d} {hc.mss(ms)} {f.as_posix()}")
         rows.append((i, hc.mss(ms), f, f))
     (d / "frames.txt").write_bytes(("\n".join(lines) + "\n").encode("utf-8"))
-    ev = ca.events_text(_PlanTurn(tid, rows))
-    assert ev.startswith(f"== {tid} ·"), ev[:80]
-    (d / "events.txt").write_bytes((ev + "\n").encode("utf-8"))
+    if noev:   # 8-28: 칸 틀 검출이 시작 · 끝 줄 프레임뿐(slotgrid detect --ends)이라 사건 목록을 만들지 않음 — 남은 옛 events.txt 도 지움
+        (d / "events.txt").unlink(missing_ok=True)
+        ev = None
+    else:
+        ev = ca.events_text(_PlanTurn(tid, rows))
+        assert ev.startswith(f"== {tid} ·"), ev[:80]
+        (d / "events.txt").write_bytes((ev + "\n").encode("utf-8"))
     task = TASK_NOSAM.format(n=p["n"], F=len(fl), tid=tid, dir=d.as_posix(), work=(d / "work").as_posix())
     old = "`opusread_1118` · `claudeagent_1119` · `geminiagent_1118`"
     assert old in task
     task = task.replace(old, "`opusread_*` · `rawread_*` · `rawhand_*` · `m2bsub_*` · `claudeagent_*` · `geminiagent_*` · `mottrack_*` · `idsolve_*` · `hands_*` · `slotgrid_*`")
+    if noev:
+        task = noev_task(task)
     (d / "TASK.md").write_bytes(task.encode("utf-8"))
-    print(tid, f"n={p['n']}", len(fl), "장(원본만) · 사건 목록", len(ev), "자 →", d, flush=True)
+    print(tid, f"n={p['n']}", len(fl), "장(원본만) · 사건 목록", "없음(--noev)" if noev else f"{len(ev)} 자", "→", d, flush=True)
 
 
 # 11-20 사용자 "m2b설정으로 opus모델 하위에이전트써서 안본판 재봐" — API m2b(claudeagent --variant motion2, 표 12-84)를 하위 에이전트 꼴로.
@@ -382,7 +407,7 @@ def main():
             q.add_argument("--raw", action="store_true", help="SAM 2 없이 원본 띠만(추가 39 — r19 4순)")
             q.add_argument("--nosam", action="store_true", help="SAM 2 없이 원본 + 칸 틀 사건 목록(11-20, --root rawread_1120)")
             q.add_argument("--hands", action="store_true", help="--nosam 에 손 관절 사건 더함(11-20, --root rawhand_1120)")
-            q.add_argument("--noev", action="store_true", help="--nosam 에서 사건 목록을 뺌(11-27, --root noev_1127)")
+            q.add_argument("--noev", action="store_true", help="--nosam 에서 사건 목록을 뺌(11-27, --root noev_1127) · --fromplan 과 함께면 설계서 8-28 글(FROMPLAN_NOEV_SUBS)")
             q.add_argument("--m2b", action="store_true", help="API m2b(motion2) 꼴을 하위 에이전트로(11-20, --root m2bsub_1120)")
             q.add_argument("--fromplan", action="store_true", help="--nosam 꼴을 SAM 2 추적 없이 plan 틀에서 바로(11-20, --ids r15L16 --root rawread_r15L16_1120)")
     a = ap.parse_args()
@@ -391,7 +416,7 @@ def main():
     if a.cmd == "prep":
         for tid in _ids(a.ids):
             if a.fromplan:
-                prep_fromplan(tid)
+                prep_fromplan(tid, a.noev)
             elif a.m2b:
                 prep_m2b(tid)
             elif a.nosam:

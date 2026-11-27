@@ -3,6 +3,7 @@
 사용자 제안: 검출기로 손패를 잡아 패 한 장 폭을 재고, (13장이면) 0 ~ 15 칸 틀을 만들어 매 프레임에 갖다 대 빈칸을 본다 → 판독하는 쪽이 도구로 쓴다.
   python -X utf8 slotgrid.py detect <판 id…> [--ids a,b] [--step 2] [--no-skip]   # 차례 창 프레임의 뒷면 상자 · 가림 열 캐시 → _work/slotgrid_1117/det_<판>.json
                                                                     # (기본: 띠가 마지막 검출 프레임과 거의 같으면 건너뛰고 skip_of 표시 — 설계서 8-27)
+  python -X utf8 slotgrid.py detect <판…> --ends [--ids a,b] [--call-ids c]  # 최소 검출(설계서 8-28): 순마다 시작 줄 · 끝 줄까지만 → 같은 캐시 + ends_<판>.json
   python -X utf8 slotgrid.py look <차례 id…> [--raw]                    # 칸 상태 줄글(정답 · 판독기 답은 안 찍음)
   python -X utf8 slotgrid.py events <차례 id…> [--count]                # 사건 목록(줄을 따라가며 칸 변화 · 가림 구간 · 줄 밀림만) — look 의 1/5 길이
   python -X utf8 slotgrid.py score <이름>                               # _work/slotgrid_1117/read_<이름>.json 채점(호출 없음)
@@ -77,6 +78,8 @@ def band_diff(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def cmd_detect(a):
+    if a.ends:
+        return cmd_detect_ends(a)
     import dettrack as dt
     L = dt.reader()
     OUT.mkdir(parents=True, exist_ok=True)
@@ -108,6 +111,98 @@ def cmd_detect(a):
               + (" (--no-skip)" if a.no_skip else f" (문턱 {SKIP_THR})"), flush=True)
 
 
+def cmd_detect_ends(a):
+    """최소 검출(설계서 8-28, 11-27 — 사건 목록을 안 만드는 길에서만): 순마다 창 프레임(--step 간격)을
+    ① 앞에서부터 하나씩 검출하다 시작 줄 조건(ANCHOR_BASE = 이 모듈의 anchor — 상자 n 개 한 덩어리 · 가림 없음)이 그 프레임에 서면 멈추고
+    ② 뒤에서부터 하나씩 검출하다 sam2track.plan 의 끝 줄 첫 규칙(end_n — 버림 + 1초 뒤 · 줄 높이 상자 n 개)이 서면 멈춘다.
+       버림 + 1초까지 못 찾으면 그 구간은 다 검출된 셈이라 plan 이 두 번째 규칙(end_row_refit)을 같은 캐시로 본다(더 검출하지 않음 — plan 과 같은 순서).
+       시작 줄(버림 시각의 시 자리 · 줄 높이)은 sam2track.plan_start 로 — plan 과 같은 함수(han3 의 시작 줄 고침도 그대로 걸림).
+    ③ 창 끝 한 장은 늘 검출(han3 plan 의 '끝 줄 없음 → 창 끝' · callprep 의 끝 = 창 안 마지막 캐시 프레임).
+    울기 차례(--call-ids)는 ① + ③ 만(callprep 은 시작 줄만 씀). 띠 건너뛰기(8-27)는 안 씀(프레임이 띄엄띄엄이라 견줄 앞 프레임이 없음).
+    캐시 줄에 "ends": 1. 순별 장수 · 찾은 규칙은 ends_<판>.json."""
+    import dettrack as dt
+    import sam2track as s1
+    OUT.mkdir(parents=True, exist_ok=True)
+    ids = {x for x in a.ids.split(",") if x} if a.ids else set()
+    calls = {x for x in (a.call_ids or "").split(",") if x}
+    st = {"L": None, "det": 0}
+    T0, tot_det, tot_win = time.time(), 0, 0
+    for gid in a.games:
+        cfg, R = hc.config(gid), pt.Row(gid)
+        f = OUT / f"det_{gid}.json"
+        cache = hc.jload(f) if f.exists() else {}
+        ts = [t for t in tc.turns_of(gid) if (not ids and not calls) or t["id"] in ids or t["id"] in calls]
+        if not ts:
+            continue
+        t0, d0 = time.time(), st["det"]
+        st["saved"] = st["det"]
+
+        def save():   # 새로 검출한 프레임이 있을 때만(다 찬 캐시 — 3반장 공용 _work/slotgrid_1117 등 — 는 읽기만)
+            if st["det"] != st["saved"]:
+                hc.jsave(f, cache, indent=None)
+                st["saved"] = st["det"]
+
+        def get(ms):
+            k = str(ms)
+            if k not in cache:
+                if st["L"] is None:
+                    st["L"] = dt.reader()
+                rgb = hc.load(ms)
+                v = hc.band_crop(rgb, cfg["sheet_band"], cfg["side"])
+                cache[k] = {"b": dt.boxes_view(st["L"], rgb, cfg), "o": occ_cols(R, v), "ends": 1}
+                st["det"] += 1
+            return cache[k]
+
+        rep = {}
+        for t in ts:
+            n, fr = t["n_calc"], hc.frame_range(*window(t))[::a.step]
+            row = {"kind": "call" if t["id"] in calls else "hand", "window": len(fr)}
+            c0, fwd = st["det"], None
+            for i, ms in enumerate(fr):
+                if ANCHOR_BASE([(ms, get(ms))], n) is not None:
+                    fwd = i + 1
+                    break
+            row["fwd"] = fwd                      # 앞에서 몇 장째에 섰나(None = 창 끝까지 안 섬 — 창 전부 검출)
+            row["fwd_det"] = st["det"] - c0
+            save()                                # plan_start 는 캐시 파일을 읽음
+            c1 = st["det"]
+            if row["kind"] == "call" or not t["cut"].get("discard"):
+                row["bwd"] = "창 끝 한 장"
+            else:
+                an = s1.plan_start(t["id"])[-1]
+                if an is None:
+                    row["bwd"] = "시작 줄 없음"   # plan 도 '시작 줄 없음' — 그 순은 꾸러미 없음
+                else:
+                    dms, yc, hh = s1.end_dms(t, an), an[2], an[3]
+                    hit = None
+                    for j, ms in enumerate(fr[::-1]):
+                        if ms < dms:
+                            break
+                        if s1.end_n(get(ms), n, yc, hh):
+                            hit = j + 1
+                            break
+                    if hit:
+                        row["bwd"] = hit          # 뒤에서 몇 장째에 섰나
+                    else:
+                        refit = any(s1.end_row_refit(get(ms)["b"], n, yc, hh) is not None for ms in fr[::-1] if ms >= dms)
+                        row["bwd"] = "refit" if refit else "끝 줄 없음"
+            if fr:
+                get(fr[-1])
+            row["bwd_det"] = st["det"] - c1
+            rep[t["id"]] = row
+            tot_win += len(fr)
+        save()
+        ng = st["det"] - d0
+        tot_det += ng
+        bad = {k: v["bwd"] for k, v in rep.items() if v["bwd"] in ("시작 줄 없음", "끝 줄 없음") or v["fwd"] is None}
+        if ng:
+            hc.jsave(OUT / f"ends_{gid}.json", {"_note": "slotgrid detect --ends(설계서 8-28) 순별 검출 장수 — fwd/bwd = 앞/뒤에서 몇 장째에 섰나",
+                                                "game": gid, "detected": ng, "sec": round(time.time() - t0, 1), "turns": rep, "not_found": bad})
+        print(gid, "끝(--ends)", f"순 {len(rep)} · 검출 {ng}장 / 창 {sum(v['window'] for v in rep.values())}장 · {time.time() - t0:.0f}s"
+              + (f" · 못 찾음 {bad}" if bad else "") + ("" if ng else " · 새 검출 0 — 캐시 · ends 파일은 안 씀(읽기만)"), flush=True)
+    print(f"--ends 합: 검출 {tot_det}장 / 창 {tot_win}장 · {time.time() - T0:.0f}s", flush=True)
+
+
 def clusters(bs: list, p: float) -> list:
     out = []
     for b in sorted(bs):
@@ -134,6 +229,9 @@ def anchor(frs: list, n: int):
         yc = float(np.median([(b[2] + b[3]) / 2 for b in bs]))
         return x0, (x1 - x0) / n, yc, float(np.median([b[3] - b[2] for b in bs])), ms
     return None
+
+
+ANCHOR_BASE = anchor   # 8-28: detect --ends 의 앞 방향 멈춤 조건 — 이 모듈의 anchor 그대로(han3.patch 가 slotgrid.anchor 를 바꿔 끼워도 이 이름은 원래 규칙)
 
 
 def state(d: dict, left0: float, p: float, yc: float, hh: float, n: int):
@@ -636,6 +734,8 @@ def main():
     d.add_argument("--ids", default="")
     d.add_argument("--step", type=int, default=2)
     d.add_argument("--no-skip", action="store_true", help="줄이 안 바뀐 프레임도 다 검출(설계서 8-27 전 동작)")
+    d.add_argument("--ends", action="store_true", help="최소 검출(설계서 8-28): 순마다 시작 줄 · 끝 줄이 서는 데까지만 — 사건 목록을 안 만드는 길용(--ids = 손패 순, --call-ids = 울기 순)")
+    d.add_argument("--call-ids", default="", help="--ends: 울기 차례(앞 방향 + 창 끝 한 장만)")
     k = sp.add_parser("look")
     k.add_argument("ids", nargs="+")
     k.add_argument("--raw", action="store_true")

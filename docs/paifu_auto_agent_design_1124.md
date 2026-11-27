@@ -1679,6 +1679,8 @@ w14 는 손패 주인 순이 하나(`w14_d02`)뿐이라 판 LLM 의 판단이 �
 
 **안 본 것:** API 손에서 사건 목록 없는 꼴의 돈 · 정답(표 12-84 의 약 30% 차는 SAM 2 그림이 있던 다른 조건), 사건 목록이 있어도 조용한 틀림이 난 w15 같은 판, 안 본 반장. 기본값을 off 로 바꿀지는 이것들 뒤에 정한다.
 
+**결과(11-27 낮 — metrics 표 12-152 · problem_log 86 이어서 19):** 구현함(Opus 높음 하위 에이전트, 커밋 전) — 고친 곳 `slotgrid.py`(`detect --ends` · `ANCHOR_BASE`) · `sam2track.py`(`plan_start` · `end_dms` · `end_n` 로 떼어 냄 — plan 동작 같음) · `opusread.py`(`prep --fromplan --noev`) · `han3.py`(`callprep --noev`) · `paifu_auto.py`(`init --events`) · `paifu_run.py` · `paifu_graph.py`(`fork --events`) · `paifu_sup.py`(지시문 한 줄). on 길은 2 · 3반장 재생이 옛 실행과 같음. off 길 2반장 빈 캐시: 검출 580장(4.3%) · 92초(옛 49분), 꾸러미 78 첫 · 끝 77/78, 지시문은 잰 글과 같음. 3반장은 흉내로 25%(시작 줄이 원래 규칙으로 늦게 서는 순 9 가 창 전부). off 꾸러미 읽기는 안 함.
+
 ## 9. 사용자에게 물을 것(설계 확인)
 
 1. 하위 에이전트 띄우는 방식: (가) 세션이 지휘(권장) / (나) `claude -p` 로 완전 무인 — (나)는 Claude Code 를 새 방식으로 쓰는 것이라 허락 필요.

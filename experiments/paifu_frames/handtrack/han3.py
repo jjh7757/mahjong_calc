@@ -304,6 +304,13 @@ def patch():
             band = [x0, max(0, y0 - ROW_PAD), x1, min(1496, y1 + ROW_PAD)]
         return _wb(band)
     s1.wide_band = wide_band
+    _ps = s1.plan_start
+
+    def plan_start(tid):
+        """8-28(11-27): slotgrid detect --ends 가 plan 을 거치지 않고 시작 줄만 부를 때도 시작 줄 한도(_anchor_limit)가 그 차례 것이게."""
+        _cur_tid[0] = tid
+        return _ps(tid)
+    s1.plan_start = plan_start
     _pl = s1.plan
 
     def plan(tid):
@@ -914,9 +921,10 @@ gone 두 개 · k · end_order 의 번호를 합치면 1 ~ {n} 이 한 번씩 �
     return s
 
 
-def cmd_callprep(ids: list, root: str):
+def cmd_callprep(ids: list, root: str, noev: bool = False):
     """울기 차례 읽기 재료. 창 = 시작 줄(han3 anchor 규칙: min(버림 − 1.5초, 경계 + 1초) 앞) ~ 차례 창 끝(slotgrid.window 끝 — 다음 차례 경계 + 1.5초).
-    프레임 · 띠 · 사건 목록은 opusread.prep_fromplan 과 같은 꼴(띠 = wide_band(sheet_band) + ROW_PAD, 초당 5장)."""
+    프레임 · 띠 · 사건 목록은 opusread.prep_fromplan 과 같은 꼴(띠 = wide_band(sheet_band) + ROW_PAD, 초당 5장).
+    noev(설계서 8-28 — slotgrid detect --ends 캐시): 사건 목록을 안 만들고 지시문을 opusread.noev_task 로(prep_fromplan --noev 와 같은 바꿈 넷)."""
     import opusread as o
     import claudeagent as ca
     import sam2track as s1
@@ -963,12 +971,17 @@ def cmd_callprep(ids: list, root: str):
             lines.append(f"{i:03d} {hc.mss(ms)} {f.as_posix()}")
             rows.append((i, hc.mss(ms), f, f))
         (d / "frames.txt").write_bytes(("\n".join(lines) + "\n").encode("utf-8"))
-        ev = ca.events_text(o._PlanTurn(tid, rows))
-        assert ev.startswith(f"== {tid} ·"), ev[:80]
-        (d / "events.txt").write_bytes((ev + "\n").encode("utf-8"))
+        if noev:
+            (d / "events.txt").unlink(missing_ok=True)
+        else:
+            ev = ca.events_text(o._PlanTurn(tid, rows))
+            assert ev.startswith(f"== {tid} ·"), ev[:80]
+            (d / "events.txt").write_bytes((ev + "\n").encode("utf-8"))
         task = call_task(n, len(fl), tid, d, d / "work")
         old = "`opusread_1118` · `claudeagent_1119` · `geminiagent_1118`"
         task = task.replace(old, "`opusread_*` · `rawread_*` · `rawhand_*` · `m2bsub_*` · `claudeagent_*` · `geminiagent_*` · `mottrack_*` · `idsolve_*` · `hands_*` · `slotgrid_*`")
+        if noev:
+            task = o.noev_task(task)
         if start != a[4]:   # 앞 차례 버림 직후 시작 — 앞 차례 끝 줄의 정의(울기로 패를 빼기 직전 줄)와 번호를 맞춤
             task = task.replace("\n## 보면 안 되는 것", f"""
 ## 이 차례만 다른 점(시작 줄)
@@ -1087,7 +1100,7 @@ def main():
         cmd_recfix(games)
     elif cmd == "callprep":
         ids = rest[rest.index("--ids") + 1].split(",") if "--ids" in rest else CALL_TURNS
-        cmd_callprep(ids, rest[rest.index("--root") + 1] if "--root" in rest else READ_ROOT)
+        cmd_callprep(ids, rest[rest.index("--root") + 1] if "--root" in rest else READ_ROOT, "--noev" in rest)
     elif cmd == "link":
         cmd_link(games)
     elif cmd == "fix":

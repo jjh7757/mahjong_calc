@@ -382,6 +382,7 @@ def cmd_init(a):
         r.state["slotgrid_seed"] = rel(Path(a.slotgrid_seed).resolve())
     if a.slotgrid_no_skip:   # 설계서 8-27: 칸 틀 검출 프레임 줄이기(기본 켬)를 끔 — 모든 프레임 검출(옛 동작)
         r.state["slotgrid_no_skip"] = True
+    r.state["s6_events"] = a.events   # 설계서 8-28: on = 사건 목록 있는 읽기 꾸러미(옛 동작) · off = 칸 틀 최소 검출(시작 · 끝 줄만) + 사건 목록 없는 꾸러미
     r.save()
     r.cfg()   # 겹침 검사
     print(f"→ {rel(r.d)} (state.json · hanchan.json) · 판 {len(r.games())}")
@@ -3172,10 +3173,29 @@ def s6(r: Run):
             todo = slotgrid_todo(r)
         st["slotgrid"] = todo
         miss = [g for g, v in todo.items() if v["missing"] and (not only or g in only)]
-        if miss:   # 새 반장이면 detect 가 캐시 폴더(_work/slotgrid_1117)에 쓴다 — 3반장 재생에서는 0 이어야 함
+        ev_off = (r.state.get("s6_events") or "on") == "off"   # 설계서 8-28(init --events off)
+        st["events"] = "off" if ev_off else "on"
+        if ev_off:
+            # 칸 틀은 읽을 순(손패 · 울기)의 시작 줄 · 끝 줄 프레임만 검출(slotgrid detect --ends) — 캐시에 빠진 프레임 수(todo)는 이 길에서 0 이 되지 않음
+            pl0 = read_plan(r)
+            hand0 = [t for g in r.games() if not only or g in only for t in pl0["hand"].get(g, [])]
+            call0 = [t for t in pl0["call"] if not only or cfg.game_of(t) in only]
+            gs = [g for g in r.games() if any(cfg.game_of(t) == g for t in hand0 + call0)]
+            if gs:
+                t1 = time.time()
+                p = han3(r, "slotgrid", "detect", *gs, "--ends", *(["--ids", ",".join(hand0)] if hand0 else []), *(["--call-ids", ",".join(call0)] if call0 else []),
+                         log=r.log("s6_slotgrid_detect.log"))
+                m = re.search(r"--ends 합: 검출 (\d+)장 / 창 (\d+)장", p.stdout)
+                st["slotgrid_detect"] = {"mode": "ends", "games": gs, "detected": int(m.group(1)) if m else None, "window_frames": int(m.group(2)) if m else None,
+                                         "s": round(time.time() - t1, 1)}
+        elif miss:   # 새 반장이면 detect 가 캐시 폴더(_work/slotgrid_1117)에 쓴다 — 3반장 재생에서는 0 이어야 함
             # 설계서 8-27: 띠가 안 바뀐 프레임은 검출을 건너뜀(기본) — init --slotgrid-no-skip 이면 끔
             st["slotgrid_skip"] = "off" if r.state.get("slotgrid_no_skip") else "on"
-            han3(r, "slotgrid", "detect", *miss, *(["--no-skip"] if r.state.get("slotgrid_no_skip") else []), log=r.log("s6_slotgrid_detect.log"))
+            t1 = time.time()
+            p = han3(r, "slotgrid", "detect", *miss, *(["--no-skip"] if r.state.get("slotgrid_no_skip") else []), log=r.log("s6_slotgrid_detect.log"))
+            det_n = [int(x) for x in re.findall(r" 끝 \d+ 장 \S+ 검출 (\d+) ·", p.stdout)]
+            st["slotgrid_detect"] = {"mode": "skip" if st["slotgrid_skip"] == "on" else "all", "games": miss, "detected": sum(det_n) if det_n else None,
+                                     "s": round(time.time() - t1, 1)}
         plan = read_plan(r)
         if only:
             plan = {"hand": {g: v for g, v in plan["hand"].items() if g in only}, "call": [t for t in plan["call"] if cfg.game_of(t) in only], "only": only}
@@ -3183,10 +3203,11 @@ def s6(r: Run):
         # 울기 차례: 설정 call_turns(손) ↔ turn_fix 의 kind call(자동)
         src_calls = r.state.get("src_call_turns") or []
         st["call_turns"] = {"auto": plan["call"], "setting": src_calls, "same": sorted(plan["call"]) == sorted(src_calls)}
+        noev = ["--noev"] if ev_off else []   # 설계서 8-28: events.txt 없이 · 지시문 바꿈 넷(opusread.FROMPLAN_NOEV_SUBS)
         if all_hand:
-            han3(r, "opusread", "prep", "--ids", ",".join(all_hand), "--root", r.read.as_posix(), "--nosam", "--fromplan", log=r.log("s6_opusread_prep.log"))
+            han3(r, "opusread", "prep", "--ids", ",".join(all_hand), "--root", r.read.as_posix(), "--nosam", "--fromplan", *noev, log=r.log("s6_opusread_prep.log"))
         if plan["call"]:
-            han3(r, "callprep", "--ids", ",".join(plan["call"]), "--root", r.read.as_posix(), log=r.log("s6_callprep.log"))
+            han3(r, "callprep", "--ids", ",".join(plan["call"]), "--root", r.read.as_posix(), *noev, log=r.log("s6_callprep.log"))
         # 설계서 8-18 (가): 읽기 답 꼴에 확신 숫자 칸 p — 공용 모듈은 안 고치고 만든 TASK.md 를 여기서 고쳐 씀
         tp = {t: task_add_p(r.read / t / "TASK.md", "call" if t in plan["call"] else "hand") for t in all_hand + plan["call"]}
         bad_tp = {t: v for t, v in tp.items() if v not in ("added", "had")}
@@ -5385,6 +5406,8 @@ def main():
     p.add_argument("--slotgrid-seed", help="시험용: S6 칸 틀 검출 캐시(det_<판>.json)를 이 실행 폴더의 handtrack/_work/slotgrid_1117 에서 복사 — "
                                             "그 판 판별 설정의 side · band · sheet_band 가 같을 때만(새로 계산할 프레임만 detect)")
     p.add_argument("--slotgrid-no-skip", action="store_true", help="S6 칸 틀 검출에서 띠가 안 바뀐 프레임 건너뛰기(설계서 8-27, 기본 켬)를 끔 — 모든 프레임 검출")
+    p.add_argument("--events", choices=["on", "off"], default="on",
+                   help="S6 읽기 꾸러미의 칸 틀 사건 목록(설계서 8-28): on = 지금 그대로(기본) · off = 칸 틀은 시작 · 끝 줄만 검출(slotgrid detect --ends), events.txt 없는 지시문")
     p.add_argument("--no-sup", action="store_true", help="판 supervisor 단계(S7s)를 끔 — 단계 · 질문 규칙 v2 · 표본 판마다 2(설계서 8-17 4-① 전과 같음)")
     p.add_argument("--sup-games", help="시험용: 판 supervisor 를 이 판들만(쉼표) 거치게 — 나머지 판은 S7s 에서 건너뜀(그 판 unsure 차례는 질문으로)")
     for name in ("status", "unapply", "autoconfirm"):

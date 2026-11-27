@@ -13,7 +13,7 @@
 start  — 흐름은 아직 돌리지 않는다. 어떤 설정 · 옵션으로 시작하는지 <실행>/runner.json 에 적고 멈춘다("시작" 을 받는 자리).
          --visit = paifu_setup.py make(시작 보고 <실행>/start_report.md). --game 이 없으면 먼저 paifu_setup.py scan 표를 보이고, 대국이 여럿이면 멈춘다.
          --hanchan = 손으로 쓴 설정의 반장(3반장 — 앱 기록이 없어 방문 폴더에서 설정을 못 만듦).
-         init 옵션(--reuse · --hand-settings · --verify-dump · --s6-games · --s6a-rules · --no-sup · --sup-games · --slotgrid-seed)은 그대로 적어 두었다가
+         init 옵션(--reuse · --hand-settings · --verify-dump · --s6-games · --s6a-rules · --no-sup · --sup-games · --slotgrid-seed · --events)은 그대로 적어 두었다가
          go 가 처음 init 할 때 넘긴다. 실행 폴더에 state.json 이 이미 있으면 멈춘다(이미 시작한 실행).
 go     — (처음이면 paifu_auto init) → paifu_auto next 를 돌린다. 답이 안 찬 꾸러미가 있으면 그 목록을 JSON 한 덩어리로 표준 출력에 내고 멈춘다
          (종료 코드 3). 답이 다 찬 꾸러미는 멈추지 않고 next 를 다시 불러 다음 단계로. 끝(S9)까지 가면 확인 1차례 자료(paifu_confirm.py prep —
@@ -64,7 +64,7 @@ MAX_ROUNDS = 2          # 확인 차례(1차례 + 추가 질문 한 번 — 설�
 MAKE_OPTS = ["--captures", "--head-rec", "--date", "--id-prefix", "--id-start", "--rerun-of", "--sticks", "--clock-offset-ms", "--sticks-source"]
 MAKE_FLAGS = ["--no-replay"]
 MAKE_MULTI = ["--sticks-by-track"]
-INIT_OPTS = ["--reuse", "--hand-settings", "--verify-dump", "--s6-games", "--sup-games", "--slotgrid-seed"]
+INIT_OPTS = ["--reuse", "--hand-settings", "--verify-dump", "--s6-games", "--sup-games", "--slotgrid-seed", "--events"]   # --events on|off = 설계서 8-28
 INIT_FLAGS = ["--s6a-rules", "--no-sup"]
 PATH_OPTS = {"--reuse", "--hand-settings", "--slotgrid-seed", "--captures", "--head-rec"}   # 저장소 루트 기준으로 바꿔 넘기는 길
 

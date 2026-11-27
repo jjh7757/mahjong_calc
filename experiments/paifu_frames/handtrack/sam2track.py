@@ -96,20 +96,36 @@ def remap_box(b, band: list, band2: list, side: str):
     return [min(xs), min(ys), max(xs), max(ys)]
 
 
-def plan(tid: str) -> dict:
+def plan_start(tid: str):
+    """plan 의 앞 절반(시작 줄) → (gid, t, cfg, det, n, w0, w1, frs, a). a = slotgrid.anchor(창 안 캐시 프레임), 없으면 None.
+    8-28(11-27): slotgrid detect --ends 도 이것 · end_dms · end_n 을 불러 끝 줄 조건을 plan 과 같게 씀(규칙을 둘로 베끼지 않음)."""
     gid, t = turn_of(tid)
     cfg = hc.config(gid)
     det = {int(k): v for k, v in hc.jload(sg.OUT / f"det_{gid}.json").items()}
     n = t["n_calc"]
     w0, w1 = sg.window(t)
     frs = [(ms, det[ms]) for ms in sorted(det) if w0 <= ms <= w1]
-    a = sg.anchor(frs, n)
+    return gid, t, cfg, det, n, w0, w1, frs, sg.anchor(frs, n)
+
+
+def end_dms(t: dict, a) -> int:
+    """끝 줄을 찾기 시작하는 시각 = 버림 + 1초(a = 시작 줄 — 시각의 시 자리를 고르는 기준)."""
+    return ms_of(t["cut"]["discard"], a[4]) + 1000
+
+
+def end_n(d: dict, n: int, yc: float, hh: float) -> bool:
+    """끝 줄 첫 규칙: 시작 줄 높이(yc ± 0.5·hh)의 상자가 정확히 n 개(가림은 따지지 않음)."""
+    return sum(abs((b[2] + b[3]) / 2 - yc) <= 0.5 * hh for b in d["b"]) == n
+
+
+def plan(tid: str) -> dict:
+    gid, t, cfg, det, n, w0, w1, frs, a = plan_start(tid)
     if a is None:
         return {"id": tid, "gid": gid, "ok": False, "why": "시작 줄 없음"}
     # 끝 줄: 버림 + 1초 뒤, 창 끝에서 거꾸로, 줄 높이 상자가 N개인 첫 프레임(가림은 따지지 않음 — 손이 줄 끝 옆에 머무는 사람이 있다)
-    dms = ms_of(t["cut"]["discard"], a[4]) + 1000
+    dms = end_dms(t, a)
     yc, hh = a[2], a[3]
-    e = next(((ms, d) for ms, d in frs[::-1] if ms >= dms and sum(abs((b[2] + b[3]) / 2 - yc) <= 0.5 * hh for b in d["b"]) == n), None)
+    e = next(((ms, d) for ms, d in frs[::-1] if ms >= dms and end_n(d, n, yc, hh)), None)
     rule, line, e_row = "fixed", None, None
     if e is None:   # 보조 규칙(11-19): 버린 뒤 줄을 앞으로 밀고 비스듬히 놓은 사람(r19 4순) — 같은 프레임 순서로 기운 줄 선을 다시 맞춤
         e = next(((ms, d) for ms, d in frs[::-1] if ms >= dms and end_row_refit(d["b"], n, yc, hh) is not None), None)

@@ -2691,6 +2691,12 @@ def cmd_fork(a):
             o = fork_run(absp(a.src), absp(a.run), a.at)
     except GraphError as e:
         emit({"run": rp(absp(a.run)), "why": str(e)}, "stop")
+    if a.events:   # 설계서 8-28: 베낀 실행의 S6 사건 목록 스위치(init --events 와 같은 state 칸) — S6 앞(또는 S6)에서 베낄 때만 뜻이 있음
+        for d in [absp(a.run)] + [unit_dir(absp(a.run), g) for g in (o.get("units") or {})]:
+            rr = pa.Run(d)
+            rr.state["s6_events"] = a.events
+            rr.save()
+        o["s6_events"] = a.events
     emit(o, "done")
 
 
@@ -2893,6 +2899,7 @@ def main():
     p.add_argument("--from", dest="src", required=True)
     p.add_argument("--at", required=True, choices=pa.STAGES)
     p.add_argument("--run", required=True)
+    p.add_argument("--events", choices=["on", "off"], help="설계서 8-28: 베낀 실행의 S6 사건 목록 스위치(paifu_auto init --events 와 같음) — 안 주면 원본 실행 값 그대로")
     p.add_argument("--games", help="11-26 밤: --from 이 반장 실행이면 새 반장(--at S4 로 베낌) + 이 판(쉼표 · all)의 판 실행 <옛 반장>__<판> 을 --at 에서 <새 반장>__<판> 으로 "
                                     "베낌 — 이어서 go --run <새 반장> --games <판> 이 그 단계부터만")
     a = ap.parse_args()

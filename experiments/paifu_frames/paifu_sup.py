@@ -471,7 +471,7 @@ TASK_TMPL = """# 판 supervisor — 판 `@GAME@`
 1. `game.md` · `hands.md` 를 읽는다.
 2. 모든 차례의 답 글을 읽는다 — `turns/<차례>/answer.json`(kind · k · j · end_order · unsure · p · events_used · why).
 3. 의심 차례를 고른다(아래 3).
-4. 차례마다 `reread` 로 독립 다시 읽기를 맡기거나, 그 차례의 프레임(`turns/<차례>/source.txt` 에 적힌 폴더의 `frames.txt` · `events.txt` · `raw/`)을 열어 보고 `set` 으로 답을 정한다.
+4. 차례마다 `reread` 로 독립 다시 읽기를 맡기거나, 그 차례의 프레임(`turns/<차례>/source.txt` 에 적힌 폴더의 `frames.txt` · `events.txt`(있으면) · `raw/`)을 열어 보고 `set` 으로 답을 정한다.
 5. `check` 로 초안을 돌려 본다.
 6. 못 풀면 `ask`.
 7. `done`.
