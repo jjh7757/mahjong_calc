@@ -161,7 +161,7 @@ TASK_HAND_SECTION = """
 """
 
 
-def prep_nosam(tid: str, hands: bool = False):
+def prep_nosam(tid: str, hands: bool = False, noev: bool = False):
     """SAM 2 없이 원본(SAM 2 에 넣은 것과 같은 띠 · 같은 프레임) + 사건 목록(+ hands 면 손 관절 사건). 원본은 이 폴더로 하드링크(안 되면 복사)."""
     import os
     import re
@@ -201,8 +201,25 @@ def prep_nosam(tid: str, hands: bool = False):
         task = task.replace("`opusread_1118` · `claudeagent_1119`", "`opusread_1118` · `rawread_1120` · `hands_1120` · `claudeagent_1119`")
         task = task.replace("\n## 보면 안 되는 것", TASK_HAND_SECTION.format(n=meta["n"], n1=meta["n"] + 1) + "\n## 보면 안 되는 것")
         assert task.count("hand_events.txt") >= 3
+    if noev:   # 11-27 사용자 "잘린 그림만 주기 → 진행해봐": 사건 목록(칸 틀 검출)을 빼고 같은 잘린 그림 · 같은 규칙만
+        (d / "events.txt").unlink()
+        for x, y in NOEV_SUBS:
+            assert task.count(x) == 1, x
+            task = task.replace(x, y)
+        assert "events" not in task and "사건 목록" not in task, task
     (d / "TASK.md").write_bytes(task.encode("utf-8"))
-    print(tid, len(labs), "장(원본만) · 사건 목록", len(ev), "자" + (" · 손 사건 있음" if hands else ""), "→", d)
+    print(tid, len(labs), "장(원본만) · 사건 목록", "없음" if noev else f"{len(ev)} 자", (" · 손 사건 있음" if hands else ""), "→", d)
+
+
+# 11-27 — TASK_NOSAM 에서 events.txt 줄과 그 말만 바꿈. "움직인 때부터" 규칙 · 답 꼴(events_used → moves)의 나머지는 그대로.
+NOEV_SUBS = [
+    ("- `events.txt` — **칸 틀 사건 목록**: 코드가 패 검출 상자로 줄의 칸이 차고 빈 때를 적은 것(시각 옆 괄호가 프레임 번호). 손이 덮은 칸 밑은 못 본다.\n", ""),
+    ("를 먼저 찾아 차례의 사건 순서를 세운다. `events.txt` 가 출발점이다. 목록은 손이 덮은 칸 밑을 못 보므로 손 가림 구간은 원본으로 확인한다.",
+     "를 원본을 훑어 먼저 찾아 차례의 사건 순서를 세운다. 손 가림 구간은 원본을 확대해 확인한다."),
+    ("`TASK.md` · `frames.txt` · `events.txt` · `raw/`", "`TASK.md` · `frames.txt` · `raw/`"),
+    ("`opusread_1118` · `claudeagent_1119`", "`opusread_*` · `rawread_*` · `rawhand_*` · `ev_1127` · `claudeagent_*`"),
+    ('"events_used": "사건 목록에서 쓴 줄과 원본으로 바로잡은 곳(프레임 번호)"', '"moves": "찾은 움직인 때(프레임 번호)"'),
+]
 
 
 # 11-20 사용자 "r15·L16 오퍼스로 sam2 없이 재봐" — SAM 2 추적이 없는 차례(r15 d11 뒤 · L16)도 되게: 프레임은 sam2track.plan + frame_list(p, 2)
@@ -333,6 +350,8 @@ def prep_m2b(tid: str):
 
 
 def _ids(s):
+    if s == "dev25":   # 개발에 쓴 25차례(표 12-84 · 12-86 세트) = 어려운 8 + 새 17
+        return sv.ids_of("hard8") + sv.ids_of("new17")
     return list(R15L16) if s == "r15L16" else sv.ids_of(s)
 
 
@@ -363,6 +382,7 @@ def main():
             q.add_argument("--raw", action="store_true", help="SAM 2 없이 원본 띠만(추가 39 — r19 4순)")
             q.add_argument("--nosam", action="store_true", help="SAM 2 없이 원본 + 칸 틀 사건 목록(11-20, --root rawread_1120)")
             q.add_argument("--hands", action="store_true", help="--nosam 에 손 관절 사건 더함(11-20, --root rawhand_1120)")
+            q.add_argument("--noev", action="store_true", help="--nosam 에서 사건 목록을 뺌(11-27, --root noev_1127)")
             q.add_argument("--m2b", action="store_true", help="API m2b(motion2) 꼴을 하위 에이전트로(11-20, --root m2bsub_1120)")
             q.add_argument("--fromplan", action="store_true", help="--nosam 꼴을 SAM 2 추적 없이 plan 틀에서 바로(11-20, --ids r15L16 --root rawread_r15L16_1120)")
     a = ap.parse_args()
@@ -375,7 +395,7 @@ def main():
             elif a.m2b:
                 prep_m2b(tid)
             elif a.nosam:
-                prep_nosam(tid, a.hands)
+                prep_nosam(tid, a.hands, a.noev)
             elif a.raw:
                 prep_raw(tid)
             else:

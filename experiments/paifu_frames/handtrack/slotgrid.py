@@ -1,7 +1,8 @@
 """칸 틀 도구 — 손패 줄에 칸 0 ~ N+2 틀을 대고 프레임마다 칸별 참 / 빔 / 가림을 글로 낸다(2026-11-17, 계획서 3단계 "추가 16").
 
 사용자 제안: 검출기로 손패를 잡아 패 한 장 폭을 재고, (13장이면) 0 ~ 15 칸 틀을 만들어 매 프레임에 갖다 대 빈칸을 본다 → 판독하는 쪽이 도구로 쓴다.
-  python -X utf8 slotgrid.py detect <판 id…> [--ids a,b] [--step 2]   # 차례 창 프레임의 뒷면 상자 · 가림 열 캐시 → _work/slotgrid_1117/det_<판>.json
+  python -X utf8 slotgrid.py detect <판 id…> [--ids a,b] [--step 2] [--no-skip]   # 차례 창 프레임의 뒷면 상자 · 가림 열 캐시 → _work/slotgrid_1117/det_<판>.json
+                                                                    # (기본: 띠가 마지막 검출 프레임과 거의 같으면 건너뛰고 skip_of 표시 — 설계서 8-27)
   python -X utf8 slotgrid.py look <차례 id…> [--raw]                    # 칸 상태 줄글(정답 · 판독기 답은 안 찍음)
   python -X utf8 slotgrid.py events <차례 id…> [--count]                # 사건 목록(줄을 따라가며 칸 변화 · 가림 구간 · 줄 밀림만) — look 의 1/5 길이
   python -X utf8 slotgrid.py score <이름>                               # _work/slotgrid_1117/read_<이름>.json 채점(호출 없음)
@@ -56,6 +57,25 @@ def occ_cols(R: "pt.Row", v: np.ndarray) -> list:
     return out
 
 
+# 검출 프레임 줄이기(설계서 8-27, 11-27): 손패 띠(sheet_band) 회색조 그림이 마지막으로 실제 검출한 프레임과 거의 같으면 검출하지 않고
+# 그 프레임 결과(b · o)를 그대로 쓰고 skip_of 로 표시. 비교 방법 · 문턱은 완전 검출 캐시로 흉내 내 아홉 판 전체에 하나로 정함
+# (results/_setup_dev/w_report.md). --no-skip 이면 모든 프레임을 검출(옛 동작).
+SKIP_BLK, SKIP_THR = 16, 3.75   # 16×16 칸마다 평균 절대 차 → 가장 큰 칸 값 < SKIP_THR 이면 건너뜀(0단계 흉내: 건너뜀 32.1% · events 74/76)
+
+
+def band_gray(v: np.ndarray) -> np.ndarray:
+    """띠 그림(RGB) → 정수 회색조(ITU-R 601)."""
+    return ((v[..., 0].astype(np.uint32) * 299 + v[..., 1].astype(np.uint32) * 587 + v[..., 2].astype(np.uint32) * 114 + 500) // 1000).astype(np.uint8)
+
+
+def band_diff(a: np.ndarray, b: np.ndarray) -> float:
+    """회색조 띠 둘의 차이 = 16×16 칸 평균 절대 차의 최댓값(줄 한 곳의 패 한 장 변화도 걸리게 — 전체 평균은 묽어짐)."""
+    d = np.abs(a.astype(np.int16) - b.astype(np.int16)).astype(np.float32)
+    H, W = d.shape
+    h, w = H // SKIP_BLK * SKIP_BLK, W // SKIP_BLK * SKIP_BLK
+    return float(d[:h, :w].reshape(h // SKIP_BLK, SKIP_BLK, w // SKIP_BLK, SKIP_BLK).mean((1, 3)).max())
+
+
 def cmd_detect(a):
     import dettrack as dt
     L = dt.reader()
@@ -67,14 +87,25 @@ def cmd_detect(a):
         cache = hc.jload(f) if f.exists() else {}
         todo = sorted({ms for t in tc.turns_of(gid) if ids is None or t["id"] in ids for ms in hc.frame_range(*window(t))[::a.step]} - {int(k) for k in cache})
         t0 = time.time()
+        ref, nskip = None, 0          # ref = (마지막으로 실제 검출한 프레임 ms, 그 띠 회색조) — 바로 앞 프레임이 아님(조금씩 쌓이는 변화가 새지 않게)
         for i, ms in enumerate(todo):
             rgb = hc.load(ms)
-            cache[str(ms)] = {"b": dt.boxes_view(L, rgb, cfg), "o": occ_cols(R, hc.band_crop(rgb, cfg["sheet_band"], cfg["side"]))}
+            v = hc.band_crop(rgb, cfg["sheet_band"], cfg["side"])
+            g = None if a.no_skip else band_gray(v)
+            if ref is not None and band_diff(g, ref[1]) < SKIP_THR:
+                d0 = cache[str(ref[0])]
+                cache[str(ms)] = {"b": d0["b"], "o": d0["o"], "skip_of": ref[0]}
+                nskip += 1
+            else:
+                cache[str(ms)] = {"b": dt.boxes_view(L, rgb, cfg), "o": occ_cols(R, v)}
+                if g is not None:
+                    ref = (ms, g)
             if i % 300 == 0:
-                print(gid, i, len(todo), f"{time.time() - t0:.0f}s", flush=True)
+                print(gid, i, len(todo), f"{time.time() - t0:.0f}s", f"건너뜀 {nskip}", flush=True)
                 hc.jsave(f, cache, indent=None)
         hc.jsave(f, cache, indent=None)
-        print(gid, "끝", len(todo), "장", f"{time.time() - t0:.0f}s", flush=True)
+        print(gid, "끝", len(todo), "장", f"{time.time() - t0:.0f}s", f"검출 {len(todo) - nskip} · 건너뜀 {nskip}"
+              + (" (--no-skip)" if a.no_skip else f" (문턱 {SKIP_THR})"), flush=True)
 
 
 def clusters(bs: list, p: float) -> list:
@@ -604,6 +635,7 @@ def main():
     d.add_argument("games", nargs="+")
     d.add_argument("--ids", default="")
     d.add_argument("--step", type=int, default=2)
+    d.add_argument("--no-skip", action="store_true", help="줄이 안 바뀐 프레임도 다 검출(설계서 8-27 전 동작)")
     k = sp.add_parser("look")
     k.add_argument("ids", nargs="+")
     k.add_argument("--raw", action="store_true")

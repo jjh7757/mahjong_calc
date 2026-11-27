@@ -380,6 +380,8 @@ def cmd_init(a):
         r.state["s6a_mode"] = "rules"
     if a.slotgrid_seed:   # 시험용(11-25, 설계서 8-14 끝 조건 4): 칸 틀 검출 캐시를 다른 실행에서 — 그 판의 side · band · sheet_band 가 같을 때만(slotgrid_seed)
         r.state["slotgrid_seed"] = rel(Path(a.slotgrid_seed).resolve())
+    if a.slotgrid_no_skip:   # 설계서 8-27: 칸 틀 검출 프레임 줄이기(기본 켬)를 끔 — 모든 프레임 검출(옛 동작)
+        r.state["slotgrid_no_skip"] = True
     r.save()
     r.cfg()   # 겹침 검사
     print(f"→ {rel(r.d)} (state.json · hanchan.json) · 판 {len(r.games())}")
@@ -3171,7 +3173,9 @@ def s6(r: Run):
         st["slotgrid"] = todo
         miss = [g for g, v in todo.items() if v["missing"] and (not only or g in only)]
         if miss:   # 새 반장이면 detect 가 캐시 폴더(_work/slotgrid_1117)에 쓴다 — 3반장 재생에서는 0 이어야 함
-            han3(r, "slotgrid", "detect", *miss, log=r.log("s6_slotgrid_detect.log"))
+            # 설계서 8-27: 띠가 안 바뀐 프레임은 검출을 건너뜀(기본) — init --slotgrid-no-skip 이면 끔
+            st["slotgrid_skip"] = "off" if r.state.get("slotgrid_no_skip") else "on"
+            han3(r, "slotgrid", "detect", *miss, *(["--no-skip"] if r.state.get("slotgrid_no_skip") else []), log=r.log("s6_slotgrid_detect.log"))
         plan = read_plan(r)
         if only:
             plan = {"hand": {g: v for g, v in plan["hand"].items() if g in only}, "call": [t for t in plan["call"] if cfg.game_of(t) in only], "only": only}
@@ -5380,6 +5384,7 @@ def main():
     p.add_argument("--s6a-rules", action="store_true", help="견줌용: S6a 를 옛 화소 규칙(handtrack_auto.py conf)으로")
     p.add_argument("--slotgrid-seed", help="시험용: S6 칸 틀 검출 캐시(det_<판>.json)를 이 실행 폴더의 handtrack/_work/slotgrid_1117 에서 복사 — "
                                             "그 판 판별 설정의 side · band · sheet_band 가 같을 때만(새로 계산할 프레임만 detect)")
+    p.add_argument("--slotgrid-no-skip", action="store_true", help="S6 칸 틀 검출에서 띠가 안 바뀐 프레임 건너뛰기(설계서 8-27, 기본 켬)를 끔 — 모든 프레임 검출")
     p.add_argument("--no-sup", action="store_true", help="판 supervisor 단계(S7s)를 끔 — 단계 · 질문 규칙 v2 · 표본 판마다 2(설계서 8-17 4-① 전과 같음)")
     p.add_argument("--sup-games", help="시험용: 판 supervisor 를 이 판들만(쉼표) 거치게 — 나머지 판은 S7s 에서 건너뜀(그 판 unsure 차례는 질문으로)")
     for name in ("status", "unapply", "autoconfirm"):
